@@ -475,7 +475,6 @@ describe('lifecycle and render', () => {
   });
 });
 
-
 describe('the board turning to face the player with the move', () => {
   const HALF_TURN = Math.PI;
 

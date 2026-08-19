@@ -50,6 +50,21 @@ export const gameManifestSchema = z
     /** Used by the catalog filters and by the tournament to pace a run. */
     roundSeconds: z.number().int().positive().max(1800),
 
+    /**
+     * What each seat's keys and pointer do, in the game's own words.
+     *
+     * Two people sharing a laptop have one keyboard and no touchscreen, so the keyboard
+     * is not a fallback — it is the whole desktop experience. Every game declares its
+     * scheme here so the shell can show both players their controls without a game
+     * drawing its own legend, and so a game shipping without an answer fails the build.
+     */
+    controls: z.object({
+      /** e.g. "Move with W A S D, drop with Space". Written for a player, not a spec. */
+      keyboard: z.string().min(4).max(120),
+      /** e.g. "Drag to aim, release to fire". Empty when the archetype has no pointer idiom. */
+      pointer: z.string().max(120).default(''),
+    }),
+
     tags: z.array(z.string().min(1).max(24)).max(12).default([]),
     /** Games that cannot be made fair across input families declare it here. */
     sameInputClassOnly: z.boolean().default(false),

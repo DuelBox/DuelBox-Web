@@ -11,5 +11,9 @@ export const manifest = parseGameManifest({
   orientation: 'any',
   zoneSplit: 'shared-board',
   roundSeconds: 90,
+  controls: {
+    keyboard: 'Arrow keys or A and D to choose a column, Space or Enter to drop',
+    pointer: 'Tap or drag over a column, release to drop',
+  },
   tags: [],
 });

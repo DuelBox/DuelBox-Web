@@ -1,0 +1,38 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--db-space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--db-space-3);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  flex: 0 0 auto;
+  font-size: var(--db-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--db-muted);
+}
+
+.text {
+  font-size: var(--db-text-sm);
+  color: var(--db-body);
+}
+
+.title {
+  font-size: var(--db-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--db-faint);
+}

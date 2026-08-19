@@ -794,3 +794,38 @@ describe('a tap keeps its coordinates', () => {
     expect(input.beginStep(STEP).seat('p1').actionHeld).toBe(false);
   });
 });
+
+describe('which keys the game claims', () => {
+  const SIZE = { width: 600, height: 1000 };
+
+  it('claims every key bound to either seat', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    for (const seat of ['p1', 'p2'] as const) {
+      const binding = DEFAULT_BINDINGS[seat];
+      for (const code of [binding.up, binding.down, binding.left, binding.right, binding.action]) {
+        expect(input.isBound(code), `${code} drives ${seat}`).toBe(true);
+      }
+    }
+  });
+
+  it('claims nothing else', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    // Escape above all: it is the way out of a match and must always reach the shell.
+    for (const code of ['Escape', 'Tab', 'KeyQ', 'F5', 'BracketLeft']) {
+      expect(input.isBound(code), `${code} is not a game control`).toBe(false);
+    }
+  });
+
+  it('follows custom bindings rather than the defaults', () => {
+    const input = new InputManager(SIZE, {
+      split: 'horizontal',
+      bottomSeat: 'p1',
+      bindings: {
+        p1: { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL', action: 'KeyU' },
+        p2: DEFAULT_BINDINGS.p2,
+      },
+    });
+    expect(input.isBound('KeyI')).toBe(true);
+    expect(input.isBound('KeyW')).toBe(false);
+  });
+});

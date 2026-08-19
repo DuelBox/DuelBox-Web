@@ -44,7 +44,11 @@ describe('the safe-area tokens', () => {
 
 describe('the surfaces that touch a screen edge', () => {
   const cases: ReadonlyArray<{ file: string; what: string; edges: readonly string[] }> = [
-    { file: 'app/globals.css', what: 'the page gutters and the skip link', edges: ['left', 'right'] },
+    {
+      file: 'app/globals.css',
+      what: 'the page gutters and the skip link',
+      edges: ['left', 'right'],
+    },
     { file: 'components/SiteFooter.module.css', what: 'the footer', edges: ['bottom'] },
     {
       file: 'components/MatchOverlay.module.css',

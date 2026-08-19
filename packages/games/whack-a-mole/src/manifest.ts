@@ -14,5 +14,9 @@ export const manifest: GameManifest = parseGameManifest({
   // of them, so the board is common ground rather than two halves.
   zoneSplit: 'shared-board',
   roundSeconds: 60,
+  controls: {
+    keyboard: 'W A S D or arrow keys to pick a hole, Space or Enter to strike',
+    pointer: 'Tap a mole the moment it appears',
+  },
   tags: [],
 });

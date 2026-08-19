@@ -209,7 +209,12 @@ export function GameHost({
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (!isSimulating(phaseRef.current)) return;
       input.keyDown(event.code);
-      if (SCROLL_KEYS.has(event.code)) event.preventDefault();
+      // A bound key belongs to the game while a match is live, whatever the browser has
+      // focused. Otherwise seat two's Enter activates the focused button instead of
+      // playing — a player pressing their own action key opened the pause menu. Escape
+      // returns above and is never captured, so the way out is always available; and
+      // once paused the phase is no longer live, so every control works normally again.
+      if (SCROLL_KEYS.has(event.code) || input.isBound(event.code)) event.preventDefault();
     }
     function onKeyUp(event: KeyboardEvent): void {
       input.keyUp(event.code);
@@ -320,6 +325,9 @@ export function GameHost({
     if (!runner || !game) return;
     const live = phase === 'countdown' || phase === 'playing';
     if (live) {
+      // Take focus so the action keys reach the board rather than a leftover button.
+      // `preventScroll` because focusing must never move the page under a live match.
+      canvasRef.current?.focus({ preventScroll: true });
       // The time spent paused is not owed to the simulation; without this the first
       // frame back would try to catch it all up at once.
       loopRef.current?.reset();
@@ -331,7 +339,19 @@ export function GameHost({
     }
   }, [phase]);
 
-  return <canvas ref={canvasRef} className={styles.canvas} aria-label={`${manifest.name} board`} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className={styles.canvas}
+      aria-label={`${manifest.name} board`}
+      /* Focusable so the board can hold focus during play. Without this, focus sits on
+         whichever button was last used and seat two's action key — Enter — activates it
+         instead of playing: pressing it opened the pause menu rather than taking a turn.
+         Seat one's Space was already safe only because the host suppresses its default
+         to stop the page scrolling, which is luck rather than design. */
+      tabIndex={0}
+    />
+  );
 }
 
 /** Arrow keys and space scroll the page by default, which ruins a game. */

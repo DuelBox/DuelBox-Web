@@ -16,6 +16,7 @@ import { seatColour } from '@/styles/tokens';
 import { GameHost } from './GameHost';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
+import { Controls } from './Controls';
 import styles from './PlaySurface.module.css';
 
 type Mode = 'friend' | 'bot';
@@ -183,6 +184,7 @@ export function PlaySurface({ slug }: { slug: string }) {
             </button>
           ) : null}
         </div>
+        <Controls manifest={manifest} />
       </div>
     );
   }
@@ -221,6 +223,7 @@ export function PlaySurface({ slug }: { slug: string }) {
           />
           <MatchOverlay
             state={match}
+            manifest={manifest}
             rounds={rules.rounds ?? 1}
             seatNames={seatNames}
             record={record}

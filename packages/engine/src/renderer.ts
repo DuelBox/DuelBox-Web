@@ -357,7 +357,9 @@ export class Canvas2DRenderer implements Renderer {
 
   pushRotation(radians: number): void {
     if (!Number.isFinite(radians)) {
-      throw new RangeError(`rotation must be a finite number of radians, received ${String(radians)}`);
+      throw new RangeError(
+        `rotation must be a finite number of radians, received ${String(radians)}`,
+      );
     }
     // Snap to the nearest half turn: the board arrives the instant the turn changes
     // rather than sweeping there, and never rests at an angle nobody can read.

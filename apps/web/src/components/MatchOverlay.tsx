@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import type { SeatId } from '@duelbox/engine';
-import type { MatchState } from '@duelbox/game-sdk';
+import type { GameManifest, MatchState } from '@duelbox/game-sdk';
 import { seatColour } from '@/styles/tokens';
 import { SeatGlyph } from './SeatGlyph';
+import { Controls } from './Controls';
 import styles from './MatchOverlay.module.css';
 
 /**
@@ -18,6 +19,8 @@ import styles from './MatchOverlay.module.css';
 
 export interface MatchOverlayProps {
   state: MatchState;
+  /** Carries the per-game control copy the pause menu shows on demand. */
+  manifest: GameManifest;
   rounds: number;
   seatNames?: Partial<Record<SeatId, string>> | undefined;
   /** Matches won by each seat in this sitting, across rematches. */
@@ -32,6 +35,7 @@ export interface MatchOverlayProps {
 
 export function MatchOverlay({
   state,
+  manifest,
   rounds,
   seatNames,
   record,
@@ -49,6 +53,9 @@ export function MatchOverlay({
       return (
         <Panel heading="Paused" role="dialog">
           <p className={styles.detail}>The board is exactly where you left it.</p>
+          {/* On demand during a match, as the issue asks: a player who has forgotten
+              which keys are theirs should not have to quit to find out. */}
+          <Controls manifest={manifest} />
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onResume} autoFocus>
               Resume

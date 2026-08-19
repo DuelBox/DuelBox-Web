@@ -267,6 +267,16 @@ export class InputManager {
     return this.#state;
   }
 
+  /**
+   * Whether this key drives a seat.
+   *
+   * The host asks so it can keep a bound key from also activating whatever the browser
+   * has focused. During a live match those keys belong to the game.
+   */
+  isBound(code: string): boolean {
+    return this.#keyTargets.has(code);
+  }
+
   /** A repeat keyDown for a key already down is ignored: browsers auto-repeat. */
   keyDown(code: string): void {
     const target = this.#keyTargets.get(code);

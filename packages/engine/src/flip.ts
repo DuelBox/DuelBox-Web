@@ -41,7 +41,9 @@ export class SeatFlip {
   constructor(options?: SeatFlipOptions) {
     const duration = options?.durationSeconds ?? DEFAULT_DURATION_SECONDS;
     if (!Number.isFinite(duration) || duration < 0) {
-      throw new RangeError(`durationSeconds must be a non-negative number, received ${String(duration)}`);
+      throw new RangeError(
+        `durationSeconds must be a non-negative number, received ${String(duration)}`,
+      );
     }
     this.#durationSeconds = duration;
     this.#rotated = options?.rotated ?? false;

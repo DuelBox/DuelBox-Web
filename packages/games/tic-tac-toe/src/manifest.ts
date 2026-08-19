@@ -11,5 +11,9 @@ export const manifest = parseGameManifest({
   orientation: 'any',
   zoneSplit: 'shared-board',
   roundSeconds: 60,
+  controls: {
+    keyboard: 'Arrow keys or W A S D to pick a square, Space or Enter to place your mark',
+    pointer: 'Tap the square you want',
+  },
   tags: ['classic', 'quick'],
 });
