@@ -18,6 +18,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "apps" / "web" / "src" / "data" / "catalogue.generated.ts"
+# Emitted alongside so tooling that cannot parse YAML (the scaffold CLI) reads one
+# generated file rather than re-implementing a parser.
+OUT_JSON = ROOT / "data" / "catalog.generated.json"
 
 # Each archetype gets a tint and a mark so 107 tiles read as one set without 107
 # hand-drawn assets. The mark names map to shapes drawn by the GameTile component.
@@ -101,7 +104,9 @@ def main() -> None:
         f"export const CATALOGUE: readonly CatalogueEntry[] = {body} as const;\n\n"
         f"export const CATEGORIES: readonly string[] = {cats} as const;\n"
     )
-    print(f"wrote {OUT.relative_to(ROOT)}: {len(entries)} games, {len(categories)} categories")
+    OUT_JSON.write_text(json.dumps({"games": entries, "categories": categories}, indent=2) + "\n")
+    print(f"wrote {OUT.relative_to(ROOT)} and {OUT_JSON.relative_to(ROOT)}: "
+          f"{len(entries)} games, {len(categories)} categories")
 
 
 if __name__ == "__main__":
