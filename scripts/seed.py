@@ -30,10 +30,12 @@ except ImportError:
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 
-# Pace of issue creation. GitHub's secondary rate limit punishes bursts of
-# content creation far more than it punishes a steady stream.
-DELAY = 1.2
-BACKOFF_START = 60
+# Pace of issue creation. GitHub caps content creation at roughly 500 requests
+# per hour; a steady 8s gap stays just under that and never trips the secondary
+# limit, which is far faster overall than bursting and then backing off for
+# fifteen minutes at a time.
+DELAY = 8.0
+BACKOFF_START = 120
 
 
 def gh(args: list[str], check: bool = True) -> str:
@@ -151,16 +153,28 @@ def game_issues(catalog: dict, tpl: dict) -> list[dict]:
 def ensure_labels(repo: str, labels: list[dict], dry: bool) -> None:
     existing: set[str] = set()
     if not dry:
-        raw = gh(["label", "list", "--repo", repo, "--limit", "500", "--json", "name"], check=False)
-        existing = {l["name"] for l in (json.loads(raw) if raw else [])}
+        page = 1
+        while True:
+            raw = gh(["api", f"repos/{repo}/labels?per_page=100&page={page}"], check=False)
+            try:
+                batch = json.loads(raw) if raw else []
+            except json.JSONDecodeError:
+                break
+            if not batch:
+                break
+            existing.update(l["name"] for l in batch)
+            if len(batch) < 100:
+                break
+            page += 1
     created = 0
     for l in labels:
         if l["name"] in existing:
             continue
         if dry:
             continue
-        gh(["label", "create", l["name"], "--repo", repo, "--color", l["color"],
-            "--description", l.get("description", "")], check=False)
+        gh(["api", "-X", "POST", f"repos/{repo}/labels",
+            "-f", f"name={l['name']}", "-f", f"color={l['color']}",
+            "-f", f"description={l.get('description', '')}"], check=False)
         created += 1
     print(f"labels: {len(labels)} defined, {created} created")
 
@@ -179,9 +193,22 @@ def ensure_milestones(repo: str, milestones: list[dict], dry: bool) -> None:
 
 
 def existing_titles(repo: str) -> set[str]:
-    raw = gh(["issue", "list", "--repo", repo, "--state", "all", "--limit", "5000",
-              "--json", "title"], check=False)
-    return {i["title"] for i in (json.loads(raw) if raw else [])}
+    """List every existing title over REST so the core budget is used, not GraphQL."""
+    titles: set[str] = set()
+    page = 1
+    while True:
+        raw = gh(["api", f"repos/{repo}/issues?state=all&per_page=100&page={page}"], check=False)
+        try:
+            batch = json.loads(raw) if raw else []
+        except json.JSONDecodeError:
+            break
+        if not batch:
+            break
+        titles.update(i["title"] for i in batch if "pull_request" not in i)
+        if len(batch) < 100:
+            break
+        page += 1
+    return titles
 
 
 def game_labels(catalog: dict) -> list[dict]:
@@ -191,27 +218,56 @@ def game_labels(catalog: dict) -> list[dict]:
             for i, g in enumerate(catalog["games"])]
 
 
-def create_issue(repo: str, issue: dict, project: str | None, owner: str) -> str | None:
-    args = ["issue", "create", "--repo", repo, "--title", issue["title"], "--body", issue["body"]]
+def milestone_numbers(repo: str) -> dict[str, int]:
+    raw = gh(["api", f"repos/{repo}/milestones?state=all&per_page=100"], check=False)
+    return {m["title"]: m["number"] for m in (json.loads(raw) if raw else [])}
+
+
+def wait_for_reset(repo: str, resource: str = "core") -> None:
+    """Sleep until the named rate-limit bucket refills."""
+    try:
+        raw = gh(["api", "rate_limit"], check=False)
+        data = json.loads(raw)["resources"][resource]
+        wait = max(0, data["reset"] - int(time.time())) + 15
+    except Exception:
+        wait = 300
+    print(f"    {resource} rate limit exhausted, sleeping {wait}s", flush=True)
+    time.sleep(wait)
+
+
+def create_issue(repo: str, issue: dict, ms_map: dict[str, int],
+                 project: str | None = None, owner: str = "") -> str | None:
+    """Create via the REST API, which draws on the core budget rather than GraphQL.
+
+    `gh issue create` goes through GraphQL, whose points budget is consumed far
+    faster; REST gives us a clean 5000/hour for the same work.
+    """
+    args = ["api", "-X", "POST", f"repos/{repo}/issues",
+            "-f", f"title={issue['title']}", "-f", f"body={issue['body']}"]
     for l in issue.get("labels", []):
-        args += ["--label", l]
-    if issue.get("milestone"):
-        args += ["--milestone", issue["milestone"]]
+        args += ["-f", f"labels[]={l}"]
+    ms = ms_map.get(issue.get("milestone") or "")
+    if ms:
+        args += ["-F", f"milestone={ms}"]
 
     backoff = BACKOFF_START
-    for attempt in range(5):
+    for attempt in range(6):
         try:
-            url = gh(args)
-            if project:
+            out = gh(args)
+            data = json.loads(out) if out else {}
+            url = data.get("html_url")
+            if project and url:
                 gh(["project", "item-add", project, "--owner", owner, "--url", url], check=False)
             return url
         except RuntimeError as e:
             msg = str(e).lower()
-            if "secondary rate limit" in msg or "abuse" in msg or "was submitted too quickly" in msg:
-                print(f"    rate limited, sleeping {backoff}s", flush=True)
+            if "rate limit already exceeded" in msg or "rate limit exceeded" in msg:
+                wait_for_reset(repo, "core")
+            elif "secondary rate limit" in msg or "abuse" in msg or "submitted too quickly" in msg:
+                print(f"    secondary limit, sleeping {backoff}s", flush=True)
                 time.sleep(backoff)
-                backoff = min(backoff * 2, 900)
-            elif attempt == 4:
+                backoff = min(backoff * 2, 600)
+            elif attempt == 5:
                 print(f"    FAILED: {issue['title']}: {e}", file=sys.stderr, flush=True)
                 return None
             else:
@@ -256,9 +312,10 @@ def main() -> None:
         print("\nDry run complete. Drop --dry-run to create.")
         return
 
+    ms_map = milestone_numbers(args.repo)
     made = 0
     for n, issue in enumerate(todo, 1):
-        url = create_issue(args.repo, issue, args.project, owner)
+        url = create_issue(args.repo, issue, ms_map, args.project, owner)
         if url:
             made += 1
         if n % 25 == 0 or n == len(todo):
