@@ -114,6 +114,30 @@ canvas {
   height: 100%;
 }
 
+/* A page that fills needs an ancestor chain with a *definite* height, not a minimum.
+   With `min-height` alone the shell simply grows to fit its content, so a square board
+   in landscape sized itself from the width — 686px tall inside a 343px viewport, most
+   of it below the fold — and `height: 100%` further down resolved against that grown
+   height rather than against the screen. Scoped with :has() so only the play route is
+   bounded; the catalogue must still scroll. */
+.db-shell:has(.db-fill) {
+  height: 100svh;
+}
+
+/* The match owns the device. The site footer is navigation, and on a phone in landscape
+   there is only about 340px of height to begin with — chrome competing with the board
+   left nothing for the board at all. The pause menu and the result screen carry the ways
+   out, so nothing is lost by standing the footer down here. */
+.db-shell:has(.db-fill) > footer {
+  display: none;
+}
+
+/* If a viewport really is too short for the board plus both scoreboards, scrolling is
+   the honest outcome. Collapsing the board to nothing is not. */
+.db-shell:has(.db-fill) .db-main {
+  overflow: auto;
+}
+
 .db-wrap {
   width: 100%;
   max-width: 76rem;

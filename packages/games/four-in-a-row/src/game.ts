@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, otherSeat, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -114,6 +114,16 @@ export class DropFourGame implements Game {
   #logical: LogicalSize = manifest.logical;
   #sharedScreen = false;
   #localSeat: SeatId = 'p1';
+  /**
+   * The board turning to face whoever has the move.
+   *
+   * Steps on the fixed timestep like everything else, so two devices rotate through the
+   * same angles on the same steps. Reduced motion is the renderer's business, not this
+   * one's — the flip must still step identically everywhere or two devices would
+   * disagree about when input reopens.
+   */
+  readonly #flip = new SeatFlip();
+
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
 
@@ -163,6 +173,8 @@ export class DropFourGame implements Game {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
+    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.step(fixedDeltaSeconds);
 
     // The falling disc is counted down before the match-over test, so the drop that
     // decides a match still lands rather than freezing in mid-air.
@@ -203,10 +215,13 @@ export class DropFourGame implements Game {
 
     const seatInput = input.seat(active);
     const pointer = seatInput.pointer;
-    if (pointer !== null) {
+    // Nothing is accepted while the board is part-way round: the column under a finger
+    // is moving, so a gesture would name one the player did not mean.
+    if (pointer !== null && this.#flip.acceptsInput) {
       // The board is drawn under the active seat's rotation, so a device-space pointer
-      // has to be turned into board space before it names a column.
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#isRotated());
+      // has to be turned into board space before it names a column. The *settled*
+      // orientation, which is the one on screen whenever input is open.
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
       const column = columnAt(this.#pointerWorld.x);
       // Arming only over a column is what stops a tap on the chrome either side of the
       // board from dropping a disc; a drag that starts on the board keeps its aim.
@@ -237,7 +252,7 @@ export class DropFourGame implements Game {
 
   render(renderer: Renderer, alpha: number): void {
     renderer.clear(COLOUR_BACKGROUND);
-    renderer.pushSeatRotation(this.#isRotated());
+    renderer.pushRotation(this.#flip.angle);
     this.#drawBoard(renderer);
     this.#drawHover(renderer);
     this.#drawFalling(renderer, alpha);
@@ -294,7 +309,8 @@ export class DropFourGame implements Game {
     return cell === undefined ? null : cell;
   }
 
-  #isRotated(): boolean {
+  /** The orientation the board should be in, which the flip tweens towards. */
+  #shouldRotate(): boolean {
     return this.#sharedScreen && this.#active !== this.#localSeat;
   }
 

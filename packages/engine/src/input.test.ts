@@ -656,3 +656,141 @@ describe('InputManager allocation discipline', () => {
     expect(p2.pointerActive).toBe(true);
   });
 });
+
+describe('a tap that begins and ends between two steps', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 600, height: 1000 };
+
+  function manager(): InputManager {
+    return new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+  }
+
+  it('is still a press', () => {
+    // The primary gesture on a touchscreen: finger down and up inside one frame. Sampling
+    // "is a pointer down now" at step time misses it entirely — the finger is already gone.
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    input.pointerUp(1);
+    const state = input.beginStep(STEP);
+    expect(state.seat('p1').actionPressed).toBe(true);
+  });
+
+  it('reports its release in the same step, not a phantom hold', () => {
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    input.pointerUp(1);
+    const state = input.beginStep(STEP);
+    expect(state.seat('p1').actionHeld).toBe(false);
+    expect(state.seat('p1').actionReleased).toBe(true);
+    expect(state.seat('p1').holdSeconds).toBe(0);
+  });
+
+  it('does not repeat on the following step', () => {
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    input.pointerUp(1);
+    input.beginStep(STEP);
+    const next = input.beginStep(STEP);
+    expect(next.seat('p1').actionPressed).toBe(false);
+    expect(next.seat('p1').actionReleased).toBe(false);
+  });
+
+  it('goes to the seat whose zone it landed in', () => {
+    const input = manager();
+    // Top half belongs to p2 when p1 sits at the bottom.
+    input.pointerDown(1, 300, 100);
+    input.pointerUp(1);
+    const state = input.beginStep(STEP);
+    expect(state.seat('p2').actionPressed).toBe(true);
+    expect(state.seat('p1').actionPressed).toBe(false);
+  });
+
+  it('counts two quick taps as two presses, not one', () => {
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    input.pointerUp(1);
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(true);
+    input.pointerDown(2, 300, 800);
+    input.pointerUp(2);
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(true);
+  });
+
+  it('keeps the position the tap landed at, so it can be aimed', () => {
+    const input = manager();
+    input.pointerDown(1, 321, 654);
+    input.pointerUp(1);
+    const state = input.beginStep(STEP);
+    expect(state.seat('p1').pointerX).toBe(321);
+    expect(state.seat('p1').pointerY).toBe(654);
+  });
+
+  it('does the same for a key tapped between steps', () => {
+    const input = manager();
+    input.keyDown(DEFAULT_BINDINGS.p1.action);
+    input.keyUp(DEFAULT_BINDINGS.p1.action);
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(true);
+  });
+
+  it('still reports a held press exactly once', () => {
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(true);
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(false);
+    expect(input.beginStep(STEP).seat('p1').actionHeld).toBe(true);
+    input.pointerUp(1);
+    const released = input.beginStep(STEP);
+    expect(released.seat('p1').actionReleased).toBe(true);
+    expect(released.seat('p1').actionHeld).toBe(false);
+  });
+
+  it('is cleared by clear(), like everything else', () => {
+    const input = manager();
+    input.pointerDown(1, 300, 800);
+    input.pointerUp(1);
+    input.clear();
+    expect(input.beginStep(STEP).seat('p1').actionPressed).toBe(false);
+  });
+});
+
+describe('a tap keeps its coordinates', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 600, height: 1000 };
+
+  it('reports the pointer as active on the step the press is reported', () => {
+    // A press with no position cannot be aimed, so a game told "actionPressed" and
+    // handed a null pointer simply drops the tap.
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    input.pointerDown(1, 250, 900);
+    input.pointerUp(1);
+    const seat = input.beginStep(STEP).seat('p1');
+    expect(seat.actionPressed).toBe(true);
+    expect(seat.pointerActive).toBe(true);
+    expect(seat.pointerX).toBe(250);
+    expect(seat.pointerY).toBe(900);
+  });
+
+  it('stops reporting it on the following step', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    input.pointerDown(1, 250, 900);
+    input.pointerUp(1);
+    input.beginStep(STEP);
+    expect(input.beginStep(STEP).seat('p1').pointerActive).toBe(false);
+  });
+
+  it('does not conjure a pointer from a keyboard press', () => {
+    // The action latch is raised by keys too; the pointer latch must not be.
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    input.keyDown(DEFAULT_BINDINGS.p1.action);
+    input.keyUp(DEFAULT_BINDINGS.p1.action);
+    const seat = input.beginStep(STEP).seat('p1');
+    expect(seat.actionPressed).toBe(true);
+    expect(seat.pointerActive).toBe(false);
+  });
+
+  it('does not treat a latched tap as a held action', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    input.pointerDown(1, 250, 900);
+    input.pointerUp(1);
+    expect(input.beginStep(STEP).seat('p1').actionHeld).toBe(false);
+  });
+});

@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -91,6 +91,15 @@ export class TicTacToeGame implements Game {
   #logical: LogicalSize = manifest.logical;
   #sharedScreen = false;
   #localSeat: SeatId = 'p1';
+  /**
+   * The board turning to face whoever has the move.
+   *
+   * It steps on the fixed timestep like everything else, so two devices rotate through
+   * the same angles on the same steps. Reduced motion is handled by the renderer, not
+   * here — the flip must still *step* identically everywhere or the two would disagree
+   * about when input reopens.
+   */
+  readonly #flip = new SeatFlip();
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
 
@@ -129,6 +138,8 @@ export class TicTacToeGame implements Game {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
+    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.step(fixedDeltaSeconds);
     if (this.#matchWinner !== null) return;
 
     if (this.#settleSteps > 0) {
@@ -157,9 +168,13 @@ export class TicTacToeGame implements Game {
     if (!seatInput.actionPressed) return;
     const pointer = seatInput.pointer;
     if (pointer === null) return;
+    // Nothing is accepted while the board is part-way round: the cell under a finger is
+    // moving, so a tap would name one the player did not mean.
+    if (!this.#flip.acceptsInput) return;
     // The board is drawn under the active seat's rotation, so a device-space tap has to
-    // be turned into board space before it names a cell.
-    toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#isRotated());
+    // be turned into board space before it names a cell. The *settled* orientation, which
+    // is the one on screen whenever input is open.
+    toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
     const cell = cellIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
     if (cell < 0) return;
     if (!applyMove(this.#board, cell, active)) return;
@@ -168,7 +183,7 @@ export class TicTacToeGame implements Game {
 
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_BACKGROUND);
-    renderer.pushSeatRotation(this.#isRotated());
+    renderer.pushRotation(this.#flip.angle);
     this.#drawGrid(renderer);
     this.#drawMarks(renderer);
     if (this.#hasStrike) this.#drawStrike(renderer);
@@ -214,7 +229,8 @@ export class TicTacToeGame implements Game {
     return cell === undefined ? null : cell;
   }
 
-  #isRotated(): boolean {
+  /** The orientation the board should be in, which the flip tweens towards. */
+  #shouldRotate(): boolean {
     return this.#sharedScreen && this.#active !== this.#localSeat;
   }
 

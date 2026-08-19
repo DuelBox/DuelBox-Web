@@ -174,6 +174,24 @@ interface SeatSources {
   pointerY: number;
   /** Action state as of the previous step, the only thing the edges are derived from. */
   wasActionHeld: boolean;
+  /**
+   * Whether the action went down at any point since the last step, even if it was
+   * released again before the step ran.
+   *
+   * Sampling "is it down now" loses a tap whose press and release both land inside one
+   * frame — which on a touchscreen is most of them. A tap is the primary gesture in this
+   * product, so it is latched here and consumed by the next step rather than missed.
+   */
+  actionLatched: boolean;
+  /**
+   * Whether a *pointer* went down since the last step.
+   *
+   * Separate from `actionLatched`, which a key can also raise: a keyboard press must not
+   * conjure a pointer position out of nowhere. This one keeps the tap's coordinates
+   * readable for the step that reports the press, or a game is told a tap happened and
+   * given nowhere to put it.
+   */
+  pointerLatched: boolean;
 }
 
 function createSeatSources(): SeatSources {
@@ -183,6 +201,8 @@ function createSeatSources(): SeatSources {
     pointerX: 0,
     pointerY: 0,
     wasActionHeld: false,
+    actionLatched: false,
+    pointerLatched: false,
   };
 }
 
@@ -201,6 +221,8 @@ function releaseSources(sources: SeatSources): void {
   sources.pointerX = 0;
   sources.pointerY = 0;
   sources.wasActionHeld = false;
+  sources.actionLatched = false;
+  sources.pointerLatched = false;
 }
 
 /** Where a key code writes to. Built on construction and on rebind, never per step. */
@@ -251,6 +273,7 @@ export class InputManager {
     if (target === undefined) return;
     if (target.sources.keys[target.slot]) return;
     target.sources.keys[target.slot] = true;
+    if (target.slot === 'action') target.sources.actionLatched = true;
   }
 
   keyUp(code: string): void {
@@ -273,6 +296,8 @@ export class InputManager {
     this.#ownership.claim(pointerId, seat);
     const sources = this.#sourcesFor(seat);
     sources.pointerCount += 1;
+    sources.actionLatched = true;
+    sources.pointerLatched = true;
     sources.pointerX = logicalX;
     sources.pointerY = logicalY;
   }
@@ -355,20 +380,28 @@ export class InputManager {
     out.moveX = move.x;
     out.moveY = move.y;
 
-    const pointerActive = sources.pointerCount > 0;
+    const pointerDown = sources.pointerCount > 0;
+    // A tap that has already ended still has a position this step: the press is being
+    // reported now, and a press with no coordinates cannot be aimed.
+    const pointerActive = pointerDown || sources.pointerLatched;
     out.pointerActive = pointerActive;
     // The pointer owns position outright; keys never write it.
     out.pointerX = sources.pointerX;
     out.pointerY = sources.pointerY;
 
     // Either source raises the action: a thumb on the screen and a key are the same intent.
-    const held = keys.action || pointerActive;
+    const held = keys.action || pointerDown;
     const was = sources.wasActionHeld;
+    // A tap that began and ended between two steps is still a press. Without the latch
+    // it is invisible: by the time the step runs the finger is already gone.
+    const latched = sources.actionLatched;
     out.actionHeld = held;
-    out.actionPressed = held && !was;
-    out.actionReleased = !held && was;
+    out.actionPressed = (held || latched) && !was;
+    out.actionReleased = !held && (was || latched);
     out.holdSeconds = held && was ? out.holdSeconds + delta : 0;
     sources.wasActionHeld = held;
+    sources.actionLatched = false;
+    sources.pointerLatched = false;
   }
 
   #sourcesFor(seat: SeatId): SeatSources {

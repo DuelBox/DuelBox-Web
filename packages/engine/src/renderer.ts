@@ -160,6 +160,7 @@ export class Canvas2DRenderer implements Renderer {
   #offsetX = 0;
   #offsetY = 0;
   #rotationDepth = 0;
+  #reducedMotion = false;
   #inFrame = false;
 
   /**
@@ -342,18 +343,33 @@ export class Canvas2DRenderer implements Renderer {
     this.pushRotation(rotated ? HALF_TURN : 0);
   }
 
+  /**
+   * Draw part-way rotations as their settled orientation.
+   *
+   * Set from `prefers-reduced-motion` by the host. It lives here rather than in a game
+   * because no game code may branch on the device (CLAUDE.md rule 10) — and because the
+   * flip must still *step* identically everywhere, or two devices would disagree about
+   * when input reopens. Reduced motion changes what is drawn, never what is simulated.
+   */
+  setReducedMotion(reduced: boolean): void {
+    this.#reducedMotion = reduced;
+  }
+
   pushRotation(radians: number): void {
     if (!Number.isFinite(radians)) {
       throw new RangeError(`rotation must be a finite number of radians, received ${String(radians)}`);
     }
+    // Snap to the nearest half turn: the board arrives the instant the turn changes
+    // rather than sweeping there, and never rests at an angle nobody can read.
+    const angle = this.#reducedMotion ? Math.round(radians / HALF_TURN) * HALF_TURN : radians;
     const ctx = this.#context;
     // Saved whether or not there is any rotation, so pushes and pops balance for both
     // seats and the caller never has to branch on which one it is drawing.
     ctx.save();
     this.#rotationDepth += 1;
-    if (radians === 0) return;
+    if (angle === 0) return;
     ctx.translate(this.#centreX, this.#centreY);
-    ctx.rotate(radians);
+    ctx.rotate(angle);
     ctx.translate(-this.#centreX, -this.#centreY);
   }
 

@@ -338,6 +338,19 @@ describe('DropFourGame turns', () => {
   });
 });
 
+/**
+ * Run out the seat flip with nothing pressed.
+ *
+ * The board turns to face whoever has the move and refuses input while it is part-way
+ * round — what sits under a finger is moving, so a tap would name something the player
+ * did not mean. A test that acts the instant the turn changes is aiming at a board
+ * nobody could have seen.
+ */
+function settleFlip(game: DropFourGame, input: FakeInput): void {
+  input.clear();
+  step(game, input, 40);
+}
+
 describe('shared-screen rotation', () => {
   it('reads the far seat gesture in the frame it was drawn in', () => {
     const game = new DropFourGame();
@@ -350,6 +363,7 @@ describe('shared-screen rotation', () => {
 
     // p2 sits opposite: the board is turned half a turn for its turn, so the device
     // point diagonally opposite column 5 is the one that must land in column 5.
+    settleFlip(game, input);
     dropInto(game, input, 5, true);
     expect(game.cellAt(at(ROWS - 1, 5))).toBe('p2');
   });

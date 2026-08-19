@@ -99,6 +99,17 @@ export function GameHost({
 
     const logical = manifest.logical;
     const renderer = new Canvas2DRenderer(context, logical);
+    // Reduced motion is a device preference, so it is read here and nowhere else: no
+    // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
+    // identically on every device — only what is drawn changes — or two devices would
+    // disagree about when input reopens.
+    // Safe to reach for unguarded: effects only run in the browser.
+    const motion = globalThis.matchMedia('(prefers-reduced-motion: reduce)');
+    renderer.setReducedMotion(motion.matches);
+    function onMotionChange(event: MediaQueryListEvent): void {
+      renderer.setReducedMotion(event.matches);
+    }
+    motion.addEventListener('change', onMotionChange);
     const inputView = new InputView();
     const input = new InputManager(logical, {
       split: manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
@@ -287,6 +298,7 @@ export function GameHost({
       loopRef.current = null;
       gameRef.current = null;
       observer.disconnect();
+      motion.removeEventListener('change', onMotionChange);
       document.removeEventListener('visibilitychange', onVisibility);
       el.removeEventListener('pointerdown', onPointerDown);
       el.removeEventListener('pointermove', onPointerMove);

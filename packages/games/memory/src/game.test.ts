@@ -419,6 +419,19 @@ describe('turns', () => {
   });
 });
 
+/**
+ * Run out the seat flip with nothing pressed.
+ *
+ * The board turns to face whoever has the move and refuses input while it is part-way
+ * round — what sits under a finger is moving, so a tap would name something the player
+ * did not mean. A test that acts the instant the turn changes is aiming at a board
+ * nobody could have seen.
+ */
+function settleFlip(game: MemoryMatchGame, input: FakeInput): void {
+  input.clear();
+  step(game, input, 40);
+}
+
 describe('shared-screen rotation', () => {
   it('reads the far seat tap in the rotated frame it was drawn in', () => {
     const game = new MemoryMatchGame();
@@ -433,7 +446,7 @@ describe('shared-screen rotation', () => {
     // p2 sits opposite: the table is turned half a turn for its turn, so the upright
     // point misses and the diagonally opposite one lands.
     const [c] = findPair(game);
-    input.clear();
+    settleFlip(game, input);
     tapCard(input, 'p2', c, false);
     step(game, input);
     expect(game.cardAt(c)?.faceUp).toBe(false);
@@ -453,7 +466,7 @@ describe('shared-screen rotation', () => {
     expect(game.activeSeat).toBe('p2');
 
     const [c] = findPair(game);
-    input.clear();
+    settleFlip(game, input);
     tapCard(input, 'p2', c, false);
     step(game, input);
     expect(game.cardAt(c)?.faceUp).toBe(true);

@@ -26,15 +26,28 @@
   text-transform: uppercase;
 }
 
+/* The area the board may occupy: whatever the two scoreboards leave. */
+.boardArea {
+  flex: 1 1 0;
+  min-height: 9rem;
+  display: grid;
+  min-width: 0;
+}
+
+/* The board fills whatever the scoreboards leave, and the *engine* fits the game's
+   logical area inside it — `fitViewport` already letterboxes to the declared logical
+   size, which is the mechanism that guarantees both players see exactly the same play
+   area (CLAUDE.md rule 9). Locking the element's own aspect ratio as well duplicated
+   that job and did it worse: with both axes constrained, one of them won and a square
+   game came out 361x413 in portrait and 686px tall inside a 343px viewport. */
 .board {
   position: relative;
-  /* Sized by the height left over, shaped by the game's own logical dimensions. The
-     aspect ratio is set inline from the manifest: hardcoding one here letterboxes every
-     game that is not that shape, and no simulation value may be expressed in pixels. */
-  flex: 1 1 auto;
+  /* Stretched by the grid rather than sized with percentages. A percentage height on a
+     grid item whose track is content-sized has nothing definite to resolve against, and
+     the browser falls back to an ancestor: the board came out 343px tall inside a 144px
+     area. Letting the grid stretch it means the area's size is the board's size, always. */
+  min-width: 0;
   min-height: 0;
-  max-width: 100%;
-  margin-inline: auto;
 }
 
 .state,

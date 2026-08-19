@@ -81,11 +81,13 @@ class RecordingRenderer implements Renderer {
     expect(colour.length).toBeGreaterThan(0);
     expect(align === undefined || align.length > 0).toBe(true);
   }
+  angles: number[] = [];
   pushSeatRotation(): void {
     this.depth += 1;
     if (this.depth > this.maxDepth) this.maxDepth = this.depth;
   }
-  pushRotation(): void {
+  pushRotation(radians = 0): void {
+    this.angles.push(radians);
     this.pushSeatRotation();
   }
   popSeatRotation(): void {
@@ -136,6 +138,19 @@ function markCount(game: TicTacToeGame): number {
 
 function step(game: TicTacToeGame, input: FakeInput, times = 1): void {
   for (let i = 0; i < times; i += 1) game.update(STEP, input);
+}
+
+/**
+ * Run out the seat flip with no input pressed.
+ *
+ * The board turns to face whoever has the move, and refuses taps while it is part-way
+ * round — the cell under a finger is moving, so a tap would name one the player did not
+ * mean. A test that taps the instant the turn changes is testing a board nobody could
+ * have aimed at.
+ */
+function settleFlip(game: TicTacToeGame, input: FakeInput): void {
+  input.clear();
+  step(game, input, 40);
 }
 
 describe('TicTacToeGame turns', () => {
@@ -244,7 +259,7 @@ describe('shared-screen rotation', () => {
 
     // p2 sits opposite: the board is turned half a turn for its turn, so the device
     // point diagonally opposite cell 8 is the one that must land on cell 8.
-    input.clear();
+    settleFlip(game, input);
     tapCell(input, 'p2', 8, true);
     step(game, input);
     expect(game.cellAt(8)).toBe('p2');
@@ -457,5 +472,111 @@ describe('lifecycle and render', () => {
     expect(after.lines).toBeGreaterThan(before.lines);
     expect(after.circles).toBeGreaterThan(before.circles);
     expect(after.depth).toBe(0);
+  });
+});
+
+
+describe('the board turning to face the player with the move', () => {
+  const HALF_TURN = Math.PI;
+
+  it('sweeps through part-way angles rather than snapping', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'shared-screen', 'p1'));
+
+    tapCell(input, 'p1', 0, false);
+    step(game, input);
+    input.clear();
+
+    const renderer = new RecordingRenderer();
+    for (let i = 0; i < 40; i += 1) {
+      game.update(STEP, input);
+      game.render(renderer);
+    }
+
+    const partway = renderer.angles.filter((a) => a > 0.001 && a < HALF_TURN - 0.001);
+    expect(partway.length).toBeGreaterThan(5);
+    // And it arrives, rather than resting at an angle nobody can read.
+    expect(renderer.angles[renderer.angles.length - 1]).toBeCloseTo(HALF_TURN, 6);
+  });
+
+  it('refuses a tap while the board is part-way round', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'shared-screen', 'p1'));
+
+    tapCell(input, 'p1', 0, false);
+    step(game, input);
+
+    // p2 taps immediately, while the board is still turning towards them.
+    input.clear();
+    tapCell(input, 'p2', 8, true);
+    step(game, input);
+    expect(game.cellAt(8)).toBeNull();
+
+    // Once it has arrived, the same tap lands.
+    settleFlip(game, input);
+    tapCell(input, 'p2', 8, true);
+    step(game, input);
+    expect(game.cellAt(8)).toBe('p2');
+  });
+
+  it('never accepts a tap unless the board is square on', () => {
+    // The criterion in full: input is never mapped through a part-way orientation.
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'shared-screen', 'p1'));
+    tapCell(input, 'p1', 0, false);
+    step(game, input);
+    input.clear();
+
+    const renderer = new RecordingRenderer();
+    for (let i = 0; i < 40; i += 1) {
+      const before = boardOf(game);
+      // A tap is pressed on every single step of the turn.
+      tapCell(input, 'p2', 4, true);
+      game.update(STEP, input);
+      game.render(renderer);
+      const angle = renderer.angles[renderer.angles.length - 1] ?? 0;
+      const squareOn = Math.abs(angle) < 1e-9 || Math.abs(angle - HALF_TURN) < 1e-9;
+      const changed = boardOf(game).some((cell, index) => cell !== before[index]);
+      if (changed) expect(squareOn, `board changed at angle ${String(angle)}`).toBe(true);
+      input.clear();
+    }
+  });
+
+  it('does not turn at all in single-seat presentation', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'single-seat', 'p1'));
+    tapCell(input, 'p1', 0, false);
+    step(game, input);
+    input.clear();
+
+    const renderer = new RecordingRenderer();
+    for (let i = 0; i < 40; i += 1) {
+      game.update(STEP, input);
+      game.render(renderer);
+    }
+    expect(renderer.angles.every((a) => a === 0)).toBe(true);
+  });
+
+  it('steps identically for the same deltas, whatever the frame rate delivered them in', () => {
+    const play = (steps: number, dt: number): number => {
+      const game = new TicTacToeGame();
+      const input = new FakeInput();
+      game.init(makeContext(null, null, 'shared-screen', 'p1'));
+      tapCell(input, 'p1', 0, false);
+      game.update(dt, input);
+      input.clear();
+      const renderer = new RecordingRenderer();
+      for (let i = 0; i < steps; i += 1) {
+        game.update(dt, input);
+        game.render(renderer);
+      }
+      return renderer.angles[renderer.angles.length - 1] ?? 0;
+    };
+    // Same total simulated time, delivered in different-sized steps.
+    expect(play(20, 1 / 60)).toBeCloseTo(play(40, 1 / 120), 6);
   });
 });

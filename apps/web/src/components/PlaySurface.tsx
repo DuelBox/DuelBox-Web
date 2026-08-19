@@ -204,38 +204,37 @@ export function PlaySurface({ slug }: { slug: string }) {
           ways. The far copy is turned to face the player at the top of the screen. */}
       <MatchHud {...hudProps} flipped />
 
-      <div
-        className={styles.board}
-        style={{ aspectRatio: `${manifest.logical.width} / ${manifest.logical.height}` }}
-      >
-        <GameHost
-          manifest={manifest}
-          createGame={create}
-          seed={seed}
-          phase={match.phase}
-          presentation="shared-screen"
-          localSeat="p1"
-          {...(mode === 'bot' ? { botDifficulty: BOT_OPPONENT } : {})}
-          onTick={handleTick}
-          onScore={handleScore}
-          onActiveSeat={setActiveSeat}
-          onRequestPause={handlePauseRequest}
-        />
-        <MatchOverlay
-          state={match}
-          rounds={rules.rounds ?? 1}
-          seatNames={seatNames}
-          record={record}
-          nextGame={nextGame}
-          onResume={() => {
-            send({ kind: 'resume' });
-          }}
-          onQuit={quit}
-          onNextRound={() => {
-            send({ kind: 'next-round' });
-          }}
-          onRematch={rematch}
-        />
+      <div className={styles.boardArea}>
+        <div className={styles.board}>
+          <GameHost
+            manifest={manifest}
+            createGame={create}
+            seed={seed}
+            phase={match.phase}
+            presentation="shared-screen"
+            localSeat="p1"
+            {...(mode === 'bot' ? { botDifficulty: BOT_OPPONENT } : {})}
+            onTick={handleTick}
+            onScore={handleScore}
+            onActiveSeat={setActiveSeat}
+            onRequestPause={handlePauseRequest}
+          />
+          <MatchOverlay
+            state={match}
+            rounds={rules.rounds ?? 1}
+            seatNames={seatNames}
+            record={record}
+            nextGame={nextGame}
+            onResume={() => {
+              send({ kind: 'resume' });
+            }}
+            onQuit={quit}
+            onNextRound={() => {
+              send({ kind: 'next-round' });
+            }}
+            onRematch={rematch}
+          />
+        </div>
       </div>
 
       <MatchHud {...hudProps} onPause={handlePauseRequest} />

@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -135,6 +135,16 @@ export class MemoryMatchGame implements Game {
   #logical: LogicalSize = manifest.logical;
   #sharedScreen = false;
   #localSeat: SeatId = 'p1';
+  /**
+   * The board turning to face whoever has the move.
+   *
+   * Steps on the fixed timestep like everything else, so two devices rotate through the
+   * same angles on the same steps. Reduced motion is the renderer's business, not this
+   * one's — the flip must still step identically everywhere or two devices would
+   * disagree about when input reopens.
+   */
+  readonly #flip = new SeatFlip();
+
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
 
@@ -184,6 +194,8 @@ export class MemoryMatchGame implements Game {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
+    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.step(fixedDeltaSeconds);
     if (this.#winner !== null) return;
 
     if (this.#hideSteps > 0) {
@@ -225,9 +237,13 @@ export class MemoryMatchGame implements Game {
       if (!seatInput.actionPressed) return;
       const pointer = seatInput.pointer;
       if (pointer === null) return;
+      // Nothing is accepted while the table is part-way round: the card under a finger
+      // is moving, so a tap would turn over one the player did not mean.
+      if (!this.#flip.acceptsInput) return;
       // The table is drawn under the active seat's rotation, so a device-space tap has to
-      // be turned into board space before it names a card.
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#isRotated());
+      // be turned into board space before it names a card. The *settled* orientation,
+      // which is the one on screen whenever input is open.
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
       choice = cardIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
     }
 
@@ -238,7 +254,7 @@ export class MemoryMatchGame implements Game {
 
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_BACKGROUND);
-    renderer.pushSeatRotation(this.#isRotated());
+    renderer.pushRotation(this.#flip.angle);
     this.#drawCards(renderer);
     renderer.popSeatRotation();
   }
@@ -294,7 +310,8 @@ export class MemoryMatchGame implements Game {
     return this.#owners[index] ?? null;
   }
 
-  #isRotated(): boolean {
+  /** The orientation the board should be in, which the flip tweens towards. */
+  #shouldRotate(): boolean {
     return this.#sharedScreen && this.#active !== this.#localSeat;
   }
 
