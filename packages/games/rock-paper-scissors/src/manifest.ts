@@ -1,0 +1,22 @@
+import { parseGameManifest } from '@duelbox/game-sdk';
+
+export const manifest = parseGameManifest({
+  id: 'rock-paper-scissors',
+  name: 'Rock Paper Scissors',
+  category: 'Reaction',
+  archetype: 'rt-split',
+  modes: ['friend', 'bot'],
+  presentations: ['shared-screen', 'single-seat'],
+  logical: { width: 600, height: 1000 },
+  orientation: 'portrait',
+  zoneSplit: 'horizontal',
+  roundSeconds: 60,
+  // Required, and deliberately not optional: the shell shows this before the match and
+  // again from the pause menu, so a game without it would advertise nothing to a player
+  // holding a keyboard. Written for a player rather than as a spec.
+  controls: {
+    keyboard: 'A and D or the arrow keys to choose, Space or Enter to lock it in',
+    pointer: 'Tap one of your three buttons before the bar runs out',
+  },
+  tags: ['quick', 'simultaneous'],
+});

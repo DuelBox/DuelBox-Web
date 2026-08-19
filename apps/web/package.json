@@ -25,7 +25,8 @@
     "@duelbox/game-dots-and-boxes": "workspace:*",
     "@duelbox/game-reversi": "workspace:*",
     "@duelbox/game-darts": "workspace:*",
-    "@duelbox/game-mancala": "workspace:*"
+    "@duelbox/game-mancala": "workspace:*",
+    "@duelbox/game-rock-paper-scissors": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",

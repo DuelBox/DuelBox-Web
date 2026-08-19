@@ -28,6 +28,8 @@ const LOADERS: Record<string, Loader> = {
   reversi: () => import('@duelbox/game-reversi').then((m) => m.default),
   darts: () => import('@duelbox/game-darts').then((m) => m.default),
   mancala: () => import('@duelbox/game-mancala').then((m) => m.default),
+  'rock-paper-scissors': () =>
+    import('@duelbox/game-rock-paper-scissors').then((m) => m.default),
 };
 
 /**

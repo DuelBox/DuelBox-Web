@@ -76,6 +76,9 @@ importers:
       '@duelbox/game-reversi':
         specifier: workspace:*
         version: link:../../packages/games/reversi
+      '@duelbox/game-rock-paper-scissors':
+        specifier: workspace:*
+        version: link:../../packages/games/rock-paper-scissors
       '@duelbox/game-sdk':
         specifier: workspace:*
         version: link:../../packages/game-sdk
@@ -180,6 +183,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/reversi:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/rock-paper-scissors:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

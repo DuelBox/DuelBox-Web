@@ -39,6 +39,9 @@
     },
     {
       "path": "./packages/games/mancala"
+    },
+    {
+      "path": "./packages/games/rock-paper-scissors"
     }
   ]
 }
