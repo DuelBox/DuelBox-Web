@@ -45,7 +45,10 @@ games:
   name: Reversi
   category: Board
   archetype: turn-board
-  confidence: genre
+  confidence: observed
+  rule: Fill the board with more pieces of your color than the opponents to win!
+  modes: friend,bot
+  refName: Reversi
 - id: mancala
   name: Mancala Pits
   category: Board
@@ -70,19 +73,28 @@ games:
   name: Ludo Dash
   category: Board
   archetype: turn-board
-  confidence: genre
+  confidence: observed
   rename: true
   was: Ludo
+  rule: Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space.
+  modes: friend,bot
+  refName: Ludo
 - id: backgammon
   name: Backgammon
   category: Board
   archetype: turn-board
-  confidence: genre
+  confidence: observed
+  rule: Move your fifteen checkers according to the roll of two dice. The objective is to move all checkers into your home board and then bear them off. You can also hit opponent's blots to send them to the bar, delaying their progress.
+  modes: friend,bot
+  refName: Backgammon
 - id: snakes-ladders
   name: Snakes and Ladders
   category: Board
   archetype: turn-board
-  confidence: genre
+  confidence: observed
+  rule: Roll a die to move across the board. Land on a ladder to climb higher, or a snake to slide down. First to reach or pass the last field wins!
+  modes: friend,bot
+  refName: Snakes & Ladders
 - id: sea-battle
   name: Sea Battle
   category: Board
@@ -122,7 +134,10 @@ games:
   name: Colour Wars
   category: Board
   archetype: turn-board
-  confidence: research
+  confidence: observed
+  rule: Try to fill the entire field with your color. Click on your circles to enlarge the dots by one. Take 4 new squares when you reach 4 white dots in a circle.
+  modes: friend,bot
+  refName: Color Wars
 - id: guess-the-person
   name: Guess Who
   category: Deduction
@@ -146,7 +161,10 @@ games:
   name: Pool
   category: Sports
   archetype: turn-aim
-  confidence: genre
+  confidence: observed
+  rule: A classic! Throw the balls of your color into the holes and finally the black ball!
+  modes: friend,bot
+  refName: Pool
 - id: carrom
   name: Carrom
   category: Sports
@@ -186,7 +204,10 @@ games:
   name: Sling Puck
   category: Sports
   archetype: turn-aim
-  confidence: research
+  confidence: observed
+  rule: Shoot all pucks into the opponent's side of the board to win
+  modes: friend,bot
+  refName: Sling Puck
 - id: soccer-pool
   name: Soccer Pool
   category: Sports
@@ -204,7 +225,10 @@ games:
   name: Basketball
   category: Sports
   archetype: turn-aim
-  confidence: genre
+  confidence: observed
+  rule: Hoop! Take the ball when it's in your half of the field and shoot. Until the ball bounces off the ground, the opponent can't touch it!
+  modes: friend,bot
+  refName: Basket Ball
 - id: golf-football
   name: Golf Football
   category: Sports
@@ -222,7 +246,10 @@ games:
   name: Sword Throwing
   category: Shooter
   archetype: turn-aim
-  confidence: research
+  confidence: observed
+  rule: Draw your sword and throw it towards the targets of your enemy. Hold it in your hand and move it to parry your opponents throws!
+  modes: friend,bot
+  refName: Sword Thrower
 - id: archery
   name: Archery
   category: Shooter
@@ -236,13 +263,21 @@ games:
   name: Archery Master
   category: Shooter
   archetype: turn-aim
-  confidence: genre
+  confidence: observed
   online: true
+  rule: Load your bow and hit 70 targets before your opponent!
+  modes: friend,bot
+  refName: Archery Master
 - id: target-practice
   name: Target Practice
   category: Shooter
   archetype: turn-aim
-  confidence: research
+  confidence: observed
+  rule: 'Shoot targets to score points. Small targets score double. First to 10 points wins.
+
+    Tap to start, then tap to aim up, then tap to fire.'
+  modes: friend,bot
+  refName: Target Practice
 - id: cannon-duel
   name: Cannon Duel
   category: Shooter
@@ -277,7 +312,10 @@ games:
   name: Air Hockey
   category: Sports
   archetype: rt-split
-  confidence: genre
+  confidence: observed
+  rule: Score in the opposing goal! Use your finger to move your paddle and get 3 goals!
+  modes: friend,bot
+  refName: Air Hockey
 - id: tennis
   name: Tennis
   category: Sports
@@ -345,7 +383,10 @@ games:
   name: Rock Paper Scissors
   category: Reaction
   archetype: rt-split
-  confidence: genre
+  confidence: observed
+  rule: Press the button of your choice before the hand stops. First to 3 wins.
+  modes: friend,bot
+  refName: Rock Paper Scissors
 - id: math-quiz
   name: Math Duel
   category: Reaction
@@ -497,7 +538,9 @@ games:
   was: Brainrot Stack
   confidence: observed
   modes: friend,bot,solo
-  rule: Take turns dropping objects onto a platform. Drag left and right to position and tap to rotate. The first player to drop one off the platform loses.
+  rule: Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop.
+  hasOptions: true
+  refName: Brainrot Stack
 - id: animal-stack
   name: Animal Stack
   category: Party
@@ -543,7 +586,10 @@ games:
   name: Stampede
   category: Platform
   archetype: rt-split
-  confidence: research
+  confidence: observed
+  rule: Look for dangers coming from the left or right and jump to avoid them
+  modes: friend,bot
+  refName: Stampede
 - id: spike-attacks
   name: Spike Attacks
   category: Survival
@@ -572,14 +618,20 @@ games:
   name: Sumo Push
   category: Arena
   archetype: rt-arena
-  confidence: genre
+  confidence: observed
   rename: true
   was: Sumo
+  rule: Tap as fast as you can to push out your opponent! Stay in the ring!
+  modes: friend,bot
+  refName: Sumo
 - id: wrestle
   name: Wrestle
   category: Arena
   archetype: rt-arena
-  confidence: research
+  confidence: observed
+  rule: Jump and try not to fall on your head. Try to push your opponent to the ground instead. Watch the wind!
+  modes: friend,bot
+  refName: Wrestle
 - id: king-of-the-yard
   name: King of the Yard
   category: Arena
@@ -608,7 +660,10 @@ games:
   name: Explosive Festival
   category: Arena
   archetype: rt-arena
-  confidence: research
+  confidence: observed
+  rule: Hit your opponent's side of the screen! Press to fire your rocket!
+  modes: friend,bot
+  refName: Explosive Festival
 - id: pinball
   name: Pinball Duel
   category: Arcade
@@ -644,14 +699,18 @@ games:
   name: Taxi Race
   category: Racing
   archetype: rt-race
-  confidence: research
+  confidence: observed
+  rule: Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up.
+  modes: friend,bot
+  refName: Taxi Race
 - id: slot-cars
   name: Slot Cars
   category: Racing
   archetype: rt-race
   confidence: observed
   modes: friend,bot
-  rule: Tap and hold to race the car around the laps. If flames appear, release in the curves to slow down or the car spins out.
+  rule: Tap the screen and race your car round the laps as fast as you can. But be careful, if flames come out of the car, you should slow down in the curves by taking your finger off the screen!
+  refName: Slot Cars
 - id: rat-race
   name: Rat Race
   category: Racing
@@ -680,7 +739,10 @@ games:
   name: Road Dodge
   category: Racing
   archetype: rt-race
-  confidence: research
+  confidence: observed
+  rule: Tap to steer left and right to dodge obstacles on the road
+  modes: friend,bot
+  refName: Road Dodge
 - id: traffic-jam
   name: Traffic Jam
   category: Puzzle
@@ -805,3 +867,19 @@ games:
   refName: Shuriken Bamboo
   modes: friend,bot
   rule: Cut the bamboo canes of your opponent! Grab the shuriken and throw it! Move your finger to add spin to your shot.
+- id: penalty-kicks
+  name: Penalty Kicks
+  category: Sports
+  archetype: rt-split
+  confidence: observed
+  refName: Penalty Kicks
+  modes: friend,bot
+  rule: Swipe your finger to dive or to kick the ball! First to 5 win!
+- id: snakes
+  name: Snake Clash
+  category: Racing & Trails
+  archetype: rt-arena
+  confidence: observed
+  refName: Snakes
+  modes: friend,bot
+  rule: Don't touch the other player's snake body! Move your finger to change direction and stay alive!
