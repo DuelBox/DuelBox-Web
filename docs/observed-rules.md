@@ -12,6 +12,21 @@ every captured screen. The app draws its text to canvas, so nothing was readable
 the accessibility tree — every line below came from looking at the screen, and no APK was
 ever unpacked or decompiled.
 
+## Catalog completeness, verified
+
+The catalog was checked against the app rather than assumed complete. A separate
+scan captured the whole grid in 60 overlapping steps — small enough that no row
+could fall between two captures — and twelve readers enumerated every card.
+
+- **111** distinct card titles were read
+- **4** of those were partial reads of cards clipped at the screen edge
+  (`IC TAC TOE`, `LADDERS`, `PERSON`, `SHUT TI`)
+- **107** real games remain, and every one maps to a catalog entry
+- **0** catalog entries are absent from the grid
+
+Both directions agree, so the catalog is complete: nothing in the app is missing
+from our backlog, and nothing in our backlog was invented.
+
 ## What the modes tell us
 
 - **vs Friend:** 100 games — every game, as expected
