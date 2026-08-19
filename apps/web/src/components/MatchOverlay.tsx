@@ -107,13 +107,18 @@ export function MatchOverlay({
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
               Rematch
             </button>
+            {/* prefetch={false} on both links here: the Next router otherwise warms these
+                routes' chunks while a match is running, downloading another game's code
+                during play for a link the player may never take. A match should need
+                nothing from the network, and `e2e/offline.spec.ts` asserts exactly that —
+                which is how this was found. */}
             {nextGame ? (
-              <Link className={styles.secondary} href={`/play/${nextGame.slug}`}>
+              <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
                 Play {nextGame.name}
               </Link>
             ) : null}
           </div>
-          <Link className={styles.back} href="/games">
+          <Link className={styles.back} href="/games" prefetch={false}>
             Back to all games
           </Link>
         </Panel>
