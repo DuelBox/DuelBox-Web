@@ -30,6 +30,9 @@
     },
     {
       "path": "./packages/games/dots-and-boxes"
+    },
+    {
+      "path": "./packages/games/reversi"
     }
   ]
 }

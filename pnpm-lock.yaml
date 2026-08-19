@@ -67,6 +67,9 @@ importers:
       '@duelbox/game-pull-the-rope':
         specifier: workspace:*
         version: link:../../packages/games/pull-the-rope
+      '@duelbox/game-reversi':
+        specifier: workspace:*
+        version: link:../../packages/games/reversi
       '@duelbox/game-sdk':
         specifier: workspace:*
         version: link:../../packages/game-sdk
@@ -144,6 +147,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/pull-the-rope:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/reversi:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
