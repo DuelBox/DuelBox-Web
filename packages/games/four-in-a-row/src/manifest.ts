@@ -5,7 +5,7 @@ export const manifest = parseGameManifest({
   name: 'Drop Four',
   category: 'Board',
   archetype: 'turn-board',
-  modes: ["friend","bot"],
+  modes: ['friend', 'bot'],
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: 900, height: 900 },
   orientation: 'any',

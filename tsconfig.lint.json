@@ -10,5 +10,5 @@
       "@/*": ["./apps/web/src/*"]
     }
   },
-  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "*.ts", "*.js"]
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "*.ts", "*.js", "e2e/**/*.ts"]
 }

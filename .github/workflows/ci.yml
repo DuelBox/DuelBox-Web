@@ -31,6 +31,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      # Smoke-test the real static artefact, not a dev server, so a green run is
+      # evidence the deployed site works.
+      - run: npx playwright install --with-deps chromium
+      - run: pnpm e2e --project=chromium
 
   audit:
     runs-on: ubuntu-latest

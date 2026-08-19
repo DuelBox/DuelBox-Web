@@ -1,12 +1,15 @@
-import type { GameModule } from '@duelbox/game-sdk';
+import type { Game, GameModule } from '@duelbox/game-sdk';
+import { PullTheRopeGame } from './game.js';
 import { manifest } from './manifest.js';
-import { PulltheRopeGame } from './game.js';
 
-export const gameModule: GameModule = {
-  manifest,
-  create: () => new PulltheRopeGame(),
-};
+function create(): Game {
+  return new PullTheRopeGame();
+}
+
+export const gameModule: GameModule = { manifest, create };
+
+export { manifest };
+export { PullTheRopeGame, TUG_STEPS } from './game.js';
+export * from './rules.js';
 
 export default gameModule;
-export { manifest };
-export * from './rules.js';

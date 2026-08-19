@@ -20,7 +20,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const ARCHETYPE_DEFAULTS = {
   'turn-board': { logical: [900, 900], zoneSplit: 'shared-board', orientation: 'any', round: 90 },
-  'turn-aim': { logical: [700, 1000], zoneSplit: 'shared-board', orientation: 'portrait', round: 90 },
+  'turn-aim': {
+    logical: [700, 1000],
+    zoneSplit: 'shared-board',
+    orientation: 'portrait',
+    round: 90,
+  },
   'rt-split': { logical: [600, 1000], zoneSplit: 'horizontal', orientation: 'portrait', round: 60 },
   'rt-arena': { logical: [800, 800], zoneSplit: 'shared-board', orientation: 'any', round: 40 },
   'rt-race': { logical: [600, 1000], zoneSplit: 'horizontal', orientation: 'portrait', round: 75 },
@@ -41,7 +46,8 @@ if (existsSync(target)) fail(`packages/games/${id} already exists`);
 // Read the game's row out of the generated catalogue rather than re-implementing a YAML
 // parser here. `pnpm catalogue` regenerates it from data/catalog.yaml.
 const cataloguePath = join(ROOT, 'data', 'catalog.generated.json');
-if (!existsSync(cataloguePath)) fail('run `pnpm catalogue` first to generate data/catalog.generated.json');
+if (!existsSync(cataloguePath))
+  fail('run `pnpm catalogue` first to generate data/catalog.generated.json');
 const catalogue = JSON.parse(readFileSync(cataloguePath, 'utf8'));
 const entry = catalogue.games.find((game) => game.id === id);
 

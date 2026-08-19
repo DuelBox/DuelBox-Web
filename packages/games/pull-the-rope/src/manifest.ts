@@ -5,7 +5,7 @@ export const manifest = parseGameManifest({
   name: 'Pull the Rope',
   category: 'Party',
   archetype: 'rt-split',
-  modes: ["friend","bot"],
+  modes: ['friend', 'bot'],
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: 600, height: 1000 },
   orientation: 'portrait',

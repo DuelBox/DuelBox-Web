@@ -59,3 +59,20 @@
   font-size: var(--db-text-xs);
   color: var(--db-faint);
 }
+
+/* Only a handful of the 107 are playable today; the badge is how a visitor tells at a
+   glance, rather than discovering it after a click. */
+.playable {
+  position: absolute;
+  right: var(--db-space-2);
+  top: var(--db-space-2);
+  padding: 2px 8px;
+  border-radius: var(--db-radius-pill);
+  background: var(--db-brand);
+  color: #fff;
+  font-family: var(--db-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

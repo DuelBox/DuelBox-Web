@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { CatalogueEntry } from '@/data/catalogue.generated';
+import { isPlayable } from '@/data/registry';
 import { GameTile } from './GameTile';
 import styles from './GameCard.module.css';
 
@@ -10,14 +11,16 @@ const MODE_LABEL: Record<string, string> = {
 };
 
 export function GameCard({ game }: { game: CatalogueEntry }) {
+  const playable = isPlayable(game.slug);
   return (
-    <Link href={`/games/${game.slug}/`} className={styles.card}>
+    <Link href={playable ? `/play/${game.slug}/` : `/games/${game.slug}/`} className={styles.card}>
       <div className={styles.art}>
         <GameTile tint={game.tint} mark={game.mark} name={game.name} />
         <span className={styles.seats} aria-hidden="true">
           <i className={styles.p1} />
           <i className={styles.p2} />
         </span>
+        {playable ? <span className={styles.playable}>Play</span> : null}
       </div>
       <span className={styles.name}>{game.name}</span>
       <span className={styles.meta}>

@@ -19,6 +19,11 @@ type Loader = () => Promise<LoadedGame>;
 const LOADERS: Record<string, Loader> = {
   'tic-tac-toe': () => import('@duelbox/game-tic-tac-toe').then((m) => m.default),
   'air-hockey': () => import('@duelbox/game-air-hockey').then((m) => m.default),
+  'four-in-a-row': () => import('@duelbox/game-four-in-a-row').then((m) => m.default),
+  'sumo': () => import('@duelbox/game-sumo').then((m) => m.default),
+  'memory': () => import('@duelbox/game-memory').then((m) => m.default),
+  'pull-the-rope': () => import('@duelbox/game-pull-the-rope').then((m) => m.default),
+  'whack-a-mole': () => import('@duelbox/game-whack-a-mole').then((m) => m.default),
 };
 
 /** Slugs that are actually playable today, for the catalogue to mark. */

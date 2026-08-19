@@ -12,6 +12,21 @@
     },
     {
       "path": "./packages/games/air-hockey"
+    },
+    {
+      "path": "./packages/games/four-in-a-row"
+    },
+    {
+      "path": "./packages/games/sumo"
+    },
+    {
+      "path": "./packages/games/memory"
+    },
+    {
+      "path": "./packages/games/pull-the-rope"
+    },
+    {
+      "path": "./packages/games/whack-a-mole"
     }
   ]
 }
