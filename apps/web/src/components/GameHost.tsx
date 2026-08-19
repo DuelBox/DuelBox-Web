@@ -14,8 +14,9 @@ import {
   viewportToLogical,
   vec2,
   type SafeAreaInsets,
+  type SeatId,
 } from '@duelbox/engine';
-import type { Game, GameContext, GameManifest } from '@duelbox/game-sdk';
+import { isSimulating, type Game, type GameContext, type GameManifest, type MatchPhase } from '@duelbox/game-sdk';
 import styles from './GameHost.module.css';
 
 /**
@@ -25,33 +26,64 @@ import styles from './GameHost.module.css';
  * host owns the canvas, the resize observer, the pointer and key listeners, the fixed
  * loop and the renderer. A game receives a fixed delta and a normalised input state, and
  * draws in logical units.
+ *
+ * The host does not decide when a match is running — it is told, through `phase`. That
+ * keeps one answer to "is the simulation moving" (the match machine's) rather than two
+ * that can disagree.
  */
 
 export interface GameHostProps {
   manifest: GameManifest;
   createGame: () => Game;
   seed: number;
+  /** The match machine's current phase. The host steps the game only while playing. */
+  phase: MatchPhase;
   /** Which seat this device plays. Only meaningful in single-seat presentation. */
-  localSeat?: 'p1' | 'p2';
+  localSeat?: SeatId;
   presentation?: 'shared-screen' | 'single-seat';
-  botDifficulty?: Partial<Record<'p1' | 'p2', 'easy' | 'normal' | 'hard'>>;
-  onScore?: (p1: number, p2: number, winner: 'p1' | 'p2' | 'draw' | null) => void;
+  botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
+  /**
+   * One fixed simulation step elapsed. Fires in every running phase, including the
+   * countdown, so the shell's clock advances on the same timestep as the physics rather
+   * than on a separate wall-clock timer that two devices would disagree about.
+   */
+  onTick?: (fixedDeltaSeconds: number) => void;
+  onScore?: (p1: number, p2: number, winner: SeatId | 'draw' | null) => void;
+  onActiveSeat?: (seat: SeatId | null) => void;
+  /** The window went away. The shell decides what that means; the host never pauses itself. */
+  onRequestPause?: () => void;
 }
 
 export function GameHost({
   manifest,
   createGame,
   seed,
+  phase,
   localSeat = 'p1',
   presentation = 'shared-screen',
   botDifficulty,
+  onTick,
   onScore,
+  onActiveSeat,
+  onRequestPause,
 }: GameHostProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  // The latest onScore without re-running the effect; re-creating the loop on every
-  // parent render would restart the match.
+  const runnerRef = useRef<RunLoop | null>(null);
+  const loopRef = useRef<FixedLoop | null>(null);
+  const gameRef = useRef<Game | null>(null);
+
+  // Callbacks and phase are read through refs so changing any of them never re-runs the
+  // setup effect: doing so would tear down the canvas and restart the match mid-play.
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
   const onScoreRef = useRef(onScore);
   onScoreRef.current = onScore;
+  const onActiveSeatRef = useRef(onActiveSeat);
+  onActiveSeatRef.current = onActiveSeat;
+  const onRequestPauseRef = useRef(onRequestPause);
+  onRequestPauseRef.current = onRequestPause;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,6 +100,7 @@ export function GameHost({
     });
 
     const game = createGame();
+    gameRef.current = game;
     const gameContext: GameContext = {
       manifest,
       rng: new Rng(seed),
@@ -110,11 +143,15 @@ export function GameHost({
     }
 
     function onPointerDown(event: PointerEvent): void {
+      // A touch that lands while the board is frozen must not be queued up and fired the
+      // instant play resumes.
+      if (!isSimulating(phaseRef.current)) return;
       el.setPointerCapture(event.pointerId);
       const point = toLogical(event);
       input.pointerDown(event.pointerId, point.x, point.y);
     }
     function onPointerMove(event: PointerEvent): void {
+      if (!isSimulating(phaseRef.current)) return;
       const point = toLogical(event);
       input.pointerMove(event.pointerId, point.x, point.y);
     }
@@ -124,6 +161,7 @@ export function GameHost({
     function onKeyDown(event: KeyboardEvent): void {
       // Escape belongs to the shell's pause menu, so it is never swallowed here.
       if (event.code === 'Escape') return;
+      if (!isSimulating(phaseRef.current)) return;
       input.keyDown(event.code);
       if (SCROLL_KEYS.has(event.code)) event.preventDefault();
     }
@@ -133,6 +171,7 @@ export function GameHost({
     function onBlur(): void {
       // Otherwise a player returns to a stuck direction.
       input.clear();
+      onRequestPauseRef.current?.();
     }
 
     el.addEventListener('pointerdown', onPointerDown);
@@ -145,15 +184,29 @@ export function GameHost({
 
     let lastP1 = -1;
     let lastP2 = -1;
+    let lastSeat: SeatId | null | undefined;
 
     const loop = new FixedLoop({
       update(dt) {
+        // The shell's clock runs in every live phase; the simulation only while playing.
+        onTickRef.current?.(dt);
+        if (!isSimulating(phaseRef.current)) {
+          // Input still has to be drained, or a key held through a countdown arrives as
+          // a fresh press on the first simulated step.
+          input.beginStep(dt);
+          return;
+        }
         game.update(dt, inputView.sync(input.beginStep(dt)));
         const score = game.getScore();
         if (score.p1 !== lastP1 || score.p2 !== lastP2) {
           lastP1 = score.p1;
           lastP2 = score.p2;
           onScoreRef.current?.(score.p1, score.p2, score.winner);
+        }
+        const seat = game.getActiveSeat?.() ?? null;
+        if (seat !== lastSeat) {
+          lastSeat = seat;
+          onActiveSeatRef.current?.(seat);
         }
       },
       render(alpha) {
@@ -162,25 +215,23 @@ export function GameHost({
         renderer.endFrame();
       },
     });
+    loopRef.current = loop;
 
     const runner = new RunLoop(loop, browserClock());
-    runner.start();
+    runnerRef.current = runner;
 
     function onVisibility(): void {
-      // Tab-switching must not fast-forward the accumulator, and a paused match must not
-      // keep burning battery.
-      if (document.hidden) {
-        runner.stop();
-        game.onPause();
-      } else {
-        game.onResume();
-        runner.start();
-      }
+      // Tab-switching must not fast-forward the accumulator, and a hidden match must not
+      // keep burning battery. The shell is told; it owns the decision.
+      if (document.hidden) onRequestPauseRef.current?.();
     }
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       runner.stop();
+      runnerRef.current = null;
+      loopRef.current = null;
+      gameRef.current = null;
       observer.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       el.removeEventListener('pointerdown', onPointerDown);
@@ -193,6 +244,24 @@ export function GameHost({
       game.destroy();
     };
   }, [manifest, createGame, seed, localSeat, presentation, botDifficulty]);
+
+  // Start and stop with the phase. Separate from setup so pausing never rebuilds the game.
+  useEffect(() => {
+    const runner = runnerRef.current;
+    const game = gameRef.current;
+    if (!runner || !game) return;
+    const live = phase === 'countdown' || phase === 'playing';
+    if (live) {
+      // The time spent paused is not owed to the simulation; without this the first
+      // frame back would try to catch it all up at once.
+      loopRef.current?.reset();
+      game.onResume();
+      runner.start();
+    } else {
+      runner.stop();
+      game.onPause();
+    }
+  }, [phase]);
 
   return <canvas ref={canvasRef} className={styles.canvas} aria-label={`${manifest.name} board`} />;
 }

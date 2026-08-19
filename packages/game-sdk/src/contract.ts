@@ -51,6 +51,12 @@ export interface Game {
   onPause(): void;
   onResume(): void;
   getScore(): MatchScore;
+  /**
+   * Whose turn it is, for the shell's turn indicator and seat flip. Optional because a
+   * real-time game has no turns; returning null means the same thing. A game that
+   * answers this never draws its own turn banner — the shell owns that, once.
+   */
+  getActiveSeat?(): SeatId | null;
   /** Release every listener, timer and buffer. The shell asserts no heap growth. */
   destroy(): void;
 }

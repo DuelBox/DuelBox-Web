@@ -285,6 +285,11 @@ export class MemoryMatchGame implements Game {
     return { p1: this.#tally.p1, p2: this.#tally.p2, winner: this.#winner };
   }
 
+  /** Whose turn it is. The shell's HUD draws the turn indicator from this. */
+  getActiveSeat(): SeatId {
+    return this.#active;
+  }
+
   destroy(): void {
     this.#clearTable();
     forgetAll(this.#memoryP1);

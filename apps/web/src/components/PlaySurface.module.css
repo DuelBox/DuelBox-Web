@@ -26,6 +26,7 @@
 }
 
 .board {
+  position: relative;
   width: 100%;
   max-width: 34rem;
   aspect-ratio: 3 / 5;

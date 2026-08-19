@@ -19,5 +19,22 @@ export type {
   MatchScore,
 } from './contract.js';
 
+export {
+  reduce,
+  canSend,
+  legalEvents,
+  initialMatchState,
+  roundsToWin,
+  isSimulating,
+  isBoardVisible,
+} from './match.js';
+export type {
+  MatchPhase,
+  MatchEvent,
+  MatchEventKind,
+  MatchRules,
+  MatchState,
+} from './match.js';
+
 export { resolve, resolveSimultaneous } from './win-conditions.js';
 export type { WinCondition, Outcome, Tally } from './win-conditions.js';

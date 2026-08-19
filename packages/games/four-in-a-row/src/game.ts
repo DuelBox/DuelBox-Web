@@ -290,6 +290,11 @@ export class DropFourGame implements Game {
     return this.#score;
   }
 
+  /** Whose turn it is. The shell's HUD draws the turn indicator from this. */
+  getActiveSeat(): SeatId {
+    return this.#active;
+  }
+
   destroy(): void {
     this.#resetRound('p1');
     this.#score.p1 = 0;

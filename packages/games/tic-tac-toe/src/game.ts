@@ -216,6 +216,11 @@ export class TicTacToeGame implements Game {
     return { p1: this.#tally.p1, p2: this.#tally.p2, winner: this.#matchWinner };
   }
 
+  /** Whose turn it is. The shell's HUD draws the turn indicator from this. */
+  getActiveSeat(): SeatId {
+    return this.#active;
+  }
+
   destroy(): void {
     this.#resetRound('p1');
     this.#tally.p1 = 0;
