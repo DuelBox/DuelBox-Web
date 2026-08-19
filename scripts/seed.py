@@ -104,6 +104,15 @@ def game_issues(catalog: dict, tpl: dict) -> list[dict]:
         if game.get("confidence") == "research":
             note += ("\n\n> Mechanics for this game are not yet confirmed. The "
                      "research issue must be closed before the spec issue starts.")
+        if game.get("rule"):
+            note += (f"\n\n**Observed rules**\n\n{game['rule']}\n\n"
+                     f"Recorded by playing the reference game. This describes the "
+                     f"mechanics we reimplement from scratch; our own copy, art, and "
+                     f"layout are original.")
+        if game.get("modes"):
+            pretty = {"friend": "vs Friend", "bot": "vs Bot", "solo": "Solo"}
+            modes = ", ".join(pretty.get(m, m) for m in game["modes"].split(","))
+            note += f"\n\n**Play modes observed:** {modes}"
 
         parent_footer = f"---\n`game:{gid}` · `{game.get('archetype')}` · `{game.get('category')}`"
         out.append({
