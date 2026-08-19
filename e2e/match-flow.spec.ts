@@ -120,3 +120,37 @@ test.describe('playing against the bot', () => {
     });
   });
 });
+
+test.describe('remembering how you last played', () => {
+  test('offers the mode you used last first, without starting it', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    // Default order puts "together" first.
+    const buttons = page.getByRole('button', { name: /Play (together here|against)/ });
+    await expect(buttons.first()).toHaveText('Play together here');
+
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    await page.getByRole('button', { name: 'Quit match' }).click();
+
+    // Having chosen the bot, the bot now leads — but nothing has auto-started.
+    await expect(buttons.first()).toHaveText('Play against Bo');
+    await expect(page.locator('canvas')).toHaveCount(0);
+  });
+
+  test('the choice survives a reload', async ({ page }) => {
+    await page.goto('/play/air-hockey/');
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.reload();
+    const buttons = page.getByRole('button', { name: /Play (together here|against)/ });
+    await expect(buttons.first()).toHaveText('Play against Bo');
+  });
+
+  test('is remembered per game rather than globally', async ({ page }) => {
+    await page.goto('/play/air-hockey/');
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    // A different game is unaffected by that choice.
+    await page.goto('/play/tic-tac-toe/');
+    const buttons = page.getByRole('button', { name: /Play (together here|against)/ });
+    await expect(buttons.first()).toHaveText('Play together here');
+  });
+});

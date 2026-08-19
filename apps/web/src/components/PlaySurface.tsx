@@ -13,6 +13,7 @@ import {
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { seatColour } from '@/styles/tokens';
+import { readLastMode, writeLastMode } from '@/lib/last-mode';
 import { GameHost } from './GameHost';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
@@ -119,12 +120,18 @@ export function PlaySurface({ slug }: { slug: string }) {
     send({ kind: 'pause' });
   }, []);
 
-  const start = useCallback((chosen: Mode) => {
-    setMode(chosen);
-    setActiveSeat(null);
-    setSeed((previous) => previous + 1);
-    send({ kind: 'start' });
-  }, []);
+  const start = useCallback(
+    (chosen: Mode) => {
+      // Remembered as a default for next time, never as a decision: reopening this game
+      // pre-selects what you last chose, it does not start it.
+      writeLastMode(slug, chosen);
+      setMode(chosen);
+      setActiveSeat(null);
+      setSeed((previous) => previous + 1);
+      send({ kind: 'start' });
+    },
+    [slug],
+  );
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
@@ -157,32 +164,31 @@ export function PlaySurface({ slug }: { slug: string }) {
   }
 
   if (match.phase === 'idle' || mode === null) {
+    const remembered = readLastMode(slug);
+    const offered = manifest.modes.filter((m): m is Mode => m === 'friend' || m === 'bot');
+    // The remembered mode leads, so the button under the player's thumb is the one they
+    // used last. Order, not preselection — nothing starts without a deliberate press.
+    const ordered = [...offered].sort((a, b) => {
+      if (a === remembered) return -1;
+      if (b === remembered) return 1;
+      return 0;
+    });
     return (
       <div className={styles.state}>
         <h2>{manifest.name}</h2>
         <div className={styles.modes}>
-          {manifest.modes.includes('friend') ? (
+          {ordered.map((offer, index) => (
             <button
+              key={offer}
               type="button"
-              className={styles.primary}
+              className={index === 0 ? styles.primary : styles.secondary}
               onClick={() => {
-                start('friend');
+                start(offer);
               }}
             >
-              Play together here
+              {offer === 'friend' ? 'Play together here' : `Play against ${seatColour.p2.name}`}
             </button>
-          ) : null}
-          {manifest.modes.includes('bot') ? (
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => {
-                start('bot');
-              }}
-            >
-              Play against {seatColour.p2.name}
-            </button>
-          ) : null}
+          ))}
         </div>
         <Controls manifest={manifest} />
       </div>
