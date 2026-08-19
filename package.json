@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @duelbox/web dev",
-    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build",
+    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost",
     "typecheck": "tsc --build && tsc --noEmit -p tsconfig.lint.json && pnpm --filter @duelbox/web typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -21,7 +21,8 @@
     "create-game": "node scripts/create-game.mjs",
     "catalogue": "python3 scripts/generate_catalog.py",
     "e2e": "playwright test",
-    "validate:manifests": "node scripts/validate-manifests.mjs"
+    "validate:manifests": "node scripts/validate-manifests.mjs",
+    "check:zero-cost": "node scripts/check-zero-cost.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

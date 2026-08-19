@@ -30,6 +30,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # `pnpm build` runs the manifest validator and the zero-cost guard as its own steps.
       - run: pnpm build
       # Smoke-test the real static artefact, not a dev server, so a green run is
       # evidence the deployed site works.
