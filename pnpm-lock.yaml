@@ -55,6 +55,9 @@ importers:
       '@duelbox/game-air-hockey':
         specifier: workspace:*
         version: link:../../packages/games/air-hockey
+      '@duelbox/game-dots-and-boxes':
+        specifier: workspace:*
+        version: link:../../packages/games/dots-and-boxes
       '@duelbox/game-four-in-a-row':
         specifier: workspace:*
         version: link:../../packages/games/four-in-a-row
@@ -105,6 +108,15 @@ importers:
         version: 3.25.76
 
   packages/games/air-hockey:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/dots-and-boxes:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

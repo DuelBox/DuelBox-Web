@@ -24,6 +24,7 @@ const LOADERS: Record<string, Loader> = {
   'memory': () => import('@duelbox/game-memory').then((m) => m.default),
   'pull-the-rope': () => import('@duelbox/game-pull-the-rope').then((m) => m.default),
   'whack-a-mole': () => import('@duelbox/game-whack-a-mole').then((m) => m.default),
+  'dots-and-boxes': () => import('@duelbox/game-dots-and-boxes').then((m) => m.default),
 };
 
 /**

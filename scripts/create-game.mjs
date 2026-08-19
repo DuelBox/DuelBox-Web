@@ -120,6 +120,13 @@ export const manifest = parseGameManifest({
   orientation: '${defaults.orientation}',
   zoneSplit: '${defaults.zoneSplit}',
   roundSeconds: ${String(entry?.roundSeconds ?? defaults.round)},
+  // Required, and deliberately not optional: the shell shows this before the match and
+  // again from the pause menu, so a game without it would advertise nothing to a player
+  // holding a keyboard. Written for a player rather than as a spec.
+  controls: {
+    keyboard: 'TODO: which keys do what, for both seats',
+    pointer: 'TODO: the pointer idiom, or empty if this archetype has none',
+  },
   tags: [],
 });
 `,

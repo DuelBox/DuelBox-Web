@@ -27,6 +27,9 @@
     },
     {
       "path": "./packages/games/whack-a-mole"
+    },
+    {
+      "path": "./packages/games/dots-and-boxes"
     }
   ]
 }

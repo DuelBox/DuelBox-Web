@@ -21,7 +21,8 @@
     "@duelbox/game-sumo": "workspace:*",
     "@duelbox/game-memory": "workspace:*",
     "@duelbox/game-pull-the-rope": "workspace:*",
-    "@duelbox/game-whack-a-mole": "workspace:*"
+    "@duelbox/game-whack-a-mole": "workspace:*",
+    "@duelbox/game-dots-and-boxes": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",

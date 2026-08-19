@@ -51,6 +51,16 @@ a:hover {
   border-radius: 4px;
 }
 
+/* The board is focusable so it can hold focus during play and the seats' action keys
+   reach the game rather than a leftover button. It must not show a focus ring for that:
+   the ring is a wayfinding aid for a keyboard user moving through controls, and the board
+   is not a control they moved to — the shell focused it for them. Escape and Tab both
+   still work, so nobody is trapped. */
+canvas:focus,
+canvas:focus-visible {
+  outline: none;
+}
+
 /* The canvas owns its gestures. Scoped here rather than globally so the rest of the
    site keeps pull-to-refresh, pinch zoom and text selection.
 
