@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #0f62fe; } a:hover { color: #4589ff; }
+  </style>
+</helmet>
+<div style="width: 620px; height: 700px; background: #f4f4f2; color: #161616; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 22px 26px 14px; display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: #6f6f6f;">DIRECTION D</div>
+    <div style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em;">The Ledger</div>
+    <div style="font-size: 13px; line-height: 1.5; color: #525252; max-width: 480px;">Every match is a record. Hairline rules, monospaced figures, a running head-to-head tally treated like a scoresheet. Utilitarian and confident — the opposite of a cartoon, and the easiest to read on a cheap phone.</div>
+  </div>
+
+  <div style="flex: 1; margin: 4px 26px 0; border: 1px solid #16161620; background: #ffffff; overflow: hidden; display: flex; flex-direction: column;">
+    <div style="display: flex; border-bottom: 1px solid #16161620; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6f6f6f;">
+      <div style="flex: 1; padding: 9px 12px;">MATCH</div>
+      <div style="width: 92px; padding: 9px 12px; border-left: 1px solid #16161612;">RAVI</div>
+      <div style="width: 92px; padding: 9px 12px; border-left: 1px solid #16161612;">MEERA</div>
+    </div>
+    <sc-for list="{{rows}}" as="row" hint-placeholder-count="6">
+      <div style="display: flex; border-bottom: 1px solid #16161612; font-size: 13px;">
+        <div style="flex: 1; padding: 11px 12px;">{{row.game}}</div>
+        <div style="width: 92px; padding: 11px 12px; border-left: 1px solid #16161612; font-family: 'IBM Plex Mono', monospace; color: #b8331f;">{{row.a}}</div>
+        <div style="width: 92px; padding: 11px 12px; border-left: 1px solid #16161612; font-family: 'IBM Plex Mono', monospace; color: #0f62fe;">{{row.b}}</div>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; display: flex; border-top: 2px solid #161616; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600;">
+      <div style="flex: 1; padding: 12px;">TOTAL</div>
+      <div style="width: 92px; padding: 12px; border-left: 1px solid #16161612; color: #b8331f;">4</div>
+      <div style="width: 92px; padding: 12px; border-left: 1px solid #16161612; color: #0f62fe;">2</div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 0; padding: 16px 26px 8px; border-top: 0;">
+    <div style="flex: 1; height: 54px; border: 1px solid #16161620; border-right: 0; background: #fff;"></div>
+    <div style="flex: 1; height: 54px; border: 1px solid #16161620; border-right: 0; background: #fff;"></div>
+    <div style="flex: 1; height: 54px; border: 1px solid #16161620; border-right: 0; background: #fff;"></div>
+    <div style="flex: 1; height: 54px; border: 1px solid #16161620; background: #fff;"></div>
+  </div>
+
+  <div style="padding: 10px 26px 22px; display: flex; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #6f6f6f;">
+    <div><span style="color: #525252;">TYPE</span> &nbsp;IBM Plex Sans / Mono</div>
+    <div><span style="color: #525252;">RISK</span> &nbsp;Could read as austere</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rows: [
+        { game: 'Mini Golf', a: '2', b: '0' },
+        { game: 'Air Hockey', a: '0', b: '1' },
+        { game: 'Drop Four', a: '1', b: '0' },
+        { game: 'Quick Draw', a: '0', b: '1' },
+        { game: 'Sumo Push', a: '1', b: '0' },
+        { game: 'Spin War', a: '—', b: '—' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

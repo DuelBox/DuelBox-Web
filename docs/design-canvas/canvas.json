@@ -1,0 +1,134 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Screens"
+    },
+    {
+      "id": "page-2",
+      "name": "Directions"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1200,
+      "h": 900,
+      "title": "Landing"
+    },
+    {
+      "file": "Catalog.dc.html",
+      "page": "page-1",
+      "x": 1280,
+      "y": 0,
+      "w": 1200,
+      "h": 900,
+      "title": "Browse 107 games"
+    },
+    {
+      "file": "PreMatch.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 980,
+      "w": 1200,
+      "h": 820,
+      "title": "Pre-match"
+    },
+    {
+      "file": "Pairing.dc.html",
+      "page": "page-1",
+      "x": 1280,
+      "y": 980,
+      "w": 1080,
+      "h": 700,
+      "title": "Pairing two devices"
+    },
+    {
+      "file": "Match.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 1880,
+      "w": 1080,
+      "h": 820,
+      "title": "In-match HUD"
+    },
+    {
+      "file": "Tournament.dc.html",
+      "page": "page-1",
+      "x": 1160,
+      "y": 1880,
+      "w": 1080,
+      "h": 760,
+      "title": "Tournament"
+    },
+    {
+      "file": "DirA-Seam.dc.html",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 620,
+      "h": 700,
+      "title": "A \u00b7 The Seam"
+    },
+    {
+      "file": "DirB-Cabinet.dc.html",
+      "page": "page-2",
+      "x": 680,
+      "y": 0,
+      "w": 620,
+      "h": 700,
+      "title": "B \u00b7 Cabinet"
+    },
+    {
+      "file": "DirC-Table.dc.html",
+      "page": "page-2",
+      "x": 1360,
+      "y": 0,
+      "w": 620,
+      "h": 700,
+      "title": "C \u00b7 The Table"
+    },
+    {
+      "file": "DirD-Ledger.dc.html",
+      "page": "page-2",
+      "x": 2040,
+      "y": 0,
+      "w": 620,
+      "h": 700,
+      "title": "D \u00b7 The Ledger"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "read-me",
+      "x": 0,
+      "y": -230,
+      "w": 620,
+      "text": "DuelBox \u2014 website and in-game GUI.\n\nThese six screens are drawn in Direction C, The Table: the device is the surface you both sit at, so the split between you is a physical fact rather than a graphic device.\n\nThe other three directions are on the Directions page. If you would rather go another way, say which and I will redraw these in it.",
+      "page": "page-1"
+    },
+    {
+      "id": "not-a-clone",
+      "x": 700,
+      "y": -230,
+      "w": 560,
+      "text": "Deliberately unlike the reference app: a serif display face instead of a rounded cartoon sans, warm inked surfaces instead of flat primaries, a brass centre rule instead of edge score pills, a category-led browse with search instead of one long scroll, and a dealt hand of cards instead of a node track for the tournament.",
+      "page": "page-1"
+    },
+    {
+      "id": "pick-one",
+      "x": 0,
+      "y": -180,
+      "w": 700,
+      "text": "Four directions, one axis each. C is recommended and is what the Screens page is drawn in \u2014 but the choice is yours, and the other three are real options, not strawmen. Each names its own risk.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

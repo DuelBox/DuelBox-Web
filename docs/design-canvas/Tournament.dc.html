@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c9852f; text-decoration: none; } a:hover { color: #e0a04d; }
+  </style>
+</helmet>
+<div style="width: 1080px; height: 760px; background: #14100d; color: #f0e9de; font-family: 'Instrument Sans', system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div style="padding: 26px 44px 6px; display: flex; align-items: baseline; gap: 14px;">
+    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 34px;">The Seven</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: #8a7a66;">GAME 5 OF 7</div>
+    <div style="margin-left: auto; font-size: 13.5px; color: #a89a86;">Best of seven, dealt at random. Win four and it is over.</div>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: center; gap: 30px; padding: 16px 44px 6px;">
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+      <div style="font-size: 15px;">Ravi</div>
+      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 58px; line-height: 1; color: #d96a44;">3</div>
+    </div>
+    <div style="width: 1px; height: 66px; background: #c9852f66;"></div>
+    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+      <div style="font-size: 15px;">Meera</div>
+      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 58px; line-height: 1; color: #3aa88c;">1</div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 11px; padding: 20px 44px 8px;">
+    <sc-for list="{{hand}}" as="c" hint-placeholder-count="7">
+      <div style="flex: 1; height: 218px; border-radius: 8px; background: {{c.bg}}; border: 1px solid {{c.border}}; padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: {{c.meta}};">{{c.n}}</div>
+        <div style="font-size: 14.5px; font-weight: 500; color: {{c.fg}}; line-height: 1.25;">{{c.name}}</div>
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 7px;">
+          <div style="width: 9px; height: 9px; border-radius: 50%; background: {{c.dot}};"></div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{c.meta}};">{{c.result}}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="padding: 14px 44px 0; display: flex; align-items: center; gap: 16px;">
+    <div style="flex: 1; height: 4px; border-radius: 2px; background: #2e2418; overflow: hidden; display: flex;">
+      <div style="width: 43%; background: #d96a44;"></div>
+      <div style="width: 14%; background: #3aa88c;"></div>
+    </div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8a7a66;">4 PLAYED &nbsp;·&nbsp; 3 TO DEAL</div>
+  </div>
+
+  <div style="margin: 22px 44px 0; padding: 22px 26px; border: 1px solid #4a3b28; border-radius: 6px; background: #1d1710; display: flex; align-items: center; gap: 22px;">
+    <div style="width: 78px; height: 106px; border-radius: 6px; background: #f0e9de; box-shadow: 0 8px 20px rgba(0,0,0,0.45); padding: 10px; display: flex; flex-direction: column; justify-content: flex-end;">
+      <div style="height: 30px; border-radius: 3px; background: #e3d9c8;"></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #c9852f;">NEXT</div>
+      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 30px;">Sumo Push</div>
+      <div style="font-size: 13.5px; color: #a89a86;">Shove them off the platform. About thirty seconds.</div>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 10px;">
+      <div style="padding: 12px 18px; border: 1px solid #2e2418; border-radius: 3px; font-size: 13.5px; color: #a89a86;">Deal another</div>
+      <div style="padding: 12px 26px; background: #c9852f; color: #14100d; border-radius: 3px; font-size: 14.5px; font-weight: 600;">Play</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    const won  = { bg: '#33241c', border: '#7a4830', fg: '#f0e9de', meta: '#c08f78', dot: '#d96a44' };
+    const lost = { bg: '#1b2b26', border: '#2f6455', fg: '#f0e9de', meta: '#7f9b8c', dot: '#3aa88c' };
+    const next = { bg: '#231b12', border: '#c9852f', fg: '#f0e9de', meta: '#c9852f', dot: '#c9852f' };
+    const face = { bg: '#1a1510', border: '#3a3025', fg: '#b3a48d', meta: '#9a8a74', dot: '#5c5140' };
+    return {
+      hand: [
+        { ...won,  n: 'ONE',   name: 'Mini Golf',  result: 'RAVI' },
+        { ...lost, n: 'TWO',   name: 'Air Hockey', result: 'MEERA' },
+        { ...won,  n: 'THREE', name: 'Drop Four',  result: 'RAVI' },
+        { ...won,  n: 'FOUR',  name: 'Quick Draw', result: 'RAVI' },
+        { ...next, n: 'FIVE',  name: 'Sumo Push',  result: 'NEXT' },
+        { ...face, n: 'SIX',   name: 'Face down',  result: '—' },
+        { ...face, n: 'SEVEN', name: 'Face down',  result: '—' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
