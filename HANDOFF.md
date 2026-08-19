@@ -10,44 +10,64 @@ constitution and its rules are non-negotiable.
 
 ## Where things stand
 
-`main` is green: `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e`.
-**891 unit tests, 133 browser tests** across four Playwright projects — Desktop Chrome,
-Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
+`main` is green and **CI passes**: `pnpm typecheck && pnpm lint && pnpm test && pnpm build
+&& pnpm e2e`. **1,169 unit tests, 165 browser tests** across four Playwright projects —
+Desktop Chrome, Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real
+WebKit**.
 
-**CI passes.** That sentence is newer than it sounds: until 20 August, CI had failed on
-every commit since the repository was created — 45 failures, 0 successes — because
-`pnpm/action-setup` was given `version: 9` while `package.json` pins `packageManager`,
-which the action treats as a conflict and refuses to install. Every job died before its
-first real step, so nothing the workflow claimed to verify had ever been verified. If you
-see a green tick now, it means something.
+That CI sentence is newer than it sounds. Until 20 August, CI had failed on every commit
+since the repository was created — 45 failures, 0 successes — because `pnpm/action-setup`
+was given `version: 9` while `package.json` pins `packageManager`, which the action treats
+as a conflict and refuses to install. Every job died before its first real step, so nothing
+the workflow claimed to verify had ever been verified there. A green tick now means
+something.
 
-**~2,245 issues open.** Roughly 1,860 are the per-game backlog (14 issues each across the
-100 games not yet built). Seven games play end to end: Tic Tac Toe, Air Hockey, Drop Four,
-Sumo Push, Memory Match, Pull the Rope, Whack a Mole.
+**~2,160 issues open.** The bulk is the per-game backlog: 14 issues each across the 95
+games not yet built.
+
+**Twelve games play end to end**, each with a `SPEC.md` and 40–80 tests:
+
+| Archetype | Games |
+|---|---|
+| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe |
+| `turn-aim` | Darts |
+| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors |
+| `rt-arena` | Sumo Push |
+| `rt-race` | *none yet — the one archetype with nothing built* |
+
+Building one closes about twelve of its fourteen issues; the other two (research, art and
+audio) are blocked on things that do not exist yet. `docs/game-spec-template.md` and any
+of the thirteen `SPEC.md` files are the pattern.
 
 ## Start here
 
-1. **#2322 needs a decision from a person, and it is blocking design work.** Our two seat
+1. **Build more games.** It is the highest-value work available and the pattern is
+   established: scaffold, rules module with tests, game module, spec, verify in a browser,
+   close the twelve issues with evidence. `rt-race` has nothing built, so a game there
+   proves the last untested archetype. Checkers, Snowball Throw and Crabby Volley are all
+   well-specified in `data/catalog.yaml`.
+2. **#2322 needs a decision from a person, and it is blocking design work.** Our two seat
    colours give **1.03:1 contrast under deuteranopia** — indistinguishable, for roughly
    one man in sixteen. Our sky is also within an RGB delta of (3, 40, 3) of a typical
    reference-app blue, which is awkward for an originality epic. The measurements and five
    candidate palettes are in the issue comment. I did not change them: it is the product's
    identity, and `palette-vision.test.ts` records the gap with the 3:1 target named so
    raising the assertion is a one-line change once someone chooses.
-2. **#1863 — the declarative layout API.** Games currently place their own geometry and
+3. **#1863 — the declarative layout API.** Games currently place their own geometry and
    the shell letterboxes around it. That works for seven single-board games and will not
    survive the first game wanting a separate control strip per seat.
-3. **The precision envelope (#1865's open item).** Pointer position reaches games
-   unquantised, so a mouse aims finer than a thumb. It does not bite yet because no
-   `turn-aim` game exists — and `turn-aim` is exactly where it bites. It must exist before
-   the first one ships.
-4. **Then the game pipeline.** 100 games × 14 issues. `docs/game-spec-template.md` and
-   `packages/games/air-hockey/SPEC.md` are the pattern to copy.
+4. **The precision envelope (#1865's open item).** Pointer position reaches games
+   unquantised, so a mouse can aim finer than a thumb. **This now bites**: Darts shipped,
+   and `turn-aim` is exactly the archetype where it does. Darts mitigates it locally — its
+   keys nudge the reticle at a rate rather than jumping it, so the two families are
+   comparable — but the envelope belongs in the engine's input path where every game gets
+   it without asking.
+
 
 ## Why platform work first
 
-Every platform fix multiplies by 100. The evidence: all seven games had invented their own
-seat colours — four palettes, two disagreeing about which player was the warm colour — so
+Every platform fix multiplies by 95. The evidence: all seven games built before the shared
+palette existed had invented their own seat colours — four palettes, two disagreeing about which player was the warm colour — so
 the scoreboard named a colour that was not on the board. One `SEAT_PALETTE` in the engine
 fixed all seven. The same fix after 107 games exist would be 107 corrections.
 
@@ -89,12 +109,34 @@ through all of them.
     box, including a wrong one;
   - the listener-leak test needed a guard against comparing zero to zero.
 - **Beware checks satisfied by a comment.** That has now happened twice.
+- **Verify an edit landed.** Two edits to `e2e/offline.spec.ts` silently did nothing —
+  scripted `replace` calls whose pattern no longer matched after Prettier reformatted the
+  file, reporting success anyway. CI failed twice on an exclusion I believed I had added.
+  Read the file back, or check `git show --stat`.
 - Close an issue only with evidence: what landed, what was verified, what is still open and
   why. Several issues are deliberately open on a single unmet item.
 - If a test encodes old behaviour, change it *and say so in the message*.
 - **Do not close an issue on a claim you have not checked.** I closed #2422 asserting
   keyboard-only play worked, then found two games had no keyboard path at all, and had to
   reopen it.
+
+## What twelve games taught, worth knowing before the thirteenth
+
+- **The bot must never see what a human cannot.** It is easy to break and always feels
+  like cheating: a Reversi bot counting chains, a Memory bot peeking at face-down cards, a
+  Whack a Mole bot seeing a mole before it surfaces. Difficulty belongs in *errors* and
+  *search depth*, never in information.
+- **A refusal must be distinguishable from a legal move that did nothing.** `-1` rather
+  than `0`, `false` rather than a no-op — because "refused" and "legal but scoreless" mean
+  opposite things for whose turn it is.
+- **Delays in whole simulation steps, never seconds.** And a delay sized in `init` is sized
+  before the step rate is known: Rock Paper Scissors' first round lasted one step because
+  of exactly that.
+- **Shape as well as colour, every time.** Whack a Mole is the sharpest case — telling the
+  two seats' moles apart *is* the game, so colour-only would make it unplayable rather
+  than merely harder.
+- **Write the fixture arithmetic out.** Four Mancala fixtures were wrong before the code
+  was, and one Reversi fixture claimed a position that could not exist.
 
 ## What is enforced, so you cannot regress it by accident
 
