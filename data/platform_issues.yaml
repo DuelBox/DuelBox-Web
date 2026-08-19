@@ -39,6 +39,7 @@ labels:
   - {name: "epic:online",       color: "5319E7", description: "Remote multiplayer"}
   - {name: "epic:crossplay",    color: "8250DF", description: "Cross-device play: phone, tablet, laptop, any combination"}
   - {name: "epic:responsive",   color: "0969DA", description: "Layout and rendering across every screen size and orientation"}
+  - {name: "epic:originality",  color: "BF3989", description: "Our own UI, our own identity - deliberately not a clone"}
   - {name: "epic:docs",         color: "BFDADC", description: "Documentation"}
   - {name: "type:epic",         color: "EEEEEE", description: "Parent issue tracking a group of work"}
   - {name: "type:research",     color: "EEEEEE", description: "Play, observe, document. No shipping code"}
@@ -2258,3 +2259,281 @@ issues:
     - "Every release runs the pass before shipping"
   labels: ["epic:responsive", "epic:qa", "type:chore", "priority:P2", "size:M"]
   milestone: M2 Game Catalog
+
+# =====================================================================
+# E22 ORIGINALITY AND UI INNOVATION
+# The mechanics are free to reimplement; the product is not allowed to
+# look like a copy. Nobody should be able to put our site beside the
+# reference app and call it the same product. This epic is where that
+# is made true on purpose rather than hoped for.
+# =====================================================================
+
+- title: "Write the product differentiation brief"
+  epic: originality
+  why: "Before any screen is designed, the team needs a written answer to 'why is this not just a clone?'. Without it, every individual design decision drifts toward the thing we were looking at, because that is the path of least resistance."
+  actions:
+    - "State what DuelBox is that the reference app is not: a web product with no install, cross-device play, per-game indexable pages, offline, and search"
+    - "Name the three experiences we intend to be visibly better: browsing 107 games, pairing two devices, and running a tournament"
+    - "List what we deliberately do NOT copy: layout, navigation model, card design, HUD arrangement, colour identity, iconography, copy voice, naming"
+    - "Define the one-sentence product positioning every later design decision is checked against"
+  acceptance:
+    - "Brief committed and referenced by every design issue in this epic"
+    - "A reviewer can use it to reject a design that drifts toward the reference"
+    - "Agreed before the design language work starts"
+  labels: ["epic:originality", "epic:design", "type:spec", "priority:P0", "size:M"]
+  milestone: M0 Foundation
+
+- title: "Establish our own visual identity and name the signature motif"
+  epic: originality
+  why: "A product with no signature element gets described by what it resembles. We need one idea, carried everywhere, that belongs to us."
+  actions:
+    - "Choose and document the signature motif - the proposed direction is the seam, a single diagonal split dividing the two players' territory, carried from the landing hero through the catalog into the live HUD"
+    - "Derive the palette from the motif rather than adopting the reference app's red/blue pairing wholesale - our player colours must be recognisably ours and must pass colour-vision checks"
+    - "Pick display, body, and data typefaces that read as a deliberate pairing, not a default"
+    - "Show the motif applied to three different screens to prove it carries"
+  acceptance:
+    - "Identity documented with the motif demonstrated across at least three screens"
+    - "Player colours differ meaningfully from the reference app and pass contrast and colour-vision checks"
+    - "No colour, type, or spacing value is taken from the reference app"
+  labels: ["epic:originality", "epic:design", "type:spec", "priority:P0", "size:L", "needs-design"]
+  milestone: M0 Foundation
+
+- title: "Reimagine catalog browsing rather than reproducing a flat scroll"
+  epic: originality
+  why: "The reference app puts 107 games in one unbroken scroll with no search, no categories, and no filters. Reproducing that would copy its single weakest screen. This is our clearest opportunity to be plainly better."
+  actions:
+    - "Design a browse model that makes 107 games tractable: category-led entry, search, filters for round length and player count, and a surfaced 'pick for us' path"
+    - "Design the browse experience separately for phone, tablet, and desktop rather than reflowing one grid"
+    - "Give returning pairs a route back to what they actually play - favourites and recent, prominent rather than buried"
+    - "Prototype at least two distinct browse concepts and choose with reasons recorded"
+  acceptance:
+    - "Two concepts explored and the choice justified in writing"
+    - "A visitor can go from landing to a specific game in under three interactions"
+    - "The layout is not a two-column infinite grid"
+  labels: ["epic:originality", "epic:site", "type:spec", "priority:P1", "size:L", "needs-design"]
+  milestone: M1 Playable Shell
+
+- title: "Design the in-match HUD from first principles"
+  epic: originality
+  why: "The reference app anchors a rotated score pill and an exit pill to the screen edges. That solves a real problem, but adopting its exact arrangement is the most recognisable thing we could copy."
+  actions:
+    - "Restate the constraints in our own terms: both seats must read the score, nothing may cover the play area, and it must work in shared-screen and single-seat presentations"
+    - "Design a HUD that satisfies them without reproducing the edge-pill arrangement"
+    - "Handle score, turn indicator, timer, health, and exit in one coherent system"
+    - "Verify legibility from arm's length at phone, tablet, and laptop size"
+  acceptance:
+    - "HUD works in both presentations and all device classes"
+    - "Arrangement is demonstrably not the reference app's"
+    - "Readable at arm's length from both seats, verified with real people"
+  labels: ["epic:originality", "epic:sdk", "epic:design", "type:feat", "priority:P1", "size:L", "needs-design"]
+  milestone: M1 Playable Shell
+
+- title: "Design the device-pairing moment as a signature interaction"
+  epic: originality
+  why: "Pairing a phone with a laptop is something the reference app cannot do at all. It is the moment most worth making memorable, and it is entirely ours to invent."
+  actions:
+    - "Design the pairing flow: create, share, join, both-ready, countdown"
+    - "Make the join path work from a QR code, a short code, and a link, whichever is at hand"
+    - "Design the moment both devices connect so it reads as a single shared event on both screens"
+    - "Handle the waiting, failed, and expired states with the same care as the success path"
+  acceptance:
+    - "Two devices go from nothing to a started match in under thirty seconds"
+    - "The connect moment is visibly designed, not a spinner disappearing"
+    - "Every failure state explains what happened and what to do"
+  labels: ["epic:originality", "epic:crossplay", "epic:design", "type:feat", "priority:P1", "size:L", "needs-design"]
+  milestone: M2 Game Catalog
+
+- title: "Design the tournament experience as our own"
+  epic: originality
+  why: "The format is worth adopting - seven random games and a running score is a genuinely good retention loop. The presentation of it should be ours."
+  actions:
+    - "Keep the format: a set of seven games with a running head-to-head score and a decisive end"
+    - "Design our own progression visualisation rather than reproducing the node-track-and-trophy"
+    - "Design the between-games beat: what the players see, and how the next game is introduced"
+    - "Design the finale so winning a tournament feels like an event"
+  acceptance:
+    - "Progression is legible at a glance from both seats at any moment"
+    - "The visualisation is not a linear node track with a trophy at the end"
+    - "The finale is designed, not a score screen with different copy"
+  labels: ["epic:originality", "epic:meta", "epic:design", "type:feat", "priority:P1", "size:L", "needs-design"]
+  milestone: M1 Playable Shell
+
+- title: "Design the pre-match screen and teach each game without words"
+  epic: originality
+  why: "The reference app states the rules in a sentence and offers a how-to-play video. A web product can do better: show the game moving before anyone commits to it."
+  actions:
+    - "Design a pre-match screen that communicates the game, its controls, and its win condition at a glance"
+    - "Use a live or looping demonstration rather than a video the player must choose to watch"
+    - "Show the control scheme for the device actually in hand, and for the chosen mode"
+    - "Keep it fast - this screen sits between wanting to play and playing"
+  acceptance:
+    - "A first-time player understands the goal and the controls without reading a paragraph"
+    - "The demonstration costs less than the game chunk it precedes"
+    - "Layout is not the reference app's title-card-and-two-buttons arrangement"
+  labels: ["epic:originality", "epic:site", "type:feat", "priority:P1", "size:M", "needs-design"]
+  milestone: M1 Playable Shell
+
+- title: "Design the game card"
+  epic: originality
+  why: "The card is the most repeated component on the site - 107 instances on one screen. Its design decides whether the catalog reads as ours or as a familiar grid."
+  actions:
+    - "Design the card to carry name, category, round length, supported modes, and offline availability without clutter"
+    - "Give it a motion behaviour on hover and focus that shows the game rather than decorating the card"
+    - "Design its loading, error, and offline-unavailable states"
+    - "Ensure the composition is distinct from a square illustration with a title bar across the bottom"
+  acceptance:
+    - "Card communicates mode support and round length at a glance"
+    - "Preview is under budget and falls back cleanly under reduced-motion and save-data"
+    - "Composition is demonstrably not the reference app's"
+  labels: ["epic:originality", "epic:design", "type:feat", "priority:P1", "size:M", "needs-design"]
+  milestone: M1 Playable Shell
+
+- title: "Define the motion and interaction signature"
+  epic: originality
+  why: "How a product moves is as recognisable as how it looks, and it is the layer most often left to defaults."
+  actions:
+    - "Define the signature transitions: entering a match, passing a turn, scoring, winning"
+    - "Tie the motion language to the seam motif so movement reinforces identity"
+    - "Specify what each motion becomes under reduced-motion - a state change, never nothing"
+    - "Keep gameplay-critical feedback readable without any motion at all"
+  acceptance:
+    - "Motion tokens defined and used by both shell and games"
+    - "Every signature motion has a reduced-motion equivalent"
+    - "No gameplay information is conveyed by motion alone"
+  labels: ["epic:originality", "epic:design", "epic:a11y", "type:spec", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Define the sound identity"
+  epic: originality
+  why: "Sound is half the feel of a mini-game and the fastest thing to accidentally imitate. Ours must be composed, not sampled from anywhere."
+  actions:
+    - "Define the tonal palette: what scoring, winning, losing, and passing a turn sound like across the whole catalog"
+    - "Design a short audio signature for match start and tournament victory"
+    - "Ensure every sound is original or licensed with the licence recorded"
+    - "Check nothing is recognisably derived from the reference app"
+  acceptance:
+    - "Sound set is coherent across games and original throughout"
+    - "Licence recorded for every file and passing the CI check"
+  labels: ["epic:originality", "epic:audio", "epic:legal", "type:spec", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Write the interface voice guide"
+  epic: originality
+  why: "Copy is where a product's personality either exists or does not. Borrowed phrasing is as recognisable as a borrowed layout, and it is the cheapest thing to get right."
+  actions:
+    - "Define the voice in three adjectives with examples of what it is and is not"
+    - "Write the core strings: buttons, empty states, errors, results, pairing prompts"
+    - "Use the same verb from action through to confirmation"
+    - "Check no string is lifted from the reference app"
+  acceptance:
+    - "Voice guide committed with real examples"
+    - "No exclamation-mark filler, no 'Oops', no borrowed phrasing"
+    - "Every user-facing string traces to the guide"
+  labels: ["epic:originality", "epic:ui", "epic:docs", "type:spec", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Run the originality review before launch"
+  epic: originality
+  why: "The differentiation brief is a promise made at the start; this is the check that it was kept. It is also the record that answers a complaint if one ever arrives."
+  actions:
+    - "Place our screens beside the reference app's equivalents and review each pair: landing, browse, pre-match, in-match, result, tournament"
+    - "Confirm no layout, arrangement, colour pairing, icon, or string is a copy"
+    - "Confirm every asset has a licence entry and no asset derives from another product"
+    - "Record the review with evidence and sign it off"
+  acceptance:
+    - "Written review covering every screen pair with a verdict on each"
+    - "Anything flagged is redesigned before launch, not noted and shipped"
+    - "The review is filed as the standing answer to an originality challenge"
+  labels: ["epic:originality", "epic:legal", "epic:qa", "type:qa", "priority:P1", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Design onboarding for a first-time pair"
+  epic: originality
+  why: "Two people who have never seen the site need to understand within seconds that this is for both of them, on this one device or on two. Nothing in the reference app solves this for the web."
+  actions:
+    - "Design the first-run moment: choose how you are playing before choosing what to play"
+    - "Make the three configurations legible without jargon - one device together, two devices, or alone against a bot"
+    - "Remember the choice and let it be changed at any time"
+    - "Keep it skippable for anyone who arrived from search on a specific game"
+  acceptance:
+    - "A first-time visitor picks a configuration and reaches a match without instructions"
+    - "Someone arriving from search on a game page is never blocked by onboarding"
+  labels: ["epic:originality", "epic:site", "type:feat", "priority:P1", "size:M", "needs-design"]
+  milestone: M1 Playable Shell
+
+# =====================================================================
+# E23 THE THREE PLAY CONFIGURATIONS, END TO END
+# Single-player against a bot, two players on one device, and two players
+# on two devices. Every one of them has to work everywhere, and the
+# tournament has to work in all three.
+# =====================================================================
+
+- title: "Specify the three play configurations and how a player moves between them"
+  epic: sdk
+  why: "Single-player against a bot, two players sharing a device, and two players on separate devices are three different products wearing the same games. The rules for how they are chosen, remembered, and switched need deciding once."
+  actions:
+    - "Define the three configurations and what each implies for presentation, input, and netcode"
+    - "Decide where the choice is made - globally, per game, or both - and how it is remembered"
+    - "Specify what happens when a player switches configuration mid-session"
+    - "Specify which configurations each archetype can support and how the manifest declares it"
+  acceptance:
+    - "Doc committed with a decision table per configuration"
+    - "The choice survives navigation and reload"
+    - "A game never offers a configuration it cannot support"
+  labels: ["epic:sdk", "epic:crossplay", "type:spec", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Guarantee every two-player game ships a bot opponent"
+  epic: sdk
+  why: "Single-player means a bot sits opposite the human. A game without one is a dead end for anybody playing alone, and the reference app itself leaves at least one game with no bot at all."
+  actions:
+    - "Audit every game in the catalog for a bot implementation across all three difficulty tiers"
+    - "Add bots where the reference app has none - Wheelie is the known case - rather than inheriting the gap"
+    - "Exclude only the genuine single-player puzzles, which have no opponent by nature"
+    - "Verify every bot through the balance harness"
+  acceptance:
+    - "Every two-player game offers Easy, Normal, and Hard"
+    - "No two-player game presents a disabled or missing single-player option"
+    - "The seven solo puzzles are explicitly exempt and marked as such"
+  labels: ["epic:sdk", "type:chore", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Run tournaments in single-player against a bot"
+  epic: meta
+  why: "The tournament is the retention hook, and someone playing alone should not be locked out of it."
+  actions:
+    - "Support a seven-game tournament against a bot at a chosen difficulty"
+    - "Keep the difficulty consistent across the run"
+    - "Track solo tournament records separately from head-to-head records"
+  acceptance:
+    - "A full solo tournament completes with a decisive result"
+    - "Difficulty is fixed for the run and shown throughout"
+    - "Solo records never mix with two-player head-to-head records"
+  labels: ["epic:meta", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Run tournaments across two devices"
+  epic: meta
+  why: "A seven-game run is the best reason to stay connected, so it must survive the whole remote session rather than being a same-device-only feature."
+  actions:
+    - "Carry tournament state across the paired session with both clients agreed on score and next game"
+    - "Handle a disconnect mid-tournament without losing the run"
+    - "Let either player see the standing at any time"
+  acceptance:
+    - "A seven-game tournament completes across two device classes with a consistent score"
+    - "A reconnect resumes at the correct game with the correct score"
+  labels: ["epic:meta", "epic:crossplay", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Let a match change configuration without losing progress"
+  epic: sdk
+  why: "A pair sharing a phone will want to move to a laptop; someone playing a bot will want to hand the second seat to a person who just walked in. Forcing a restart makes the product feel brittle."
+  actions:
+    - "Support handing the second seat from bot to human and back between matches"
+    - "Support moving an in-progress tournament from one device to a paired pair of devices"
+    - "Define clearly what cannot be switched mid-match and prevent it rather than failing halfway"
+  acceptance:
+    - "Swapping the second seat between bot and human preserves the running score"
+    - "Unsupported switches are prevented up front with a clear reason"
+  labels: ["epic:sdk", "epic:meta", "type:feat", "priority:P3", "size:M"]
+  milestone: M4 Online

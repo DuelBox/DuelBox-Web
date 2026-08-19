@@ -755,9 +755,10 @@ games:
   category: Racing
   archetype: rt-race
   confidence: observed
-  modes: friend,solo
+  modes: friend,bot,solo
   rule: Accelerate your bike to pull up a wheelie. Earn more points the longer you maintain a wheelie.
   refName: Wheelie
+  modesNote: Reference app offers no bot here; we add one so single-player is never a dead end.
 - id: crash-it
   name: Crash It
   category: Racing
