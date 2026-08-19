@@ -33,6 +33,9 @@
     },
     {
       "path": "./packages/games/reversi"
+    },
+    {
+      "path": "./packages/games/darts"
     }
   ]
 }
