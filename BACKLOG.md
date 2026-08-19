@@ -3,8 +3,8 @@
 ## Issues per milestone
 
 - **M0 Foundation** — 57
-- **M1 Playable Shell** — 55
-- **M2 Game Catalog** — 1649
+- **M1 Playable Shell** — 130
+- **M2 Game Catalog** — 1574
 - **M3 Premium Site** — 57
 - **M4 Online** — 15
 - **(none)** — 1
