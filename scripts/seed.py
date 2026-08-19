@@ -251,7 +251,8 @@ def create_issue(repo: str, issue: dict, ms_map: dict[str, int],
         args += ["-F", f"milestone={ms}"]
 
     backoff = BACKOFF_START
-    for attempt in range(6):
+    attempt = 0
+    while True:
         try:
             out = gh(args)
             data = json.loads(out) if out else {}
@@ -261,18 +262,22 @@ def create_issue(repo: str, issue: dict, ms_map: dict[str, int],
             return url
         except RuntimeError as e:
             msg = str(e).lower()
+            # Rate limits are not failures - they are waits. They must never
+            # consume the retry budget, or an unattended run gives up on every
+            # remaining issue the moment the hourly cap is reached.
             if "rate limit already exceeded" in msg or "rate limit exceeded" in msg:
                 wait_for_reset(repo, "core")
-            elif "secondary rate limit" in msg or "abuse" in msg or "submitted too quickly" in msg:
-                print(f"    secondary limit, sleeping {backoff}s", flush=True)
+                continue
+            if "secondary rate limit" in msg or "abuse" in msg or "submitted too quickly" in msg:
+                print(f"    content-creation cap reached, sleeping {backoff}s", flush=True)
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 600)
-            elif attempt == 5:
+                continue
+            attempt += 1
+            if attempt >= 4:
                 print(f"    FAILED: {issue['title']}: {e}", file=sys.stderr, flush=True)
                 return None
-            else:
-                time.sleep(5)
-    return None
+            time.sleep(5)
 
 
 def main() -> None:
