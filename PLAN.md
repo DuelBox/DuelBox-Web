@@ -4,7 +4,7 @@ A browser-based collection of two-player mini-games. Two people, one device, one
 browser tab, no download, no account. Original implementations of game genres that
 are free to reimplement.
 
-**Scale:** 101 games · 1,699 issues · 5 milestones.
+**Scale:** 107 games · ~2,260 issues · 5 milestones.
 
 This plan is derived from **playing the reference app**, not from imagining it.
 The observations are in `docs/reference-analysis.md`; the catalog in
@@ -37,7 +37,7 @@ per-game research issue.
 |---|---|---|
 | Framework | Next.js 15, App Router, TypeScript strict | A client-rendered games portal earns no organic traffic; SSG/SSR is the whole discovery strategy |
 | Styling | Tailwind v4 over CSS custom-property tokens | One token source shared by shell CSS and canvas drawing code |
-| Game engine | Custom, Canvas2D, fixed timestep | 101 small games do not need a physics library, and React must never enter a game loop |
+| Game engine | Custom, Canvas2D, fixed timestep | 107 small games do not need a physics library, and React must never enter a game loop |
 | 3D landing | React Three Fiber, landing route only | Isolated structurally, asserted in CI, never in a game bundle |
 | State | Zustand for the shell | Games hold their own state; the shell holds session and settings |
 | Testing | Vitest and Playwright | Rules headless, journeys across three browsers |
@@ -50,7 +50,7 @@ per-game research issue.
 apps/web              shell, routing, landing, catalog, game host
 packages/engine       fixed-timestep loop, renderer, collision, input, seats, audio
 packages/game-sdk     the Game contract, match flow, HUD, win conditions, bots
-packages/games/*      101 folders, each its own chunk
+packages/games/*      107 folders, each its own chunk
 packages/ui           shared components
 ```
 
@@ -110,7 +110,7 @@ match state exactly across rotation, resize, and fold.
 
 ## Where we beat the reference app
 
-The catalog is one flat scroll of 101 cards with no search, no categories, and no
+The catalog is one flat scroll of 107 cards with no search, no categories, and no
 filters. Ours gets search, category filters, sort, favourites, recently played,
 animated card previews, per-game indexable pages, offline play, and installability.
 
@@ -120,7 +120,7 @@ animated card previews, per-game indexable pages, offline play, and installabili
 |---|---|
 | **M0 Foundation** | Repo, CI, tokens, engine loop, seats, collision, input, SDK contract |
 | **M1 Playable Shell** | Shell routes, game host, match flow, HUD, tournament, first games |
-| **M2 Game Catalog** | The 101 games, bots, audio, i18n, accessibility |
+| **M2 Game Catalog** | The 107 games, bots, audio, i18n, accessibility |
 | **M3 Premium Site** | 3D landing, motion, SEO, PWA, analytics, legal, launch |
 | **M4 Online** | Remote multiplayer, accounts, leaderboards, live ops |
 
@@ -128,9 +128,11 @@ animated card previews, per-game indexable pages, offline play, and installabili
 
 ```
 docs/reference-analysis.md    what was observed by playing, and what it implies
-data/catalog.yaml             101 games with archetype, category, and observed rules
-data/platform_issues.yaml     198 granular website and platform issues
-data/game_templates.yaml      14 issues per game, generated per archetype
+docs/observed-rules.md        verbatim rules for all 107 games
+docs/game-catalog.md          the catalog as a readable table
+data/catalog.yaml             107 games with archetype, category, observed rules, modes
+data/platform_issues.yaml     240 granular website and platform issues
+data/game_templates.yaml      19 issue templates per game, filtered by archetype
 scripts/seed.py               creates everything via gh, idempotent, resumable
 prompts/build-iteration.md    the per-issue build loop prompt
 CLAUDE_CODE_LOOP.md           the three loops
@@ -138,4 +140,4 @@ CLAUDE.md                     repo constitution
 ```
 
 Add a game by appending to `catalog.yaml` and rerunning the seeder — it generates
-that game's 14 issues and skips everything that already exists.
+that game's issue set and skips everything that already exists.
