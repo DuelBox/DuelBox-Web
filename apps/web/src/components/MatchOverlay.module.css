@@ -3,7 +3,12 @@
   inset: 0;
   display: grid;
   place-items: center;
-  padding: var(--db-space-4);
+  /* The result and pause panels are the only full-bleed surfaces in the product, so
+     they are the only place a button can land under a cutout or the home indicator. */
+  padding-top: max(var(--db-space-4), var(--db-safe-top));
+  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
+  padding-left: max(var(--db-space-4), var(--db-safe-left));
   text-align: center;
   /* The board stays visible behind a pause or a result: players want to see the position
      that decided it, and a full-cover panel makes a rematch feel like a new app. */

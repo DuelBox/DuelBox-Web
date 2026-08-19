@@ -11,9 +11,9 @@ import {
   browserClock,
   clampDevicePixelRatio,
   fitViewport,
+  NO_INSETS,
   viewportToLogical,
   vec2,
-  type SafeAreaInsets,
   type SeatId,
 } from '@duelbox/engine';
 import {
@@ -116,8 +116,16 @@ export function GameHost({
     };
     game.init(gameContext);
 
-    let view = fitViewport(logical, canvas.clientWidth, canvas.clientHeight, readInsets());
+    // NO_INSETS, deliberately. Safe-area handling belongs to the layout, which pads the
+    // shell so this canvas is already inside the safe region by the time it is measured.
+    // Subtracting the root insets here as well shrank the play area twice over on a
+    // notched phone, and cost a getComputedStyle on every resize to do it.
+    let view = fitViewport(logical, canvas.clientWidth, canvas.clientHeight, NO_INSETS);
     const scratch = vec2();
+    let lastWidth = -1;
+    let lastHeight = -1;
+    let lastDpr = -1;
+    let resizeHandle = 0;
 
     // The element is passed in rather than closed over: TypeScript will not carry the
     // null-narrowing of a ref into a hoisted function declaration.
@@ -125,17 +133,31 @@ export function GameHost({
       const dpr = clampDevicePixelRatio(globalThis.devicePixelRatio);
       const cssWidth = el.clientWidth;
       const cssHeight = el.clientHeight;
+      // Reassigning canvas.width clears the backing store and forces a reallocation, so
+      // a resize that is not a resize must not reach it. Mobile browser chrome sliding
+      // in and out fires the observer repeatedly at the same size.
+      if (cssWidth === lastWidth && cssHeight === lastHeight && dpr === lastDpr) return;
+      lastWidth = cssWidth;
+      lastHeight = cssHeight;
+      lastDpr = dpr;
       el.width = Math.round(cssWidth * dpr);
       el.height = Math.round(cssHeight * dpr);
       // Draw in CSS pixels; the backing store carries the device ratio.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      view = fitViewport(logical, cssWidth, cssHeight, readInsets());
+      view = fitViewport(logical, cssWidth, cssHeight, NO_INSETS);
       renderer.setViewport(view);
     }
     resize(canvas, context);
 
+    // Coalesced into one animation frame. The observer can fire several times for a
+    // single chrome transition, and reallocating the backing store on each is the layout
+    // thrash the player sees as a stutter mid-match.
     const observer = new ResizeObserver(() => {
-      resize(canvas, context);
+      if (resizeHandle !== 0) return;
+      resizeHandle = globalThis.requestAnimationFrame(() => {
+        resizeHandle = 0;
+        resize(canvas, context);
+      });
     });
     observer.observe(canvas);
 
@@ -260,6 +282,7 @@ export function GameHost({
 
     return () => {
       runner.stop();
+      if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;
       loopRef.current = null;
       gameRef.current = null;
@@ -309,18 +332,3 @@ const SCROLL_KEYS = new Set([
   'PageUp',
   'PageDown',
 ]);
-
-/** Reads the safe-area insets the layout exposes, so nothing sits under a notch. */
-function readInsets(): SafeAreaInsets {
-  const style = getComputedStyle(document.documentElement);
-  const read = (name: string): number => {
-    const value = Number.parseFloat(style.getPropertyValue(name));
-    return Number.isFinite(value) ? value : 0;
-  };
-  return {
-    top: read('--db-safe-top'),
-    right: read('--db-safe-right'),
-    bottom: read('--db-safe-bottom'),
-    left: read('--db-safe-left'),
-  };
-}

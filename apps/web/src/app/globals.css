@@ -70,7 +70,7 @@ canvas {
 
 .db-skip {
   position: absolute;
-  left: var(--db-space-4);
+  left: max(var(--db-space-4), var(--db-safe-left));
   top: calc(var(--db-space-4) * -4);
   z-index: 100;
   padding: var(--db-space-3) var(--db-space-4);
@@ -82,12 +82,20 @@ canvas {
 }
 
 .db-skip:focus {
-  top: var(--db-space-4);
+  /* The first thing a keyboard user reaches must not land under a notch. */
+  top: max(var(--db-space-4), var(--db-safe-top));
   color: #fff;
 }
 
 .db-shell {
-  min-height: 100dvh;
+  /* Static fallback first, for browsers without the newer units. */
+  min-height: 100vh;
+  /* `svh`, deliberately, not `dvh`. On mobile Safari and Chrome the address bar shows
+     and hides while you scroll, and `dvh` tracks it — so the canvas would resize under
+     a running match. `svh` is the viewport with the chrome *visible*, which is the one
+     size that never changes mid-match. The cost is a strip of background when the bar
+     retracts; the alternative is a play area that moves while someone is aiming. */
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
@@ -110,12 +118,16 @@ canvas {
   width: 100%;
   max-width: 76rem;
   margin-inline: auto;
-  padding-inline: var(--db-space-5);
+  /* max(), so the notch only ever widens the gutter and never narrows it. In landscape
+     on a notched phone the cutout is on one side, and content there is unreadable. */
+  padding-left: max(var(--db-space-5), var(--db-safe-left));
+  padding-right: max(var(--db-space-5), var(--db-safe-right));
 }
 
 @media (max-width: 40rem) {
   .db-wrap {
-    padding-inline: var(--db-space-4);
+    padding-left: max(var(--db-space-4), var(--db-safe-left));
+    padding-right: max(var(--db-space-4), var(--db-safe-right));
   }
 }
 

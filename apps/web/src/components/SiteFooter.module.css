@@ -3,6 +3,8 @@
   margin-top: var(--db-space-8);
   padding-block: var(--db-space-5);
   background: var(--db-surface);
+  /* Clear of the home indicator, which sits over the bottom edge. */
+  padding-bottom: max(var(--db-space-6), var(--db-safe-bottom));
 }
 
 .inner {

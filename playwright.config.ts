@@ -21,6 +21,14 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     // Two people sharing one phone is the primary case, so it is tested, not assumed.
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    // A notched phone in both orientations. The insets differ between them — portrait
+    // puts the cutout on the top edge, landscape on one side — so a layout that clears
+    // the notch in one can still bury a control in the other.
+    { name: 'notched-portrait', use: { ...devices['iPhone 14 Pro'] } },
+    {
+      name: 'notched-landscape',
+      use: { ...devices['iPhone 14 Pro landscape'] },
+    },
   ],
   webServer: {
     command: 'npx serve apps/web/out -l 4173 --no-clipboard',
