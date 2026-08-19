@@ -26,6 +26,13 @@ const LOADERS: Record<string, Loader> = {
   'whack-a-mole': () => import('@duelbox/game-whack-a-mole').then((m) => m.default),
 };
 
+/**
+ * The loader table, for tests that must cover every playable game rather than a list
+ * someone remembered to update. Exported for that purpose only — the shell loads games
+ * through `loadGame`.
+ */
+export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
+
 /** Slugs that are actually playable today, for the catalogue to mark. */
 export const PLAYABLE: readonly string[] = Object.keys(LOADERS);
 
