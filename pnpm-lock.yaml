@@ -41,9 +41,15 @@ importers:
       '@duelbox/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@duelbox/game-air-hockey':
+        specifier: workspace:*
+        version: link:../../packages/games/air-hockey
       '@duelbox/game-sdk':
         specifier: workspace:*
         version: link:../../packages/game-sdk
+      '@duelbox/game-tic-tac-toe':
+        specifier: workspace:*
+        version: link:../../packages/games/tic-tac-toe
       next:
         specifier: ^15.1.3
         version: 15.5.23(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -71,6 +77,24 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/games/air-hockey:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/tic-tac-toe:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
 
 packages:
 

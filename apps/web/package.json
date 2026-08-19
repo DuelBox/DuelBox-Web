@@ -13,7 +13,9 @@
     "@duelbox/game-sdk": "workspace:*",
     "next": "^15.1.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@duelbox/game-tic-tac-toe": "workspace:*",
+    "@duelbox/game-air-hockey": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",

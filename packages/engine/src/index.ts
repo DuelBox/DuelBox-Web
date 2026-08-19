@@ -72,5 +72,8 @@ export type { Circle, Aabb, Obb, Segment, Contact } from './collision.js';
 export { InputState, InputManager, DEFAULT_BINDINGS } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 
+export { InputView } from './input-view.js';
+export type { InputStateView, SeatInputView } from './input-view.js';
+
 export { Canvas2DRenderer } from './renderer.js';
 export type { Renderer, Canvas2DLike, TextAlign } from './renderer.js';

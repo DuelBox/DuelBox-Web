@@ -1,4 +1,11 @@
-import type { Presentation, Renderer, Rng, SeatId, Vec2 } from '@duelbox/engine';
+import type {
+  InputStateView,
+  Presentation,
+  Renderer,
+  Rng,
+  SeatId,
+  SeatInputView,
+} from '@duelbox/engine';
 import type { GameManifest } from './manifest.js';
 
 /**
@@ -7,28 +14,12 @@ import type { GameManifest } from './manifest.js';
  * shell no changes at all.
  */
 
-/** One seat's input for one simulation step. Read-only: games never write input. */
-export interface SeatInput {
-  /** Direction of intent, each component in [-1, 1]. Zero when idle. */
-  readonly move: Readonly<Vec2>;
-  /** Pointer position in logical units, or null when this seat has no pointer down. */
-  readonly pointer: Readonly<Vec2> | null;
-  /** True on the step the primary action began. */
-  readonly actionPressed: boolean;
-  /** True while the primary action is held. */
-  readonly actionHeld: boolean;
-  /** True on the step the primary action ended. */
-  readonly actionReleased: boolean;
-  /**
-   * How long the action has been held, in seconds, for charge and hold-timing games.
-   * Zero when not held.
-   */
-  readonly holdSeconds: number;
-}
-
-export interface InputState {
-  seat(seat: SeatId): SeatInput;
-}
+/**
+ * A game reads input through the engine's view: movement as a vector and a pointer
+ * that is null when absent, so the type system carries what is and is not available.
+ */
+export type SeatInput = SeatInputView;
+export type InputState = InputStateView;
 
 export type { Renderer };
 

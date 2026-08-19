@@ -1,0 +1,83 @@
+.surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--db-space-3);
+  padding-block: var(--db-space-4) var(--db-space-6);
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--db-space-4);
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-lg);
+}
+
+.seat b {
+  font-size: 1.4em;
+}
+
+.versus {
+  color: var(--db-faint);
+  font-size: var(--db-text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.board {
+  width: 100%;
+  max-width: 34rem;
+  aspect-ratio: 3 / 5;
+  margin-inline: auto;
+}
+
+.state,
+.result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--db-space-4);
+  padding-block: var(--db-space-7);
+  text-align: center;
+}
+
+.state h2 {
+  font-size: var(--db-text-2xl);
+}
+
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-3);
+  justify-content: center;
+}
+
+.primary,
+.secondary {
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-5);
+  border-radius: var(--db-radius);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--db-brand);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 0 var(--db-brand-deep);
+}
+
+.secondary {
+  background: var(--db-paper);
+  border: 2px solid var(--db-border);
+  color: var(--db-ink);
+}
+
+.winner {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-xl);
+  font-weight: 600;
+}

@@ -82,6 +82,13 @@
   /* Two-player games are held at arm's length by two people, so the minimum comfortable
      target is larger than the usual 44px web guidance. */
   --db-touch-target: 48px;
+
+  /* Safe-area insets, read by the game host so no control lands under a notch or a home
+     indicator. Declared here rather than inline so there is one place to override them. */
+  --db-safe-top: env(safe-area-inset-top, 0px);
+  --db-safe-right: env(safe-area-inset-right, 0px);
+  --db-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --db-safe-left: env(safe-area-inset-left, 0px);
 }
 
 @media (prefers-reduced-motion: reduce) {

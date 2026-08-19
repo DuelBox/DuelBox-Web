@@ -1,4 +1,17 @@
 {
   "files": [],
-  "references": [{ "path": "./packages/engine" }, { "path": "./packages/game-sdk" }]
+  "references": [
+    {
+      "path": "./packages/engine"
+    },
+    {
+      "path": "./packages/game-sdk"
+    },
+    {
+      "path": "./packages/games/tic-tac-toe"
+    },
+    {
+      "path": "./packages/games/air-hockey"
+    }
+  ]
 }
