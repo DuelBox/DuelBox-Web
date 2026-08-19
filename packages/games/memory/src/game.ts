@@ -4,11 +4,12 @@ import {
   SEAT_PALETTE,
   SeatFlip,
   otherSeat,
+  seatView,
   set,
   toWorld,
   vec2,
 } from '@duelbox/engine';
-import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
+import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
   Game,
@@ -145,7 +146,7 @@ export class MemoryMatchGame implements Game {
   #memoryP2: BotMemory = createMemory(0);
   #rng: Rng = new Rng(0);
   #logical: LogicalSize = manifest.logical;
-  #sharedScreen = false;
+  #presentation: Presentation = 'shared-screen';
   #localSeat: SeatId = 'p1';
   /**
    * The board turning to face whoever has the move.
@@ -181,7 +182,7 @@ export class MemoryMatchGame implements Game {
   init(context: GameContext): void {
     this.#rng = context.rng;
     this.#logical = context.manifest.logical;
-    this.#sharedScreen = context.presentation === 'shared-screen';
+    this.#presentation = context.presentation;
     this.#localSeat = context.localSeat;
     const botP1 = context.botDifficulty('p1');
     const botP2 = context.botDifficulty('p2');
@@ -342,7 +343,10 @@ export class MemoryMatchGame implements Game {
 
   /** The orientation the board should be in, which the flip tweens towards. */
   #shouldRotate(): boolean {
-    return this.#sharedScreen && this.#active !== this.#localSeat;
+    // `seatView` is the one definition of when a seat reads the board upside down.
+    // Three games had reimplemented the same expression, which is three chances to
+    // disagree the day single-seat presentation gains a wrinkle.
+    return seatView(this.#active, this.#presentation, this.#localSeat).rotated;
   }
 
   #stepsFor(seconds: number): number {
