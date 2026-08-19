@@ -1,5 +1,5 @@
 # Per-game issue templates. The seeder expands these across every game in catalog.yaml:
-# one parent epic plus one child issue per template = 14 issues per game.
+# one parent epic plus one child issue per template (archetype filters apply).
 #
 # Placeholders: {name} {id} {category} {archetype} {sim} {controls} {seats}
 # `archetypes:` limits a template to specific archetypes (omit = all).
@@ -224,4 +224,78 @@ templates:
     - "No console errors and no heap growth across ten load-unload cycles"
     - "Balance harness shows no stalemate or degenerate strategy and a win rate in band"
   labels: ["epic:game", "epic:qa", "type:qa", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: responsive
+  title: "[{name}] Make it correct on every screen size and orientation"
+  why: "Two people share a phone, a tablet, or a laptop, and a third plays it remotely on something else entirely. {name} has to be genuinely playable on all of them, not merely not-crashing."
+  actions:
+    - "Render from the game's fixed logical resolution, scaled to fit and letterboxed - never lay out from pixel values"
+    - "Design the layout at each device class: small phone, large phone, tablet portrait, tablet landscape, laptop, desktop"
+    - "Handle both orientations, re-laying out where the game supports both and prompting where it supports one"
+    - "Keep every control and HUD element clear of notches, home indicators, rounded corners, and system gesture areas"
+    - "Ensure mobile browser chrome appearing or hiding mid-match does not resize the play area"
+    - "Preserve match state exactly across resize, rotation, and fold"
+  acceptance:
+    - "Playable and correct from a 320px phone through to a 4K desktop, in both orientations"
+    - "No horizontal page scroll and no element outside the safe area at any size"
+    - "Rotating or resizing mid-match preserves the simulation exactly"
+    - "Passes the responsive verification harness for every named device class"
+    - "Touch controls remain comfortably reachable for two people at phone AND tablet physical sizes"
+  labels: ["epic:game", "epic:responsive", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: presentation
+  title: "[{name}] Implement the single-seat presentation for remote play"
+  why: "Sharing one screen and playing alone on your own device are two different layouts of {name}. On one device two seats split the screen; alone, the local player owns all of it, upright, with full-device controls."
+  actions:
+    - "Implement the single-seat presentation through the SDK's presentation abstraction, not a bespoke second layout"
+    - "Use the whole viewport for the local seat with the HUD in the surplus space"
+    - "Disable seat rotation in single-seat mode - the view is always upright for the local player"
+    - "Map the game's actions onto full-device controls: whole keyboard, pointer, or gamepad"
+    - "Keep the rules, scoring, and win condition byte-identical between presentations"
+  acceptance:
+    - "The game plays correctly in both shared-screen and single-seat presentation"
+    - "Rules and simulation are identical across presentations, verified by an input-trace test"
+    - "No branching on device type anywhere in the game package"
+    - "Switching presentation at runtime does not disturb simulation state"
+  archetypes: ["turn-board", "turn-aim", "rt-split", "rt-arena", "rt-race"]
+  labels: ["epic:game", "epic:crossplay", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: crossplay
+  title: "[{name}] Wire up cross-device remote play"
+  why: "A player on a phone must be able to play {name} against a player on a laptop, and the match must be fair and identical on both sides."
+  actions:
+    - "Integrate with the transport and the archetype's sync model - move-based for turn games, lockstep for real-time"
+    - "Confirm the simulation is viewport-independent so both devices step identically"
+    - "Adopt the negotiated shared logical viewport so neither player sees more of the play area than the other"
+    - "Drive countdown and any timers from the shared match clock"
+    - "Handle disconnect, reconnect, and forfeit through the shared rules"
+    - "For hidden-information games, ensure secret state is never transmitted to the opponent's client"
+  acceptance:
+    - "A full match completes between two different device classes with identical final state"
+    - "Neither player can see a game object the other cannot"
+    - "Passes the cross-device test harness including injected latency and packet loss"
+    - "A mid-match disconnect inside the reconnect window resumes rather than ending the match"
+    - "Desync is detected and surfaced, never silent"
+  archetypes: ["turn-board", "turn-aim", "rt-split", "rt-arena", "rt-race"]
+  labels: ["epic:game", "epic:crossplay", "epic:online", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- key: parity
+  title: "[{name}] Audit fairness across devices and input families"
+  why: "A thumb, a mouse, and a trackpad are not equivalent instruments. If {name} rewards precision or reaction speed, the player with better hardware wins regardless of skill - and that is the fastest way to make cross-device play feel pointless."
+  actions:
+    - "Identify every interaction where an input family has an inherent advantage: aim precision, drag range, tap latency, hold timing"
+    - "Apply the normalisation rules from the input parity spec rather than inventing per-game ones"
+    - "Measure outcomes across touch, mouse, and trackpad and compare the distributions"
+    - "Verify neither seat nor either screen size confers an advantage in shared-screen play"
+    - "If the game cannot be made fair cross-device, declare it same-class-only in the manifest rather than shipping it unfair"
+  acceptance:
+    - "Measured outcome distributions are comparable across input families"
+    - "Neither seat wins more than the 45-55 percent band in the balance harness at equal skill"
+    - "Any residual advantage is documented, and the manifest reflects any restriction"
+    - "Reaction-sensitive outcomes are resolved on source timestamps, not arrival order"
+  labels: ["epic:game", "epic:crossplay", "epic:qa", "type:qa", "priority:P2", "size:M"]
   milestone: M2 Game Catalog

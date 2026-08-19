@@ -37,6 +37,8 @@ labels:
   - {name: "epic:i18n",         color: "C2E0C6", description: "Localisation"}
   - {name: "epic:qa",           color: "BFDADC", description: "Testing and verification"}
   - {name: "epic:online",       color: "5319E7", description: "Remote multiplayer"}
+  - {name: "epic:crossplay",    color: "8250DF", description: "Cross-device play: phone, tablet, laptop, any combination"}
+  - {name: "epic:responsive",   color: "0969DA", description: "Layout and rendering across every screen size and orientation"}
   - {name: "epic:docs",         color: "BFDADC", description: "Documentation"}
   - {name: "type:epic",         color: "EEEEEE", description: "Parent issue tracking a group of work"}
   - {name: "type:research",     color: "EEEEEE", description: "Play, observe, document. No shipping code"}
@@ -1767,3 +1769,492 @@ issues:
   acceptance: ["Ten thousand concurrent rooms sustained with documented cost"]
   labels: ["epic:online", "epic:qa", "type:chore", "priority:P3", "size:M"]
   milestone: M4 Online
+
+# =====================================================================
+# E20 CROSS-DEVICE PLAY
+# Two people must be able to play together whether they are sharing one
+# phone or sitting on opposite sides of the world on a phone and a laptop.
+# That is two different presentations of the same game, plus a transport,
+# plus a fairness problem — and it constrains the engine from day one.
+# =====================================================================
+
+- title: "Spec the two presentation modes: shared-screen and single-seat"
+  epic: crossplay
+  why: "The same game has to render two different ways. On one device two seats share the screen; on two devices each player owns the whole screen in their own orientation. If this is not designed up front, every game gets a bespoke second layout bolted on later."
+  actions:
+    - "Define presentation as a first-class concept: shared-screen (two seats, one viewport) and single-seat (one seat, full viewport)"
+    - "Document how the HUD, controls, seat rotation, and safe areas differ between them"
+    - "Decide which presentation each archetype defaults to, and how a game declares support"
+    - "Specify what happens to seat rotation in single-seat mode - the play area no longer flips, it is always upright for the local player"
+  acceptance:
+    - "Doc committed covering both presentations with a decision table per archetype"
+    - "Every downstream presentation issue references this spec rather than re-deciding"
+    - "Reviewed before any game implements its second presentation"
+  labels: ["epic:crossplay", "epic:sdk", "type:spec", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Make the simulation viewport-independent by running in fixed logical units"
+  epic: crossplay
+  why: "A phone and a laptop must simulate the identical match. If any simulation value is expressed in pixels, the two devices diverge and lockstep netcode is impossible before it is even attempted."
+  actions:
+    - "Define a fixed logical coordinate space per game, declared in the manifest"
+    - "Audit the engine for any simulation value derived from canvas or window size"
+    - "Move all pixel conversion into the render layer so update() never sees a device dimension"
+    - "Add a test that runs the same input trace at three viewport sizes and asserts identical final state"
+  acceptance:
+    - "Simulation output is bit-identical across viewport sizes, proven by test"
+    - "No engine or game update path reads canvas, window, or devicePixelRatio"
+    - "Logical resolution is declared per game and validated at build time"
+  labels: ["epic:crossplay", "epic:engine", "type:feat", "priority:P0", "size:L"]
+  milestone: M0 Foundation
+
+- title: "Guarantee an identical logical viewport for both players in remote play"
+  epic: crossplay
+  why: "This is the fairness problem nobody sees coming. If the laptop player's wider screen shows more of the arena than the phone player's, the laptop player has a real competitive advantage. Both must see exactly the same play area, letterboxed differently."
+  actions:
+    - "Negotiate a common logical viewport at match start, independent of either device's screen"
+    - "Letterbox each device to that viewport rather than filling its screen"
+    - "Never reveal play area outside the negotiated viewport, even when screen space is available"
+    - "Use the surplus space for HUD and controls instead"
+  acceptance:
+    - "Two devices with different aspect ratios show the identical play area, verified side by side"
+    - "No player can see a game object the other cannot"
+    - "Surplus screen space is used for chrome, never for extra field of view"
+  labels: ["epic:crossplay", "epic:engine", "type:feat", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Implement the presentation abstraction in the game SDK"
+  epic: crossplay
+  why: "Games should express what they draw once and let the SDK place it, or 107 games each grow two divergent layout implementations."
+  actions:
+    - "Expose the active presentation and local seat to the game through the context"
+    - "Have the SDK own HUD placement, control zones, and rotation per presentation"
+    - "Give games a declarative way to say where their play area and control zones sit"
+    - "Provide a dev toggle to switch presentation live for testing"
+  acceptance:
+    - "A game supports both presentations without branching on device type"
+    - "Switching presentation at runtime does not disturb simulation state"
+    - "The dev toggle is stripped from production bundles"
+  labels: ["epic:crossplay", "epic:sdk", "type:feat", "priority:P0", "size:L"]
+  milestone: M1 Playable Shell
+
+- title: "Add supported presentations and device classes to the game manifest"
+  epic: crossplay
+  why: "Some games genuinely do not work remotely, and some do not work on a phone in portrait. The catalog must know before a player picks one and hits a dead end."
+  actions:
+    - "Add supportedPresentations, minViewport, and preferredOrientation to the manifest schema"
+    - "Validate at build time that a declared presentation is actually implemented"
+    - "Surface the constraints on the game page and filter the catalog by them"
+  acceptance:
+    - "A game that cannot be played remotely never offers the remote option"
+    - "The catalog can be filtered to what the current device supports"
+    - "Build fails when a declaration and the implementation disagree"
+  labels: ["epic:crossplay", "epic:sdk", "type:feat", "priority:P1", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Write the cross-device input parity design document"
+  epic: crossplay
+  why: "A thumb on a phone and a mouse on a laptop are not equivalent instruments. A mouse is more precise, a thumb occludes the screen, and a trackpad drags differently from both. Left unaddressed, cross-device matches are decided by hardware rather than skill."
+  actions:
+    - "Enumerate the input families: touch, mouse, trackpad, keyboard, gamepad, pen"
+    - "For each game archetype, identify where a family has an inherent advantage"
+    - "Decide the normalisation policy per interaction: aim precision, drag distance, tap latency, hold timing"
+    - "Define which games are fair cross-device and which should be same-class only"
+  acceptance:
+    - "Doc committed with a per-archetype, per-family parity table"
+    - "Each game archetype has a stated normalisation rule"
+    - "Games judged unfair cross-device are flagged in the manifest rather than shipped unfair"
+  labels: ["epic:crossplay", "epic:input", "type:spec", "priority:P0", "size:L"]
+  milestone: M1 Playable Shell
+
+- title: "Unify touch, mouse, trackpad, and pen behind pointer events"
+  epic: crossplay
+  why: "Games must not branch on input hardware. One code path for every pointing device is what makes a phone and a laptop able to play the same build."
+  actions:
+    - "Route all pointing input through Pointer Events with a single normalised representation"
+    - "Preserve pressure and pointer type where available without requiring them"
+    - "Keep the existing per-seat zone ownership rule intact for multi-pointer devices"
+    - "Handle mouse leaving the window mid-drag the way a lifted finger is handled"
+  acceptance:
+    - "A drag-to-aim game plays identically with a finger, a mouse, and a trackpad"
+    - "No game code reads pointerType to decide behaviour"
+    - "Pointer capture survives the pointer leaving the canvas"
+  labels: ["epic:crossplay", "epic:input", "type:feat", "priority:P0", "size:M"]
+  milestone: M0 Foundation
+
+- title: "Normalise aim precision across pointing devices"
+  epic: crossplay
+  why: "A mouse can place a shot within a pixel; a thumb covering the target cannot. Without normalisation every aim game is won by whoever brought a laptop."
+  actions:
+    - "Express aim as a normalised vector over a device-independent drag distance, not raw pixels"
+    - "Apply a consistent precision envelope so no family can aim finer than the envelope allows"
+    - "Scale the envelope by the negotiated logical viewport rather than the physical screen"
+    - "Verify with a measured test: same intended shot, three devices, comparable outcomes"
+  acceptance:
+    - "Measured shot dispersion is comparable across touch, mouse, and trackpad"
+    - "No family can exceed the shared precision envelope"
+    - "The envelope is a documented constant, not a per-game guess"
+  labels: ["epic:crossplay", "epic:input", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Measure and compensate input latency differences between device classes"
+  epic: crossplay
+  why: "Reaction games are decided in tens of milliseconds. A cheap Android browser and a desktop Chrome do not deliver an input on the same schedule, and in a reaction duel that gap is the whole game."
+  actions:
+    - "Measure end-to-end input latency per device class using the existing latency harness"
+    - "Timestamp inputs at the source and resolve reaction outcomes on those timestamps, not arrival order"
+    - "Define the tolerance below which two inputs are declared simultaneous"
+    - "Show the measured latency in the debug overlay during remote matches"
+  acceptance:
+    - "Reaction outcomes are decided by source timestamp, never by packet arrival"
+    - "A documented tolerance window exists and is applied by the shared tie helper"
+    - "Latency figures are recorded per device class in the test matrix"
+  labels: ["epic:crossplay", "epic:input", "type:feat", "priority:P1", "size:L"]
+  milestone: M2 Game Catalog
+
+- title: "Negotiate device capability at match start"
+  epic: crossplay
+  why: "Before the countdown, both clients need to agree on what they can both do: the shared viewport, the frame budget, the input families in play, and whether either side needs assistive settings."
+  actions:
+    - "Exchange capability descriptors on connection: viewport, DPR, input families, reduced-motion, save-data"
+    - "Compute the shared match configuration from the intersection"
+    - "Show each player what the other is playing on, without exposing anything personal"
+    - "Refuse to start and explain clearly when no viable shared configuration exists"
+  acceptance:
+    - "Both clients derive an identical match configuration from the same exchange"
+    - "An impossible pairing fails before the countdown with a readable reason"
+    - "No device identifier or personal data is exchanged"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Map every game action onto each input family for single-seat play"
+  epic: crossplay
+  why: "In shared-screen play a seat gets half a keyboard or half a screen. Alone on a laptop the same player has the whole keyboard and a mouse, and the control scheme should use it rather than pretend the other half is occupied."
+  actions:
+    - "Define a full-device control scheme per game archetype for keyboard, pointer, and gamepad"
+    - "Keep the action set identical to shared-screen play so rules never change with presentation"
+    - "Show the correct scheme in the lobby for the detected device and presentation"
+  acceptance:
+    - "Every game is fully playable single-seat with keyboard alone and with pointer alone"
+    - "The action set is identical across presentations"
+    - "The lobby diagram matches what the player actually has in hand"
+  labels: ["epic:crossplay", "epic:input", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Implement the remote session model and room lifecycle"
+  epic: crossplay
+  why: "Cross-device play needs a room before it needs netcode: create, share, join, start, rejoin, end."
+  actions:
+    - "Create a room and produce a short human-sayable join code plus a link"
+    - "Join by code or link from any device, with a clear waiting state"
+    - "Handle the room being full, expired, or already started"
+    - "Garbage-collect abandoned rooms"
+  acceptance:
+    - "Two devices reach a started match from a shared link in under three taps each"
+    - "Every failure mode has a specific, actionable message"
+    - "Abandoned rooms disappear without manual intervention"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P1", "size:L"]
+  milestone: M2 Game Catalog
+
+- title: "Implement the transport: WebSocket signalling with a WebRTC data channel and TURN fallback"
+  epic: crossplay
+  why: "Peer-to-peer keeps latency and cost low, but a real share of mobile networks block it, and a game that only works on friendly networks is a game that looks broken at random."
+  actions:
+    - "Signal over WebSocket, upgrade to a WebRTC data channel when possible"
+    - "Fall back to relay when NAT traversal fails, transparently to the game"
+    - "Expose one transport interface so game and netcode never know which is in use"
+    - "Model the relay cost before launch"
+  acceptance:
+    - "A match completes on a mobile network that blocks peer-to-peer"
+    - "The game layer cannot tell which transport is active"
+    - "Fallback happens without a visible interruption"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Implement clock synchronisation between paired devices"
+  epic: crossplay
+  why: "Timestamped inputs, countdowns, and match timers all assume the two devices agree on the time. They do not, by default, and the drift is large enough to matter."
+  actions:
+    - "Estimate offset and round-trip time with a periodic exchange"
+    - "Expose a shared match clock derived from the estimate"
+    - "Re-estimate during play and correct smoothly rather than jumping"
+    - "Drive the countdown from the shared clock so both see 3-2-1 together"
+  acceptance:
+    - "Countdown start differs by less than one frame between devices"
+    - "Clock corrections never jump the simulation"
+    - "Offset and round-trip time are visible in the debug overlay"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P1", "size:M"]
+  milestone: M4 Online
+
+- title: "Implement state synchronisation for turn-based remote games"
+  epic: crossplay
+  why: "Board games do not need lockstep. They need a move to be validated, applied identically on both sides, and never lost."
+  actions:
+    - "Send moves rather than state, and apply them through the same rules module both sides run"
+    - "Acknowledge and retry so a dropped move cannot desync the board"
+    - "Reconcile on reconnect by replaying the move log"
+    - "Reject illegal moves server-side or peer-side rather than trusting the sender"
+  acceptance:
+    - "A board game survives a dropped packet and a mid-match reconnect with identical state"
+    - "An illegal move is refused rather than applied"
+    - "Move log replay reproduces the board exactly"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Implement deterministic lockstep with input delay for real-time remote games"
+  epic: crossplay
+  why: "The fixed timestep, seeded RNG, and logical-unit simulation were all built for this moment. Lockstep is what turns them into a real-time match between two devices."
+  actions:
+    - "Exchange per-step inputs with a configurable delay tuned to measured round-trip time"
+    - "Stall rather than diverge when an input has not arrived"
+    - "Hash state every N steps and compare"
+    - "Surface a desync explicitly and end the match cleanly rather than drifting"
+  acceptance:
+    - "Two devices run a full real-time match with identical final state"
+    - "A desync is always detected and reported, never silent"
+    - "Input delay adapts to the measured connection rather than being fixed"
+  labels: ["epic:crossplay", "epic:online", "epic:engine", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Implement disconnect, reconnect, and forfeit rules for remote matches"
+  epic: crossplay
+  why: "Mobile connections drop constantly. An instant forfeit on a subway tunnel makes remote play miserable."
+  actions:
+    - "Hold the match through a defined reconnect window with clear messaging on the other side"
+    - "Resume from the move log or the last agreed state"
+    - "Apply and document consistent forfeit rules when the window expires"
+    - "Let the waiting player leave without being trapped"
+  acceptance:
+    - "A thirty-second dropout resumes rather than ending the match"
+    - "The waiting player always knows what is happening and can leave"
+    - "Forfeit rules are identical for both sides"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Handle hidden-information games in remote play"
+  epic: crossplay
+  why: "Sea Battle needs a blackout hand-off on one device. On two devices the problem inverts: each player simply must not receive the other's secret state at all."
+  actions:
+    - "Ensure hidden state is never transmitted to the opponent's client, not merely hidden in its UI"
+    - "Validate reveals against the authoritative state so a modified client cannot peek"
+    - "Skip the pass-and-play blackout entirely in single-seat presentation"
+  acceptance:
+    - "An opponent's client never receives hidden state, verified by inspecting traffic"
+    - "The blackout screen does not appear in remote play"
+    - "A tampered client cannot reveal what it was not sent"
+  labels: ["epic:crossplay", "epic:online", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Support cross-device tournaments"
+  epic: crossplay
+  why: "The tournament is the retention hook. Restricting it to one device would make remote play feel like a lesser mode."
+  actions:
+    - "Carry tournament state across the remote session rather than a single device"
+    - "Keep both clients agreed on the running score and the next game"
+    - "Handle one player dropping mid-tournament without losing the run"
+  acceptance:
+    - "A seven-game tournament completes across two devices with a consistent score"
+    - "A reconnect mid-tournament resumes at the right game"
+  labels: ["epic:crossplay", "epic:meta", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Show connection quality and what the opponent is playing on"
+  epic: crossplay
+  why: "When a remote match feels sluggish players blame the game. Showing latency and connection state moves the explanation to where it belongs."
+  actions:
+    - "Display round-trip time and packet loss during remote matches"
+    - "Warn when the connection degrades enough to affect fairness"
+    - "Indicate the opponent's device class without revealing anything identifying"
+  acceptance:
+    - "Latency and loss are visible without obscuring play"
+    - "A degrading connection produces a warning before the match becomes unfair"
+  labels: ["epic:crossplay", "epic:online", "epic:ui", "type:feat", "priority:P3", "size:S"]
+  milestone: M4 Online
+
+- title: "Build the cross-device test harness"
+  epic: crossplay
+  why: "Cross-device bugs only appear with two clients at different viewports. Testing that by hand with two phones does not scale to 107 games."
+  actions:
+    - "Drive two browser contexts at different viewports and input families in one Playwright run"
+    - "Assert both clients reach identical final state from a scripted input trace"
+    - "Simulate latency, jitter, and packet loss"
+    - "Make it reusable as the per-game cross-play acceptance test"
+  acceptance:
+    - "A single command runs a full cross-device match for a named game"
+    - "Injected latency and loss are configurable"
+    - "Every game's cross-play issue can close against this harness"
+  labels: ["epic:crossplay", "epic:qa", "type:feat", "priority:P1", "size:L"]
+  milestone: M2 Game Catalog
+
+- title: "Add anti-cheat considerations for peer-to-peer matches"
+  epic: crossplay
+  why: "In a peer-to-peer match there is no server to trust. A modified client can claim any input, and the honest player has no recourse."
+  actions:
+    - "Document the threat model for casual peer-to-peer play"
+    - "Validate inputs against what the rules allow before applying them"
+    - "Detect impossible timing and reject rather than accept"
+    - "Decide which games need server authority before they can carry a public result"
+  acceptance:
+    - "Threat model committed with a decision per game class"
+    - "Rule-illegal inputs are refused by the receiving client"
+    - "Results from unauthenticated peer play are never written to a public board"
+  labels: ["epic:crossplay", "epic:backend", "type:spec", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+# =====================================================================
+# E21 RESPONSIVE ACROSS EVERY DEVICE
+# Phone, tablet, laptop, desktop; portrait and landscape; any size.
+# =====================================================================
+
+- title: "Write the responsive strategy for the game canvas"
+  epic: responsive
+  why: "Every game renders into a box whose size we do not control, on screens from a 320px phone to a 4K monitor. One strategy decided once beats 107 improvisations."
+  actions:
+    - "Define fixed logical resolution per game, scaled to fit with letterboxing"
+    - "Decide the policy for aspect ratios wider or taller than the logical space"
+    - "Specify how safe-area insets, browser chrome, and on-screen keyboards are accounted for"
+    - "Define the minimum supported viewport and what happens below it"
+  acceptance:
+    - "Doc committed and referenced by every per-game responsive issue"
+    - "The policy covers portrait, landscape, and square-ish tablet ratios"
+    - "Below-minimum viewports get a clear message, not a broken canvas"
+  labels: ["epic:responsive", "epic:engine", "type:spec", "priority:P0", "size:M"]
+  milestone: M0 Foundation
+
+- title: "Define the device class breakpoints and the shell grid"
+  epic: responsive
+  why: "Phone, large phone, tablet portrait, tablet landscape, laptop, desktop, and ultrawide are genuinely different layouts, not one layout stretched."
+  actions:
+    - "Define breakpoints and name each device class"
+    - "Specify the catalog grid, header, and game page at each class"
+    - "Use container queries where a component's context matters more than the viewport"
+    - "Document which classes are tier-one supported"
+  acceptance:
+    - "Every shell route is designed at each named class, not just reflowed"
+    - "No horizontal page scroll at any width from 320px to 4K"
+  labels: ["epic:responsive", "epic:site", "type:spec", "priority:P0", "size:M"]
+  milestone: M0 Foundation
+
+- title: "Handle mobile browser chrome with dynamic viewport units"
+  epic: responsive
+  why: "On mobile Safari and Chrome the address bar appears and disappears mid-match, changing the viewport height under a running game. Using vh means the canvas resizes while someone is playing."
+  actions:
+    - "Use dynamic viewport units with a static fallback"
+    - "Debounce resize so a scroll-triggered chrome change does not re-layout the canvas"
+    - "Keep the logical play area constant across the change"
+    - "Verify on iOS Safari, Chrome Android, and Samsung Internet"
+  acceptance:
+    - "The play area does not change size when browser chrome appears or hides"
+    - "No layout thrash during a match"
+  labels: ["epic:responsive", "epic:engine", "type:bug", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Implement safe-area handling for notches, home indicators, and rounded corners"
+  epic: responsive
+  why: "A control under a notch is a control nobody can press, and a score in a rounded corner is a score nobody can read."
+  actions:
+    - "Apply safe-area insets to the canvas container and all HUD placement"
+    - "Keep interactive elements clear of system gesture areas"
+    - "Verify in both orientations, where the insets differ"
+  acceptance:
+    - "No interactive or informational element falls under a notch, indicator, or corner"
+    - "Verified in portrait and landscape on a notched device"
+  labels: ["epic:responsive", "epic:engine", "type:feat", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Implement orientation handling and per-game orientation preference"
+  epic: responsive
+  why: "Two people sharing a phone in portrait is a different physical arrangement from sharing it in landscape, and some games only work in one."
+  actions:
+    - "Let a game declare its preferred and supported orientations"
+    - "Re-layout rather than letterbox where the game supports both"
+    - "Offer a non-blocking rotate prompt where it supports only one"
+    - "Never lose match state across an orientation change"
+  acceptance:
+    - "Rotating mid-match preserves the simulation exactly"
+    - "A single-orientation game prompts without blocking play"
+    - "Games supporting both look designed in both, not stretched"
+  labels: ["epic:responsive", "epic:engine", "type:feat", "priority:P1", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Design tablet layouts rather than scaling phone layouts"
+  epic: responsive
+  why: "An iPad is the best device for two people sharing a screen and deserves a layout that uses the space, not a stretched phone view with enormous controls."
+  actions:
+    - "Design the catalog, game page, and shared-screen presentation at tablet sizes"
+    - "Scale control zones to the physical size, not just the pixel count"
+    - "Handle tablet portrait and landscape as separate designs"
+    - "Verify split-view and stage-manager style resizing does not break the canvas"
+  acceptance:
+    - "Tablet layouts use the extra space deliberately"
+    - "Controls remain comfortably reachable for two people at tablet size"
+    - "Resizing in split view re-layouts cleanly"
+  labels: ["epic:responsive", "epic:site", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Handle unusual aspect ratios: ultrawide, foldables, and square windows"
+  epic: responsive
+  why: "Ultrawide monitors, folding phones, and freely resized desktop windows all produce ratios no phone-first design anticipates."
+  actions:
+    - "Cap the play area and centre it rather than stretching on ultrawide"
+    - "Handle fold and unfold as a resize that preserves match state"
+    - "Test at extreme ratios in both directions"
+  acceptance:
+    - "No game distorts or reveals extra field of view at extreme ratios"
+    - "Folding a device mid-match preserves state"
+  labels: ["epic:responsive", "epic:engine", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Scale touch targets by physical size rather than pixels"
+  epic: responsive
+  why: "A 44px target is comfortable on a phone and tiny on a high-density tablet held at arm's length. Fingers do not get smaller as pixels do."
+  actions:
+    - "Size interactive elements in physical units, accounting for device pixel ratio"
+    - "Set a minimum physical size for gameplay controls"
+    - "Verify on a low-density phone and a high-density tablet"
+  acceptance:
+    - "Controls are comfortably hittable on both density extremes"
+    - "No target falls below the physical minimum on any supported device"
+  labels: ["epic:responsive", "epic:a11y", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Respect user font scaling and zoom without breaking layouts"
+  epic: responsive
+  why: "People who scale their text up are not asking for a broken page, and browser zoom is the most common accessibility tool there is."
+  actions:
+    - "Use relative units for all shell typography"
+    - "Verify every route at 200 percent zoom and at large system font sizes"
+    - "Keep the canvas independent of text scaling so gameplay is unaffected"
+  acceptance:
+    - "No clipping or overlap at 200 percent zoom on any route"
+    - "Gameplay is unaffected by text scale settings"
+  labels: ["epic:responsive", "epic:a11y", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Build the responsive verification harness"
+  epic: responsive
+  why: "Checking 107 games by hand at eight viewports is 856 manual checks. Automate the sweep and keep the human pass for feel."
+  actions:
+    - "Screenshot every route and every game at the named device classes in both orientations"
+    - "Assert no horizontal overflow and no element outside safe areas"
+    - "Surface diffs on the pull request"
+    - "Make it reusable as the per-game responsive acceptance test"
+  acceptance:
+    - "One command produces the full matrix for a named game"
+    - "Overflow and safe-area violations fail automatically"
+    - "Every game's responsive issue can close against this harness"
+  labels: ["epic:responsive", "epic:qa", "type:feat", "priority:P1", "size:L"]
+  milestone: M2 Game Catalog
+
+- title: "Define the device test matrix and acquire the hardware"
+  epic: responsive
+  why: "Emulated viewports do not surface thermal throttling, real touch behaviour, or browser quirks. The audience is largely on mid and low-end Android."
+  actions:
+    - "Name the tier-one devices: a low-end Android, a mid Android, a current iPhone, an iPad, a laptop"
+    - "Record browser versions per device"
+    - "Establish a per-release manual pass across the matrix"
+  acceptance:
+    - "Matrix committed and the hardware available to the team"
+    - "Every release runs the pass before shipping"
+  labels: ["epic:responsive", "epic:qa", "type:chore", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
