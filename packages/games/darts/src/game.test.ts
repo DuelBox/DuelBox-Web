@@ -251,7 +251,10 @@ describe('playing with the keyboard alone', () => {
 });
 
 describe('a whole match', () => {
-  it('finishes, with one seat on exactly zero', () => {
+  // A 301 match driven a step at a time is tens of thousands of steps.
+  const MATCH_TIMEOUT_MS = 60_000;
+
+  it('finishes, with one seat on exactly zero', { timeout: MATCH_TIMEOUT_MS }, () => {
     const game = new DartsGame();
     const input = new FakeInput();
     game.init(makeContext('hard', 'hard'));
@@ -269,7 +272,7 @@ describe('a whole match', () => {
     expect(score.p2).toBeGreaterThanOrEqual(0);
   });
 
-  it('replays identically from the same seed', () => {
+  it('replays identically from the same seed', { timeout: MATCH_TIMEOUT_MS }, () => {
     const play = (): string => {
       const game = new DartsGame();
       const input = new FakeInput();
@@ -286,7 +289,7 @@ describe('a whole match', () => {
     expect(play()).toBe(play());
   });
 
-  it('never lets a seat go below zero', () => {
+  it('never lets a seat go below zero', { timeout: MATCH_TIMEOUT_MS }, () => {
     const game = new DartsGame();
     const input = new FakeInput();
     game.init(makeContext('easy', 'hard'));

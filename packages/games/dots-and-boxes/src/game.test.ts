@@ -261,7 +261,9 @@ describe('playing with the keyboard alone', () => {
 });
 
 describe('a whole match', () => {
-  it('plays out bot against bot and accounts for every box', () => {
+  const MATCH_TIMEOUT_MS = 60_000;
+
+  it('plays out bot against bot and accounts for every box', { timeout: MATCH_TIMEOUT_MS }, () => {
     const game = new DotsAndBoxesGame();
     const input = new FakeInput();
     game.init(makeContext('hard', 'normal'));
@@ -276,7 +278,7 @@ describe('a whole match', () => {
     expect(score.p1 + score.p2, 'a box went missing').toBe(BOX_COUNT);
   });
 
-  it('replays identically from the same seed', () => {
+  it('replays identically from the same seed', { timeout: MATCH_TIMEOUT_MS }, () => {
     const play = (): string => {
       const game = new DotsAndBoxesGame();
       const input = new FakeInput();

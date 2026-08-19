@@ -23,6 +23,17 @@ import {
 } from './rules.js';
 import type { Board, BotDifficulty, Cell } from './rules.js';
 
+/**
+ * A generous budget for the tests that play whole games.
+ *
+ * Measured rather than guessed: the hard bot's worst single move is about 39ms and its
+ * average about 11ms, so one game is a few hundred milliseconds and a ten-game series is
+ * a few seconds — comfortably inside 5s on a developer machine and not on a shared CI
+ * runner, which is where it first failed. The series length is what makes the strength
+ * comparison meaningful, so the budget is raised rather than the series shortened.
+ */
+const SERIES_TIMEOUT_MS = 60_000;
+
 /** Plays a whole game between two bots, returning the finished board. */
 function playOut(p1: BotDifficulty, p2: BotDifficulty, seed: number): Board {
   const board = createBoard();
@@ -179,16 +190,20 @@ describe('the end of the game', () => {
     expect(winnerOf(board)).toBe('draw');
   });
 
-  it('always terminates, and every piece belongs to someone', () => {
-    for (const seed of [1, 2, 3, 7, 42]) {
-      const board = playOut('hard', 'normal', seed);
-      expect(isOver(board), `seed ${String(seed)} never finished`).toBe(true);
-      const { p1, p2 } = tallyOf(board);
-      const occupied = board.filter((cell) => cell !== null).length;
-      expect(p1 + p2).toBe(occupied);
-      expect(winnerOf(board)).not.toBeNull();
-    }
-  });
+  it(
+    'always terminates, and every piece belongs to someone',
+    { timeout: SERIES_TIMEOUT_MS },
+    () => {
+      for (const seed of [1, 2, 3, 7, 42]) {
+        const board = playOut('hard', 'normal', seed);
+        expect(isOver(board), `seed ${String(seed)} never finished`).toBe(true);
+        const { p1, p2 } = tallyOf(board);
+        const occupied = board.filter((cell) => cell !== null).length;
+        expect(p1 + p2).toBe(occupied);
+        expect(winnerOf(board)).not.toBeNull();
+      }
+    },
+  );
 });
 
 describe('passing', () => {
@@ -250,7 +265,7 @@ describe('the bot', () => {
     expect(bestMove(board, 'p1', new Rng(2), 'hard')).toBe(indexOf(0, 0));
   });
 
-  it('is deterministic for a seed', () => {
+  it('is deterministic for a seed', { timeout: SERIES_TIMEOUT_MS }, () => {
     const trace = (): string => {
       const board = createBoard();
       const rng = new Rng(808);
@@ -267,7 +282,7 @@ describe('the bot', () => {
     expect(trace()).toBe(trace());
   });
 
-  it('beats its blundering self over a series', () => {
+  it('beats its blundering self over a series', { timeout: SERIES_TIMEOUT_MS }, () => {
     // The tiers must differ in strength, or difficulty is a label rather than a setting.
     let hardWins = 0;
     const games = 10;

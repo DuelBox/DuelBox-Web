@@ -249,7 +249,10 @@ describe('passing', () => {
 });
 
 describe('a whole match', () => {
-  it('finishes and every piece belongs to someone', () => {
+  // Whole matches driven a step at a time are slow by construction; see rules.test.ts.
+  const MATCH_TIMEOUT_MS = 60_000;
+
+  it('finishes and every piece belongs to someone', { timeout: MATCH_TIMEOUT_MS }, () => {
     const game = new ReversiGame();
     const input = new FakeInput();
     game.init(makeContext('hard', 'normal'));
@@ -266,7 +269,7 @@ describe('a whole match', () => {
     expect(occupied).toBeGreaterThan(4);
   });
 
-  it('replays identically from the same seed', () => {
+  it('replays identically from the same seed', { timeout: MATCH_TIMEOUT_MS }, () => {
     const play = (): string => {
       const game = new ReversiGame();
       const input = new FakeInput();
@@ -283,7 +286,7 @@ describe('a whole match', () => {
     expect(play()).toBe(play());
   });
 
-  it('agrees with the rules module about the score', () => {
+  it('agrees with the rules module about the score', { timeout: MATCH_TIMEOUT_MS }, () => {
     const game = new ReversiGame();
     const input = new FakeInput();
     game.init(makeContext('normal', 'normal'));
