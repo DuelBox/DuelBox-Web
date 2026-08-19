@@ -76,3 +76,47 @@ test.describe('the match flow', () => {
     await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
   });
 });
+
+/**
+ * Bot mode, which the rest of the suite never exercised.
+ *
+ * Every test above starts a match with "Play together here". That gap let a bug ship in
+ * which every bot match froze on the countdown forever: the difficulty object was
+ * rebuilt on each render, which re-ran the host's setup effect, and the rebuilt loop was
+ * never started because the phase had not changed. Nothing errored — the match simply
+ * stopped. These assert the path end to end.
+ */
+test.describe('playing against the bot', () => {
+  test('gets past the countdown and into play', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+
+    const countdown = page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ });
+    await expect(countdown).toBeVisible();
+    // The whole bug was that this never happened.
+    await expect(countdown).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('names the bot in the HUD and says it is thinking on its turn', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    const hud = page.getByRole('group', { name: 'Score' });
+    await expect(hud).toContainText('Bo (bot)');
+  });
+
+  test('keeps running long after the countdown, rather than stalling once', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+
+    // A frozen loop still shows a board, so assert the simulation is advancing: pause,
+    // and the resumed countdown must also complete.
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+  });
+});

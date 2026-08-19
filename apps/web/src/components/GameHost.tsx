@@ -232,6 +232,12 @@ export function GameHost({
     const runner = new RunLoop(loop, browserClock());
     runnerRef.current = runner;
 
+    // A host rebuilt mid-match must come back running if the phase says it should be.
+    // The phase effect below only fires when the phase *changes*, so a host recreated
+    // while the phase stayed the same would be left stopped for good — the match would
+    // hang wherever it was, with no error and nothing in the console.
+    if (phaseRef.current === 'countdown' || phaseRef.current === 'playing') runner.start();
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.

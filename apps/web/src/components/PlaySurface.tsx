@@ -21,6 +21,15 @@ import styles from './PlaySurface.module.css';
 type Mode = 'friend' | 'bot';
 
 /**
+ * Hoisted so its identity is stable across renders.
+ *
+ * Written inline it was a fresh object every render, and it sits in the game host's
+ * setup-effect dependencies — so the first countdown frame tore the game down and
+ * rebuilt it, and bot matches hung on the countdown forever.
+ */
+const BOT_OPPONENT = { p2: 'normal' } as const;
+
+/**
  * The shared match flow every game runs inside: choose a mode, count in, play, pause,
  * see the result, play again.
  *
@@ -206,7 +215,7 @@ export function PlaySurface({ slug }: { slug: string }) {
           phase={match.phase}
           presentation="shared-screen"
           localSeat="p1"
-          {...(mode === 'bot' ? { botDifficulty: { p2: 'normal' as const } } : {})}
+          {...(mode === 'bot' ? { botDifficulty: BOT_OPPONENT } : {})}
           onTick={handleTick}
           onScore={handleScore}
           onActiveSeat={setActiveSeat}
