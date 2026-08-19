@@ -12,6 +12,14 @@ import type { Page } from '@playwright/test';
 
 const CYCLES = 50;
 
+/**
+ * Fifty mount-unmount cycles is inherently slow, and slower still on WebKit on a shared
+ * CI runner — the default 30s budget is not enough there, which showed up only once CI
+ * could run the suite at all. Raised rather than reducing the cycle count: fifty is the
+ * number that makes the measurement meaningful.
+ */
+test.describe.configure({ timeout: 120_000 });
+
 /** Counts listener adds and removes per event type, from before any app code runs. */
 const COUNT_LISTENERS = `
   window.__listeners = {};
