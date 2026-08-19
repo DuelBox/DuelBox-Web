@@ -311,30 +311,36 @@ export function circleSegment(out: Contact, c: Circle, seg: Segment): boolean {
 }
 
 export function aabbAabb(out: Contact, a: Aabb, b: Aabb): boolean {
-  const loX = a.minX > b.minX ? a.minX : b.minX;
-  const hiX = a.maxX < b.maxX ? a.maxX : b.maxX;
-  const overlapX = hiX - loX;
+  // Distance A must travel each way to clear B. Whichever is smaller is the
+  // penetration on that axis; it is not the width of the intersection, which is
+  // shorter than the escape whenever one box contains the other. At most one of
+  // the pair can be negative, and a negative one means the boxes are apart.
+  const leftX = a.maxX - b.minX;
+  const rightX = b.maxX - a.minX;
+  const negX = leftX < rightX;
+  const overlapX = negX ? leftX : rightX;
   if (overlapX < 0) return miss(out);
-  const loY = a.minY > b.minY ? a.minY : b.minY;
-  const hiY = a.maxY < b.maxY ? a.maxY : b.maxY;
-  const overlapY = hiY - loY;
+  const leftY = a.maxY - b.minY;
+  const rightY = b.maxY - a.minY;
+  const negY = leftY < rightY;
+  const overlapY = negY ? leftY : rightY;
   if (overlapY < 0) return miss(out);
 
   out.hit = true;
-  out.pointX = (loX + hiX) / 2;
-  out.pointY = (loY + hiY) / 2;
-  // Least-penetration axis wins; a tie takes x, so a corner touch and a square
-  // containment both resolve the same way every step. Centres are compared
-  // doubled to avoid a division; equal centres push A along +x, matching the
-  // concentric-circle choice.
+  // Centre of the intersection rectangle.
+  out.pointX = ((a.minX > b.minX ? a.minX : b.minX) + (a.maxX < b.maxX ? a.maxX : b.maxX)) / 2;
+  out.pointY = ((a.minY > b.minY ? a.minY : b.minY) + (a.maxY < b.maxY ? a.maxY : b.maxY)) / 2;
+  // Least-penetration axis wins; a tie takes x, so a corner touch resolves the
+  // same way every step. Equal escapes mean the centres agree on that axis, and
+  // A then goes +axis, matching the concentric-circle choice.
   if (overlapX <= overlapY) {
     out.depth = overlapX;
-    out.normalX = a.minX + a.maxX < b.minX + b.maxX ? -1 : 1;
+    out.normalX = negX ? -1 : 1;
     out.normalY = 0;
   } else {
     out.depth = overlapY;
     out.normalX = 0;
-    out.normalY = a.minY + a.maxY < b.minY + b.maxY ? -1 : 1;
+    out.normalY = negY ? -1 : 1;
   }
   return true;
 }

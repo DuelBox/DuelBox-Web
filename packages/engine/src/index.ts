@@ -51,3 +51,26 @@ export {
   negotiateSharedLogical,
 } from './viewport.js';
 export type { SafeAreaInsets, Viewport } from './viewport.js';
+
+export {
+  createContact,
+  circleCircle,
+  circleAabb,
+  circleObb,
+  circleSegment,
+  aabbAabb,
+  segmentSegment,
+  obbObb,
+  closestPointOnSegment,
+  pointInAabb,
+  pointInCircle,
+  sweptCircleSegment,
+  sweptCircleCircle,
+} from './collision.js';
+export type { Circle, Aabb, Obb, Segment, Contact } from './collision.js';
+
+export { InputState, InputManager, DEFAULT_BINDINGS } from './input.js';
+export type { SeatInputState, KeyBinding } from './input.js';
+
+export { Canvas2DRenderer } from './renderer.js';
+export type { Renderer, Canvas2DLike, TextAlign } from './renderer.js';

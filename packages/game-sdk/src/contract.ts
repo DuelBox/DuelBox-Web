@@ -1,4 +1,4 @@
-import type { Presentation, Rng, SeatId, Vec2 } from '@duelbox/engine';
+import type { Presentation, Renderer, Rng, SeatId, Vec2 } from '@duelbox/engine';
 import type { GameManifest } from './manifest.js';
 
 /**
@@ -30,17 +30,7 @@ export interface InputState {
   seat(seat: SeatId): SeatInput;
 }
 
-/** Everything a game may draw with. Games never touch a canvas context directly. */
-export interface Renderer {
-  clear(colour: string): void;
-  rect(x: number, y: number, width: number, height: number, colour: string): void;
-  circle(x: number, y: number, radius: number, colour: string): void;
-  line(x1: number, y1: number, x2: number, y2: number, width: number, colour: string): void;
-  text(value: string, x: number, y: number, sizePx: number, colour: string): void;
-  /** Rotates subsequent drawing 180 degrees about the logical centre, for the far seat. */
-  pushSeatRotation(rotated: boolean): void;
-  popSeatRotation(): void;
-}
+export type { Renderer };
 
 export interface MatchScore {
   readonly p1: number;

@@ -286,17 +286,30 @@ describe('circleObb', () => {
 
   it('pushes a centre inside a rotated box out along a rotated face normal', () => {
     expect(circleObb(out, circle(0, 0, 0.5), obb(0, 0, 3, 1, Math.PI / 2))).toBe(true);
-    // Nearest face in the box frame is the left one, which now faces -y.
+    // The nearest face in the box frame is the bottom one, and a quarter turn
+    // leaves it facing +x.
     expect(out.depth).toBeCloseTo(1.5, 12);
-    expectNormal(out, 0, -1);
+    expectNormal(out, 1, 0);
   });
 
-  it('moving the circle along +normal by depth leaves it exactly touching', () => {
+  it('moving the circle along +normal by depth clears the overlap', () => {
     const box = obb(0, 0, 1, 1, Math.PI / 4);
     const c = circle(1.06, 0.4, 0.05);
     expect(circleObb(out, c, box)).toBe(true);
-    const moved = circle(c.x + out.normalX * out.depth, c.y + out.normalY * out.depth, c.radius);
-    expect(circleObb(out, moved, box)).toBe(true);
+    const depth = out.depth;
+    const nx = out.normalX;
+    const ny = out.normalY;
+
+    // Nine tenths of the way out leaves exactly a tenth of the overlap.
+    const part = circle(c.x + nx * depth * 0.9, c.y + ny * depth * 0.9, c.radius);
+    expect(circleObb(out, part, box)).toBe(true);
+    expect(out.depth).toBeCloseTo(depth * 0.1, 12);
+
+    // The full push lands on the touching boundary. Rotation makes that boundary
+    // a rounding error wide, so this may report a depth-0 touch or a clean miss;
+    // what matters is that no penetration is left either way.
+    const moved = circle(c.x + nx * depth, c.y + ny * depth, c.radius);
+    circleObb(out, moved, box);
     expect(out.depth).toBeCloseTo(0, 12);
   });
 });
@@ -412,9 +425,23 @@ describe('aabbAabb', () => {
     expectPoint(out, 4, 4);
   });
 
+  it('measures a contained box by its escape, not by the intersection', () => {
+    // A sits wholly inside B. The intersection is only 2 by 2, but A has to
+    // travel 3 to get clear of B's left edge, and reporting the intersection
+    // width would leave it still buried after the correction.
+    expect(aabbAabb(out, aabb(1, 2, 3, 4), aabb(0, 0, 10, 10))).toBe(true);
+    expect(out.depth).toBe(3);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 2, 3);
+
+    const moved = aabb(1 - 3, 2, 3 - 3, 4);
+    expect(aabbAabb(out, moved, aabb(0, 0, 10, 10))).toBe(true);
+    expect(out.depth).toBe(0);
+  });
+
   it('pushes A along +x when the centres coincide', () => {
     expect(aabbAabb(out, aabb(0, 0, 10, 10), aabb(4, 4, 6, 6))).toBe(true);
-    expect(out.depth).toBe(2);
+    expect(out.depth).toBe(6);
     expectNormal(out, 1, 0);
     expectPoint(out, 5, 5);
   });
@@ -460,12 +487,18 @@ describe('obbObb', () => {
     expectNormal(out, 0, 1);
   });
 
-  it('separates on B own axis when that is the shallow one', () => {
-    // A long thin box lying across a square: the square's own faces cut deeper
-    // than the thin box's, so the contact normal comes from A.
+  it('takes the shallow axis of a thin box rather than its long one', () => {
     expect(obbObb(out, obb(0, 0, 4, 0.25, 0), obb(0, 1, 1, 1, 0))).toBe(true);
     expect(out.depth).toBeCloseTo(0.25, 12);
     expectNormal(out, 0, -1);
+  });
+
+  it('takes B own axis when B is the thin one', () => {
+    // A square sitting on a thin plank laid across it at 45 degrees: the
+    // shallowest escape is perpendicular to the plank, an axis only B owns.
+    expect(obbObb(out, obb(0, 0, 2, 2, 0), obb(0, 0, 5, 0.1, Math.PI / 4))).toBe(true);
+    expect(out.depth).toBeCloseTo(0.1 + 2 * Math.SQRT2, 12);
+    expectNormal(out, -Math.SQRT1_2, Math.SQRT1_2);
   });
 
   it('only overlaps once B is rotated', () => {
@@ -479,9 +512,12 @@ describe('obbObb', () => {
   });
 
   it('a rotated box touching corner to face is still a hit with depth 0', () => {
-    // The diamond's left vertex reaches exactly A's right face.
-    expect(obbObb(out, obb(0, 0, 1, 1, 0), obb(1 + Math.SQRT2, 0, 1, 1, Math.PI / 4))).toBe(true);
-    expect(out.depth).toBeCloseTo(0, 12);
+    // A 45 degree box reaches its own cos + sin along the world x axis, so this
+    // places its left vertex exactly on A's right face whatever the platform's
+    // trigonometry rounds to.
+    const reach = Math.cos(Math.PI / 4) + Math.sin(Math.PI / 4);
+    expect(obbObb(out, obb(0, 0, 1, 1, 0), obb(1 + reach, 0, 1, 1, Math.PI / 4))).toBe(true);
+    expect(out.depth).toBe(0);
     expectNormal(out, -1, 0);
   });
 
@@ -498,11 +534,19 @@ describe('obbObb', () => {
     expect(spun.normalY).toBeCloseTo(out.normalX * s + out.normalY * c, 12);
   });
 
-  it('moving A along +normal by depth leaves the boxes exactly touching', () => {
+  it('moving A along +normal by depth clears the overlap', () => {
     const b = obb(2.2, 0, 1, 1, Math.PI / 4);
     expect(obbObb(out, obb(0, 0, 1, 1, 0), b)).toBe(true);
-    const moved = obb(out.normalX * out.depth, out.normalY * out.depth, 1, 1, 0);
-    expect(obbObb(out, moved, b)).toBe(true);
+    const depth = out.depth;
+    const nx = out.normalX;
+    const ny = out.normalY;
+
+    expect(obbObb(out, obb(nx * depth * 0.9, ny * depth * 0.9, 1, 1, 0), b)).toBe(true);
+    expect(out.depth).toBeCloseTo(depth * 0.1, 12);
+
+    // As with circleObb, the full push lands on a boundary a rounding error
+    // wide: a depth-0 touch and a clean miss are both correct, penetration is not.
+    obbObb(out, obb(nx * depth, ny * depth, 1, 1, 0), b);
     expect(out.depth).toBeCloseTo(0, 12);
   });
 });
