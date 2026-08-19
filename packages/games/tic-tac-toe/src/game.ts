@@ -1,4 +1,13 @@
-import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import {
+  GridCursor,
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  otherSeat,
+  set,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -48,6 +57,9 @@ const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_STRIKE = '#f4f4f5';
 
 const GRID_WIDTH = 8;
+/** The keyboard cursor sits inside its cell so it never touches the grid lines. */
+const CURSOR_INSET = 10;
+const CURSOR_WIDTH = 6;
 const MARK_RADIUS = 66;
 const MARK_WIDTH = 14;
 /** Half-diagonal of the cross, as a fraction of the circle's radius. */
@@ -100,6 +112,13 @@ export class TicTacToeGame implements Game {
    * about when input reopens.
    */
   readonly #flip = new SeatFlip();
+  /**
+   * The keyboard's way onto the board.
+   *
+   * Without it this game is pointer-only: a tap names a square directly, so there was
+   * nothing for a keyboard to move and two people sharing a laptop could not play at all.
+   */
+  readonly #cursor = new GridCursor({ columns: BOARD_COLUMNS, rows: BOARD_COLUMNS });
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
 
@@ -165,18 +184,31 @@ export class TicTacToeGame implements Game {
     }
 
     const seatInput = input.seat(active);
-    if (!seatInput.actionPressed) return;
-    const pointer = seatInput.pointer;
-    if (pointer === null) return;
     // Nothing is accepted while the board is part-way round: the cell under a finger is
     // moving, so a tap would name one the player did not mean.
     if (!this.#flip.acceptsInput) return;
-    // The board is drawn under the active seat's rotation, so a device-space tap has to
-    // be turned into board space before it names a cell. The *settled* orientation, which
-    // is the one on screen whenever input is open.
-    toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
-    const cell = cellIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
-    if (cell < 0) return;
+
+    // The keyboard moves a cursor; the pointer names a square outright. Both feed the
+    // same move, and using one never locks out the other.
+    this.#cursor.step(seatInput.move.x, seatInput.move.y, fixedDeltaSeconds, this.#flip.rotated);
+
+    if (!seatInput.actionPressed) return;
+
+    let cell = this.#cursor.index;
+    const pointer = seatInput.pointer;
+    if (pointer !== null) {
+      // The board is drawn under the active seat's rotation, so a device-space tap has to
+      // be turned into board space before it names a cell. The *settled* orientation,
+      // which is the one on screen whenever input is open.
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+      const tapped = cellIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
+      if (tapped < 0) return;
+      cell = tapped;
+      // Leave the cursor where the finger went, so switching to keys carries on from
+      // there rather than jumping back to wherever it last was.
+      this.#cursor.moveTo(tapped);
+    }
+
     if (!applyMove(this.#board, cell, active)) return;
     this.#settleMove();
   }
@@ -185,6 +217,7 @@ export class TicTacToeGame implements Game {
     renderer.clear(COLOUR_BACKGROUND);
     renderer.pushRotation(this.#flip.angle);
     this.#drawGrid(renderer);
+    this.#drawCursor(renderer);
     this.#drawMarks(renderer);
     if (this.#hasStrike) this.#drawStrike(renderer);
     renderer.popSeatRotation();
@@ -265,6 +298,22 @@ export class TicTacToeGame implements Game {
     this.#options.timeExpired = this.#roundsPlayed >= MAX_ROUNDS;
     this.#matchWinner = resolve(this.#condition, this.#tally, this.#options);
     if (this.#matchWinner === null) this.#settleSteps = this.#stepsFor(SETTLE_SECONDS);
+  }
+
+  /** Only once a key has been used, so a player who taps never sees a stray highlight. */
+  #drawCursor(renderer: Renderer): void {
+    if (!this.#cursor.visible) return;
+    if (this.#matchWinner !== null) return;
+    const column = this.#cursor.column;
+    const row = this.#cursor.row;
+    renderer.strokeRect(
+      BOARD_ORIGIN + column * CELL_EXTENT + CURSOR_INSET,
+      BOARD_ORIGIN + row * CELL_EXTENT + CURSOR_INSET,
+      CELL_EXTENT - CURSOR_INSET * 2,
+      CELL_EXTENT - CURSOR_INSET * 2,
+      CURSOR_WIDTH,
+      this.#active === 'p1' ? COLOUR_P1 : COLOUR_P2,
+    );
   }
 
   #drawGrid(renderer: Renderer): void {

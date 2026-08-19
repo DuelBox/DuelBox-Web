@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Rng, vec2 } from '@duelbox/engine';
+import { Rng, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import {
@@ -40,6 +40,8 @@ class FakeInput implements InputState {
   }
 
   clear(): void {
+    set(this.p1.move, 0, 0);
+    set(this.p2.move, 0, 0);
     for (const seat of [this.p1, this.p2]) {
       seat.pointer = null;
       seat.actionPressed = false;
@@ -379,17 +381,22 @@ describe('turns', () => {
     expect(faceUpCount(game)).toBe(0);
   });
 
-  it('ignores a press with no pointer, and a pointer with no press', () => {
+  it('turns over the card at the keyboard cursor when a press arrives with no pointer', () => {
+    // This used to turn over nothing, which is what made the game unplayable on a
+    // keyboard: a tap names a card directly, so a press without one had nowhere to go.
+    // Only a key can raise a press with no pointer — a tap always carries its position.
     input.p1.actionPressed = true;
     step(game, input);
-    expect(faceUpCount(game)).toBe(0);
+    expect(game.cardAt(0)?.faceUp).toBe(true);
+  });
 
+  it('ignores a pointer with no press', () => {
     input.clear();
-    cardCentre(aim, 5);
+    cardCentre(aim, 0);
     input.p1.pointer = { x: aim.x, y: aim.y };
     input.p1.actionHeld = true;
     step(game, input);
-    expect(faceUpCount(game)).toBe(0);
+    expect(game.cardAt(0)?.faceUp).toBe(false);
   });
 
   it('ignores the seat whose turn it is not', () => {

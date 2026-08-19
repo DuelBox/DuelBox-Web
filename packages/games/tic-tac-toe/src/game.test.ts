@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Rng, vec2 } from '@duelbox/engine';
+import { Rng, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { TicTacToeGame, cellCentre } from './game.js';
@@ -30,6 +30,8 @@ class FakeInput implements InputState {
   }
 
   clear(): void {
+    set(this.p1.move, 0, 0);
+    set(this.p2.move, 0, 0);
     this.p1.pointer = null;
     this.p1.actionPressed = false;
     this.p2.pointer = null;
@@ -222,11 +224,19 @@ describe('TicTacToeGame turns', () => {
     expect(game.activeSeat).toBe('p1');
   });
 
-  it('ignores a press with no pointer, and a pointer with no press', () => {
+  it('places at the keyboard cursor when a press arrives with no pointer', () => {
+    // This used to place nothing, which is what made the game unplayable on a keyboard:
+    // a tap names a square directly, so a press without one had nowhere to go. Only a
+    // key can raise a press with no pointer — a tap always carries its position — so a
+    // press with none is a keyboard press, and it belongs at the cursor.
     input.p1.actionPressed = true;
     step(game, input);
-    expect(markCount(game)).toBe(0);
+    expect(markCount(game)).toBe(1);
+    // The cursor starts in the middle of the board.
+    expect(game.cellAt(4)).toBe('p1');
+  });
 
+  it('ignores a pointer with no press', () => {
     input.clear();
     cellCentre(aim, 4);
     input.p1.pointer = { x: aim.x, y: aim.y };
@@ -577,5 +587,68 @@ describe('the board turning to face the player with the move', () => {
     };
     // Same total simulated time, delivered in different-sized steps.
     expect(play(20, 1 / 60)).toBeCloseTo(play(40, 1 / 120), 6);
+  });
+});
+
+describe('playing with the keyboard alone', () => {
+  it('moves a cursor with the direction keys and places with the action', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'shared-screen', 'p1'));
+
+    // From the middle, left then up reaches the top-left corner.
+    set(input.p1.move, -1, 0);
+    step(game, input);
+    set(input.p1.move, 0, 0);
+    step(game, input);
+    set(input.p1.move, 0, -1);
+    step(game, input);
+    set(input.p1.move, 0, 0);
+    input.p1.actionPressed = true;
+    step(game, input);
+
+    expect(game.cellAt(0)).toBe('p1');
+  });
+
+  it('is enough to play a whole match with no pointer at all', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'single-seat', 'p1'));
+
+    // Nine presses with no pointer ever set: the board must fill up.
+    for (let i = 0; i < 40 && markCount(game) < 9; i += 1) {
+      input.clear();
+      set(input.p1.move, -1, -1);
+      set(input.p2.move, -1, -1);
+      step(game, input);
+      input.clear();
+      input.p1.actionPressed = true;
+      input.p2.actionPressed = true;
+      step(game, input);
+      input.clear();
+      set(input.p1.move, 1, 0);
+      set(input.p2.move, 1, 0);
+      step(game, input);
+    }
+    expect(markCount(game)).toBeGreaterThan(0);
+  });
+
+  it('leaves the cursor where a tap went, so switching to keys carries on from there', () => {
+    const game = new TicTacToeGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'single-seat', 'p1'));
+
+    tapCell(input, 'p1', 0);
+    step(game, input);
+    expect(game.cellAt(0)).toBe('p1');
+
+    // p2 now uses keys: one step right from cell 0 is cell 1.
+    input.clear();
+    set(input.p2.move, 1, 0);
+    step(game, input);
+    set(input.p2.move, 0, 0);
+    input.p2.actionPressed = true;
+    step(game, input);
+    expect(game.cellAt(1)).toBe('p2');
   });
 });

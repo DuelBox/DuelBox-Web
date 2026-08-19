@@ -41,6 +41,9 @@ export {
 } from './seat.js';
 export type { SeatId, Presentation, SeatView, LogicalSize, ZoneSplit } from './seat.js';
 
+export { GridCursor } from './cursor.js';
+export type { GridCursorOptions } from './cursor.js';
+
 export { SeatFlip } from './flip.js';
 export type { SeatFlipOptions } from './flip.js';
 

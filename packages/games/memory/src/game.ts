@@ -1,4 +1,13 @@
-import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import {
+  GridCursor,
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  otherSeat,
+  set,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -41,6 +50,9 @@ const GRID = gridFor(PAIRS, DEFAULT_COLUMNS);
 export const BOARD_ORIGIN_X = 60;
 export const BOARD_ORIGIN_Y = 190;
 export const CARD_PITCH = 170;
+/** The keyboard cursor sits inside its card so it never overlaps the neighbour. */
+const CURSOR_INSET = 6;
+const CURSOR_WIDTH = 6;
 export const CARD_SIZE = 150;
 
 /**
@@ -144,6 +156,13 @@ export class MemoryMatchGame implements Game {
    * disagree about when input reopens.
    */
   readonly #flip = new SeatFlip();
+  /**
+   * The keyboard's way onto the table.
+   *
+   * Without it the game was pointer-only — a tap named a card directly, so there was
+   * nothing for a keyboard to move and two people sharing a laptop could not play.
+   */
+  readonly #cursor = new GridCursor({ columns: GRID.columns, rows: GRID.rows, startIndex: 0 });
 
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
@@ -234,17 +253,27 @@ export class MemoryMatchGame implements Game {
       choice = botChoice(this.#cards, memory, this.#rng, difficulty);
     } else {
       const seatInput = input.seat(active);
-      if (!seatInput.actionPressed) return;
-      const pointer = seatInput.pointer;
-      if (pointer === null) return;
       // Nothing is accepted while the table is part-way round: the card under a finger
       // is moving, so a tap would turn over one the player did not mean.
       if (!this.#flip.acceptsInput) return;
-      // The table is drawn under the active seat's rotation, so a device-space tap has to
-      // be turned into board space before it names a card. The *settled* orientation,
-      // which is the one on screen whenever input is open.
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
-      choice = cardIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
+
+      // Keys move a cursor over the table; a tap names a card outright. Both feed the
+      // same choice, and the cursor follows a tap so switching does not jump.
+      this.#cursor.step(seatInput.move.x, seatInput.move.y, fixedDeltaSeconds, this.#flip.rotated);
+
+      if (!seatInput.actionPressed) return;
+      const pointer = seatInput.pointer;
+      if (pointer === null) {
+        // Only a key raises a press with no pointer — a tap always carries its position.
+        choice = this.#cursor.index;
+      } else {
+        // The table is drawn under the active seat's rotation, so a device-space tap has
+        // to be turned into board space before it names a card. The *settled*
+        // orientation, which is the one on screen whenever input is open.
+        toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+        choice = cardIndexAt(this.#pointerWorld.x, this.#pointerWorld.y);
+        if (choice >= 0) this.#cursor.moveTo(choice);
+      }
     }
 
     if (choice < 0) return;
@@ -256,6 +285,7 @@ export class MemoryMatchGame implements Game {
     renderer.clear(COLOUR_BACKGROUND);
     renderer.pushRotation(this.#flip.angle);
     this.#drawCards(renderer);
+    this.#drawCursor(renderer);
     renderer.popSeatRotation();
   }
 
@@ -360,6 +390,21 @@ export class MemoryMatchGame implements Game {
     this.#options.timeExpired = allMatched(this.#cards);
     this.#winner = resolve(this.#condition, this.#tally, this.#options);
     this.#holdSteps = this.#stepsFor(MATCH_SECONDS);
+  }
+
+  /** Only once a key has been used, so a player who taps never sees a stray highlight. */
+  #drawCursor(renderer: Renderer): void {
+    if (!this.#cursor.visible) return;
+    const column = this.#cursor.column;
+    const row = this.#cursor.row;
+    renderer.strokeRect(
+      BOARD_ORIGIN_X + column * CARD_PITCH + CURSOR_INSET,
+      BOARD_ORIGIN_Y + row * CARD_PITCH + CURSOR_INSET,
+      CARD_PITCH - CURSOR_INSET * 2,
+      CARD_PITCH - CURSOR_INSET * 2,
+      CURSOR_WIDTH,
+      this.#active === 'p1' ? COLOUR_P1 : COLOUR_P2,
+    );
   }
 
   #drawCards(renderer: Renderer): void {

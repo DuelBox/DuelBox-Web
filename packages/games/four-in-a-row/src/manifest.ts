@@ -12,7 +12,7 @@ export const manifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 90,
   controls: {
-    keyboard: 'Arrow keys or A and D to choose a column, Space or Enter to drop',
+    keyboard: 'Arrow keys or A and D to slide across the columns, Space or Enter to drop',
     pointer: 'Tap or drag over a column, release to drop',
   },
   tags: [],
