@@ -1,0 +1,1962 @@
+# DuelBox platform backlog.
+# Game-specific issues are generated from data/games.yaml — do not duplicate them here.
+# Each issue: title, body, labels, milestone, estimate (story points).
+
+milestones:
+  - name: M0 Foundation
+    description: Repo, tooling, engine core, input system, game SDK. Nothing shippable yet.
+  - name: M1 First Playable
+    description: Shell + 6 launch games + tournament mode, playable end to end on mobile and desktop.
+  - name: M2 Catalog
+    description: Remaining games, AI opponents, audio, accessibility, i18n.
+  - name: M3 Launch
+    description: 3D landing site, SEO, analytics, monetization, legal, CI/CD, public release.
+  - name: M4 Online
+    description: Remote multiplayer, accounts, leaderboards, live ops.
+
+labels:
+  - {name: "epic:tooling",      color: "5319E7", description: "Repo, build, CI"}
+  - {name: "epic:engine",       color: "0E8A16", description: "Core game engine"}
+  - {name: "epic:input",        color: "0E8A16", description: "Two-player input system"}
+  - {name: "epic:sdk",          color: "0E8A16", description: "Game module contract"}
+  - {name: "epic:game",         color: "1D76DB", description: "Individual mini-game"}
+  - {name: "epic:ui",           color: "D93F0B", description: "Shell UI and site design"}
+  - {name: "epic:3d",           color: "D93F0B", description: "WebGL landing experience"}
+  - {name: "epic:meta",         color: "FBCA04", description: "Tournament, progression, profiles"}
+  - {name: "epic:audio",        color: "FBCA04", description: "Sound and music"}
+  - {name: "epic:a11y",         color: "006B75", description: "Accessibility"}
+  - {name: "epic:perf",         color: "006B75", description: "Performance budgets"}
+  - {name: "epic:pwa",          color: "006B75", description: "Offline and installability"}
+  - {name: "epic:backend",      color: "B60205", description: "Server, persistence, leaderboards"}
+  - {name: "epic:analytics",    color: "B60205", description: "Telemetry and experimentation"}
+  - {name: "epic:monetization", color: "B60205", description: "Ads, premium, IAP"}
+  - {name: "epic:seo",          color: "C2E0C6", description: "Discovery and growth"}
+  - {name: "epic:legal",        color: "C2E0C6", description: "Privacy, compliance, IP"}
+  - {name: "epic:i18n",         color: "C2E0C6", description: "Localisation"}
+  - {name: "epic:qa",           color: "BFDADC", description: "Testing"}
+  - {name: "epic:online",       color: "5319E7", description: "Remote multiplayer"}
+  - {name: "epic:docs",         color: "BFDADC", description: "Documentation"}
+  - {name: "type:spec",         color: "EEEEEE", description: "Design or research, no shipping code"}
+  - {name: "type:feat",         color: "EEEEEE", description: "New functionality"}
+  - {name: "type:chore",        color: "EEEEEE", description: "Maintenance"}
+  - {name: "type:bug",          color: "EEEEEE", description: "Defect"}
+  - {name: "type:qa",           color: "EEEEEE", description: "Testing and verification work"}
+  - {name: "good first issue",  color: "7057FF", description: "Small, self-contained"}
+  - {name: "blocked",           color: "000000", description: "Waiting on a dependency"}
+  - {name: "needs-design",      color: "F9D0C4", description: "Needs visual direction first"}
+  - {name: "milestone-ready",   color: "2EA44F", description: "Groomed and ready for the build loop"}
+
+issues:
+
+# =============== E00 REPO & TOOLING ===============
+- title: "Scaffold monorepo with pnpm workspaces"
+  body: |
+    Create the workspace layout the rest of the project assumes.
+    Packages: `apps/web` (site + shell), `packages/engine`, `packages/game-sdk`, `packages/games/*`, `packages/ui`, `packages/analytics`.
+    **Acceptance**
+    - `pnpm i && pnpm build` succeeds from a clean clone
+    - Each package has its own tsconfig extending a shared base
+    - Root README documents the layout in under 30 lines
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Add TypeScript strict config and shared tsconfig base"
+  body: |
+    `strict: true`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. Game code touches arrays constantly; loose typing will cost more later.
+    **Acceptance**
+    - Zero `any` in `packages/engine`
+    - `pnpm typecheck` runs across all packages
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 2
+
+- title: "Set up Vite build with per-game code splitting"
+  body: |
+    Each game must be a separately-loadable chunk. A player opening Tic Tac Toe should not download the pool physics.
+    **Acceptance**
+    - Dynamic `import()` per game id
+    - Initial JS payload under 150KB gzipped excluding any game
+    - Build reports per-chunk sizes
+  labels: ["epic:tooling", "epic:perf", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Add ESLint + Prettier + import ordering with a single `pnpm lint` entry point"
+  body: |
+    **Acceptance**
+    - Lint fails CI on error, not warning
+    - Format-on-save config committed for VS Code
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M0 Foundation
+  estimate: 1
+
+- title: "Add Vitest with jsdom + canvas mock and a coverage gate"
+  body: |
+    Physics and rules code must be unit testable without a browser.
+    **Acceptance**
+    - `pnpm test` runs in under 30s
+    - Coverage gate at 70% for `packages/engine` and any `rules.ts`
+  labels: ["epic:tooling", "epic:qa", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Add Playwright for cross-browser smoke tests"
+  body: |
+    **Acceptance**
+    - Runs Chromium, Firefox, WebKit
+    - One test that loads the shell, starts a game, and asserts the canvas renders a non-blank frame
+  labels: ["epic:tooling", "epic:qa", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Create issue and PR templates"
+  body: |
+    Issue templates: bug, new game, balance change. PR template with a checklist for tests, a11y, and bundle size.
+    **Acceptance**
+    - `.github/ISSUE_TEMPLATE/*.yml` present and rendering on GitHub
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M0 Foundation
+  estimate: 1
+
+- title: "Add CODEOWNERS and branch protection"
+  body: |
+    **Acceptance**
+    - `main` requires green CI and one approval
+    - `packages/engine` requires a specific owner
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M0 Foundation
+  estimate: 1
+
+- title: "Add a bundle-size budget check to CI"
+  body: |
+    Use `size-limit`. Regressions in payload size are the most likely silent quality loss on a games site.
+    **Acceptance**
+    - CI fails if shell JS exceeds 150KB gz or any single game exceeds 80KB gz
+    - The failure comment shows the diff versus `main`
+  labels: ["epic:tooling", "epic:perf", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Add Changesets for versioning game packages"
+  body: |
+    **Acceptance**
+    - `pnpm changeset` works
+    - Release PR is opened automatically
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M3 Launch
+  estimate: 2
+
+- title: "Set up Storybook for `packages/ui`"
+  body: |
+    **Acceptance**
+    - Every shared component has at least one story
+    - Storybook deploys as a CI artefact preview
+  labels: ["epic:tooling", "epic:ui", "type:chore"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Write CONTRIBUTING.md with the 'how to add a game' walkthrough"
+  body: |
+    **Acceptance**
+    - A new contributor can add a working stub game in under 20 minutes following only this doc
+  labels: ["epic:docs", "type:chore", "good first issue"]
+  milestone: M1 First Playable
+  estimate: 2
+
+# =============== E01 ENGINE CORE ===============
+- title: "Implement fixed-timestep game loop with interpolated rendering"
+  body: |
+    Physics at a fixed 60Hz accumulator, rendering decoupled and interpolated. Variable timestep will make every physics game feel different on different refresh rates — including 120Hz phones.
+    **Acceptance**
+    - Deterministic given identical input traces
+    - Stable on 60Hz, 90Hz, 120Hz displays
+    - Spiral-of-death guard caps catch-up steps
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 8
+
+- title: "Implement scene graph with transform hierarchy"
+  body: |
+    **Acceptance**
+    - Parent/child transforms compose correctly
+    - Dirty-flag propagation avoids recomputing static subtrees
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Build a 2D renderer abstraction over Canvas2D with a WebGL path"
+  body: |
+    Most games only need Canvas2D. A few (trails, particles) want WebGL. One interface, two backends, chosen per game.
+    **Acceptance**
+    - `Renderer` interface with sprite, shape, text, and line-batch primitives
+    - Canvas2D backend complete; WebGL backend behind a flag
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 13
+
+- title: "Implement sprite atlas loader and texture packing at build time"
+  body: |
+    **Acceptance**
+    - Atlases generated during build, not shipped as loose PNGs
+    - Loader supports per-game atlas scoping
+  labels: ["epic:engine", "epic:perf", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement 2D collision primitives: circle, AABB, OBB, segment"
+  body: |
+    **Acceptance**
+    - Intersection + penetration depth + contact normal for every pair
+    - Property-based tests verifying symmetry and no false negatives at touching distance
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 8
+
+- title: "Implement impulse-based collision resolution with restitution and friction"
+  body: |
+    Powers air hockey, sumo, spinner war, pin soccer, pool.
+    **Acceptance**
+    - Momentum conserved within float tolerance in a 1000-step soak test
+    - No tunnelling at max game speed with CCD for fast small bodies
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 13
+
+- title: "Implement continuous collision detection for fast projectiles"
+  body: |
+    Bullets and pucks at high speed must not pass through thin walls between frames.
+    **Acceptance**
+    - Swept-circle against segment
+    - Regression test firing a projectile at 5000 px/s at a 2px wall
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 8
+
+- title: "Implement spatial hash broadphase"
+  body: |
+    **Acceptance**
+    - 200 bodies at 60fps on a 2019 mid-range Android device
+    - Benchmarks committed
+  labels: ["epic:engine", "epic:perf", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement seeded deterministic RNG"
+  body: |
+    Never use `Math.random()` in gameplay. Seeded RNG makes bugs reproducible and is a prerequisite for online play and replays.
+    **Acceptance**
+    - xorshift128 or PCG, serialisable state
+    - Lint rule banning `Math.random` inside `packages/games/*`
+  labels: ["epic:engine", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Implement particle system with pooling"
+  body: |
+    **Acceptance**
+    - Zero allocations per frame in steady state
+    - Emitter config is data, not code
+  labels: ["epic:engine", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement tween/easing library for UI and game juice"
+  body: |
+    **Acceptance**
+    - Standard easing set, chainable sequences, cancellation
+    - All tweens respect `prefers-reduced-motion` globally
+  labels: ["epic:engine", "epic:a11y", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement screen shake, hit-stop, and flash as reusable juice primitives"
+  body: |
+    These three effects account for most of the perceived quality gap between a prototype and a shipped mini-game. Build once, apply everywhere.
+    **Acceptance**
+    - Intensity is a single 0-1 parameter per effect
+    - Fully disabled under reduced-motion, replaced by a non-motion feedback cue
+  labels: ["epic:engine", "epic:a11y", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement asset preloader with progress events"
+  body: |
+    **Acceptance**
+    - Reports 0-1 progress for the shell loading bar
+    - Retries failed fetches twice with backoff
+  labels: ["epic:engine", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement pause/resume/visibility handling"
+  body: |
+    Tab-switching mid-match must not fast-forward the accumulator.
+    **Acceptance**
+    - `visibilitychange` pauses the loop and clamps `dt` on resume
+    - Audio suspends and resumes with the AudioContext
+  labels: ["epic:engine", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement a debug overlay: FPS, step time, body count, input state"
+  body: |
+    **Acceptance**
+    - Toggled by a query param, stripped from production bundles
+  labels: ["epic:engine", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Implement input recording and replay for deterministic bug reports"
+  body: |
+    **Acceptance**
+    - Record an input trace, replay it, get a byte-identical final state
+    - Traces exportable as JSON from the debug overlay
+  labels: ["epic:engine", "epic:qa", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Implement responsive canvas sizing with letterboxing and safe areas"
+  body: |
+    Games must render correctly from a 320px phone in portrait to a 4K desktop, including notch safe-area insets.
+    **Acceptance**
+    - Logical resolution fixed per game, scaled to fit
+    - No gameplay element ever falls under a notch or home indicator
+  labels: ["epic:engine", "epic:ui", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Add DPR-aware rendering with a cap"
+  body: |
+    Rendering at devicePixelRatio 3 on a phone destroys the frame budget for marginal visual gain.
+    **Acceptance**
+    - DPR capped at 2, configurable per game
+    - Automatic downscale if frame time exceeds budget for 2 consecutive seconds
+  labels: ["epic:engine", "epic:perf", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+# =============== E02 TWO-PLAYER INPUT ===============
+- title: "Design the multi-input abstraction covering touch, keyboard, and gamepad"
+  body: |
+    This is the single highest-risk piece of the project. Two humans, one browser tab, three input families, and no OS-level player separation.
+    Write the design doc before any code: enumerate every layout (split touch zones, shared board tapping, keyboard halves, two gamepads) and how a game declares which it supports.
+    **Acceptance**
+    - Doc in `docs/input-design.md` with a decision table
+    - Reviewed and approved before implementation issues start
+  labels: ["epic:input", "type:spec"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Implement multi-touch tracking with per-player zone ownership"
+  body: |
+    A touch must be assigned to P1 or P2 on `touchstart` by which screen zone it began in, and keep that ownership until `touchend` even if the finger crosses the midline.
+    **Acceptance**
+    - Handles at least 10 simultaneous touch points
+    - Finger crossing the seam does not steal the other player's control
+    - Test with a synthetic multi-touch harness
+  labels: ["epic:input", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 13
+
+- title: "Implement keyboard binding map with default P1/P2 split"
+  body: |
+    Default P1 = WASD + Space, P2 = Arrows + Enter. Both must work simultaneously.
+    **Acceptance**
+    - Simultaneous keydown from both halves registers independently
+    - Ghosting-prone combos documented with a known-limitations note
+  labels: ["epic:input", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Implement keyboard rebinding UI with conflict detection"
+  body: |
+    **Acceptance**
+    - Cannot assign one key to both players
+    - Bindings persist per browser profile
+  labels: ["epic:input", "epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement Gamepad API support with player-index assignment"
+  body: |
+    **Acceptance**
+    - Two connected pads map to P1/P2 by connection order, reassignable
+    - Deadzone and axis normalisation applied
+    - Hot-plug and disconnect handled mid-match with a pause prompt
+  labels: ["epic:input", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Implement input latency measurement harness"
+  body: |
+    Reaction games are unfair if one input path is slower than the other. Measure it rather than assume.
+    **Acceptance**
+    - Reports touch/keyboard/gamepad latency in the debug overlay
+    - Documented baseline numbers per input family per browser
+  labels: ["epic:input", "epic:qa", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Prevent browser default gestures that break gameplay"
+  body: |
+    Pull-to-refresh, double-tap zoom, long-press context menu, text selection, and iOS rubber-band scrolling all sabotage touch games.
+    **Acceptance**
+    - `touch-action: none` scoped to the canvas only
+    - Verified on iOS Safari, Chrome Android, Samsung Internet
+  labels: ["epic:input", "type:bug"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement rotate-device prompt for landscape-only games"
+  body: |
+    **Acceptance**
+    - Non-blocking overlay, dismissible, does not pause a running match
+    - Uses Screen Orientation API lock where permitted, falls back to the prompt
+  labels: ["epic:input", "epic:ui", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement pass-and-play hand-off screen for hidden-information games"
+  body: |
+    Required by Sea Battle. A blackout screen with 'Pass to Player 2' and a confirm tap.
+    **Acceptance**
+    - No frame of the other player's state renders during the transition
+    - Configurable per game via the SDK
+  labels: ["epic:input", "epic:sdk", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement haptic feedback via the Vibration API with a global toggle"
+  body: |
+    **Acceptance**
+    - Graceful no-op where unsupported (all iOS Safari)
+    - Off by default on first visit, discoverable in settings
+  labels: ["epic:input", "type:feat", "good first issue"]
+  milestone: M2 Catalog
+  estimate: 2
+
+- title: "Handle simultaneous-input tie resolution policy"
+  body: |
+    In Quick Draw and Snake Clash two inputs can land in the same frame. Decide and document the rule once rather than per game.
+    **Acceptance**
+    - Policy documented: sub-frame timestamp ordering, tie declared a draw
+    - Shared helper in the SDK
+  labels: ["epic:input", "epic:sdk", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Add on-screen touch control hints that fade after first successful input"
+  body: |
+    **Acceptance**
+    - Shown per game on first play only, resettable in settings
+    - Do not obstruct any interactive area
+  labels: ["epic:input", "epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 3
+
+# =============== E03 GAME SDK ===============
+- title: "Define the Game module contract"
+  body: |
+    Every game exports the same shape so the shell can load, run, pause, score, and unload it without knowing anything about it.
+    Contract: `meta`, `init(ctx)`, `update(dt, input)`, `render(renderer, alpha)`, `onPause`, `onResume`, `destroy`, `getScore()`, `serialize()/deserialize()`.
+    **Acceptance**
+    - Typed interface in `packages/game-sdk`
+    - A reference stub game implements it in under 60 lines
+  labels: ["epic:sdk", "type:spec"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Define the GameMeta manifest schema"
+  body: |
+    Fields: id, name, genre, layout, minPlayers, supportsAI, orientation, estimatedRoundSeconds, controlScheme, thumbnail, colorPair, tags.
+    **Acceptance**
+    - Zod schema validating every game at build time
+    - Build fails on a malformed manifest
+  labels: ["epic:sdk", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Implement game lifecycle host in the shell"
+  body: |
+    **Acceptance**
+    - Load, run, pause, resume, restart, quit, and unload with no memory growth across 50 load/unload cycles
+    - Heap snapshot test in CI
+  labels: ["epic:sdk", "epic:perf", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Implement the standard match flow: countdown, play, result, rematch"
+  body: |
+    Shared across all 44 games. Building it per game guarantees inconsistency.
+    **Acceptance**
+    - 3-2-1 countdown, in-match HUD, win banner, rematch and back-to-menu actions
+    - Games only supply the win condition
+  labels: ["epic:sdk", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Implement the shared scoreboard HUD component"
+  body: |
+    **Acceptance**
+    - P1 and P2 scores anchored to their own screen halves and readable from arm's length
+    - Colour-coded by the player colour pair, plus a shape/label so it is not colour-only
+  labels: ["epic:sdk", "epic:ui", "epic:a11y", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement a difficulty interface for AI opponents"
+  body: |
+    Three tiers everywhere: Easy, Normal, Hard. Expressed as reaction delay, error magnitude, and blunder rate rather than cheating stats.
+    **Acceptance**
+    - Shared `AIDifficulty` type consumed by every game
+    - Documented rule: AI never gets information or physics a human cannot get
+  labels: ["epic:sdk", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement per-game settings persistence"
+  body: |
+    **Acceptance**
+    - Namespaced storage keys, schema-versioned with a migration path
+    - Corrupt data resets to defaults rather than crashing
+  labels: ["epic:sdk", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Implement a game error boundary with recovery"
+  body: |
+    One game throwing must not take down the shell.
+    **Acceptance**
+    - Caught error shows a recoverable screen and reports to error tracking
+    - Player returns to the menu with tournament progress intact
+  labels: ["epic:sdk", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Create a `create-game` CLI scaffold"
+  body: |
+    **Acceptance**
+    - `pnpm create-game <id>` produces a compiling, runnable stub registered in the catalog
+  labels: ["epic:sdk", "epic:tooling", "type:feat"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Implement a headless simulation harness for balance testing"
+  body: |
+    Run AI vs AI for 10,000 matches without rendering to find degenerate strategies and win-rate skew.
+    **Acceptance**
+    - Reports win rate, average round length, and stalemate rate per game
+    - Runs in CI nightly and flags any game outside a 45-55% first-player win band
+  labels: ["epic:sdk", "epic:qa", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Implement game asset licensing manifest"
+  body: |
+    Every sprite, font, and sound file records its source and licence. This is what makes a takedown claim answerable.
+    **Acceptance**
+    - `assets.license.json` per game, validated in CI
+    - Build fails on an asset with no licence entry
+  labels: ["epic:sdk", "epic:legal", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement a spectator/idle attract mode"
+  body: |
+    AI vs AI plays on the menu background when idle. Cheap, and it demonstrates games to a first-time visitor.
+    **Acceptance**
+    - Starts after 20s idle, stops instantly on any input
+    - Capped frame rate to protect battery
+  labels: ["epic:sdk", "epic:ui", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+# =============== E04 UI / SHELL / DESIGN ===============
+- title: "Produce the design system: palette, type scale, spacing, motion tokens"
+  body: |
+    Direction is 'the seam' — the whole product identity is one diagonal split dividing P1 and P2 territory, carried from the landing hero into the game HUDs.
+    Palette: `--ink #08090F`, `--surface #12141F`, `--p1 #FF3B6B`, `--p2 #21E6C1`, `--gold #FFC94A`, `--paper #E8E6DF`.
+    Type: display Archivo Expanded, body Inter Tight, data/scoreboard JetBrains Mono.
+    **Acceptance**
+    - Tokens as CSS custom properties, single source of truth
+    - No component hardcodes a hex value
+  labels: ["epic:ui", "type:spec", "needs-design"]
+  milestone: M0 Foundation
+  estimate: 8
+
+- title: "Build the shared component library: Button, Card, Modal, Toggle, Slider, Tabs"
+  body: |
+    **Acceptance**
+    - Keyboard operable, visible focus rings, ARIA roles correct
+    - Storybook story per component per state
+  labels: ["epic:ui", "epic:a11y", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Build the game catalog grid with genre filtering and search"
+  body: |
+    **Acceptance**
+    - Filter by genre, player count, and round length
+    - Search matches name and tags, debounced, no layout shift
+    - Works with keyboard alone
+  labels: ["epic:ui", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Design and build the game card with animated preview"
+  body: |
+    Static thumbnails undersell action games. A short looping preview on hover/focus converts far better.
+    **Acceptance**
+    - Preview is a lightweight looping asset, lazy-loaded, under 60KB
+    - Falls back to a static frame under reduced-motion or save-data
+  labels: ["epic:ui", "epic:perf", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Build the pre-game lobby: mode select, difficulty, controls preview, start"
+  body: |
+    **Acceptance**
+    - Shows the control scheme for the detected input device before the match
+    - Two-player vs one-player-vs-AI toggle
+  labels: ["epic:ui", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Build the pause menu and quit-confirm flow"
+  body: |
+    **Acceptance**
+    - Reachable by Escape, gamepad Start, and an on-screen button
+    - Quitting mid-tournament warns about forfeiting the round
+  labels: ["epic:ui", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Build the results screen with rematch, next game, and share"
+  body: |
+    **Acceptance**
+    - Rematch restarts in under 500ms with no full reload
+    - Share produces a result image and a link
+  labels: ["epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Build the settings screen: audio, motion, haptics, colour mode, language, controls"
+  body: |
+    **Acceptance**
+    - Every setting applies immediately without a reload
+    - Persisted and restored on next visit
+  labels: ["epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Design the seam divider component and apply it across shell and HUD"
+  body: |
+    The signature element. It must appear in the hero, between catalog sections, and as the live divider in mirrored-half games.
+    **Acceptance**
+    - Single component, angle and thickness parameterised
+    - Animates on match start and on scoring events
+  labels: ["epic:ui", "type:feat", "needs-design"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement dark mode as default with a light mode variant"
+  body: |
+    **Acceptance**
+    - Respects `prefers-color-scheme` on first visit, user override persists
+    - Contrast verified in both modes
+  labels: ["epic:ui", "epic:a11y", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Implement route-level page transitions"
+  body: |
+    **Acceptance**
+    - Transitions never delay interactivity by more than 200ms
+    - Fully skipped under reduced-motion
+  labels: ["epic:ui", "epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Build empty, loading, and error states for every screen"
+  body: |
+    **Acceptance**
+    - Errors state what happened and the next action, no apologies, no dead ends
+    - Loading uses skeletons matched to final layout to avoid shift
+  labels: ["epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Write the interface copy pass"
+  body: |
+    Button labels, empty states, error messages, tooltips. Same verb from action to confirmation ('Rematch' produces 'Rematch started').
+    **Acceptance**
+    - Copy audit doc listing every string and its rationale
+    - No 'Submit', no 'Oops', no exclamation-mark filler
+  labels: ["epic:ui", "epic:docs", "type:spec"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Design and build the favicon, app icons, and social share cards"
+  body: |
+    **Acceptance**
+    - Full icon set including maskable PWA icons
+    - OG and Twitter card images per game, generated at build time
+  labels: ["epic:ui", "epic:seo", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+# =============== E04b 3D LANDING EXPERIENCE ===============
+- title: "Spec the 3D landing experience and its performance budget"
+  body: |
+    The reference sites (Apple product pages, WebGL portfolios) are desktop-first showcases. A games site is majority mobile. Decide up front what mobile gets.
+    **Acceptance**
+    - Doc naming the exact scroll beats and what each communicates
+    - Hard budget: under 2.5s LCP on a mid-range Android over 4G
+    - Explicit mobile fallback plan
+  labels: ["epic:3d", "type:spec", "needs-design"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement the WebGL hero scene with React Three Fiber"
+  body: |
+    Concept: an arcade cabinet split along the seam, each half lit in the P1/P2 colour, rotating to reveal live game footage on the screen.
+    **Acceptance**
+    - Loads under 400KB including geometry and textures
+    - Holds 60fps on desktop, 30fps floor on mid-range mobile
+  labels: ["epic:3d", "type:feat"]
+  milestone: M3 Launch
+  estimate: 13
+
+- title: "Implement scroll-driven camera choreography"
+  body: |
+    **Acceptance**
+    - Scroll position drives camera along a fixed spline, no scroll-jacking
+    - Native scroll speed preserved; page fully usable with scrollbar dragging
+  labels: ["epic:3d", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement a static fallback hero for low-end devices and reduced-motion"
+  body: |
+    Detect via `navigator.hardwareConcurrency`, `deviceMemory`, save-data, and reduced-motion. Serve a designed static composition, not a broken 3D scene.
+    **Acceptance**
+    - Fallback is a deliberate design, not a screenshot
+    - Zero WebGL code downloaded when the fallback triggers
+  labels: ["epic:3d", "epic:perf", "epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Optimise 3D assets: Draco compression, KTX2 textures, LOD"
+  body: |
+    **Acceptance**
+    - Geometry Draco-compressed, textures KTX2/Basis
+    - Two LOD levels selected by measured frame time
+  labels: ["epic:3d", "epic:perf", "type:chore"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add WebGL context-loss recovery"
+  body: |
+    Mobile browsers drop GL contexts under memory pressure. Unhandled, the hero becomes a black rectangle.
+    **Acceptance**
+    - `webglcontextlost` handled, scene rebuilt on restore
+    - Falls back permanently to the static hero after two losses
+  labels: ["epic:3d", "type:bug"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement scroll-triggered reveal animations for landing sections"
+  body: |
+    **Acceptance**
+    - IntersectionObserver based, no scroll listeners
+    - All disabled under reduced-motion with content immediately visible
+  labels: ["epic:3d", "epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Ensure the landing page is fully functional with JavaScript disabled"
+  body: |
+    Search crawlers and a meaningful slice of users. Content, links, and game descriptions must be in the server-rendered HTML.
+    **Acceptance**
+    - Full content and navigation present in view-source
+    - Lighthouse SEO score 100 with JS disabled
+  labels: ["epic:3d", "epic:seo", "epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+# =============== E05 TOURNAMENT & PROGRESSION ===============
+- title: "Design the tournament (cup) mode"
+  body: |
+    The app's retention hook is a running score across mini-games, not any single game. This is the feature that makes it a product rather than a collection.
+    **Acceptance**
+    - Doc covering formats: best-of-N, first-to-N-wins, random-game gauntlet, pick-ban
+    - Chosen format justified against session length data
+  labels: ["epic:meta", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 5
+
+- title: "Implement tournament state machine with resumable progress"
+  body: |
+    **Acceptance**
+    - Survives refresh, tab close, and device sleep
+    - Corrupt or stale state offers a clean restart instead of hanging
+  labels: ["epic:meta", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Implement the running head-to-head score across sessions"
+  body: |
+    **Acceptance**
+    - Persistent P1 vs P2 lifetime record on the device
+    - Resettable from settings with a confirm step
+  labels: ["epic:meta", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement pick-ban game selection for tournaments"
+  body: |
+    **Acceptance**
+    - Alternating ban then pick, with a random-fill option
+    - Skippable for quick play
+  labels: ["epic:meta", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement player name and avatar entry"
+  body: |
+    **Acceptance**
+    - Local only, no account required
+    - Profanity filter on names before any shareable output
+  labels: ["epic:meta", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Implement per-game personal bests and streak tracking"
+  body: |
+    **Acceptance**
+    - Best score, longest win streak, total matches per game
+    - Surfaced on the game card
+  labels: ["epic:meta", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement an achievements system"
+  body: |
+    **Acceptance**
+    - Data-driven definitions, no per-achievement code
+    - Unlock toast that never interrupts an active match
+  labels: ["epic:meta", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement daily challenge with a shared seed"
+  body: |
+    Everyone gets the same seeded configuration each day. Cheap, repeatable retention.
+    **Acceptance**
+    - Seed derived from UTC date, identical across devices
+    - Result shareable as a spoiler-free text summary
+  labels: ["epic:meta", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement the post-match share card generator"
+  body: |
+    **Acceptance**
+    - Canvas-rendered image with the score, both names, and the game
+    - Web Share API where available, download fallback
+  labels: ["epic:meta", "epic:seo", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement a 'random game' button"
+  body: |
+    **Acceptance**
+    - Weighted to avoid repeating the last three games
+  labels: ["epic:meta", "type:feat", "good first issue"]
+  milestone: M1 First Playable
+  estimate: 1
+
+# =============== E06 AUDIO ===============
+- title: "Implement the audio engine on Web Audio with a pooled source graph"
+  body: |
+    **Acceptance**
+    - Separate SFX, music, and UI buses with independent volume
+    - Under 20ms latency from trigger to sound on desktop
+  labels: ["epic:audio", "type:feat"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Handle autoplay policy and the first-gesture AudioContext unlock"
+  body: |
+    Every browser blocks audio before a user gesture. Handled badly this means the entire first match is silent.
+    **Acceptance**
+    - Context resumed on first interaction, no visible prompt needed
+    - Verified on iOS Safari specifically
+  labels: ["epic:audio", "type:bug"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Source or commission the original sound effect library"
+  body: |
+    Every sound must be original or from a licence permitting commercial use with the licence recorded in the asset manifest.
+    **Acceptance**
+    - Hit, bounce, score, win, lose, countdown, UI tap, error — full coverage
+    - Licence recorded per file
+  labels: ["epic:audio", "epic:legal", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Commission original menu and match music"
+  body: |
+    **Acceptance**
+    - Loops seamlessly, under 800KB per track after encoding
+    - Written for the project, with a signed licence on file
+  labels: ["epic:audio", "epic:legal", "type:chore"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement audio ducking during announcements and countdowns"
+  body: |
+    **Acceptance**
+    - Music ducks smoothly, no clicks or pops
+  labels: ["epic:audio", "type:feat", "good first issue"]
+  milestone: M2 Catalog
+  estimate: 2
+
+- title: "Implement a global mute that persists and respects device silent mode where detectable"
+  body: |
+    **Acceptance**
+    - Mute state survives reload
+    - Mute control reachable within one tap from any screen
+  labels: ["epic:audio", "type:feat", "good first issue"]
+  milestone: M1 First Playable
+  estimate: 2
+
+- title: "Encode audio to multiple formats with fallback"
+  body: |
+    **Acceptance**
+    - Opus/WebM primary, AAC/M4A fallback for Safari
+    - Format selected by capability detection, not user agent sniffing
+  labels: ["epic:audio", "epic:perf", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 3
+
+# =============== E07 ACCESSIBILITY ===============
+- title: "Run a WCAG 2.2 AA audit and file the resulting defects"
+  body: |
+    **Acceptance**
+    - Every non-game screen passes AA
+    - Documented, justified exceptions for canvas gameplay
+  labels: ["epic:a11y", "type:spec"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Ensure full keyboard navigation with a visible focus ring on every screen"
+  body: |
+    **Acceptance**
+    - No keyboard trap anywhere
+    - Focus ring meets 3:1 contrast against every background it appears on
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Add screen reader support for shell navigation and results"
+  body: |
+    Canvas gameplay is not realistically screen-reader accessible for action games; menus, catalog, settings, and results absolutely are.
+    **Acceptance**
+    - Tested with VoiceOver and NVDA
+    - Match results announced via a live region
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement colour-blind safe player differentiation"
+  body: |
+    P1 red vs P2 teal fails for several colour vision types. Colour alone can never be the only signal.
+    **Acceptance**
+    - Every player-owned element also differs by shape, pattern, or label
+    - Alternative palette option in settings
+  labels: ["epic:a11y", "epic:ui", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Implement `prefers-reduced-motion` support globally"
+  body: |
+    **Acceptance**
+    - Screen shake, particles, parallax, and page transitions all disabled
+    - Gameplay remains fully functional and fair without them
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Add adjustable game speed for accessibility"
+  body: |
+    A 0.75x speed option makes several games playable for people who cannot hit the default timing windows.
+    **Acceptance**
+    - Per-game speed multiplier, applied to the fixed timestep, not the render rate
+    - Marked as an assist mode, excluded from leaderboards
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add larger touch targets and a hit-area setting"
+  body: |
+    **Acceptance**
+    - All interactive elements at least 44x44 CSS px
+    - Optional expanded hit areas for gameplay controls
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Add captions/visual indicators for every audio-only cue"
+  body: |
+    **Acceptance**
+    - No game state is communicated by sound alone
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add a single-player one-handed control option where feasible"
+  body: |
+    **Acceptance**
+    - Documented per game in the manifest as supported or not
+  labels: ["epic:a11y", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+- title: "Add axe-core automated accessibility checks to CI"
+  body: |
+    **Acceptance**
+    - Runs on every shell route
+    - Fails on serious and critical violations
+  labels: ["epic:a11y", "epic:qa", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 3
+
+# =============== E08 PERFORMANCE ===============
+- title: "Define and document performance budgets"
+  body: |
+    **Acceptance**
+    - LCP under 2.5s, INP under 200ms, CLS under 0.1 on mid-range Android over 4G
+    - 60fps target, 30fps hard floor in every game
+    - Budgets enforced in CI, not aspirational
+  labels: ["epic:perf", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Add Lighthouse CI with score thresholds"
+  body: |
+    **Acceptance**
+    - Runs on every PR against a preview deploy
+    - Fails below the agreed thresholds
+  labels: ["epic:perf", "epic:tooling", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Set up real-device testing on low-end Android"
+  body: |
+    Emulators do not surface thermal throttling or GPU limits. Test on real hardware in the sub-$150 bracket, which is a large share of the audience.
+    **Acceptance**
+    - At least three real low-end devices in the test matrix
+    - Frame-time traces recorded per game
+  labels: ["epic:perf", "epic:qa", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Eliminate per-frame allocations in the hot path"
+  body: |
+    GC pauses show up as stutter precisely during the busiest moments.
+    **Acceptance**
+    - Zero allocations per frame in engine update, verified by heap profiling
+    - Vector/matrix operations use preallocated scratch objects
+  labels: ["epic:perf", "epic:engine", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Implement adaptive quality scaling"
+  body: |
+    **Acceptance**
+    - Particle count, DPR, and effect quality step down automatically when frame time exceeds budget
+    - Never changes gameplay-relevant simulation
+  labels: ["epic:perf", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add font loading optimisation"
+  body: |
+    **Acceptance**
+    - Subset to used glyphs, `font-display: swap`, preload the display face
+    - No layout shift from font swap
+  labels: ["epic:perf", "epic:ui", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement image optimisation pipeline"
+  body: |
+    **Acceptance**
+    - AVIF/WebP with fallback, responsive srcset, explicit dimensions on every image
+  labels: ["epic:perf", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add a CDN with immutable asset caching"
+  body: |
+    **Acceptance**
+    - Content-hashed filenames, one-year immutable cache headers
+    - HTML never cached longer than 5 minutes
+  labels: ["epic:perf", "epic:backend", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add route-level and game-level prefetching on intent"
+  body: |
+    **Acceptance**
+    - Prefetch a game chunk on card hover or focus
+    - Respects save-data and slow connections
+  labels: ["epic:perf", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add battery and thermal awareness"
+  body: |
+    **Acceptance**
+    - Caps frame rate and disables ambient effects under low battery where the API is available
+  labels: ["epic:perf", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+# =============== E09 PWA / OFFLINE ===============
+- title: "Implement the service worker with a cache strategy per asset class"
+  body: |
+    Offline play is the single strongest differentiator against a browser games portal — and the app being cloned is offline-first.
+    **Acceptance**
+    - App shell precached, games cached on first play
+    - Stale-while-revalidate for the catalog, network-first for HTML
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add the web app manifest with maskable icons and shortcuts"
+  body: |
+    **Acceptance**
+    - Installable on Android and iOS
+    - Shortcuts to Quick Play and Tournament
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement an offline indicator and offline-capable catalog"
+  body: |
+    **Acceptance**
+    - Cached games clearly marked as playable offline
+    - Uncached games show a clear, actionable message rather than failing silently
+  labels: ["epic:pwa", "epic:ui", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement an update prompt when a new service worker is waiting"
+  body: |
+    **Acceptance**
+    - Non-intrusive prompt, never appears mid-match
+    - 'Update now' reloads cleanly with progress preserved
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add a custom install prompt with correct timing"
+  body: |
+    **Acceptance**
+    - Triggered after a completed match, not on first load
+    - Dismissal respected for at least 30 days
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Add a storage quota strategy and eviction handling"
+  body: |
+    **Acceptance**
+    - LRU eviction of cached game chunks under quota pressure
+    - Persistent storage requested where appropriate
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+- title: "Add a 'download all games' action for offline use"
+  body: |
+    **Acceptance**
+    - Shows total size before download, cancellable, resumable
+  labels: ["epic:pwa", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+# =============== E10 BACKEND & DATA ===============
+- title: "Choose and document the hosting and backend architecture"
+  body: |
+    Edge-rendered static frontend plus a thin API. Decide the provider and record the reasoning, including cost at 1M monthly sessions.
+    **Acceptance**
+    - ADR committed with the decision and the rejected alternatives
+  labels: ["epic:backend", "type:spec"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement anonymous device identity without accounts"
+  body: |
+    **Acceptance**
+    - Locally generated ID, no PII, resettable by the user
+    - Documented in the privacy policy
+  labels: ["epic:backend", "epic:legal", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement optional account creation with OAuth"
+  body: |
+    **Acceptance**
+    - Optional at every point; nothing is gated behind an account before M4
+    - Local progress migrates on sign-in without loss
+  labels: ["epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement cloud save sync with conflict resolution"
+  body: |
+    **Acceptance**
+    - Last-write-wins with a user-visible conflict prompt for tournament state
+  labels: ["epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement global leaderboards per game"
+  body: |
+    **Acceptance**
+    - Daily, weekly, and all-time boards
+    - Paginated, cached at the edge
+  labels: ["epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement server-side score validation and anti-cheat"
+  body: |
+    Any client-submitted score is a claim, not a fact. Validate plausibility server-side before it reaches a public board.
+    **Acceptance**
+    - Reject scores outside physically achievable bounds
+    - Rate limiting per identity
+    - Suspicious submissions flagged for review, not silently dropped
+  labels: ["epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 13
+
+- title: "Add API rate limiting and abuse protection"
+  body: |
+    **Acceptance**
+    - Per-IP and per-identity limits with clear 429 responses
+  labels: ["epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+- title: "Set up error tracking and alerting"
+  body: |
+    **Acceptance**
+    - Source-mapped stack traces, release tagging
+    - Alert on any error rate above 1% of sessions
+  labels: ["epic:backend", "epic:qa", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Set up uptime monitoring and a status page"
+  body: |
+    **Acceptance**
+    - Synthetic check every minute from three regions
+  labels: ["epic:backend", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement a database backup and restore runbook"
+  body: |
+    **Acceptance**
+    - Automated daily backups, restore tested at least once and documented
+  labels: ["epic:backend", "type:chore"]
+  milestone: M4 Online
+  estimate: 3
+
+# =============== E11 ANALYTICS ===============
+- title: "Define the analytics event taxonomy before instrumenting anything"
+  body: |
+    Instrument-first always produces unusable data. Name the questions first: which games get started but not finished, where do players drop out of a tournament, which control scheme correlates with retention.
+    **Acceptance**
+    - Event spec doc with names, properties, and the question each answers
+    - No event ships without a stated question
+  labels: ["epic:analytics", "type:spec"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement privacy-preserving analytics"
+  body: |
+    **Acceptance**
+    - Cookieless where possible, no cross-site identifiers
+    - Works without a consent banner in the EU, or gated correctly if not
+  labels: ["epic:analytics", "epic:legal", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Instrument the core funnel: land, browse, start, complete, rematch"
+  body: |
+    **Acceptance**
+    - Full funnel visible in a dashboard, segmentable by device class
+  labels: ["epic:analytics", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Instrument per-game engagement and abandonment"
+  body: |
+    **Acceptance**
+    - Start, complete, quit-at-time-T, rematch rate per game
+    - Identifies games abandoned in the first 10 seconds, which usually means unclear controls
+  labels: ["epic:analytics", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add Real User Monitoring for Core Web Vitals"
+  body: |
+    **Acceptance**
+    - Field data segmented by device and connection, not just lab scores
+  labels: ["epic:analytics", "epic:perf", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement a feature flag system"
+  body: |
+    **Acceptance**
+    - Flags evaluable client-side with no flash of wrong content
+    - Kill switch for any game
+  labels: ["epic:analytics", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement an A/B testing framework for game balance and UI"
+  body: |
+    **Acceptance**
+    - Deterministic bucketing by identity, sticky across sessions
+    - Results readable without a data engineer
+  labels: ["epic:analytics", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+# =============== E12 MONETIZATION ===============
+- title: "Decide and document the monetization model"
+  body: |
+    Options: display ads, rewarded video, premium ad-free unlock, cosmetic packs. Each has different consequences for latency, layout stability, and child-audience compliance.
+    **Acceptance**
+    - ADR with the chosen model and revenue-per-session estimates
+    - Explicit decision on whether the site targets children, which constrains everything downstream
+  labels: ["epic:monetization", "epic:legal", "type:spec"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement ad slots that never cause layout shift"
+  body: |
+    Reserved fixed-height containers. An ad that reflows the page mid-match is the fastest way to lose a session.
+    **Acceptance**
+    - CLS contribution from ads is zero
+    - No ad renders during active gameplay
+  labels: ["epic:monetization", "epic:perf", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement interstitial ads at natural break points only"
+  body: |
+    **Acceptance**
+    - Only between matches, never mid-match, never on first session
+    - Hard frequency cap and a documented rationale
+  labels: ["epic:monetization", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement rewarded video for optional unlocks"
+  body: |
+    **Acceptance**
+    - Always optional, never blocking core play
+    - Reward delivered even if the ad network fails
+  labels: ["epic:monetization", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement the premium ad-free purchase flow"
+  body: |
+    **Acceptance**
+    - Payment provider integrated, receipts validated server-side
+    - Restore-purchase path that works across devices
+  labels: ["epic:monetization", "epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 13
+
+- title: "Ensure ad content is age-appropriate and configure network filters"
+  body: |
+    If the audience skews young, ad category filtering is a legal requirement, not a preference.
+    **Acceptance**
+    - Ad network configured for the declared audience rating
+    - Documented review of served ad categories
+  labels: ["epic:monetization", "epic:legal", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add ad-blocker detection with a non-hostile response"
+  body: |
+    **Acceptance**
+    - Detects, does not block play, offers the premium option once
+  labels: ["epic:monetization", "type:feat"]
+  milestone: M4 Online
+  estimate: 3
+
+- title: "Implement revenue reporting dashboard"
+  body: |
+    **Acceptance**
+    - Revenue per session by traffic source and device class
+  labels: ["epic:monetization", "epic:analytics", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+# =============== E13 SEO & GROWTH ===============
+- title: "Implement server-side rendering or static generation for all content routes"
+  body: |
+    A client-rendered games portal is invisible to search. This is the difference between organic traffic and none.
+    **Acceptance**
+    - Every game has a crawlable, indexable URL with real HTML content
+  labels: ["epic:seo", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Create a dedicated landing page per game"
+  body: |
+    **Acceptance**
+    - Unique title, description, how-to-play copy, controls, and structured data per game
+    - No duplicate or templated boilerplate content
+  labels: ["epic:seo", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add VideoGame structured data (schema.org)"
+  body: |
+    **Acceptance**
+    - Validates in the Rich Results test for every game page
+  labels: ["epic:seo", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Generate sitemap.xml and robots.txt"
+  body: |
+    **Acceptance**
+    - Sitemap auto-generated at build, submitted to Search Console
+  labels: ["epic:seo", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 2
+
+- title: "Implement canonical URLs and hreflang for localised pages"
+  body: |
+    **Acceptance**
+    - No duplicate content penalties across language variants
+  labels: ["epic:seo", "epic:i18n", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Write genre hub pages targeting real search intent"
+  body: |
+    Pages for '2 player games on one computer', 'two player games no download' and similar, each linking into the catalog.
+    **Acceptance**
+    - Genuinely useful content, not keyword filler
+    - Keyword research doc committed
+  labels: ["epic:seo", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement an embeddable game iframe with attribution"
+  body: |
+    Portals embedding games is a major distribution channel for browser games.
+    **Acceptance**
+    - Sandboxed iframe, backlink and branding preserved, domain allowlist
+  labels: ["epic:seo", "epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Set up Google Search Console and Bing Webmaster Tools"
+  body: |
+    **Acceptance**
+    - Verified, sitemap submitted, coverage errors monitored
+  labels: ["epic:seo", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 1
+
+- title: "Add Open Graph and Twitter card metadata per route"
+  body: |
+    **Acceptance**
+    - Correct preview in Slack, WhatsApp, Discord, X, iMessage
+  labels: ["epic:seo", "type:feat", "good first issue"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Implement a referral and share-link attribution scheme"
+  body: |
+    **Acceptance**
+    - Share links carry a source parameter surfaced in analytics
+    - No personal data in the URL
+  labels: ["epic:seo", "epic:analytics", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+# =============== E14 LEGAL & COMPLIANCE ===============
+- title: "Complete an IP clearance review of the game catalog"
+  body: |
+    Rules and mechanics are not protected; names, art, sounds, and code are. Confirm every game name is generic or original and no asset derives from another product.
+    **Acceptance**
+    - Written review covering all 44 games with a trademark search on each name
+    - Any flagged name renamed before launch
+  labels: ["epic:legal", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 8
+
+- title: "Write the asset provenance policy and enforce it in review"
+  body: |
+    **Acceptance**
+    - Policy: no asset enters the repo without a recorded source and licence
+    - PR template checkbox, CI validation against the asset manifest
+  labels: ["epic:legal", "type:chore"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Write the privacy policy"
+  body: |
+    **Acceptance**
+    - Covers analytics, ads, local storage, and any account data
+    - Reviewed by someone qualified before launch
+  labels: ["epic:legal", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Write the terms of service"
+  body: |
+    **Acceptance**
+    - Covers acceptable use, leaderboards, purchases, and liability
+  labels: ["epic:legal", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Implement GDPR and CCPA data requests"
+  body: |
+    **Acceptance**
+    - Export and delete flows that actually complete within the statutory window
+  labels: ["epic:legal", "epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Determine the child-audience position and implement COPPA/GDPR-K controls"
+  body: |
+    A two-player casual games site will attract under-13 users regardless of intent. Decide the position deliberately: either declare a general audience with age gating, or build for a child audience with no behavioural ads and no data collection.
+    **Acceptance**
+    - Written decision with the compliance obligations that follow
+    - Ad network and analytics configured to match
+  labels: ["epic:legal", "type:spec"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Implement a cookie/consent banner only if actually required"
+  body: |
+    **Acceptance**
+    - Banner appears only if non-essential storage is used
+    - Reject is as easy as accept, and rejection is honoured
+  labels: ["epic:legal", "epic:ui", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add licence headers and a third-party attribution page"
+  body: |
+    **Acceptance**
+    - Auto-generated attribution page listing every dependency and its licence
+  labels: ["epic:legal", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Add a DMCA and abuse contact process"
+  body: |
+    **Acceptance**
+    - Published contact route and a documented internal response procedure
+  labels: ["epic:legal", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 2
+
+# =============== E15 INTERNATIONALISATION ===============
+- title: "Implement the i18n framework with lazy-loaded locale bundles"
+  body: |
+    **Acceptance**
+    - Only the active locale is downloaded
+    - Language switch applies without a reload
+  labels: ["epic:i18n", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Extract every user-facing string into locale files"
+  body: |
+    **Acceptance**
+    - CI lint rule failing on any hardcoded user-facing string
+  labels: ["epic:i18n", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Translate to the launch locale set"
+  body: |
+    Target: English, Hindi, Spanish, Portuguese, French, Indonesian, Arabic. These match where casual mobile browser gaming volume actually is.
+    **Acceptance**
+    - Human-reviewed translations, not raw machine output
+    - Game names and rules reviewed for cultural fit
+  labels: ["epic:i18n", "type:chore"]
+  milestone: M3 Launch
+  estimate: 13
+
+- title: "Implement RTL layout support"
+  body: |
+    **Acceptance**
+    - Full shell mirrors correctly for Arabic
+    - Game canvases explicitly opt in or out of mirroring, per game
+  labels: ["epic:i18n", "epic:ui", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Handle locale-aware number, date, and duration formatting"
+  body: |
+    **Acceptance**
+    - `Intl` APIs used throughout, no manual formatting
+  labels: ["epic:i18n", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 2
+
+- title: "Verify text expansion does not break layouts"
+  body: |
+    German and Hindi strings commonly run 30-50% longer than English.
+    **Acceptance**
+    - Pseudo-locale test mode with expanded strings
+    - No truncation or overflow in any screen at 150% length
+  labels: ["epic:i18n", "epic:ui", "type:qa"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Ensure fonts cover every launch locale's glyph set"
+  body: |
+    **Acceptance**
+    - Devanagari and Arabic covered, subset per locale
+    - No tofu characters in any supported language
+  labels: ["epic:i18n", "epic:perf", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+# =============== E16 CI/CD ===============
+- title: "Build the CI pipeline: lint, typecheck, test, build, size, a11y"
+  body: |
+    **Acceptance**
+    - Under 8 minutes on a PR
+    - Parallelised and cached
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M0 Foundation
+  estimate: 5
+
+- title: "Add preview deployments per pull request"
+  body: |
+    **Acceptance**
+    - Unique URL commented on the PR
+    - Torn down on merge
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Implement staged rollout with an automatic rollback trigger"
+  body: |
+    **Acceptance**
+    - Canary to 5% of traffic, auto-rollback on error rate or Web Vitals regression
+  labels: ["epic:tooling", "epic:backend", "type:feat"]
+  milestone: M3 Launch
+  estimate: 8
+
+- title: "Add dependency update automation with grouped PRs"
+  body: |
+    **Acceptance**
+    - Weekly grouped updates, auto-merge on green for patch versions
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M2 Catalog
+  estimate: 2
+
+- title: "Add secret scanning and dependency vulnerability scanning"
+  body: |
+    **Acceptance**
+    - CI fails on a high-severity advisory or a committed secret
+  labels: ["epic:tooling", "type:chore"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Configure a strict Content Security Policy"
+  body: |
+    **Acceptance**
+    - No `unsafe-inline` for scripts
+    - Ad and analytics domains explicitly allowlisted
+    - Report-only mode first, enforced after a clean week
+  labels: ["epic:tooling", "epic:legal", "type:chore"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add security headers: HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy"
+  body: |
+    **Acceptance**
+    - Grade A on an external header scanner
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 2
+
+- title: "Set up release notes generation from Changesets"
+  body: |
+    **Acceptance**
+    - Public changelog page generated from merged changesets
+  labels: ["epic:tooling", "epic:docs", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Add source map upload for production error tracking"
+  body: |
+    **Acceptance**
+    - Maps uploaded privately, not served publicly
+  labels: ["epic:tooling", "type:chore", "good first issue"]
+  milestone: M3 Launch
+  estimate: 2
+
+- title: "Document the release runbook and rollback procedure"
+  body: |
+    **Acceptance**
+    - Someone who has never deployed can follow it end to end
+  labels: ["epic:docs", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+# =============== E17 QA ===============
+- title: "Define the browser and device support matrix"
+  body: |
+    **Acceptance**
+    - Named browser versions and device classes with tiered support levels
+    - Anything outside the matrix gets a clear unsupported message, not a broken page
+  labels: ["epic:qa", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Write E2E tests for the core journeys"
+  body: |
+    **Acceptance**
+    - Browse to game to match to result to rematch
+    - Full tournament run
+    - Settings persistence across reload
+  labels: ["epic:qa", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Add visual regression testing for shell screens"
+  body: |
+    **Acceptance**
+    - Baseline screenshots per breakpoint, diffs surfaced on the PR
+  labels: ["epic:qa", "type:chore"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Build a manual playtest protocol and score sheet"
+  body: |
+    Automated tests cannot tell you a game feels bad. Structure the human pass.
+    **Acceptance**
+    - Per-game sheet covering clarity of controls, first-30-seconds comprehension, fairness, and round-length feel
+  labels: ["epic:qa", "type:spec"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Run moderated playtests with real pairs of players"
+  body: |
+    Two people sharing one phone is a physical ergonomics problem as much as a software one. Watch where their hands collide.
+    **Acceptance**
+    - At least 10 sessions with pairs who have not seen the product
+    - Findings filed as individual issues
+  labels: ["epic:qa", "type:spec"]
+  milestone: M2 Catalog
+  estimate: 8
+
+- title: "Test on iOS Safari specifically for its known divergences"
+  body: |
+    Audio unlock, viewport units, `touch-action`, PWA storage limits, and WebGL memory all behave differently here.
+    **Acceptance**
+    - Dedicated iOS pass with findings filed per game
+  labels: ["epic:qa", "type:spec"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Add fuzz testing for input handling"
+  body: |
+    **Acceptance**
+    - Random input storms produce no unhandled exceptions across a 1-hour soak
+  labels: ["epic:qa", "epic:input", "type:feat"]
+  milestone: M3 Launch
+  estimate: 5
+
+- title: "Add a memory-leak soak test"
+  body: |
+    **Acceptance**
+    - 100 game load/unload cycles with heap growth under 5MB
+  labels: ["epic:qa", "epic:perf", "type:feat"]
+  milestone: M2 Catalog
+  estimate: 5
+
+- title: "Set up a public bug reporting channel with a template"
+  body: |
+    **Acceptance**
+    - In-app report link that prefills device, browser, and game context
+  labels: ["epic:qa", "epic:ui", "type:feat"]
+  milestone: M3 Launch
+  estimate: 3
+
+- title: "Establish a pre-launch checklist and run it"
+  body: |
+    **Acceptance**
+    - Single checklist covering performance, a11y, legal, SEO, analytics, and rollback readiness
+    - Signed off before public launch
+  labels: ["epic:qa", "type:chore"]
+  milestone: M3 Launch
+  estimate: 3
+
+# =============== E18 ONLINE MULTIPLAYER (v2) ===============
+- title: "Spec online multiplayer scope and per-game suitability"
+  body: |
+    Turn-based board games work over any latency. Real-time physics duels need rollback or lockstep and will not all be worth porting.
+    **Acceptance**
+    - Per-game classification: turn-based, lockstep-viable, or local-only
+  labels: ["epic:online", "type:spec"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement the WebSocket signalling and room server"
+  body: |
+    **Acceptance**
+    - Create, join by code, and rejoin after disconnect
+    - Rooms garbage-collected after inactivity
+  labels: ["epic:online", "epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 13
+
+- title: "Implement WebRTC data channels with a TURN fallback"
+  body: |
+    **Acceptance**
+    - Peer-to-peer where possible, relayed where NAT blocks it
+    - TURN cost modelled before launch
+  labels: ["epic:online", "type:feat"]
+  milestone: M4 Online
+  estimate: 13
+
+- title: "Implement deterministic lockstep with input delay for real-time games"
+  body: |
+    **Acceptance**
+    - Desync detection via state hashing every N frames
+    - Graceful resync or forfeit on desync, never a silent divergence
+  labels: ["epic:online", "epic:engine", "type:feat"]
+  milestone: M4 Online
+  estimate: 13
+
+- title: "Implement matchmaking with skill-based pairing"
+  body: |
+    **Acceptance**
+    - Simple rating per game, widening search band over time
+  labels: ["epic:online", "epic:backend", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement invite links and private rooms"
+  body: |
+    **Acceptance**
+    - Shareable link joins directly into a room, works from any messenger
+  labels: ["epic:online", "type:feat"]
+  milestone: M4 Online
+  estimate: 5
+
+- title: "Implement disconnect handling and reconnect grace"
+  body: |
+    **Acceptance**
+    - 30-second reconnect window, clear opponent-side messaging
+    - Forfeit rules documented and consistent
+  labels: ["epic:online", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Implement reporting, blocking, and a moderation queue"
+  body: |
+    Any system with player-visible names needs this before it has users, not after.
+    **Acceptance**
+    - Report flow, name filtering, and an internal review queue
+  labels: ["epic:online", "epic:legal", "type:feat"]
+  milestone: M4 Online
+  estimate: 8
+
+- title: "Add network quality indicator and latency display"
+  body: |
+    **Acceptance**
+    - Ping and packet-loss indicator visible during online matches
+  labels: ["epic:online", "epic:ui", "type:feat"]
+  milestone: M4 Online
+  estimate: 3
+
+- title: "Load test the room server"
+  body: |
+    **Acceptance**
+    - 10,000 concurrent rooms sustained with documented resource usage and cost
+  labels: ["epic:online", "epic:qa", "type:chore"]
+  milestone: M4 Online
+  estimate: 8
+
+# =============== E19 DOCS ===============
+- title: "Write the architecture overview document"
+  body: |
+    **Acceptance**
+    - Diagram plus prose covering engine, SDK, shell, and backend boundaries
+  labels: ["epic:docs", "type:chore"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Write the game design guidelines doc"
+  body: |
+    Every game must be understandable in 10 seconds without instructions, playable in under 90 seconds, and fair to both seating positions on a shared phone.
+    **Acceptance**
+    - Guidelines doc that every new game is reviewed against
+  labels: ["epic:docs", "type:spec"]
+  milestone: M1 First Playable
+  estimate: 3
+
+- title: "Write the AI opponent design guidelines"
+  body: |
+    **Acceptance**
+    - Documents the no-cheating rule and the three-tier difficulty model
+  labels: ["epic:docs", "type:spec"]
+  milestone: M2 Catalog
+  estimate: 3
+
+- title: "Document the emulator-based mechanics research protocol"
+  body: |
+    Research reference apps by playing them and recording observed mechanics: round length, control mapping, difficulty ramp, feedback timing.
+    Explicitly out of scope: decompiling, extracting assets, or reproducing any art, audio, code, or UI layout.
+    **Acceptance**
+    - Protocol doc with an observation template
+    - Scope boundary stated in CONTRIBUTING.md
+  labels: ["epic:docs", "epic:legal", "type:spec"]
+  milestone: M0 Foundation
+  estimate: 3
+
+- title: "Write the onboarding guide for new contributors"
+  body: |
+    **Acceptance**
+    - Clone to first running game in under 15 minutes
+  labels: ["epic:docs", "type:chore", "good first issue"]
+  milestone: M2 Catalog
+  estimate: 2
+
+- title: "Add ADR (architecture decision record) template and process"
+  body: |
+    **Acceptance**
+    - Template committed, first three ADRs written retroactively
+  labels: ["epic:docs", "type:chore", "good first issue"]
+  milestone: M1 First Playable
+  estimate: 2

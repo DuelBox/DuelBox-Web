@@ -1,0 +1,151 @@
+# Per-game issue templates. seed_issues.py expands each template across every
+# game in games.yaml (8 templates x 44 games = 352 issues).
+#
+# fields:
+#   key       stable template id, stamped into the issue footer
+#   title     may use {name} {id} {genre} {layout} {controls} {loop} {sim} {ai} {round} {build}
+#   body      same placeholders; avoid literal braces (str.format)
+#   labels    always extended with game:<id> by the seeder
+#   milestone all game work lands in M2 Catalog; grooming promotes the six
+#             launch games (ping-pong, air-hockey, tic-tac-toe, sumo-push,
+#             drop-four, quick-draw) to M1 First Playable
+#   base      story points before build-cost scaling
+#   scales    if true, estimate = base x build cost (S=1, M=2, L=3)
+
+templates:
+
+  - key: spec
+    title: "{name}: write the game spec"
+    body: |
+      Write the design spec for **{name}** ({genre}) before any implementation issue starts.
+
+      Starting point from the catalog:
+      - Layout: {layout}
+      - Controls: {controls}
+      - Core loop: {loop}
+      - Target round length: {round}
+
+      The spec must cover: exact rules and win/lose/draw conditions, scoring,
+      per-player controls on touch AND keyboard, round structure, edge cases
+      (simultaneous input, timeout, stalemate), and how the game maps onto the
+      shared match flow (countdown, HUD, result, rematch).
+      **Acceptance**
+      - Spec committed at `packages/games/{id}/SPEC.md`
+      - Reviewed against the game design guidelines doc
+      - Ambiguities resolved or filed as questions before build issues start
+    labels: ["epic:game", "type:spec"]
+    milestone: M2 Catalog
+    base: 2
+    scales: false
+
+  - key: research
+    title: "{name}: emulator research notes"
+    body: |
+      Play the corresponding **{genre}** genre in the reference app for ~3 minutes
+      and record ONLY observable behaviour: round length, control mapping, how the
+      game teaches its rules in the first 5 seconds, difficulty ramp, feedback
+      timing, and what the result screen offers next.
+
+      Scope boundary: observe by playing. Do NOT decompile, unpack, extract
+      assets, or reproduce any art, layout, or text.
+      **Acceptance**
+      - Findings appended to `packages/games/{id}/RESEARCH.md` under "Observed behaviour"
+      - The 2-3 findings that should change our spec commented on the "{name}: write the game spec" issue
+    labels: ["epic:game", "type:spec"]
+    milestone: M2 Catalog
+    base: 1
+    scales: false
+
+  - key: core-sim
+    title: "{name}: implement core simulation and rules"
+    body: |
+      Implement the simulation for **{name}** on the fixed timestep, per the spec.
+
+      The hard part: {sim}
+      **Acceptance**
+      - Deterministic given identical input traces (seeded RNG only, no Math.random)
+      - Rules, scoring, and win/lose/draw conditions unit-tested in `rules.ts`
+      - No per-frame allocations in `update()`
+      - Runs headless (no renderer) for the balance harness
+    labels: ["epic:game", "type:feat"]
+    milestone: M2 Catalog
+    base: 3
+    scales: true
+
+  - key: controls
+    title: "{name}: implement controls and input mapping"
+    body: |
+      Wire **{name}** into the two-player input abstraction.
+
+      - Layout: {layout}
+      - Control model: {controls}
+      **Acceptance**
+      - Touch, keyboard (P1 WASD-side / P2 arrows-side), and gamepad where sensible
+      - Simultaneous input from both players registers independently
+      - Touch ownership follows the zone-ownership rule (a touch keeps its player even across the seam)
+      - Control hints declared in the game manifest for the lobby preview
+    labels: ["epic:game", "epic:input", "type:feat"]
+    milestone: M2 Catalog
+    base: 2
+    scales: true
+
+  - key: ai
+    title: "{name}: implement AI opponent with three difficulty tiers"
+    body: |
+      Implement the CPU opponent for **{name}** so one player can play solo.
+
+      Approach from the catalog: {ai}
+      **Acceptance**
+      - Easy / Normal / Hard via the shared AIDifficulty interface (reaction delay, error magnitude, blunder rate)
+      - AI never gets information, speed, or physics a human cannot get
+      - Passes the headless balance harness: first-player win rate within 45-55% at equal difficulty
+    labels: ["epic:game", "type:feat"]
+    milestone: M2 Catalog
+    base: 2
+    scales: true
+
+  - key: assets
+    title: "{name}: create original art, audio hookup, and licensing entries"
+    body: |
+      Produce the original visual assets for **{name}** in the DuelBox design
+      system (seam identity, P1/P2 colour pair plus shape/label differentiation)
+      and wire the shared SFX events (hit, score, win, lose, countdown).
+
+      Nothing may be copied or derived from any other product.
+      **Acceptance**
+      - Sprites/shapes and thumbnail committed, packed via the atlas pipeline
+      - Every asset has an `assets.license.json` entry (CI enforces)
+      - Player-owned elements distinguishable without colour (shape/pattern/label)
+    labels: ["epic:game", "epic:ui", "epic:legal", "type:feat"]
+    milestone: M2 Catalog
+    base: 2
+    scales: true
+
+  - key: polish
+    title: "{name}: match-flow integration, juice, and responsiveness"
+    body: |
+      Integrate **{name}** with the shared match flow and polish the feel.
+      **Acceptance**
+      - Countdown, HUD, result screen, rematch, and pause all work via the SDK (no bespoke versions)
+      - Screen shake / hit-stop / flash applied via the shared juice primitives; disabled under reduced-motion
+      - Renders correctly from 320px portrait to 4K, letterboxed, safe-area aware
+      - Round length lands in the target band: {round}
+    labels: ["epic:game", "epic:ui", "type:feat"]
+    milestone: M2 Catalog
+    base: 1
+    scales: true
+
+  - key: qa
+    title: "{name}: QA pass and balance validation"
+    body: |
+      Verify **{name}** against the definition of done for a game.
+      **Acceptance**
+      - Win, lose, draw, restart, rematch, quit, and pause all verified by hand
+      - Simultaneous input, rapid input, no input, and boundary cases produce no errors
+      - Verified on iOS Safari and Chrome Android; no console errors; no memory growth across 10 load/unload cycles
+      - 10,000-match AI-vs-AI run: no stalemates, no degenerate strategy, win rate in band
+      - Playtest score sheet completed by one real pair
+    labels: ["epic:game", "epic:qa", "type:qa"]
+    milestone: M2 Catalog
+    base: 1
+    scales: true
