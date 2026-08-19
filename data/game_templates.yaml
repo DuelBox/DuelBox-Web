@@ -1,0 +1,227 @@
+# Per-game issue templates. The seeder expands these across every game in catalog.yaml:
+# one parent epic plus one child issue per template = 14 issues per game.
+#
+# Placeholders: {name} {id} {category} {archetype} {sim} {controls} {seats}
+# `archetypes:` limits a template to specific archetypes (omit = all).
+
+parent:
+  title: "[{name}] Build the game"
+  why: "Parent issue tracking every piece of work for {name} ({category}, {archetype}). Close it when the child issues are all done and the game passes its QA pass."
+  labels: ["epic:game", "type:epic"]
+  milestone: M2 Game Catalog
+
+templates:
+
+- key: research
+  title: "[{name}] Research: play the reference genre and document observed mechanics"
+  why: "The spec must describe how this game actually plays, not how we imagine it plays. Everything downstream depends on this being accurate."
+  actions:
+    - "Play the corresponding game on the emulator for at least three minutes with both seats"
+    - "Record: exact rules, round length start-to-result, control mapping per seat, what the first five seconds teach, difficulty ramp, feedback timing, and what the result screen offers"
+    - "Deliberately trigger win, loss, draw, timeout, boundary conditions, rapid input, no input, and simultaneous input"
+    - "Write findings to packages/games/{id}/RESEARCH.md under 'Observed behaviour', in your own words"
+  acceptance:
+    - "RESEARCH.md committed with every field of the observation template filled or explicitly marked UNKNOWN"
+    - "No decompiling, unpacking, or asset extraction was used - observation only"
+    - "Anything that could not be verified is marked UNKNOWN rather than guessed"
+  labels: ["epic:game", "type:research", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: spec
+  title: "[{name}] Write the game spec"
+  why: "A spec turns observations into decisions a developer can implement without re-deriving the rules."
+  actions:
+    - "Write packages/games/{id}/SPEC.md covering rules, scoring, win/lose/draw conditions, and round structure"
+    - "Specify controls for both seats on touch and keyboard"
+    - "Specify the win condition using one of the shared helpers (first to N, lead by N, highest at time, last standing)"
+    - "List edge cases: simultaneous input, timeout, stalemate, and boundary conditions"
+  acceptance:
+    - "SPEC.md committed and reviewed against the game design guidelines"
+    - "Every rule traces to a RESEARCH.md observation or an explicit, flagged design decision"
+    - "No ambiguity left that would block implementation"
+  labels: ["epic:game", "type:spec", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: scaffold
+  title: "[{name}] Scaffold the game package and manifest"
+  why: "A registered, compiling stub means every later issue starts from something that already runs."
+  actions:
+    - "Run the create-game scaffold for {id}"
+    - "Fill the GameMeta manifest: name, category, archetype, seats, layout, orientation, round length, control scheme, and tags"
+    - "Register it so it appears in the catalog and loads as its own chunk"
+  acceptance:
+    - "The stub loads from the catalog and renders a placeholder frame"
+    - "Manifest passes schema validation at build time"
+    - "The game ships as its own chunk, confirmed in the build report"
+  labels: ["epic:game", "type:chore", "priority:P1", "size:XS"]
+  milestone: M2 Game Catalog
+
+- key: state
+  title: "[{name}] Implement the state model and rules module"
+  why: "Rules kept separate from rendering are the only rules that can be unit tested and reused by the bot and the balance harness."
+  actions:
+    - "Define the typed state shape for the match"
+    - "Implement rules.ts as pure functions: legal moves, apply move, and detect terminal state"
+    - "Keep every rule free of rendering, timing, and DOM access"
+  acceptance:
+    - "rules.ts has no imports from the renderer or the DOM"
+    - "State is serialisable and restorable exactly"
+    - "Rules are covered by unit tests including the terminal cases"
+  labels: ["epic:game", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: input
+  title: "[{name}] Wire up controls for both seats"
+  why: "Two players on one device is the whole product; controls that work for seat one and fail for seat two make the game worthless."
+  actions:
+    - "Map the game's actions onto the shared input abstraction for touch and keyboard"
+    - "Respect zone ownership: a touch belongs to the seat it started in, even across the midline"
+    - "Declare the control scheme in the manifest so the lobby can show the right diagram"
+  acceptance:
+    - "Both seats can act independently and simultaneously where the game allows it"
+    - "A finger dragged across the seam never steals the other seat's control"
+    - "Keyboard defaults work for both halves at once"
+  labels: ["epic:game", "epic:input", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: sim
+  title: "[{name}] Implement the core simulation"
+  why: "This is the part that has to feel right; everything else is presentation around it."
+  actions:
+    - "Implement the simulation on the fixed timestep using engine primitives, never a bespoke loop"
+    - "Use the seeded RNG for every random draw"
+    - "Keep update() free of per-frame allocations"
+  acceptance:
+    - "Identical input traces produce identical final state"
+    - "Runs headless with no renderer for the balance harness"
+    - "Zero allocations per frame in update(), verified by profiling"
+  labels: ["epic:game", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: scoring
+  title: "[{name}] Implement scoring and the win condition"
+  why: "The observed pattern is that win conditions are stated in one line before the match; ours must match that clarity and be testable."
+  actions:
+    - "Implement scoring per the spec"
+    - "Declare the win condition through the shared helper rather than bespoke comparisons"
+    - "Handle draws explicitly, including the simultaneous-input tie policy where relevant"
+  acceptance:
+    - "Win, lose, and draw are all reachable and unit tested"
+    - "The match cannot end in an undefined state"
+    - "Score reporting feeds the shared HUD and tournament without special-casing"
+  labels: ["epic:game", "type:feat", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: render
+  title: "[{name}] Implement rendering"
+  why: "Drawing through the renderer abstraction is what lets the engine change backends later without touching this game."
+  actions:
+    - "Render through the Renderer interface only, never the raw canvas context"
+    - "Interpolate using the render alpha so motion is smooth above the simulation rate"
+    - "Read every colour from the design tokens"
+  acceptance:
+    - "No direct canvas context calls in game code"
+    - "Renders correctly from 320px portrait through to a desktop viewport"
+    - "No hardcoded colour values"
+  labels: ["epic:game", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: seatflip
+  title: "[{name}] Integrate seat rotation and the turn indicator"
+  why: "Observed as the defining mechanic: the play area rotates 180 degrees and recolours to the active player so each person reads the screen the right way up."
+  actions:
+    - "Adopt the engine's seat rotation rather than rotating anything locally"
+    - "Verify input coordinates are inverted correctly for the rotated seat"
+    - "Ensure all in-canvas text renders upright for the active seat"
+  acceptance:
+    - "A tap maps to the correct world position in both seats"
+    - "No text ever renders upside-down for the player whose turn it is"
+    - "The flip respects reduced-motion by swapping instantly"
+  archetypes: ["turn-board", "turn-aim"]
+  labels: ["epic:game", "epic:sdk", "type:feat", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: splitlayout
+  title: "[{name}] Implement the split-seat layout and per-seat HUD placement"
+  why: "In a real-time game both players act at once, so each needs their own zone, their own controls, and their own readable score without ever obscuring the other."
+  actions:
+    - "Lay out the two seat zones with a clear divider"
+    - "Mirror each seat's UI so it reads correctly from that side of the device"
+    - "Verify neither player's hand position covers the other's play area"
+  acceptance:
+    - "Both seats are equally playable, verified by swapping which side each player sits on"
+    - "No control overlaps the other seat's zone"
+    - "Layout holds from 320px through to desktop"
+  archetypes: ["rt-split", "rt-arena", "rt-race"]
+  labels: ["epic:game", "epic:site", "type:feat", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: matchflow
+  title: "[{name}] Integrate the shared match flow"
+  why: "Countdown, HUD, pause, result, and rematch must come from the SDK; a bespoke version here is one of ninety-nine inconsistent versions."
+  actions:
+    - "Wire into the match state machine and the shared HUD"
+    - "Verify pause freezes the simulation and resumes identically"
+    - "Verify rematch resets state fully with no leakage between matches"
+  acceptance:
+    - "No bespoke countdown, scoreboard, pause, or result screen in this package"
+    - "Rematch restarts in under 500ms with no full reload"
+    - "Quitting mid-match leaves tournament progress intact"
+  labels: ["epic:game", "epic:sdk", "type:feat", "priority:P1", "size:S"]
+  milestone: M2 Game Catalog
+
+- key: bot
+  title: "[{name}] Implement the bot opponent with three difficulty tiers"
+  why: "Every game in the reference app offers play-vs-bot, so a solo player must never hit a game they cannot start."
+  actions:
+    - "Implement the bot against the shared difficulty interface"
+    - "Express difficulty as reaction delay, error magnitude, and blunder rate, never as extra information or speed"
+    - "Tune each tier against the balance harness"
+  acceptance:
+    - "Easy, Normal, and Hard are all distinguishable in play"
+    - "The bot reads only what a human could see"
+    - "Win rate at equal difficulty lands within 45-55 percent over a headless run"
+  labels: ["epic:game", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: assets
+  title: "[{name}] Create original art and wire the audio events"
+  why: "Mechanics are free to reimplement; art and audio are not. Everything here must be ours and its licence recorded."
+  actions:
+    - "Create original sprites and a thumbnail in the DuelBox visual language"
+    - "Trigger the shared sound events rather than adding bespoke ones without reason"
+    - "Add an assets.license.json entry for every file"
+  acceptance:
+    - "Nothing is copied or traced from another product"
+    - "Player-owned elements differ by shape or label as well as colour"
+    - "CI asset-licence check passes"
+  labels: ["epic:game", "epic:design", "epic:legal", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: tests
+  title: "[{name}] Write unit and deterministic simulation tests"
+  why: "Rules that are not tested are rules that quietly change the next time someone touches the physics."
+  actions:
+    - "Unit test legal moves, scoring, and every terminal state"
+    - "Add a deterministic replay test asserting an input trace reproduces a known final state"
+    - "Cover the edge cases named in the spec"
+  acceptance:
+    - "Rules coverage meets the engine threshold"
+    - "The replay test fails if determinism regresses"
+    - "Every spec edge case has a corresponding test"
+  labels: ["epic:game", "epic:qa", "type:qa", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- key: qa
+  title: "[{name}] QA pass against the definition of done"
+  why: "An issue is not done because code was written; it is done when the game was actually played and verified."
+  actions:
+    - "Verify by hand: both seats control independently, win, lose, draw, restart, rematch, pause, and quit"
+    - "Verify on iOS Safari and Chrome Android, portrait and landscape, with no console errors"
+    - "Run the balance harness and complete a playtest score sheet with a real pair"
+  acceptance:
+    - "Every definition-of-done item ticked or explicitly explained"
+    - "No console errors and no heap growth across ten load-unload cycles"
+    - "Balance harness shows no stalemate or degenerate strategy and a win rate in band"
+  labels: ["epic:game", "epic:qa", "type:qa", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
