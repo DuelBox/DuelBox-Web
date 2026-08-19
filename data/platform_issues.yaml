@@ -971,7 +971,8 @@ issues:
     - "Animate damage with a distinct non-colour cue"
     - "Announce elimination through the shared result path"
   acceptance:
-    - "Readable at arm's length from both seats", "Meaning is clear in greyscale"
+    - "Readable at arm's length from both seats"
+    - "Meaning is clear in greyscale"
   labels: ["epic:sdk", "epic:a11y", "type:feat", "priority:P2", "size:S"]
   milestone: M2 Game Catalog
 
