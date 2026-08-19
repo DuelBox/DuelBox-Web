@@ -1,18 +1,18 @@
-# DuelBox backlog — 2434 issues
+# DuelBox backlog — 2451 issues
 
 ## Issues per milestone
 
 - **M0 Foundation** — 63
-- **M1 Playable Shell** — 168
-- **M2 Game Catalog** — 1929
-- **M3 Premium Site** — 91
-- **M4 Online** — 157
-- **(none)** — 1
+- **M1 Playable Shell** — 169
+- **M2 Game Catalog** — 1933
+- **M3 Premium Site** — 99
+- **M4 Online** — 160
+- **(none)** — 2
 
 ## Platform and website issues
 
 
-### Repo, tooling and CI (21)
+### Repo, tooling and CI (22)
 
 - #50 Initialise Next.js 15 app with TypeScript and the App Router  
   `priority:P0 size:S type:chore`
@@ -56,6 +56,8 @@
   `priority:P0 size:M type:chore`
 - #2380 Secure the dependency supply chain (A06, A08, CWE-1104)  
   `priority:P0 size:M type:chore`
+- #2455 Add a deploy that works on any static host  
+  `priority:P2 size:M type:chore`
 
 ### Design system (10)
 
@@ -126,7 +128,7 @@
 - #101 Handle WebGL context loss and restoration  
   `priority:P2 size:S type:bug`
 
-### Game engine core (48)
+### Game engine core (49)
 
 - #14 Implement fixed-timestep game loop with interpolated rendering  
   `type:feat`
@@ -224,6 +226,8 @@
   `priority:P1 size:M type:feat`
 - #2370 Protect against prototype pollution and unsafe deserialisation (CWE-1321, CWE-502)  
   `priority:P1 size:M type:feat`
+- #2447 Keep all gameplay computation on the player's device  
+  `priority:P0 size:M type:feat`
 
 ### Two-player input system (46)
 
@@ -405,7 +409,7 @@
 - #2356 Let a match change configuration without losing progress  
   `priority:P3 size:M type:feat`
 
-### Tournament and progression (19)
+### Tournament and progression (20)
 
 - #86 Implement a favourites list stored locally  
   `priority:P2 size:M type:feat`
@@ -445,6 +449,8 @@
   `priority:P2 size:M type:feat`
 - #2354 Run tournaments across two devices  
   `priority:P2 size:M type:feat`
+- #2448 Store all player data locally, with no database in v1  
+  `priority:P1 size:M type:feat`
 
 ### Audio (10)
 
@@ -469,7 +475,7 @@
 - #2340 Define the sound identity  
   `priority:P2 size:M type:spec`
 
-### Accessibility (21)
+### Accessibility (22)
 
 - #72 Define the motion system: durations, easings, and the reduced-motion policy  
   `priority:P1 size:M type:spec`
@@ -513,8 +519,10 @@
   `priority:P2 size:M type:spec`
 - #2338 Define the motion and interaction signature  
   `priority:P2 size:M type:spec`
+- #2458 Design the launch sequence  
+  `priority:P2 size:M type:feat`
 
-### Performance (19)
+### Performance (21)
 
 - #59 Add a bundle-size budget check with size-limit  
   `priority:P1 size:M type:chore`
@@ -554,8 +562,12 @@
   `priority:P2 size:M type:feat`
 - #2425 Enforce a per-session asset budget at catalog scale  
   `priority:P2 size:M type:feat`
+- #2446 Set and enforce a per-session byte budget  
+  `priority:P1 size:M type:chore`
+- #2457 Build the per-game artwork system: one illustrated tile per game  
+  `priority:P1 size:L type:feat`
 
-### Offline and installability (6)
+### Offline and installability (7)
 
 - #191 Add the web app manifest with maskable icons and shortcuts  
   `priority:P2 size:S type:feat`
@@ -569,8 +581,10 @@
   `priority:P3 size:S type:feat`
 - #196 Add a download-all-games action with a storage quota strategy  
   `priority:P3 size:M type:feat`
+- #2445 Make the second play of a game cost zero requests  
+  `priority:P1 size:L type:feat`
 
-### Discovery and SEO (11)
+### Discovery and SEO (13)
 
 - #80 Define the URL and route structure for the whole site  
   `priority:P0 size:S type:spec`
@@ -594,8 +608,12 @@
   `priority:P1 size:M type:feat`
 - #2372 Secure the embeddable iframe and postMessage surface (CWE-1021, CWE-346)  
   `priority:P1 size:M type:feat`
+- #2444 Pre-render every route at build time with no request-time compute  
+  `priority:P0 size:M type:feat`
+- #2453 Generate share images and previews at build time, never on request  
+  `priority:P2 size:M type:feat`
 
-### Backend and data (32)
+### Backend and data (33)
 
 - #202 Build the embeddable game iframe with attribution  
   `priority:P3 size:M type:feat`
@@ -661,8 +679,10 @@
   `priority:P2 size:L type:feat`
 - #2423 Implement backup, restore, and disaster recovery with tested targets  
   `priority:P2 size:M type:chore`
+- #2443 Commit to a static-first hosting target and write down the cost model  
+  `priority:P0 size:M type:spec`
 
-### Analytics (7)
+### Analytics (8)
 
 - #203 Define the analytics event taxonomy before instrumenting anything  
   `priority:P2 size:M type:spec`
@@ -678,6 +698,8 @@
   `priority:P2 size:M type:spec`
 - #2405 Define service level objectives and an error budget  
   `priority:P2 size:M type:spec`
+- #2454 Keep analytics and error reporting free-tier sized  
+  `priority:P2 size:M type:feat`
 
 ### Legal and compliance (15)
 
@@ -725,7 +747,7 @@
 - #223 Verify text expansion does not break layouts  
   `priority:P3 size:S type:qa`
 
-### Testing and QA (23)
+### Testing and QA (25)
 
 - #55 Set up Vitest with jsdom and a canvas mock  
   `priority:P0 size:S type:chore`
@@ -773,8 +795,12 @@
   `priority:P2 size:L type:qa`
 - #2411 Load test to the modelled peak and beyond  
   `priority:P2 size:L type:qa`
+- #2456 Guard the zero-cost properties in CI  
+  `priority:P1 size:M type:chore`
+- #2459 Enable WebKit and Firefox in the smoke suite  
+  `priority:P2 size:S type:chore`
 
-### Online multiplayer (15)
+### Online multiplayer (17)
 
 - #237 Spec online multiplayer scope and per-game suitability  
   `priority:P3 size:M type:spec`
@@ -806,6 +832,10 @@
   `priority:P2 size:L type:feat`
 - #2408 Design the room server to scale horizontally  
   `priority:P2 size:L type:feat`
+- #2450 Run signalling on a free-tier serverless function with hard limits  
+  `priority:P2 size:L type:feat`
+- #2451 Decide the relay policy before it becomes a bill  
+  `priority:P1 size:M type:spec`
 
 ### Documentation (8)
 
