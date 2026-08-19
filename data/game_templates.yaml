@@ -74,13 +74,17 @@ templates:
   title: "[{name}] Wire up controls for both seats"
   why: "Two players on one device is the whole product; controls that work for seat one and fail for seat two make the game worthless."
   actions:
-    - "Map the game's actions onto the shared input abstraction for touch and keyboard"
+    - "Map the game's actions onto the shared input abstraction for touch, keyboard, and pointer"
     - "Respect zone ownership: a touch belongs to the seat it started in, even across the midline"
-    - "Declare the control scheme in the manifest so the lobby can show the right diagram"
+    - "Implement the two-player keyboard split so both seats can play on one keyboard simultaneously"
+    - "Implement the pointer idiom for this archetype so single-player works with a mouse alone"
+    - "Declare the control scheme per configuration in the manifest so the lobby shows the right diagram"
   acceptance:
     - "Both seats can act independently and simultaneously where the game allows it"
     - "A finger dragged across the seam never steals the other seat's control"
-    - "Keyboard defaults work for both halves at once"
+    - "Two players can play the whole game on one keyboard, holding directions and pressing actions at the same time"
+    - "A single player can complete the game with the keyboard alone AND with the pointer alone"
+    - "Switching between keyboard and pointer mid-match never drops an input"
   labels: ["epic:game", "epic:input", "type:feat", "priority:P1", "size:M"]
   milestone: M2 Game Catalog
 

@@ -40,6 +40,8 @@ labels:
   - {name: "epic:crossplay",    color: "8250DF", description: "Cross-device play: phone, tablet, laptop, any combination"}
   - {name: "epic:responsive",   color: "0969DA", description: "Layout and rendering across every screen size and orientation"}
   - {name: "epic:originality",  color: "BF3989", description: "Our own UI, our own identity - deliberately not a clone"}
+  - {name: "epic:security",     color: "A40E26", description: "Secure coding, OWASP Top 10, CWE/SANS Top 25, threat modelling"}
+  - {name: "epic:scale",        color: "0A3069", description: "Capacity, reliability and cost at five million users"}
   - {name: "epic:docs",         color: "BFDADC", description: "Documentation"}
   - {name: "type:epic",         color: "EEEEEE", description: "Parent issue tracking a group of work"}
   - {name: "type:research",     color: "EEEEEE", description: "Play, observe, document. No shipping code"}
@@ -2537,3 +2539,598 @@ issues:
     - "Unsupported switches are prevented up front with a clear reason"
   labels: ["epic:sdk", "epic:meta", "type:feat", "priority:P3", "size:M"]
   milestone: M4 Online
+
+# =====================================================================
+# E24 SECURITY
+# A games site with player-entered names, shareable rooms, embeddable
+# iframes, and a public leaderboard has a real attack surface. Every
+# issue here names the OWASP Top 10 category or CWE it closes.
+# =====================================================================
+
+- title: "Write the threat model and security requirements"
+  epic: security
+  why: "You cannot secure a system you have not described. Everything else in this epic is a mitigation for something this document names."
+  actions:
+    - "Map the trust boundaries: browser, edge, API, room server, database, ad and analytics third parties"
+    - "Enumerate the assets worth attacking: player records, leaderboards, purchases, room sessions, and our domain reputation"
+    - "Enumerate the actors: a curious player, a cheater, an automated scanner, a malicious embedder"
+    - "Map each threat to an OWASP Top 10 category and a planned mitigation"
+    - "State explicitly what we accept as out of scope for casual peer-to-peer play"
+  acceptance:
+    - "Threat model committed with a mitigation owner per threat"
+    - "Every later security issue references a threat from this document"
+    - "Reviewed and agreed before the backend work starts"
+  labels: ["epic:security", "type:spec", "priority:P0", "size:L"]
+  milestone: M1 Playable Shell
+
+- title: "Write the secure coding standard for this codebase"
+  epic: security
+  why: "Generic advice does not change behaviour. The standard has to name the patterns this specific stack gets wrong."
+  actions:
+    - "Ban dangerouslySetInnerHTML, innerHTML, eval, new Function, and string-built SQL, enforced by lint"
+    - "Require validated parsing at every trust boundary rather than trusting shapes"
+    - "Require parameterised queries and typed query builders exclusively"
+    - "Document the review checklist a reviewer runs against any change touching input, auth, or storage"
+  acceptance:
+    - "Standard committed and linked from CONTRIBUTING.md"
+    - "The banned patterns fail lint rather than relying on reviewer memory"
+    - "Reviewers have a concrete checklist, not a principle"
+  labels: ["epic:security", "epic:docs", "type:spec", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Validate and sanitise every player-supplied string (A03 Injection, CWE-79)"
+  epic: security
+  why: "Player names, room codes, and chat-adjacent text end up in the DOM, in share images, in URLs, and in logs. Cross-site scripting is the single most likely vulnerability on a site like this."
+  actions:
+    - "Define a schema for every user-supplied field: length, allowed character classes, normalisation"
+    - "Validate on input and encode contextually on output - HTML, attribute, URL, and canvas text each differ"
+    - "Never interpolate user text into markup; render it as text nodes"
+    - "Add tests using a standard XSS payload corpus against every field"
+  acceptance:
+    - "Every user-supplied field has a schema enforced server-side, not only in the browser"
+    - "The XSS payload corpus produces no execution anywhere, including in share images"
+    - "Unicode direction-override and zero-width characters are normalised out of display names"
+  labels: ["epic:security", "type:feat", "priority:P0", "size:L"]
+  milestone: M2 Game Catalog
+
+- title: "Enforce authorisation on every API route (A01 Broken Access Control, CWE-639)"
+  epic: security
+  why: "Broken access control is the most commonly exploited category on the web. Rooms, saves, and profiles are all addressable by identifier, which is exactly the shape of an IDOR."
+  actions:
+    - "Require an explicit authorisation decision in every handler; make the default deny"
+    - "Use unguessable identifiers for rooms and saves rather than sequential ones"
+    - "Verify ownership server-side on every read and write, never trusting a client-supplied identity"
+    - "Add tests that attempt cross-account access on every route and expect a refusal"
+  acceptance:
+    - "No route reaches data without an authorisation check, verified by test"
+    - "Cross-account access attempts fail on every route in the suite"
+    - "Identifiers are unguessable and not enumerable"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P0", "size:L"]
+  milestone: M4 Online
+
+- title: "Parameterise all database access and constrain the ORM (A03 Injection, CWE-89)"
+  epic: security
+  why: "One string-concatenated query is all it takes, and the leaderboard is the obvious target."
+  actions:
+    - "Use parameterised statements or a typed query builder exclusively"
+    - "Ban raw query interpolation in lint and in review"
+    - "Grant the application database role only the privileges it actually needs"
+    - "Add injection tests against every parameterised endpoint"
+  acceptance:
+    - "No raw interpolated SQL anywhere in the codebase"
+    - "The application role cannot drop or alter schema"
+    - "Injection test suite passes against every data endpoint"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P0", "size:M"]
+  milestone: M4 Online
+
+- title: "Harden the room server and signalling against abuse (A04 Insecure Design)"
+  epic: security
+  why: "An open WebSocket that creates rooms on demand is a free resource for anyone who wants to exhaust it, and a way into other people's matches if messages are not authorised."
+  actions:
+    - "Authorise every message against the sender's membership of that room"
+    - "Cap rooms per identity, messages per second, and payload size"
+    - "Validate every inbound message against a schema and drop malformed frames without crashing"
+    - "Expire idle rooms and cap room lifetime"
+  acceptance:
+    - "A client cannot send into a room it has not joined"
+    - "Flooding a connection results in throttling and disconnection, never server degradation"
+    - "Malformed frames are dropped and logged rather than throwing"
+  labels: ["epic:security", "epic:online", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Protect against prototype pollution and unsafe deserialisation (CWE-1321, CWE-502)"
+  epic: security
+  why: "This is the JavaScript-specific one people forget. Game state, replays, and network messages are all deserialised, and a crafted key can poison Object.prototype across the whole runtime."
+  actions:
+    - "Reject __proto__, constructor, and prototype keys when parsing any external JSON"
+    - "Use null-prototype objects or Maps for anything built from external input"
+    - "Validate deserialised game state and replay traces against a schema before use"
+    - "Add tests with known pollution payloads against every parsing path"
+  acceptance:
+    - "Pollution payloads cannot alter Object.prototype through any input path"
+    - "Saved state and replays are schema-validated before being applied"
+  labels: ["epic:security", "epic:engine", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Secure the embeddable iframe and postMessage surface (CWE-1021, CWE-346)"
+  epic: security
+  why: "We deliberately let other sites embed our games, which means we ship a clickjacking and message-injection surface on purpose. It has to be built with that in mind."
+  actions:
+    - "Serve the embed route with a sandbox and a frame-ancestors policy driven by an allowlist"
+    - "Verify origin on every postMessage received and never use a wildcard target origin when sending"
+    - "Keep the embed route free of any authenticated or personal data"
+    - "Set frame-ancestors to none on every non-embed route"
+  acceptance:
+    - "Only allowlisted origins can frame the embed route"
+    - "Messages from unexpected origins are ignored"
+    - "No non-embed route can be framed at all"
+  labels: ["epic:security", "epic:seo", "type:feat", "priority:P1", "size:M"]
+  milestone: M4 Online
+
+- title: "Enforce a strict Content Security Policy with nonces (A05 Security Misconfiguration)"
+  epic: security
+  why: "CSP is the backstop for the cross-site scripting we hope we already prevented, and an ad-serving games site badly needs a backstop."
+  actions:
+    - "Nonce-based script-src with no unsafe-inline and no unsafe-eval"
+    - "Allowlist only the third-party origins actually required, reviewed each time one is added"
+    - "Set object-src none, base-uri self, and form-action self"
+    - "Ship report-only first, collect reports, then enforce"
+  acceptance:
+    - "Enforced CSP with zero violations across every route"
+    - "Adding a third-party script requires an explicit, reviewed policy change"
+  labels: ["epic:security", "epic:setup", "type:chore", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Set the full security header suite (A05 Security Misconfiguration)"
+  epic: security
+  why: "These are cheap, well-understood protections, and their absence is the first thing any scanner reports."
+  actions:
+    - "HSTS with a long max-age and preload, X-Content-Type-Options, Referrer-Policy, Permissions-Policy"
+    - "Cross-Origin-Opener-Policy and Cross-Origin-Resource-Policy"
+    - "Verify with an external scanner and record the grade"
+    - "Add a test that fails if a header is dropped"
+  acceptance:
+    - "Grade A on an external header scan"
+    - "A removed header fails CI rather than being noticed later"
+  labels: ["epic:security", "epic:setup", "type:chore", "priority:P1", "size:S"]
+  milestone: M3 Premium Site
+
+- title: "Keep secrets out of the client bundle (CWE-798)"
+  epic: security
+  why: "Anything shipped to the browser is public. On a site with ads, analytics, and a backend it is genuinely easy to leak a key into a bundle by accident."
+  actions:
+    - "Separate public configuration from secrets by naming convention and enforce it in the build"
+    - "Scan built bundles for high-entropy strings and known key formats in CI"
+    - "Document the rotation procedure for each secret"
+    - "Fail the build when a secret-shaped string reaches client output"
+  acceptance:
+    - "A deliberately planted key fails the build"
+    - "No credential appears in any shipped asset"
+    - "Rotation is documented and has been rehearsed once"
+  labels: ["epic:security", "epic:setup", "type:chore", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Secure the dependency supply chain (A06, A08, CWE-1104)"
+  epic: security
+  why: "A games site pulls in a lot of npm, and a compromised transitive dependency is the most realistic route to serving malware from our domain to five million people."
+  actions:
+    - "Commit a lockfile and enable install-time integrity verification"
+    - "Run dependency and advisory scanning on every PR and nightly"
+    - "Pin CI actions to commit SHAs rather than moving tags"
+    - "Review any new direct dependency for maintenance status and transitive weight before adding it"
+  acceptance:
+    - "A high-severity advisory fails the build"
+    - "CI actions are SHA-pinned"
+    - "Adding a direct dependency requires a recorded review"
+  labels: ["epic:security", "epic:setup", "type:chore", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Add SAST, secret scanning, and dependency review to CI"
+  epic: security
+  why: "Automated checks catch the regressions a one-off audit cannot, and they run on every change rather than once a year."
+  actions:
+    - "Enable static analysis with security rules and fail on high severity"
+    - "Enable secret scanning with push protection"
+    - "Add a scheduled full scan in addition to per-PR scanning"
+    - "Route findings to a triage label with an owner"
+  acceptance:
+    - "A deliberately introduced vulnerable pattern fails CI"
+    - "Findings land in triage rather than an ignored dashboard"
+  labels: ["epic:security", "epic:qa", "type:chore", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Add DAST scanning against a preview deployment"
+  epic: security
+  why: "Static analysis cannot see misconfiguration, missing headers, or an exposed route. A running scan can."
+  actions:
+    - "Run an automated scanner against each preview deploy"
+    - "Cover the shell routes, the API, and the embed route"
+    - "Fail on high severity and triage the rest"
+  acceptance:
+    - "Scan runs automatically per release candidate"
+    - "High-severity findings block release"
+  labels: ["epic:security", "epic:qa", "type:chore", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Secure authentication and session handling (A07, CWE-287)"
+  epic: security
+  why: "Accounts are optional here, which limits the blast radius, but the accounts that do exist carry purchases and leaderboard standing."
+  actions:
+    - "Delegate authentication to a vetted OAuth provider rather than storing passwords"
+    - "Issue short-lived tokens with rotation and server-side revocation"
+    - "Use SameSite and Secure cookie attributes and bind sessions to a device fingerprint that carries no personal data"
+    - "Rate limit and lock out credential-stuffing patterns"
+  acceptance:
+    - "No password is ever stored by us"
+    - "A stolen token expires quickly and can be revoked server-side"
+    - "Automated credential stuffing is throttled and alerted"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Treat every client-submitted score as an untrusted claim (A08, CWE-345)"
+  epic: security
+  why: "The leaderboard is the one place where lying is rewarded. Client-side scores are assertions, not facts."
+  actions:
+    - "Validate submissions against physically achievable bounds derived from the balance harness"
+    - "Require a signed, replayable input trace for any score that reaches a public board"
+    - "Re-simulate submitted traces server-side for top entries"
+    - "Flag rather than silently drop suspicious submissions, and rate limit per identity"
+  acceptance:
+    - "A fabricated score is rejected and logged"
+    - "Top-of-board entries are verified by re-simulation"
+    - "Assist-mode runs never reach a competitive board"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Prevent SSRF in any server-side fetch (A10, CWE-918)"
+  epic: security
+  why: "Share cards, OG image generation, and any future webhook all fetch on the server's behalf, which is exactly the shape of a server-side request forgery."
+  actions:
+    - "Allowlist destinations for every server-side fetch"
+    - "Block private, link-local, and metadata address ranges after DNS resolution"
+    - "Disable redirect following or re-validate the destination after each hop"
+    - "Set aggressive timeouts and response size caps"
+  acceptance:
+    - "Requests to internal ranges are refused even via redirect or DNS rebinding"
+    - "Every server-side fetch has an explicit allowlist"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Guard against ReDoS and algorithmic complexity attacks (CWE-1333, CWE-400)"
+  epic: security
+  why: "One catastrophically backtracking regular expression in a search field takes down a node process, and we have a search field over 107 games."
+  actions:
+    - "Audit every regular expression that touches user input for backtracking behaviour"
+    - "Replace risky patterns with linear-time parsing or a safe engine"
+    - "Bound input length before any pattern is applied"
+    - "Add tests with known pathological inputs"
+  acceptance:
+    - "No user-facing pattern exhibits super-linear behaviour on the pathological corpus"
+    - "Input length is bounded before matching"
+  labels: ["epic:security", "type:feat", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Implement security logging, alerting, and an incident runbook (A09)"
+  epic: security
+  why: "The failure mode that hurts most is not being attacked, it is being attacked for a week without noticing."
+  actions:
+    - "Log authorisation failures, rate-limit trips, validation rejections, and admin actions"
+    - "Never log tokens, secrets, or personal data"
+    - "Alert on anomalous patterns rather than individual events"
+    - "Write the incident runbook covering triage, containment, disclosure, and rotation"
+  acceptance:
+    - "Security events are queryable and retained for a defined period"
+    - "No secret or personal datum appears in any log"
+    - "The runbook has been walked through once as a tabletop exercise"
+  labels: ["epic:security", "epic:backend", "type:feat", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Cover the CWE/SANS Top 25 with a mapped verification matrix"
+  epic: security
+  why: "OWASP categories are broad. The CWE Top 25 is specific enough to check off one by one, and a matrix is what turns 'we care about security' into evidence."
+  actions:
+    - "Produce a matrix of the CWE Top 25 against this codebase"
+    - "For each entry record: applicable or not, the mitigation, and the test that proves it"
+    - "File an issue for every entry that is applicable and unmitigated"
+    - "Re-verify the matrix each release"
+  acceptance:
+    - "Every applicable CWE has a named mitigation and an automated test"
+    - "Entries marked not applicable carry a written justification"
+  labels: ["epic:security", "epic:qa", "type:qa", "priority:P1", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Commission an external penetration test before launch"
+  epic: security
+  why: "We will not find our own blind spots, and five million users is past the point where an internal review alone is responsible."
+  actions:
+    - "Scope the test across the shell, API, room server, embed route, and payment flow"
+    - "Fix all high and critical findings before launch and re-test them"
+    - "Record accepted risks with a named owner and a review date"
+  acceptance:
+    - "Report received and every high or critical finding fixed and re-tested"
+    - "Accepted risks are documented rather than forgotten"
+  labels: ["epic:security", "type:qa", "priority:P2", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Publish a vulnerability disclosure policy and security contact"
+  epic: security
+  why: "Researchers will find things. Without a route to report them, the next best option they have is publishing."
+  actions:
+    - "Publish security.txt and a disclosure policy with response time commitments"
+    - "Define the internal triage path and who owns it"
+    - "State clearly what is in scope and what is not"
+  acceptance:
+    - "security.txt is served and the policy is reachable"
+    - "A test report reaches a named owner within the stated window"
+  labels: ["epic:security", "epic:legal", "type:chore", "priority:P2", "size:S"]
+  milestone: M3 Premium Site
+
+# =====================================================================
+# E25 SCALE AND RELIABILITY - FIVE MILLION USERS
+# Capacity, cost, and failure behaviour at the target user base.
+# =====================================================================
+
+- title: "Model capacity and cost at five million users"
+  epic: scale
+  why: "Five million registered users implies a peak concurrency, a bandwidth bill, and a database load that must be sized before the architecture is fixed, not after the invoice arrives."
+  actions:
+    - "Derive peak concurrent sessions, matches per second, and room churn from the target user base"
+    - "Size bandwidth from the real asset payload per session, including game chunks and previews"
+    - "Model cost per million sessions for CDN, edge compute, database, and TURN relay"
+    - "Identify the first component that breaks as load grows and state the mitigation"
+  acceptance:
+    - "Written capacity model with stated assumptions and a cost per million sessions"
+    - "The first bottleneck is named with a plan, not discovered in production"
+  labels: ["epic:scale", "epic:backend", "type:spec", "priority:P1", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Define service level objectives and an error budget"
+  epic: scale
+  why: "Without an SLO, every incident is argued from opinion and every performance regression is somebody's judgement call."
+  actions:
+    - "Set availability, latency, and Core Web Vitals objectives for the shell, the API, and the room server"
+    - "Define the error budget and what happens when it is spent"
+    - "Instrument each objective so it is measured, not estimated"
+  acceptance:
+    - "SLOs committed, measured, and visible on a dashboard"
+    - "Burning the error budget has an agreed, written consequence"
+  labels: ["epic:scale", "epic:analytics", "type:spec", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Make the frontend fully static and edge-cached"
+  epic: scale
+  why: "At this scale the cheapest and most reliable request is the one served from cache at the edge and never touches an origin."
+  actions:
+    - "Statically generate every content route and serve from the edge"
+    - "Content-hash all assets with long immutable caching and short HTML caching"
+    - "Verify cache hit ratio under load and tune what misses"
+    - "Ensure a cold origin cannot be stampeded by a cache purge"
+  acceptance:
+    - "Cache hit ratio above the agreed threshold under load test"
+    - "A purge does not overwhelm the origin"
+  labels: ["epic:scale", "epic:perf", "type:feat", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Design the room server to scale horizontally"
+  epic: scale
+  why: "The room server is the only genuinely stateful component, which makes it the one that will not scale by adding instances unless it was designed to."
+  actions:
+    - "Keep room state in a shared store rather than in process memory, or shard rooms deterministically"
+    - "Make instances interchangeable so any can serve any room"
+    - "Drain connections gracefully on deploy so a release does not end live matches"
+    - "Autoscale on connection count rather than CPU alone"
+  acceptance:
+    - "Adding an instance increases capacity approximately linearly"
+    - "A rolling deploy does not drop live matches"
+  labels: ["epic:scale", "epic:online", "type:feat", "priority:P2", "size:L"]
+  milestone: M4 Online
+
+- title: "Load test to the modelled peak and beyond"
+  epic: scale
+  why: "A capacity model is a hypothesis until it is tested, and the interesting behaviour is always just past the expected peak."
+  actions:
+    - "Load test the shell, the API, and the room server to the modelled peak and then to failure"
+    - "Record the failure mode at each tier - degradation is acceptable, collapse is not"
+    - "Test the realistic mix: mostly browsing, some matches, a few tournaments"
+    - "Re-run before each major release"
+  acceptance:
+    - "Modelled peak sustained with objectives met"
+    - "Behaviour past peak is graceful degradation, documented per tier"
+  labels: ["epic:scale", "epic:qa", "type:qa", "priority:P2", "size:L"]
+  milestone: M4 Online
+
+- title: "Implement rate limiting and DDoS protection at the edge"
+  epic: scale
+  why: "A popular games site attracts scrapers and stress-testers, and absorbing that at the edge is far cheaper than at the origin."
+  actions:
+    - "Rate limit per IP and per identity at the edge with clear 429 responses and a Retry-After"
+    - "Apply stricter limits to expensive endpoints: room creation, score submission, share-image generation"
+    - "Enable managed DDoS protection and bot filtering"
+    - "Ensure legitimate players never trip the limits during normal play"
+  acceptance:
+    - "Abusive traffic is absorbed at the edge without origin impact"
+    - "No normal play pattern trips a limit, verified against real session traces"
+  labels: ["epic:scale", "epic:security", "epic:backend", "type:feat", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Design the database for scale: indexing, pooling, and read replicas"
+  epic: scale
+  why: "Leaderboards and saves are read overwhelmingly more than they are written, and an unindexed leaderboard query is the classic way to take a site down at peak."
+  actions:
+    - "Index every query path and verify with query plans against realistic data volumes"
+    - "Serve leaderboard reads from replicas or a cache rather than the primary"
+    - "Use connection pooling sized to the serverless concurrency model"
+    - "Define retention and archival so tables do not grow without bound"
+  acceptance:
+    - "No query path performs a sequential scan at production data volumes"
+    - "Leaderboard reads never touch the primary"
+    - "Connection exhaustion is not reachable under load test"
+  labels: ["epic:scale", "epic:backend", "type:feat", "priority:P2", "size:L"]
+  milestone: M4 Online
+
+- title: "Implement graceful degradation for every dependency"
+  epic: scale
+  why: "At five million users something is always partly broken. The site must stay playable when the leaderboard, ad network, or analytics is not."
+  actions:
+    - "Identify every external dependency and define the degraded behaviour when it fails"
+    - "Apply timeouts, circuit breakers, and bounded retries to each"
+    - "Guarantee local play works with the entire backend unavailable"
+    - "Test each degraded path by deliberately failing the dependency"
+  acceptance:
+    - "Local two-player games remain fully playable with the backend down"
+    - "No single third-party failure takes the site down, verified by fault injection"
+  labels: ["epic:scale", "epic:backend", "type:feat", "priority:P1", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Set up observability: tracing, metrics, and structured logs"
+  epic: scale
+  why: "At this scale a report of 'the game feels slow' is unactionable without the data to locate it."
+  actions:
+    - "Trace requests across edge, API, and room server with a correlation identifier"
+    - "Emit metrics for the SLOs and for saturation of each tier"
+    - "Use structured logs with sampling so volume stays affordable"
+    - "Build the dashboard someone actually opens during an incident"
+  acceptance:
+    - "A slow request can be traced end to end from a single identifier"
+    - "Saturation is visible per tier before it becomes an outage"
+    - "Log cost is bounded by sampling"
+  labels: ["epic:scale", "epic:backend", "type:feat", "priority:P2", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Write the on-call and incident response process"
+  epic: scale
+  why: "Five million users means an outage is noticed by a lot of people very quickly, and improvising the response is how a short incident becomes a long one."
+  actions:
+    - "Define severity levels, escalation, and communication channels"
+    - "Write runbooks for the likely incidents: room server saturation, database exhaustion, bad deploy, CDN failure"
+    - "Establish a blameless post-incident review with tracked actions"
+  acceptance:
+    - "Runbooks exist for each named scenario and have been rehearsed"
+    - "Post-incident actions are tracked as issues, not lost in a document"
+  labels: ["epic:scale", "epic:docs", "type:chore", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Implement backup, restore, and disaster recovery with tested targets"
+  epic: scale
+  why: "An untested backup is a hypothesis. Losing five million players' records would be unrecoverable as a product, not just as data."
+  actions:
+    - "Automate backups with point-in-time recovery"
+    - "Define and agree recovery point and recovery time objectives"
+    - "Rehearse a full restore into a clean environment and time it"
+    - "Document the runbook from the rehearsal"
+  acceptance:
+    - "A full restore has been performed and timed against the objectives"
+    - "The runbook was written from an actual rehearsal, not from memory"
+  labels: ["epic:scale", "epic:backend", "type:chore", "priority:P2", "size:M"]
+  milestone: M4 Online
+
+- title: "Enforce a per-session asset budget at catalog scale"
+  epic: scale
+  why: "107 games of thumbnails and previews is where bandwidth cost and mobile data usage both get decided, and both matter at five million users."
+  actions:
+    - "Budget bytes per session for the catalog view specifically"
+    - "Lazy-load and prioritise only what is on screen"
+    - "Serve modern formats with correct sizing per device class"
+    - "Track real bandwidth per session in field data, not just lab measurements"
+  acceptance:
+    - "Catalog view stays within the per-session byte budget on a phone"
+    - "Field data confirms the budget holds in practice"
+  labels: ["epic:scale", "epic:perf", "type:feat", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+# =====================================================================
+# E26 CONTROLS ACROSS CONFIGURATIONS
+# Two players sharing a laptop both need the keyboard. One player alone
+# should be able to use the keyboard, the mouse, or both, whichever
+# suits the game and the moment.
+# =====================================================================
+
+- title: "Make the keyboard a first-class control for shared-device two-player play"
+  epic: input
+  why: "Two people sharing a laptop have one keyboard and no touchscreen. If the keyboard is an afterthought, the whole desktop experience of a two-player site is an afterthought."
+  actions:
+    - "Define default two-player bindings that split the keyboard into two comfortable, non-overlapping halves - the left hand around WASD with a nearby action key, the right hand on the arrows with its own action key"
+    - "Guarantee both halves register simultaneously, including diagonal movement on both sides at once"
+    - "Document the known n-key rollover and ghosting limits of common keyboards and choose defaults that avoid the worst combinations"
+    - "Prevent browser and OS shortcuts from firing during a match without trapping the player in the page"
+    - "Show both players' bindings on screen before the match and on demand during it"
+  acceptance:
+    - "Both players can hold a direction and press their action key at the same time with no dropped input, verified on at least three physical keyboards"
+    - "No default binding collides with a common browser shortcut"
+    - "Escape always reaches the pause menu and is never swallowed"
+    - "Every game declares its two-player keyboard scheme in the manifest"
+  labels: ["epic:input", "epic:crossplay", "type:feat", "priority:P0", "size:L"]
+  milestone: M1 Playable Shell
+
+- title: "Support keyboard and mouse independently in single-player"
+  epic: input
+  why: "Alone, a player has the whole keyboard and a pointer. Some games are better aimed with a mouse and others better driven with keys, and the player should not have to care which we prefer."
+  actions:
+    - "Map every game action to both a keyboard control and a pointer control for single-seat play"
+    - "Allow either to be used at any moment without a mode switch - moving the mouse after using keys must not fight the player"
+    - "Define the pointer idiom per archetype: click-drag-release to aim, click to place, hold to charge, pointer position to steer"
+    - "Keep keyboard-only play fully viable for every game, since not every player has or wants a mouse"
+  acceptance:
+    - "Every game is completable in single-player using only the keyboard"
+    - "Every game is completable in single-player using only the pointer, where the archetype allows it"
+    - "Switching between them mid-match is seamless and never drops an input"
+  labels: ["epic:input", "type:feat", "priority:P0", "size:L"]
+  milestone: M1 Playable Shell
+
+- title: "Detect the active input method and adapt hints without changing behaviour"
+  epic: input
+  why: "Showing keyboard prompts to someone using a mouse, or touch prompts on a laptop, is the small detail that makes an interface feel unconsidered."
+  actions:
+    - "Track the most recently used input method and update on-screen prompts to match"
+    - "Switch prompts on use, never on device sniffing"
+    - "Keep every control active regardless of which prompt is showing"
+    - "Handle hybrid devices - a touchscreen laptop, a tablet with a keyboard - without flickering between prompt sets"
+  acceptance:
+    - "Prompts follow the input the player actually used most recently"
+    - "No input path is ever disabled because another was detected"
+    - "Hybrid devices do not flicker between prompt sets"
+  labels: ["epic:input", "epic:ui", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Define the pointer control idiom per archetype"
+  epic: input
+  why: "Deciding what a mouse does in an aim game once means 21 aim games behave consistently instead of 21 slightly different ways."
+  actions:
+    - "Specify the pointer idiom for each archetype: turn-board, turn-aim, rt-split, rt-arena, rt-race"
+    - "Define hover, press, drag, release, and cancel semantics for each"
+    - "Specify the cursor treatment and when the pointer should be hidden during play"
+    - "Verify each idiom works identically with a trackpad"
+  acceptance:
+    - "Every archetype has a documented pointer idiom used by all its games"
+    - "Trackpad behaviour matches mouse behaviour"
+    - "Drag can always be cancelled without committing an action"
+  labels: ["epic:input", "type:spec", "priority:P1", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Let both players rebind their own keys independently"
+  epic: input
+  why: "Default bindings assume a QWERTY layout and two right-handed people. Neither assumption is safe, and on a shared keyboard a bad binding affects both players."
+  actions:
+    - "Provide per-seat rebinding with live conflict detection against the other seat"
+    - "Refuse a binding that collides with the other player or with a reserved system key"
+    - "Detect non-QWERTY layouts and offer sensible defaults per layout"
+    - "Persist per seat and offer a reset"
+  acceptance:
+    - "One key can never be bound to both seats"
+    - "Non-QWERTY layouts get workable defaults without manual rebinding"
+    - "Bindings persist and can be reset"
+  labels: ["epic:input", "epic:a11y", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Verify control parity between input methods per archetype"
+  epic: input
+  why: "If the mouse aims better than the keyboard in the same game, single-player results are decided by peripheral choice rather than skill - the same fairness problem as cross-device, one device in."
+  actions:
+    - "Measure outcomes for the same game played with keyboard only and pointer only"
+    - "Bring any significant gap inside tolerance by adjusting the weaker path rather than degrading the stronger"
+    - "Record the measured comparison per archetype"
+  acceptance:
+    - "Measured outcome distributions are comparable between keyboard-only and pointer-only play"
+    - "Any residual difference is documented per archetype"
+  labels: ["epic:input", "epic:qa", "type:qa", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
