@@ -5,10 +5,10 @@ transcribed while playing it on the emulator. These are research notes recording
 **mechanics** we reimplement from scratch. Mechanics and rules are not protected;
 all of our copy, art, audio, and layout is original.
 
-Captured: **97 of 107 games**. Method: three emulator sweeps
-driving the app with `adb`, then parallel transcription of every captured screen.
-The app draws its text to canvas, so nothing was readable through the accessibility
-tree — every line below came from looking at the screen, and no APK was unpacked.
+Captured: **101 of 107 games**. Method: repeated emulator sweeps
+driving the app with `adb`, then parallel transcription of every captured screen. The app
+draws its text to canvas, so nothing was readable through the accessibility tree — every
+line below came from looking at the screen, and no APK was ever unpacked.
 
 | Game (ours) | In reference app | Modes | Options | Rules as stated |
 |---|---|---|---|---|
@@ -19,6 +19,7 @@ tree — every line below came from looking at the screen, and no APK was unpack
 | **Backgammon** | Backgammon | friend, bot |  | Move your fifteen checkers according to the roll of two dice. The objective is to move all checkers into your home board and then bear them off. You can also hit opponent's blots to send them to the bar, delaying their progress. |
 | **Ball Games** | Ballgames Physics | friend, bot |  | Shoot and score with every part of your body |
 | **Basketball** | Basket Ball | friend, bot |  | Hoop! Take the ball when it's in your half of the field and shoot. Until the ball bounces off the ground, the opponent can't touch it! |
+| **Beach Ball** | Beach Ball | friend, bot |  | Try to shoot the beachball over the opponent's side. First to 3 wins. |
 | **Blocks** | Blocks | solo |  | Place blocks in the 9x9 board and fill rows, columns or squares to clear them from the game. |
 | **Bowling** | Bowling | friend, bot | gear | Classic 10 pin bowling. Swipe to shoot your ball and knock down the pins. Highest score after 4 rounds wins! |
 | **Brick Blast** | Brick Blast | friend, bot |  | Move the paddle with your finger to keep the balls in play. If you miss, your opponent scores a point. |
@@ -43,6 +44,7 @@ tree — every line below came from looking at the screen, and no APK was unpack
 | **Flappy Jump** | Flappy Jump | friend, bot |  | Tap to jump and shoot as many baskets as you can. First to 10 wins. |
 | **Frogs Fight** | Frogs Fight | friend, bot |  | Jump among the water lilies and catch the bugs! The dragonfly is worth 5 points and the first to reach 10 wins! |
 | **Frozen Beaks** | Frozen Beaks | friend, bot |  | Collect 30 fish! Move your finger to walk and release it to slide on the ice! Don't fall in the hole! |
+| **Fruit Duel** | Fruit Duel | friend, bot |  | Watch the icon in the center and tap the saber as soon as you see a fruit (watermelon, pomgrenade, orange). First to 10 wins. |
 | **Golf Football** | Golf Football | friend, bot |  | Score points by shooting the ball into the hole. Find the right angle and the right power. The longer you press, the stronger the shot. |
 | **Gravity Run** | Gravity Run | friend, bot |  | Tap to change gravity. Run fast and don't fall! |
 | **Guard and Thief** | Guard And Thief | friend, bot |  | The thief has to collect the coins, the guard must catch the thief. Whoever has more coins at the end of the match wins! |
@@ -73,6 +75,7 @@ You can only move nuts onto other nuts of the same colour. |
 | **Pizza Memory** | Pizza Memory | friend, bot |  | Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell! |
 | **Pool** | Pool | friend, bot |  | A classic! Throw the balls of your color into the holes and finally the black ball! |
 | **Pop It** | Pop It | friend, bot |  | Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game. |
+| **Racing Cars** | Racing Cars | friend, bot |  | Compete against your opponent and finish first! Move your finger to drive the car. |
 | **Rat Race** | Rat Race | friend, bot |  | Press to run! Run away from the cats' paws and collect the pieces of cheese before your opponent! |
 | **Reversi** | Reversi | friend, bot |  | Fill the board with more pieces of your color than the opponents to win! |
 | **Road Dodge** | Road Dodge | friend, bot |  | Tap to steer left and right to dodge obstacles on the road |
@@ -98,9 +101,9 @@ You can only move nuts onto other nuts of the same colour. |
 | **Sudoku** | Sudoku | solo | gear | Play Sudoku, train your brain and beat your highscore |
 | **Sumo Push** | Sumo | friend, bot |  | Tap as fast as you can to push out your opponent! Stay in the ring! |
 | **Sword Throwing** | Sword Thrower | friend, bot |  | Draw your sword and throw it towards the targets of your enemy. Hold it in your hand and move it to parry your opponents throws! |
+| **Tanks** | Tanks | friend, bot |  | Destroy the enemy tank. Use the left stick to move and the right to shoot! |
 | **Tap Match** | Tap Match | solo |  | Tap to collect cards. Complete sets of 3 to clear cards. You can hold up to 7 cards in your stack, so collect strategically. |
-| **Target Practice** | Target Practice | friend, bot |  | Shoot targets to score points. Small targets score double. First to 10 points wins.
-Tap to start, then tap to aim up, then tap to fire. |
+| **Target Practice** | Target Practice | friend, bot |  | Shoot targets to score points. Small targets score double. First to 10 points wins. Tap to start, then tap to aim up, then tap to fire. |
 | **Taxi Race** | Taxi Race | friend, bot |  | Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up. |
 | **Tennis** | Tennis | friend, bot |  | Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast. |
 | **The Last Sashimi** | The Last Sashimi | friend, bot |  | Eat all before your opponent! First to 15 wins, sashimi is worth 1 point, onigiri is worth 3 point and for every mistake you lose a point! |
@@ -115,6 +118,6 @@ Tap to start, then tap to aim up, then tap to fire. |
 
 ## Still to research
 
-Each of these has an open `Research:` issue. Nothing about their mechanics is assumed.
+Each has an open `Research:` issue. Nothing about their mechanics is assumed.
 
-Beach Ball, Cup Pong, Fruit Duel, Happy Hippos, Knife Thrower, Match Rush, Pull the Rope, Racing Cars, Tanks, Tic Tac Toe
+Cup Pong, Happy Hippos, Knife Thrower, Match Rush, Pull the Rope, Tic Tac Toe

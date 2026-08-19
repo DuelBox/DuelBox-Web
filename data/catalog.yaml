@@ -273,9 +273,7 @@ games:
   category: Shooter
   archetype: turn-aim
   confidence: observed
-  rule: 'Shoot targets to score points. Small targets score double. First to 10 points wins.
-
-    Tap to start, then tap to aim up, then tap to fire.'
+  rule: Shoot targets to score points. Small targets score double. First to 10 points wins. Tap to start, then tap to aim up, then tap to fire.
   modes: friend,bot
   refName: Target Practice
 - id: cannon-duel
@@ -290,7 +288,10 @@ games:
   name: Tanks
   category: Shooter
   archetype: turn-aim
-  confidence: genre
+  confidence: observed
+  rule: Destroy the enemy tank. Use the left stick to move and the right to shoot!
+  modes: friend,bot
+  refName: Tanks
 - id: hammer-hit
   name: Hammer Hit
   category: Party
@@ -336,7 +337,10 @@ games:
   name: Beach Ball
   category: Sports
   archetype: rt-split
-  confidence: research
+  confidence: observed
+  rule: Try to shoot the beachball over the opponent's side. First to 3 wins.
+  modes: friend,bot
+  refName: Beach Ball
 - id: mini-soccer
   name: Mini Soccer
   category: Sports
@@ -435,8 +439,11 @@ games:
   name: Fruit Duel
   category: Reaction
   archetype: rt-split
-  confidence: research
+  confidence: observed
   online: true
+  rule: Watch the icon in the center and tap the saber as soon as you see a fruit (watermelon, pomgrenade, orange). First to 10 wins.
+  modes: friend,bot
+  refName: Fruit Duel
 - id: sticky-tongues
   name: Sticky Tongues
   category: Party
@@ -694,7 +701,10 @@ games:
   name: Racing Cars
   category: Racing
   archetype: rt-race
-  confidence: genre
+  confidence: observed
+  rule: Compete against your opponent and finish first! Move your finger to drive the car.
+  modes: friend,bot
+  refName: Racing Cars
 - id: taxi-race
   name: Taxi Race
   category: Racing
