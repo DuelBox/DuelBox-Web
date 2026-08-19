@@ -1,4 +1,4 @@
-import { Rng, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -61,9 +61,8 @@ const COLOUR_CARD_FACE = '#e8ecf4';
 const COLOUR_CARD_CLAIMED = '#9aa7ba';
 const COLOUR_CARD_EDGE = '#0b111b';
 const COLOUR_INK = '#131a26';
-const COLOUR_P1 = '#4cc9f0';
-const COLOUR_P2 = '#f7b267';
-const COLOUR_TEXT = '#e6e9ef';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 
 const CARD_EDGE_WIDTH = 4;
 const BACK_HATCH_INSET = 34;
@@ -73,37 +72,8 @@ const GLYPH_WIDTH = 10;
 const OWNER_RADIUS = 16;
 const OWNER_WIDTH = 5;
 const OWNER_INSET = 28;
-
-const SEAT_GLYPH_RADIUS = 22;
-const SEAT_GLYPH_WIDTH = 6;
 /** Half-diagonal of the cross, as a fraction of the ring's radius. */
 const CROSS_REACH = 0.78;
-
-const SCORE_Y = 100;
-const SCORE_SIZE = 46;
-const SCORE_P1_GLYPH_X = 250;
-const SCORE_P1_TEXT_X = 292;
-const SCORE_P2_GLYPH_X = 470;
-const SCORE_P2_TEXT_X = 512;
-const STATUS_Y = 940;
-const STATUS_SIZE = 38;
-const STATUS_GLYPH_X = 230;
-const STATUS_TEXT_X = 278;
-
-const LABEL_TO_PLAY = 'to play';
-const LABEL_THINKING = 'thinking';
-const LABEL_PAIR = 'takes the pair';
-const LABEL_NO_MATCH = 'no match';
-const LABEL_MATCH_WON = 'wins the match';
-const LABEL_MATCH_DRAWN = 'match drawn';
-
-/** A tally can never exceed PAIRS, so no score needs a string built per frame. */
-const COUNT_LABELS: readonly string[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8'];
-
-function countLabel(count: number): string {
-  const label = COUNT_LABELS[count];
-  return label === undefined ? '' : label;
-}
 
 function createOwners(): (SeatId | null)[] {
   const owners: (SeatId | null)[] = [];
@@ -270,8 +240,6 @@ export class MemoryMatchGame implements Game {
     renderer.clear(COLOUR_BACKGROUND);
     renderer.pushSeatRotation(this.#isRotated());
     this.#drawCards(renderer);
-    this.#drawScore(renderer);
-    this.#drawStatus(renderer);
     renderer.popSeatRotation();
   }
 
@@ -492,60 +460,5 @@ export class MemoryMatchGame implements Game {
     const reach = radius * CROSS_REACH;
     renderer.line(x - reach, y - reach, x + reach, y + reach, width, COLOUR_P2);
     renderer.line(x + reach, y - reach, x - reach, y + reach, width, COLOUR_P2);
-  }
-
-  #drawScore(renderer: Renderer): void {
-    this.#drawSeatMark(
-      renderer,
-      'p1',
-      SCORE_P1_GLYPH_X,
-      SCORE_Y,
-      SEAT_GLYPH_RADIUS,
-      SEAT_GLYPH_WIDTH,
-    );
-    renderer.text(countLabel(this.#tally.p1), SCORE_P1_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-    this.#drawSeatMark(
-      renderer,
-      'p2',
-      SCORE_P2_GLYPH_X,
-      SCORE_Y,
-      SEAT_GLYPH_RADIUS,
-      SEAT_GLYPH_WIDTH,
-    );
-    renderer.text(countLabel(this.#tally.p2), SCORE_P2_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-  }
-
-  #drawStatus(renderer: Renderer): void {
-    let seat: SeatId | null = null;
-    let label = LABEL_MATCH_DRAWN;
-
-    if (this.#winner !== null) {
-      if (this.#winner !== 'draw') {
-        seat = this.#winner;
-        label = LABEL_MATCH_WON;
-      }
-    } else if (this.#hideSteps > 0) {
-      seat = this.#active;
-      label = LABEL_NO_MATCH;
-    } else if (this.#holdSteps > 0) {
-      seat = this.#active;
-      label = LABEL_PAIR;
-    } else {
-      seat = this.#active;
-      const difficulty = this.#active === 'p1' ? this.#botP1 : this.#botP2;
-      label = difficulty === null ? LABEL_TO_PLAY : LABEL_THINKING;
-    }
-
-    if (seat !== null) {
-      this.#drawSeatMark(
-        renderer,
-        seat,
-        STATUS_GLYPH_X,
-        STATUS_Y,
-        SEAT_GLYPH_RADIUS,
-        SEAT_GLYPH_WIDTH,
-      );
-    }
-    renderer.text(label, STATUS_TEXT_X, STATUS_Y, STATUS_SIZE, COLOUR_TEXT);
   }
 }

@@ -112,3 +112,17 @@
     animation: none;
   }
 }
+
+.record {
+  padding: var(--db-space-2) var(--db-space-3);
+  background: var(--db-surface);
+  border-radius: var(--db-radius-pill);
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.back {
+  font-size: var(--db-text-sm);
+  font-weight: 600;
+}

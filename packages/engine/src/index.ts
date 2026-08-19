@@ -41,6 +41,9 @@ export {
 } from './seat.js';
 export type { SeatId, Presentation, SeatView, LogicalSize, ZoneSplit } from './seat.js';
 
+export { SEAT_PALETTE, seatPalette } from './palette.js';
+export type { SeatPalette } from './palette.js';
+
 export {
   NO_INSETS,
   fitViewport,

@@ -1,8 +1,9 @@
 .surface {
   display: flex;
   flex-direction: column;
-  gap: var(--db-space-3);
-  padding-block: var(--db-space-4) var(--db-space-6);
+  gap: var(--db-space-2);
+  height: 100%;
+  padding-block: var(--db-space-2);
 }
 
 .hud {
@@ -27,9 +28,12 @@
 
 .board {
   position: relative;
-  width: 100%;
-  max-width: 34rem;
-  aspect-ratio: 3 / 5;
+  /* Sized by the height left over, shaped by the game's own logical dimensions. The
+     aspect ratio is set inline from the manifest: hardcoding one here letterboxes every
+     game that is not that shape, and no simulation value may be expressed in pixels. */
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: 100%;
   margin-inline: auto;
 }
 

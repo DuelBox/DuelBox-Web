@@ -34,6 +34,9 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [create, setCreate] = useState<(() => Game) | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const [activeSeat, setActiveSeat] = useState<SeatId | null>(null);
+  // The running head-to-head for this sitting. A pair that plays five in a row wants to
+  // know the score across all five, not just the last one.
+  const [record, setRecord] = useState({ p1: 0, p2: 0, draws: 0 });
   // A new seed per match keeps a rematch from replaying the previous one exactly.
   const [seed, setSeed] = useState(1);
 
@@ -82,6 +85,17 @@ export function PlaySurface({ slug }: { slug: string }) {
       globalThis.removeEventListener('keydown', onKey);
     };
   }, [match.phase]);
+
+  // Counted once per match, when the machine enters its terminal phase.
+  useEffect(() => {
+    if (match.phase !== 'match-over') return;
+    const outcome = match.matchOutcome;
+    setRecord((previous) => ({
+      p1: previous.p1 + (outcome === 'p1' ? 1 : 0),
+      p2: previous.p2 + (outcome === 'p2' ? 1 : 0),
+      draws: previous.draws + (outcome === 'draw' ? 1 : 0),
+    }));
+  }, [match.phase, match.matchOutcome]);
 
   const handleTick = useCallback((dt: number) => {
     send({ kind: 'tick', seconds: dt });
@@ -167,17 +181,24 @@ export function PlaySurface({ slug }: { slug: string }) {
   const seatNames: Partial<Record<SeatId, string>> =
     mode === 'bot' ? { p2: `${seatColour.p2.name} (bot)` } : { p2: 'Player two' };
 
+  const hudProps = {
+    state: match,
+    rounds: rules.rounds ?? 1,
+    activeSeat,
+    seatNames,
+    botSeats: mode === 'bot' ? { p2: true } : undefined,
+  };
+
   return (
     <div className={styles.surface}>
-      <MatchHud
-        state={match}
-        rounds={rules.rounds ?? 1}
-        activeSeat={activeSeat}
-        seatNames={seatNames}
-        onPause={handlePauseRequest}
-      />
+      {/* Two people sit on opposite sides of one device, so the scoreboard faces both
+          ways. The far copy is turned to face the player at the top of the screen. */}
+      <MatchHud {...hudProps} flipped />
 
-      <div className={styles.board}>
+      <div
+        className={styles.board}
+        style={{ aspectRatio: `${manifest.logical.width} / ${manifest.logical.height}` }}
+      >
         <GameHost
           manifest={manifest}
           createGame={create}
@@ -195,6 +216,7 @@ export function PlaySurface({ slug }: { slug: string }) {
           state={match}
           rounds={rules.rounds ?? 1}
           seatNames={seatNames}
+          record={record}
           nextGame={nextGame}
           onResume={() => {
             send({ kind: 'resume' });
@@ -206,6 +228,8 @@ export function PlaySurface({ slug }: { slug: string }) {
           onRematch={rematch}
         />
       </div>
+
+      <MatchHud {...hudProps} onPause={handlePauseRequest} />
     </div>
   );
 }

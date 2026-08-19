@@ -185,13 +185,21 @@ describe('pause and resume', () => {
 
 describe('scoring a single-round match', () => {
   it('stays in play while the win condition is unmet, recording the tally', () => {
-    const s = reduce(stateIn('playing', FIRST_TO_ONE), { kind: 'score', tally: { p1: 0, p2: 0 } }, FIRST_TO_ONE);
+    const s = reduce(
+      stateIn('playing', FIRST_TO_ONE),
+      { kind: 'score', tally: { p1: 0, p2: 0 } },
+      FIRST_TO_ONE,
+    );
     expect(s.phase).toBe('playing');
     expect(s.tally).toEqual({ p1: 0, p2: 0 });
   });
 
   it('ends the match rather than the round when there is only one round', () => {
-    const s = reduce(stateIn('playing', FIRST_TO_ONE), { kind: 'score', tally: { p1: 1, p2: 0 } }, FIRST_TO_ONE);
+    const s = reduce(
+      stateIn('playing', FIRST_TO_ONE),
+      { kind: 'score', tally: { p1: 1, p2: 0 } },
+      FIRST_TO_ONE,
+    );
     expect(s.phase).toBe('match-over');
     expect(s.matchOutcome).toBe('p1');
   });
@@ -272,7 +280,11 @@ describe('best-of matches', () => {
     const s = stateIn('playing');
     for (const rounds of [0, -1, 2.5]) {
       expect(() =>
-        reduce(s, { kind: 'score', tally: { p1: 1, p2: 0 } }, { win: { kind: 'first-to', target: 1 }, rounds }),
+        reduce(
+          s,
+          { kind: 'score', tally: { p1: 1, p2: 0 } },
+          { win: { kind: 'first-to', target: 1 }, rounds },
+        ),
       ).toThrow(RangeError);
     }
   });
@@ -347,11 +359,7 @@ describe('a game that decides its own round', () => {
   });
 
   it('falls back to the win condition when no outcome is reported', () => {
-    const s = reduce(
-      stateIn('playing', rules),
-      { kind: 'score', tally: { p1: 99, p2: 0 } },
-      rules,
-    );
+    const s = reduce(stateIn('playing', rules), { kind: 'score', tally: { p1: 99, p2: 0 } }, rules);
     expect(s.roundOutcome).toBe('p1');
   });
 

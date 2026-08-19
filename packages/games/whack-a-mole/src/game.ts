@@ -1,4 +1,4 @@
-import { otherSeat, set, vec2 } from '@duelbox/engine';
+import { SEAT_PALETTE, otherSeat, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -65,21 +65,17 @@ const COLOUR_PANEL = '#1b2740';
 const COLOUR_LINE = 'rgba(233, 240, 252, 0.35)';
 const COLOUR_HOLE = '#0a1020';
 const COLOUR_HOLE_RIM = 'rgba(233, 240, 252, 0.22)';
-const COLOUR_P1 = '#3d7bff';
-const COLOUR_P2 = '#ff8a3d';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_INK = '#0b1220';
-const COLOUR_TEXT = '#e9f0fc';
 const COLOUR_PENALTY = '#ff5a5a';
 const COLOUR_MISS = 'rgba(233, 240, 252, 0.5)';
 
 const PANEL_PAD = 18;
-const GLYPH_RADIUS = 26;
-const SCORE_SIZE = 46;
 const FEEDBACK_SIZE = 32;
 const HUD_X = 44;
 const HUD_Y = 930;
 const HUD_TOP_Y = 70;
-const SCORE_OFFSET = 74;
 const FEEDBACK_OFFSET = 168;
 
 const FEEDBACK_LABELS: Readonly<Record<HitResult, string>> = Object.freeze({
@@ -87,20 +83,6 @@ const FEEDBACK_LABELS: Readonly<Record<HitResult, string>> = Object.freeze({
   other: '-1',
   miss: 'miss',
 });
-
-/** Scores never exceed the target, so the HUD never has to build a string per frame. */
-const COUNT_LABELS: readonly string[] = buildCountLabels();
-
-function buildCountLabels(): string[] {
-  const labels: string[] = [];
-  for (let count = 0; count <= TARGET_HITS; count += 1) labels.push(String(count));
-  return labels;
-}
-
-function countLabel(count: number): string {
-  const label = COUNT_LABELS[count];
-  return label === undefined ? '' : label;
-}
 
 /** Centre of a hole in logical units. Writes into `out` and allocates nothing. */
 export function holeCentre(out: Vec2, hole: number): Vec2 {
@@ -500,11 +482,13 @@ export class WhackaMoleGame implements Game {
     renderer.popSeatRotation();
   }
 
+  /**
+   * Per-hit feedback only. The score itself belongs to the shell's scoreboard: drawing
+   * it here as well gives a player two numbers to reconcile, and 107 games each drawing
+   * their own is exactly what the shared HUD exists to prevent.
+   */
   #drawHud(renderer: Renderer, seat: SeatId, y: number): void {
     const runtime = this.#runtime(seat);
-    const tally = seat === 'p1' ? this.#tally.p1 : this.#tally.p2;
-    this.#drawMole(renderer, seat, HUD_X, y, GLYPH_RADIUS);
-    renderer.text(countLabel(tally), HUD_X + SCORE_OFFSET, y, SCORE_SIZE, COLOUR_TEXT);
     if (runtime.feedbackSteps === 0 || runtime.feedback === null) return;
     renderer.text(
       FEEDBACK_LABELS[runtime.feedback],

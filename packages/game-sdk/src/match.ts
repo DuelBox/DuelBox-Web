@@ -30,14 +30,7 @@ export type MatchPhase =
   | 'match-over';
 
 export type MatchEventKind =
-  | 'start'
-  | 'tick'
-  | 'pause'
-  | 'resume'
-  | 'score'
-  | 'next-round'
-  | 'rematch'
-  | 'quit';
+  'start' | 'tick' | 'pause' | 'resume' | 'score' | 'next-round' | 'rematch' | 'quit';
 
 export type MatchEvent =
   /** Leave `idle` and begin the first countdown. */
@@ -134,7 +127,9 @@ export function initialMatchState(): MatchState {
 function countdownSecondsOf(rules: MatchRules): number {
   const seconds = rules.countdownSeconds ?? 3;
   if (!Number.isFinite(seconds) || seconds < 0) {
-    throw new RangeError(`countdownSeconds must be a non-negative number, received ${String(seconds)}`);
+    throw new RangeError(
+      `countdownSeconds must be a non-negative number, received ${String(seconds)}`,
+    );
   }
   return seconds;
 }
@@ -166,7 +161,9 @@ export function reduce(state: MatchState, event: MatchEvent, rules: MatchRules):
 
     case 'tick': {
       if (!Number.isFinite(event.seconds) || event.seconds < 0) {
-        throw new RangeError(`tick seconds must be a non-negative number, received ${String(event.seconds)}`);
+        throw new RangeError(
+          `tick seconds must be a non-negative number, received ${String(event.seconds)}`,
+        );
       }
       const remaining = state.countdownRemaining - event.seconds;
       if (remaining > 0) return { ...state, countdownRemaining: remaining };
@@ -233,7 +230,12 @@ export function reduce(state: MatchState, event: MatchEvent, rules: MatchRules):
   }
 }
 
-function beginRound(base: MatchState, rules: MatchRules, round: number, roundWins: Tally): MatchState {
+function beginRound(
+  base: MatchState,
+  rules: MatchRules,
+  round: number,
+  roundWins: Tally,
+): MatchState {
   const countdown = countdownSecondsOf(rules);
   return {
     ...base,

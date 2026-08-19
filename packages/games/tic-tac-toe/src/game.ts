@@ -1,4 +1,4 @@
-import { Rng, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, otherSeat, set, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -43,10 +43,9 @@ const SETTLE_SECONDS = 0.9;
 
 const COLOUR_BACKGROUND = '#12161c';
 const COLOUR_GRID = '#5a6472';
-const COLOUR_P1 = '#4cc9f0';
-const COLOUR_P2 = '#f7b267';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_STRIKE = '#f4f4f5';
-const COLOUR_TEXT = '#e6e9ef';
 
 const GRID_WIDTH = 8;
 const MARK_RADIUS = 66;
@@ -55,34 +54,6 @@ const MARK_WIDTH = 14;
 const CROSS_REACH = 0.78;
 const STRIKE_WIDTH = 16;
 const STRIKE_OVERHANG = 46;
-
-const GLYPH_RADIUS = 26;
-const GLYPH_WIDTH = 7;
-const SCORE_Y = 62;
-const SCORE_SIZE = 44;
-const STATUS_Y = 838;
-const STATUS_SIZE = 40;
-const STATUS_GLYPH_X = 150;
-const STATUS_TEXT_X = 200;
-const SCORE_P1_GLYPH_X = 330;
-const SCORE_P1_TEXT_X = 372;
-const SCORE_P2_GLYPH_X = 500;
-const SCORE_P2_TEXT_X = 542;
-
-const LABEL_TO_PLAY = 'to play';
-const LABEL_THINKING = 'thinking';
-const LABEL_ROUND_WON = 'wins the round';
-const LABEL_ROUND_DRAWN = 'round drawn';
-const LABEL_MATCH_WON = 'wins the match';
-const LABEL_MATCH_DRAWN = 'match drawn';
-
-/** Round counts never exceed MAX_ROUNDS, so no score needs a string built per frame. */
-const COUNT_LABELS: readonly string[] = ['0', '1', '2', '3', '4', '5'];
-
-function countLabel(count: number): string {
-  const label = COUNT_LABELS[count];
-  return label === undefined ? '' : label;
-}
 
 /** Centre of a cell in logical units. Writes into `out` and allocates nothing. */
 export function cellCentre(out: Vec2, index: number): Vec2 {
@@ -201,8 +172,6 @@ export class TicTacToeGame implements Game {
     this.#drawGrid(renderer);
     this.#drawMarks(renderer);
     if (this.#hasStrike) this.#drawStrike(renderer);
-    this.#drawScore(renderer);
-    this.#drawStatus(renderer);
     renderer.popSeatRotation();
   }
 
@@ -340,40 +309,5 @@ export class TicTacToeGame implements Game {
       STRIKE_WIDTH,
       COLOUR_STRIKE,
     );
-  }
-
-  #drawScore(renderer: Renderer): void {
-    this.#drawMark(renderer, 'p1', SCORE_P1_GLYPH_X, SCORE_Y, GLYPH_RADIUS, GLYPH_WIDTH);
-    renderer.text(countLabel(this.#tally.p1), SCORE_P1_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-    this.#drawMark(renderer, 'p2', SCORE_P2_GLYPH_X, SCORE_Y, GLYPH_RADIUS, GLYPH_WIDTH);
-    renderer.text(countLabel(this.#tally.p2), SCORE_P2_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-  }
-
-  #drawStatus(renderer: Renderer): void {
-    let seat: SeatId | null = null;
-    let label = LABEL_MATCH_DRAWN;
-
-    if (this.#matchWinner !== null) {
-      if (this.#matchWinner !== 'draw') {
-        seat = this.#matchWinner;
-        label = LABEL_MATCH_WON;
-      }
-    } else if (this.#roundOutcome !== null) {
-      if (this.#roundOutcome === 'draw') {
-        label = LABEL_ROUND_DRAWN;
-      } else {
-        seat = this.#roundOutcome;
-        label = LABEL_ROUND_WON;
-      }
-    } else {
-      seat = this.#active;
-      const difficulty = this.#active === 'p1' ? this.#botP1 : this.#botP2;
-      label = difficulty === null ? LABEL_TO_PLAY : LABEL_THINKING;
-    }
-
-    if (seat !== null) {
-      this.#drawMark(renderer, seat, STATUS_GLYPH_X, STATUS_Y, GLYPH_RADIUS, GLYPH_WIDTH);
-    }
-    renderer.text(label, STATUS_TEXT_X, STATUS_Y, STATUS_SIZE, COLOUR_TEXT);
   }
 }

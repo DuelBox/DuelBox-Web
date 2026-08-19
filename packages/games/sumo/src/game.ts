@@ -1,4 +1,4 @@
-import { vec2 } from '@duelbox/engine';
+import { SEAT_PALETTE, vec2 } from '@duelbox/engine';
 import type { Rng, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -50,8 +50,8 @@ const COLOUR_EDGE = '#f2e6d0';
 const COLOUR_START = 'rgba(242, 230, 208, 0.16)';
 const COLOUR_LIMIT = 'rgba(242, 230, 208, 0.26)';
 const COLOUR_COUNTDOWN = 'rgba(242, 230, 208, 0.45)';
-const COLOUR_P1 = '#3d7bff';
-const COLOUR_P2 = '#ff8a3d';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_INK = '#0b1220';
 
 const EDGE_WIDTH = 6;

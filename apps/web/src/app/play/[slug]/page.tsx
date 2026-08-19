@@ -21,7 +21,7 @@ export async function generateMetadata({
 export default async function PlayPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   return (
-    <div className="db-wrap">
+    <div className="db-wrap db-fill">
       <PlaySurface slug={slug} />
     </div>
   );

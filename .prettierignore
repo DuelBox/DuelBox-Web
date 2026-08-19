@@ -1,5 +1,6 @@
 dist
 .next
+.next-dev
 coverage
 pnpm-lock.yaml
 BACKLOG.md

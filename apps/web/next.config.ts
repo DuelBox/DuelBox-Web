@@ -11,6 +11,13 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   output: 'export',
+  /**
+   * `next build` and `next dev` share `.next` by default, so a build run while the dev
+   * server is up deletes the manifests it is serving from and every route starts
+   * answering 500. Giving dev its own directory means a build never disturbs a running
+   * dev server — which matters when the two happen side by side all day.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   reactStrictMode: true,
   // A static host cannot run the image optimiser, and our art is SVG anyway.
   images: { unoptimized: true },

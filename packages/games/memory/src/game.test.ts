@@ -645,7 +645,9 @@ describe('lifecycle and render', () => {
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.rects).toBeGreaterThan(0);
-    expect(renderer.texts).toBeGreaterThan(0);
+    // No text on the board: the score and the turn belong to the shell's HUD, and a
+    // game that draws its own gives the player two scoreboards to reconcile.
+    expect(renderer.texts).toBe(0);
     expect(snapshot(game)).toBe(before);
   });
 

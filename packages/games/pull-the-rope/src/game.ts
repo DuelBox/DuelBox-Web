@@ -1,3 +1,4 @@
+import { SEAT_PALETTE } from '@duelbox/engine';
 import type { LogicalSize, Rng, SeatId } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -33,10 +34,10 @@ const COLOUR_ROPE_TWIST = '#8d7442';
 const COLOUR_LINE = 'rgba(233, 240, 252, 0.55)';
 const COLOUR_LINE_SOFT = 'rgba(233, 240, 252, 0.22)';
 const COLOUR_DEAD = 'rgba(233, 240, 252, 0.06)';
-const COLOUR_P1 = '#3d7bff';
-const COLOUR_P2 = '#ff8a3d';
-const COLOUR_P1_SOFT = 'rgba(61, 123, 255, 0.45)';
-const COLOUR_P2_SOFT = 'rgba(255, 138, 61, 0.45)';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
+const COLOUR_P1_SOFT = SEAT_PALETTE.p1.soft;
+const COLOUR_P2_SOFT = SEAT_PALETTE.p2.soft;
 const COLOUR_KNOT = '#e9f0fc';
 const COLOUR_INK = '#0b1220';
 const COLOUR_FLASH = 'rgba(233, 240, 252, 0.85)';

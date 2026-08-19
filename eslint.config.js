@@ -8,6 +8,8 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.next/**',
+      // The dev server's own output directory, kept separate so a build cannot clobber it.
+      '**/.next-dev/**',
       '**/out/**',
       '**/coverage/**',
       '**/node_modules/**',

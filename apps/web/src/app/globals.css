@@ -52,10 +52,19 @@ a:hover {
 }
 
 /* The canvas owns its gestures. Scoped here rather than globally so the rest of the
-   site keeps pull-to-refresh, pinch zoom and text selection. */
+   site keeps pull-to-refresh, pinch zoom and text selection.
+
+   Each property answers a different way a browser breaks a touch game: touch-action
+   stops scroll, pan and double-tap zoom; overscroll-behavior stops the rubber-band and
+   pull-to-refresh that a swipe near the edge triggers; user-select stops a drag from
+   selecting the page around it; and touch-callout stops iOS Safari's long-press menu,
+   which no other property covers. */
 canvas {
   touch-action: none;
+  overscroll-behavior: contain;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   display: block;
 }
 
@@ -85,6 +94,16 @@ canvas {
 
 .db-main {
   flex: 1;
+  /* Without this a tall child stretches the flex item instead of shrinking inside it,
+     and the play surface pushes the footer off the bottom of the screen. */
+  min-height: 0;
+}
+
+/* Fills whatever height the shell has left. The play route uses it so a match occupies
+   the device exactly: neither player should have to scroll to see the board or the
+   score, least of all on a phone the two of them are sharing. */
+.db-fill {
+  height: 100%;
 }
 
 .db-wrap {

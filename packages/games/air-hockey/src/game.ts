@@ -1,4 +1,4 @@
-import { vec2 } from '@duelbox/engine';
+import { SEAT_PALETTE, vec2 } from '@duelbox/engine';
 import type { Rng, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -41,8 +41,8 @@ const KEYBOARD_MALLET_SPEED = 900;
 const COLOUR_TABLE = '#0e1726';
 const COLOUR_LINE = 'rgba(233, 240, 252, 0.55)';
 const COLOUR_LINE_SOFT = 'rgba(233, 240, 252, 0.22)';
-const COLOUR_P1 = '#3d7bff';
-const COLOUR_P2 = '#ff8a3d';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_INK = '#0b1220';
 const COLOUR_PUCK = '#e9f0fc';
 const COLOUR_SERVE = 'rgba(233, 240, 252, 0.38)';

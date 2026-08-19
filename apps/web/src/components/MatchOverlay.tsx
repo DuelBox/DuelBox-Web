@@ -20,6 +20,8 @@ export interface MatchOverlayProps {
   state: MatchState;
   rounds: number;
   seatNames?: Partial<Record<SeatId, string>> | undefined;
+  /** Matches won by each seat in this sitting, across rematches. */
+  record?: { p1: number; p2: number; draws: number } | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
   onResume: () => void;
@@ -32,6 +34,7 @@ export function MatchOverlay({
   state,
   rounds,
   seatNames,
+  record,
   nextGame,
   onResume,
   onQuit,
@@ -86,6 +89,13 @@ export function MatchOverlay({
               {seatName('p2', seatNames)}
             </p>
           ) : null}
+          {record && record.p1 + record.p2 + record.draws > 1 ? (
+            <p className={styles.record}>
+              Tonight: {seatName('p1', seatNames)} {record.p1} — {record.p2}{' '}
+              {seatName('p2', seatNames)}
+              {record.draws > 0 ? `, ${record.draws} drawn` : ''}
+            </p>
+          ) : null}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
               Rematch
@@ -94,12 +104,11 @@ export function MatchOverlay({
               <Link className={styles.secondary} href={`/play/${nextGame.slug}`}>
                 Play {nextGame.name}
               </Link>
-            ) : (
-              <Link className={styles.secondary} href="/games">
-                All games
-              </Link>
-            )}
+            ) : null}
           </div>
+          <Link className={styles.back} href="/games">
+            Back to all games
+          </Link>
         </Panel>
       );
 
@@ -162,6 +171,6 @@ function Winner({
   );
 }
 
-function seatName(seat: SeatId, seatNames?: Partial<Record<SeatId, string>> | undefined): string {
+function seatName(seat: SeatId, seatNames?: Partial<Record<SeatId, string>>): string {
   return seatNames?.[seat] ?? seatColour[seat].name;
 }

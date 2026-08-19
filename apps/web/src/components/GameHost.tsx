@@ -16,7 +16,13 @@ import {
   type SafeAreaInsets,
   type SeatId,
 } from '@duelbox/engine';
-import { isSimulating, type Game, type GameContext, type GameManifest, type MatchPhase } from '@duelbox/game-sdk';
+import {
+  isSimulating,
+  type Game,
+  type GameContext,
+  type GameManifest,
+  type MatchPhase,
+} from '@duelbox/game-sdk';
 import styles from './GameHost.module.css';
 
 /**
@@ -168,6 +174,11 @@ export function GameHost({
     function onKeyUp(event: KeyboardEvent): void {
       input.keyUp(event.code);
     }
+    function onContextMenu(event: Event): void {
+      // A long press is a legitimate game input; on touch it otherwise raises the
+      // callout menu and the press is lost. CSS cannot suppress this on Android.
+      event.preventDefault();
+    }
     function onBlur(): void {
       // Otherwise a player returns to a stuck direction.
       input.clear();
@@ -178,6 +189,7 @@ export function GameHost({
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerup', onPointerUp);
     el.addEventListener('pointercancel', onPointerUp);
+    el.addEventListener('contextmenu', onContextMenu);
     globalThis.addEventListener('keydown', onKeyDown);
     globalThis.addEventListener('keyup', onKeyUp);
     globalThis.addEventListener('blur', onBlur);
@@ -238,6 +250,7 @@ export function GameHost({
       el.removeEventListener('pointermove', onPointerMove);
       el.removeEventListener('pointerup', onPointerUp);
       el.removeEventListener('pointercancel', onPointerUp);
+      el.removeEventListener('contextmenu', onContextMenu);
       globalThis.removeEventListener('keydown', onKeyDown);
       globalThis.removeEventListener('keyup', onKeyUp);
       globalThis.removeEventListener('blur', onBlur);

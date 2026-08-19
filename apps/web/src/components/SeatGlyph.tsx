@@ -15,7 +15,16 @@ export function SeatGlyph({ seat, size = 18 }: { seat: SeatId; size?: number }) 
       {seat === 'p1' ? (
         <circle cx="12" cy="12" r="9" fill={fill} stroke={stroke} strokeWidth="2.5" />
       ) : (
-        <rect x="3" y="3" width="18" height="18" rx="5" fill={fill} stroke={stroke} strokeWidth="2.5" />
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="5"
+          fill={fill}
+          stroke={stroke}
+          strokeWidth="2.5"
+        />
       )}
     </svg>
   );

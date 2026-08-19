@@ -1,4 +1,4 @@
-import { Rng, otherSeat, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, otherSeat, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -60,11 +60,10 @@ const COLOUR_BACKGROUND = '#12161c';
 const COLOUR_PANEL = '#243347';
 const COLOUR_HOLE = '#0d1218';
 const COLOUR_RIM = '#3b4d68';
-const COLOUR_P1 = '#f4a259';
-const COLOUR_P2 = '#4cc9f0';
+const COLOUR_P1 = SEAT_PALETTE.p1.base;
+const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_GUIDE = 'rgba(230, 233, 239, 0.34)';
 const COLOUR_HIGHLIGHT = '#f4f4f5';
-const COLOUR_TEXT = '#e6e9ef';
 
 const DISC_RADIUS = 42;
 const RING_WIDTH = 13;
@@ -72,34 +71,6 @@ const HOLE_RADIUS = 46;
 const RIM_WIDTH = 3;
 const GUIDE_WIDTH = 5;
 const HIGHLIGHT_WIDTH = 6;
-
-const GLYPH_RADIUS = 24;
-const GLYPH_RING_WIDTH = 8;
-const SCORE_Y = 58;
-const SCORE_SIZE = 42;
-const SCORE_P1_GLYPH_X = 316;
-const SCORE_P1_TEXT_X = 356;
-const SCORE_P2_GLYPH_X = 500;
-const SCORE_P2_TEXT_X = 540;
-const STATUS_Y = 872;
-const STATUS_SIZE = 34;
-const STATUS_GLYPH_X = 150;
-const STATUS_TEXT_X = 194;
-
-const LABEL_TO_PLAY = 'to play';
-const LABEL_THINKING = 'thinking';
-const LABEL_ROUND_WON = 'wins the round';
-const LABEL_ROUND_DRAWN = 'round drawn';
-const LABEL_MATCH_WON = 'wins the match';
-const LABEL_MATCH_DRAWN = 'match drawn';
-
-/** Round counts never exceed MAX_ROUNDS, so no score needs a string built per frame. */
-const COUNT_LABELS: readonly string[] = ['0', '1', '2', '3'];
-
-function countLabel(count: number): string {
-  const label = COUNT_LABELS[count];
-  return label === undefined ? '' : label;
-}
 
 /** Centre of a column in logical units. */
 export function columnCentreX(col: number): number {
@@ -271,8 +242,6 @@ export class DropFourGame implements Game {
     this.#drawHover(renderer);
     this.#drawFalling(renderer, alpha);
     this.#drawHighlight(renderer);
-    this.#drawScore(renderer);
-    this.#drawStatus(renderer);
     renderer.popSeatRotation();
   }
 
@@ -461,40 +430,5 @@ export class DropFourGame implements Game {
       return;
     }
     renderer.strokeCircle(x, y, radius - ringWidth / 2, ringWidth, COLOUR_P2);
-  }
-
-  #drawScore(renderer: Renderer): void {
-    this.#drawDisc(renderer, 'p1', SCORE_P1_GLYPH_X, SCORE_Y, GLYPH_RADIUS, GLYPH_RING_WIDTH);
-    renderer.text(countLabel(this.#score.p1), SCORE_P1_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-    this.#drawDisc(renderer, 'p2', SCORE_P2_GLYPH_X, SCORE_Y, GLYPH_RADIUS, GLYPH_RING_WIDTH);
-    renderer.text(countLabel(this.#score.p2), SCORE_P2_TEXT_X, SCORE_Y, SCORE_SIZE, COLOUR_TEXT);
-  }
-
-  #drawStatus(renderer: Renderer): void {
-    let seat: SeatId | null = null;
-    let label = LABEL_MATCH_DRAWN;
-
-    if (this.#score.winner !== null) {
-      if (this.#score.winner !== 'draw') {
-        seat = this.#score.winner;
-        label = LABEL_MATCH_WON;
-      }
-    } else if (this.#roundOutcome !== null) {
-      if (this.#roundOutcome === 'draw') {
-        label = LABEL_ROUND_DRAWN;
-      } else {
-        seat = this.#roundOutcome;
-        label = LABEL_ROUND_WON;
-      }
-    } else {
-      seat = this.#active;
-      const difficulty = this.#active === 'p1' ? this.#botP1 : this.#botP2;
-      label = difficulty === null ? LABEL_TO_PLAY : LABEL_THINKING;
-    }
-
-    if (seat !== null) {
-      this.#drawDisc(renderer, seat, STATUS_GLYPH_X, STATUS_Y, GLYPH_RADIUS, GLYPH_RING_WIDTH);
-    }
-    renderer.text(label, STATUS_TEXT_X, STATUS_Y, STATUS_SIZE, COLOUR_TEXT);
   }
 }
