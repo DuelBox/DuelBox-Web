@@ -42,6 +42,9 @@
     },
     {
       "path": "./packages/games/rock-paper-scissors"
+    },
+    {
+      "path": "./packages/games/ultimate-ttt"
     }
   ]
 }

@@ -88,6 +88,9 @@ importers:
       '@duelbox/game-tic-tac-toe':
         specifier: workspace:*
         version: link:../../packages/games/tic-tac-toe
+      '@duelbox/game-ultimate-ttt':
+        specifier: workspace:*
+        version: link:../../packages/games/ultimate-ttt
       '@duelbox/game-whack-a-mole':
         specifier: workspace:*
         version: link:../../packages/games/whack-a-mole
@@ -210,6 +213,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/tic-tac-toe:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/ultimate-ttt:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
