@@ -46,11 +46,55 @@ export default tseslint.config(
             'Use the seeded Rng from @duelbox/engine. Math.random breaks determinism, replays and lockstep.',
         },
       ],
+      // No simulation value may be expressed in pixels and no game may branch on the
+      // device (CLAUDE.md rules 8 and 10). Both held by discipline alone until now — an
+      // audit confirmed nothing in these packages touched the device, but nothing stopped
+      // the next commit from doing so. The engine's `browserClock` is the one legitimate
+      // reader of wall time and lives behind an injectable seam in loop.ts.
       'no-restricted-globals': [
         'error',
         { name: 'Date', message: 'Simulation time comes from the fixed loop, not wall time.' },
+        {
+          name: 'window',
+          message: 'Games and the engine never read the device. The host passes logical units in.',
+        },
+        {
+          name: 'document',
+          message:
+            'The DOM belongs to the host. A game receives input and a renderer, nothing else.',
+        },
+        {
+          name: 'devicePixelRatio',
+          message: "Device pixels are the render layer's business. Simulate in logical units.",
+        },
+        {
+          name: 'screen',
+          message:
+            'Screen size must not reach the simulation, or two devices step different matches.',
+        },
+        {
+          name: 'navigator',
+          message: 'Branching on the device breaks one-build-serves-every-device.',
+        },
+        {
+          name: 'requestAnimationFrame',
+          message: 'Frame timing comes from the fixed loop, which the host drives.',
+        },
+        {
+          name: 'performance',
+          message: 'Wall time breaks determinism. Use the fixed delta the loop hands you.',
+        },
+        {
+          name: 'matchMedia',
+          message: 'Device preferences are read by the host and applied to presentation only.',
+        },
       ],
     },
+  },
+  {
+    // The one legitimate reader of wall time: the clock the host injects into the loop.
+    files: ['packages/engine/src/loop.ts'],
+    rules: { 'no-restricted-globals': 'off' },
   },
   {
     files: ['**/*.js', '**/*.mjs'],

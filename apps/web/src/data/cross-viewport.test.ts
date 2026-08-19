@@ -141,3 +141,65 @@ describe('the simulation is viewport-independent', () => {
     expect(a).not.toEqual(b);
   });
 });
+
+describe('the declared logical size is the one the simulation uses', () => {
+  /**
+   * A manifest that disagrees with its game is worse than no manifest: the shell
+   * letterboxes to the declared box, so a game simulating in a different one has part
+   * of its play area cropped or floating in dead space. The schema cannot catch this —
+   * it only sees the number, not what the code does with it.
+   */
+  for (const [slug, load] of Object.entries(LOADERS_FOR_TEST)) {
+    it(`${slug} keeps every drawn point inside its declared box`, async () => {
+      const loaded = await load();
+      const { width, height } = loaded.manifest.logical;
+
+      const seen: number[][] = [];
+      const recorder = new Proxy(
+        {},
+        {
+          get: (_t, property) => {
+            if (property === 'measureText') return () => ({ width: 0 }) as TextMetrics;
+            return (...args: unknown[]) => {
+              const numbers = args.filter((a): a is number => typeof a === 'number');
+              if (numbers.length >= 2) seen.push(numbers);
+              return undefined;
+            };
+          },
+          set: () => true,
+        },
+      ) as unknown as Canvas2DLike;
+
+      const renderer = new Canvas2DRenderer(recorder, loaded.manifest.logical);
+      renderer.setViewport(fitViewport(loaded.manifest.logical, 800, 1200, NO_INSETS));
+      const game = loaded.create();
+      game.init({
+        manifest: loaded.manifest,
+        rng: new Rng(1),
+        presentation: 'shared-screen',
+        localSeat: 'p1',
+        botDifficulty: () => null,
+      });
+      const input = new InputManager(loaded.manifest.logical, {
+        split: loaded.manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
+        bottomSeat: 'p1',
+      });
+      const view = new InputView();
+      for (let i = 0; i < 120; i += 1) {
+        game.update(1 / 60, view.sync(input.beginStep(1 / 60)));
+        game.render(renderer, 0);
+      }
+      game.destroy();
+
+      expect(seen.length, `${slug} drew nothing`).toBeGreaterThan(0);
+      // Generous: strokes, shadows and glyph boxes legitimately overhang a little. What
+      // this catches is a game simulating in a box unrelated to the one it declared.
+      const limit = Math.max(width, height) * 2;
+      for (const args of seen) {
+        for (const value of args) {
+          expect(Math.abs(value), `${slug} drew at ${String(value)}, far outside ${String(width)}x${String(height)}`).toBeLessThanOrEqual(limit);
+        }
+      }
+    });
+  }
+});

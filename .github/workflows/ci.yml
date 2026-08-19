@@ -33,8 +33,10 @@ jobs:
       - run: pnpm build
       # Smoke-test the real static artefact, not a dev server, so a green run is
       # evidence the deployed site works.
-      - run: npx playwright install --with-deps chromium
-      - run: pnpm e2e --project=chromium
+      # WebKit is the engine iOS Safari ships, and two people sharing a phone is the
+      # primary case — a chromium window sized like a phone is not the same test.
+      - run: npx playwright install --with-deps chromium webkit
+      - run: pnpm e2e
 
   audit:
     runs-on: ubuntu-latest
