@@ -911,6 +911,83 @@ issues:
   labels: ["epic:sdk", "type:feat", "priority:P1", "size:M"]
   milestone: M1 Playable Shell
 
+- title: "Implement play-mode declaration and mode-aware lobby buttons"
+  epic: sdk
+  why: "Observed: the reference app offers vs-friend, vs-bot, and solo score attack, and not every game offers all three. Wheelie has no bot; Brainrot Stack has all three. Assuming every game has every mode produces dead buttons."
+  actions:
+    - "Add a supportedModes field to the manifest covering friend, bot, and solo"
+    - "Render only the modes a game declares on its landing page and lobby"
+    - "Fail the build if a game declares a mode it does not implement"
+  acceptance:
+    - "A game declaring only friend and solo shows exactly those two buttons"
+    - "Declaring an unimplemented mode fails validation at build time"
+  labels: ["epic:sdk", "epic:site", "type:feat", "priority:P1", "size:S"]
+  milestone: M1 Playable Shell
+
+- title: "Implement solo score-attack mode in the match flow"
+  epic: sdk
+  why: "Observed as a distinct third mode: one player chasing a score rather than an opponent. It needs its own result screen and its own personal-best tracking."
+  actions:
+    - "Add a solo variant to the match state machine with a single-seat HUD"
+    - "Result screen shows the score against the stored personal best rather than a winner"
+    - "Persist the personal best per game"
+  acceptance:
+    - "Solo mode never renders a second seat or an opponent score"
+    - "Beating the personal best is called out on the result screen"
+  labels: ["epic:sdk", "epic:meta", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Build the per-game options panel"
+  epic: sdk
+  why: "Observed: several games carry a gear on the pre-game screen exposing options specific to that game, such as board size or round length."
+  actions:
+    - "Let a game declare its options as typed schema entries in the manifest"
+    - "Render the panel generically from that schema, no bespoke UI per game"
+    - "Persist choices per game and apply them at match start"
+  acceptance:
+    - "A game adds an option without writing any UI code"
+    - "Options persist and are applied to the next match"
+  labels: ["epic:sdk", "epic:site", "type:feat", "priority:P2", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Add health and accumulated-score win conditions to the helper library"
+  epic: sdk
+  why: "Observed beyond first-to-N: Throw ends when a player's health hits zero, and Wheelie is won on points accumulated while a state is held. Both need to be first-class or every game reimplements them."
+  actions:
+    - "Implement reduceToZero (health) and highestAccumulated (score over time) helpers"
+    - "Support per-seat health tracking with damage events for the HUD"
+    - "Unit test both including simultaneous-elimination draws"
+  acceptance:
+    - "A game declares a health win condition without writing comparison logic"
+    - "Simultaneous elimination resolves to a draw, not an arbitrary winner"
+  labels: ["epic:sdk", "type:feat", "priority:P1", "size:S"]
+  milestone: M1 Playable Shell
+
+- title: "Build the health bar HUD component"
+  epic: sdk
+  why: "Health-based games need a per-seat bar that both players can read from their own side, in their own colour, without it being colour-only."
+  actions:
+    - "Per-seat health bar anchored to that seat's edge and oriented for them"
+    - "Animate damage with a distinct non-colour cue"
+    - "Announce elimination through the shared result path"
+  acceptance:
+    - "Readable at arm's length from both seats", "Meaning is clear in greyscale"
+  labels: ["epic:sdk", "epic:a11y", "type:feat", "priority:P2", "size:S"]
+  milestone: M2 Game Catalog
+
+- title: "Implement hold-to-act input with a release constraint"
+  epic: input
+  why: "Observed in Slot Cars: the player holds to accelerate and must release in the curves or fail. This is a distinct pattern from tap and from drag."
+  actions:
+    - "Expose hold duration and release timing per seat in the input state"
+    - "Support a constraint window where holding is penalised"
+    - "Make it work identically on touch, keyboard, and gamepad"
+  acceptance:
+    - "Hold duration is accurate within one simulation step"
+    - "The same game logic works across all three input families"
+  labels: ["epic:input", "type:feat", "priority:P2", "size:S"]
+  milestone: M2 Game Catalog
+
 - title: "Implement per-game settings persistence"
   epic: sdk
   why: "Difficulty and per-game preferences should be remembered, and corrupt storage should never crash a launch."

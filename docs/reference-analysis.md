@@ -48,10 +48,42 @@ HOME (game grid)
 
 ## 4. Pre-game screen
 
-Every game funnels through the same screen: title, a one-sentence rule statement,
-a HOW TO PLAY video button, and the two mode buttons. Example observed copy pattern
-(Mini Golf): "Hole in one! The player with 2 points more than the other wins!" — the
-win condition is stated in one line before the match, not in a tutorial.
+Every game funnels through the same screen: title, a short rule statement, a HOW TO
+PLAY video button, the mode buttons, a favourite star, and — on some games — a gear
+opening per-game options. The win condition is stated in one or two sentences before
+the match rather than taught by a tutorial.
+
+**Three play modes exist, and not every game offers all three:**
+
+| Mode | Meaning | Observed on |
+|---|---|---|
+| Play vs Friend | Two humans, one device | Every game |
+| Play vs Bot | One human against the CPU | Most games |
+| Play Solo | Score attack, no opponent | Wheelie, Brainrot Stack |
+
+Wheelie offers Friend and Solo but no Bot; Brainrot Stack offers all three. So the
+manifest must declare which modes a game supports, and the shell must render only
+those. Assuming every game has a bot would produce dead buttons.
+
+### Rule text captured verbatim from the pre-game screens
+
+These are the reference app's own summaries, recorded as research notes to define
+the mechanics we implement independently. Our own copy is written from scratch.
+
+| Game | Rule as stated | What it implies |
+|---|---|---|
+| Guess the Person | Ask yes/no questions to narrow down which character the other player chose and guess it before they do | Hidden information, needs the pass-and-play blackout |
+| Ultimate Tic Tac Toe | Nine small boards; where you place your mark dictates which board the opponent must play next; win three small boards in a row | Nested board state, constraint propagation, non-trivial bot |
+| Crash It | Drive, jump and flip your car by tapping buttons; hit the opponent's head with your car and protect your own | Real-time vehicle physics with a vulnerable hitbox |
+| Throw | Snowball fight: pull back to aim, release to throw; first to reduce the opponent's health to zero wins | Drag-to-aim plus a **health/HP win condition** |
+| Wheelie | Accelerate to pull a wheelie; earn more points the longer you hold it | Balance simulation, score accumulates over time held |
+| Shut the Box | Roll dice, flip numbered tiles summing to the roll, continue until no move is possible | Dice + subset-sum move generation |
+| Brainrot Stack | Take turns dropping objects; first to drop one off the platform loses; drag to position and tap to rotate | Turn-based stacking physics, drag plus tap controls |
+| Slot Cars | Tap and hold to race; release in the curves or the car flames out | Hold-to-accelerate with a corner-speed constraint |
+
+Two win-condition patterns appear here that the shared helper library must cover
+beyond first-to-N: **reduce opponent health to zero**, and **highest accumulated
+score when the round ends**.
 
 ## 5. In-match HUD
 

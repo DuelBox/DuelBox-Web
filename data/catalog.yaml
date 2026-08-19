@@ -18,7 +18,7 @@ games:
 
 # ---------------- BOARD & TURN-BASED ----------------
 - {id: tic-tac-toe,        name: Tic Tac Toe,          category: Board,     archetype: turn-board, confidence: genre,    online: true}
-- {id: ultimate-ttt,       name: Ultimate Tic Tac Toe, category: Board,     archetype: turn-board, confidence: genre}
+- {id: ultimate-ttt,       name: Ultimate Tic Tac Toe, category: Board,     archetype: turn-board, confidence: observed, modes: "friend,bot", rule: "Nine small tic-tac-toe boards inside one big board. Where you place your mark dictates which small board the opponent must play next. Win three small boards in a row."}
 - {id: four-in-a-row,      name: Drop Four,            category: Board,     archetype: turn-board, confidence: genre,    rename: true, was: 4 in a Row}
 - {id: chess,              name: Chess,                category: Board,     archetype: turn-board, confidence: genre}
 - {id: checkers,           name: Checkers,             category: Board,     archetype: turn-board, confidence: genre}
@@ -30,13 +30,13 @@ games:
 - {id: snakes-ladders,     name: Snakes and Ladders,   category: Board,     archetype: turn-board, confidence: genre}
 - {id: sea-battle,         name: Sea Battle,           category: Board,     archetype: turn-board, confidence: genre}
 - {id: ship-battle,        name: Ship Battle,          category: Board,     archetype: turn-board, confidence: research}
-- {id: shut-the-box,       name: Shut the Box,         category: Dice,      archetype: turn-board, confidence: genre}
+- {id: shut-the-box,       name: Shut the Box,         category: Dice,      archetype: turn-board, confidence: observed, modes: "friend,bot", rule: "Roll the dice, then flip one or more numbered tiles that add up to the roll. Play continues until no move is possible."}
 - {id: yazy,               name: Dice Yatzy,           category: Dice,      archetype: turn-board, confidence: genre,    rename: true, was: Yazy}
 - {id: color-wars,         name: Colour Wars,          category: Board,     archetype: turn-board, confidence: research}
-- {id: guess-the-person,   name: Guess Who,            category: Deduction, archetype: turn-board, confidence: research, rename: true, was: Guess the Person}
+- {id: guess-the-person,   name: Guess Who,            category: Deduction, archetype: turn-board, rename: true, was: Guess the Person, confidence: observed, modes: "friend,bot", rule: "Ask yes/no questions to narrow down which character the opponent chose, and guess it before they do."}
 
 # ---------------- TURN-BASED AIM & SHOOT ----------------
-- {id: mini-golf,          name: Mini Golf,            category: Sports,    archetype: turn-aim,   confidence: observed}
+- {id: mini-golf,          name: Mini Golf,            category: Sports,    archetype: turn-aim,   confidence: observed, modes: "friend,bot", rule: "Drag back and release to putt. Sinking the ball scores a point and passes the turn. The player two points ahead wins. Each hole adds more obstacles."}
 - {id: pool,               name: Pool,                 category: Sports,    archetype: turn-aim,   confidence: genre}
 - {id: carrom,             name: Carrom,               category: Sports,    archetype: turn-aim,   confidence: genre}
 - {id: bowling,            name: Bowling,              category: Sports,    archetype: turn-aim,   confidence: genre}
@@ -65,7 +65,7 @@ games:
 - {id: beach-ball,         name: Beach Ball,           category: Sports,    archetype: rt-split,   confidence: research}
 - {id: mini-soccer,        name: Mini Soccer,          category: Sports,    archetype: rt-split,   confidence: research}
 - {id: ballgames-physics,  name: Ball Games,           category: Sports,    archetype: rt-split,   confidence: research, rename: true, was: Ballgames Physics}
-- {id: throw,              name: Snowball Throw,       category: Party,     archetype: rt-split,   confidence: research, rename: true, was: Throw}
+- {id: throw,              name: Snowball Throw,       category: Party,     archetype: rt-split,   rename: true, was: Throw, confidence: observed, modes: "friend,bot", rule: "Snowball fight. Pull back to aim, release to throw. First to reduce the opponent's health to zero wins."}
 - {id: pull-the-rope,      name: Pull the Rope,        category: Party,     archetype: rt-split,   confidence: research, online: true}
 - {id: hand-slap,          name: Hand Slap,            category: Reaction,  archetype: rt-split,   confidence: genre}
 - {id: rock-paper-scissors, name: Rock Paper Scissors, category: Reaction,  archetype: rt-split,   confidence: genre}
@@ -87,7 +87,7 @@ games:
 - {id: water-game,         name: Water Game,           category: Party,     archetype: rt-split,   confidence: research}
 - {id: broken-tiles,       name: Broken Tiles,         category: Party,     archetype: rt-split,   confidence: research}
 - {id: lumber-jack,        name: Lumberjack,           category: Party,     archetype: rt-split,   confidence: research}
-- {id: brainrot-stack,     name: Wobble Stack,         category: Party,     archetype: rt-split,   confidence: research, rename: true, was: Brainrot Stack}
+- {id: brainrot-stack,     name: Wobble Stack,         category: Party,     archetype: rt-split,   rename: true, was: Brainrot Stack, confidence: observed, modes: "friend,bot,solo", rule: "Take turns dropping objects onto a platform. Drag left and right to position and tap to rotate. The first player to drop one off the platform loses."}
 - {id: animal-stack,       name: Animal Stack,         category: Party,     archetype: rt-split,   confidence: research}
 - {id: chicken-jump,       name: Chicken Jump,         category: Platform,  archetype: rt-split,   confidence: research}
 - {id: flappy-jump,        name: Flappy Jump,          category: Platform,  archetype: rt-split,   confidence: research}
@@ -95,7 +95,7 @@ games:
 - {id: gravity-run,        name: Gravity Run,          category: Platform,  archetype: rt-split,   confidence: research}
 - {id: stampede,           name: Stampede,             category: Platform,  archetype: rt-split,   confidence: research}
 - {id: spike-attacks,      name: Spike Attacks,        category: Survival,  archetype: rt-split,   confidence: research}
-- {id: disco-battle,       name: Disco Battle,         category: Rhythm,    archetype: rt-split,   confidence: research}
+- {id: disco-battle,       name: Disco Battle,         category: Rhythm,    archetype: rt-split,   confidence: observed, modes: "friend,bot", rule: "Press at the right moment as the notes reach your platform. Mistakes lower your score. Most points when the song ends wins."}
 - {id: guard-and-thief,    name: Guard and Thief,      category: Stealth,   archetype: rt-split,   confidence: research}
 
 # ---------------- REAL-TIME, SHARED ARENA ----------------
@@ -113,10 +113,10 @@ games:
 # ---------------- REAL-TIME, RACING & DRIVING ----------------
 - {id: racing-cars,        name: Racing Cars,          category: Racing,    archetype: rt-race,    confidence: genre}
 - {id: taxi-race,          name: Taxi Race,            category: Racing,    archetype: rt-race,    confidence: research}
-- {id: slot-cars,          name: Slot Cars,            category: Racing,    archetype: rt-race,    confidence: research}
+- {id: slot-cars,          name: Slot Cars,            category: Racing,    archetype: rt-race,    confidence: observed, modes: "friend,bot", rule: "Tap and hold to race the car around the laps. If flames appear, release in the curves to slow down or the car spins out."}
 - {id: rat-race,           name: Rat Race,             category: Racing,    archetype: rt-race,    confidence: research}
-- {id: wheelie,            name: Wheelie,              category: Racing,    archetype: rt-race,    confidence: research}
-- {id: crash-it,           name: Crash It,             category: Racing,    archetype: rt-race,    confidence: research}
+- {id: wheelie,            name: Wheelie,              category: Racing,    archetype: rt-race,    confidence: observed, modes: "friend,solo", rule: "Accelerate the bike to pull up a wheelie. The longer the wheelie is held, the more points it earns."}
+- {id: crash-it,           name: Crash It,             category: Racing,    archetype: rt-race,    confidence: observed, modes: "friend,bot", rule: "Drive, jump and flip your car by tapping buttons. Hit the opponent on the head with your car to score, and protect your own head."}
 - {id: road-dodge,         name: Road Dodge,           category: Racing,    archetype: rt-race,    confidence: research}
 - {id: traffic-jam,        name: Traffic Jam,          category: Puzzle,    archetype: rt-race,    confidence: research}
 
