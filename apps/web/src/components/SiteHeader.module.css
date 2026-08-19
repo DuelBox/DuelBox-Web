@@ -50,7 +50,7 @@
 
 /* The nav collapses before the primary action does: on a phone the one thing that must
    survive is the route into a game. */
-@media (max-width: 46rem) {
+@media (max-width: 40rem) {
   .nav {
     display: none;
   }

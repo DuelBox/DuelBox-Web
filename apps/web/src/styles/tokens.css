@@ -85,6 +85,15 @@
 
   /* Safe-area insets, read by the game host so no control lands under a notch or a home
      indicator. Declared here rather than inline so there is one place to override them. */
+  /* The named device classes. CSS cannot use a custom property inside a media query, so
+     these are documentation rather than mechanism — the value must be repeated in the
+     query. They exist so a sixth breakpoint has to be added here first, deliberately,
+     rather than appearing in one stylesheet and never propagating. See docs/responsive.md. */
+  --db-bp-phone: 30rem;
+  --db-bp-tablet: 40rem;
+  --db-bp-laptop: 64rem;
+  --db-bp-wide: 90rem;
+
   --db-safe-top: env(safe-area-inset-top, 0px);
   --db-safe-right: env(safe-area-inset-right, 0px);
   --db-safe-bottom: env(safe-area-inset-bottom, 0px);

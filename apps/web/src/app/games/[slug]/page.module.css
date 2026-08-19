@@ -13,7 +13,7 @@
   align-items: start;
 }
 
-@media (max-width: 46rem) {
+@media (max-width: 40rem) {
   .top {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--db-space-4);
