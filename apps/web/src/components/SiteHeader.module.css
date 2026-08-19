@@ -1,0 +1,57 @@
+.header {
+  border-bottom: 1px solid var(--db-hairline);
+  background: var(--db-paper);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-5);
+  min-height: 64px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  color: var(--db-ink);
+}
+
+.nav {
+  display: flex;
+  gap: var(--db-space-5);
+  font-weight: 500;
+}
+
+.nav a {
+  color: var(--db-body);
+}
+
+.nav a:hover {
+  color: var(--db-ink);
+}
+
+.cta {
+  margin-left: auto;
+  padding: var(--db-space-2) var(--db-space-4);
+  min-height: var(--db-touch-target);
+  display: inline-flex;
+  align-items: center;
+  background: var(--db-brand);
+  color: #fff;
+  border-radius: var(--db-radius);
+  font-weight: 600;
+  box-shadow: 0 3px 0 var(--db-brand-deep);
+}
+
+.cta:hover {
+  color: #fff;
+  background: var(--db-brand-deep);
+}
+
+/* The nav collapses before the primary action does: on a phone the one thing that must
+   survive is the route into a game. */
+@media (max-width: 46rem) {
+  .nav {
+    display: none;
+  }
+}

@@ -1,0 +1,42 @@
+.head {
+  padding-block: var(--db-space-6) var(--db-space-5);
+}
+
+.head h1 {
+  font-size: var(--db-text-2xl);
+}
+
+.count {
+  margin-top: var(--db-space-2);
+  color: var(--db-muted);
+  max-width: 40rem;
+}
+
+.section {
+  margin-bottom: var(--db-space-7);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-3);
+  font-size: var(--db-text-xl);
+  margin-bottom: var(--db-space-4);
+}
+
+.sectionCount {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+  font-weight: 700;
+  color: var(--db-muted);
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-pill);
+  padding: 2px 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--db-space-4);
+}

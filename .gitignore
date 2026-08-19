@@ -16,3 +16,5 @@ coverage/
 
 playwright-report/
 test-results/
+out/
+next-env.d.ts

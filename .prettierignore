@@ -7,3 +7,5 @@ docs/design-canvas
 data
 docs
 *.md
+out
+*.generated.ts

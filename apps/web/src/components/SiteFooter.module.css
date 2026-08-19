@@ -1,0 +1,33 @@
+.footer {
+  border-top: 1px solid var(--db-hairline);
+  margin-top: var(--db-space-8);
+  padding-block: var(--db-space-5);
+  background: var(--db-surface);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-4);
+  align-items: center;
+}
+
+.line {
+  color: var(--db-muted);
+  font-size: var(--db-text-sm);
+}
+
+.links {
+  margin-left: auto;
+  display: flex;
+  gap: var(--db-space-4);
+  font-size: var(--db-text-sm);
+}
+
+.links a {
+  color: var(--db-muted);
+}
+
+.links a:hover {
+  color: var(--db-ink);
+}

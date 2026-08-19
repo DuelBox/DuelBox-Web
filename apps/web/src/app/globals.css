@@ -1,0 +1,101 @@
+@import '../styles/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font-family: var(--db-font-body);
+  font-size: var(--db-text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--db-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--db-brand);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--db-brand-deep);
+}
+
+/* A visible focus ring on every background the site uses. Removing it is never correct;
+   :focus-visible already limits it to keyboard use. */
+:focus-visible {
+  outline: 3px solid var(--db-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The canvas owns its gestures. Scoped here rather than globally so the rest of the
+   site keeps pull-to-refresh, pinch zoom and text selection. */
+canvas {
+  touch-action: none;
+  user-select: none;
+  display: block;
+}
+
+.db-skip {
+  position: absolute;
+  left: var(--db-space-4);
+  top: calc(var(--db-space-4) * -4);
+  z-index: 100;
+  padding: var(--db-space-3) var(--db-space-4);
+  background: var(--db-brand);
+  color: #fff;
+  border-radius: var(--db-radius-sm);
+  font-weight: 600;
+  transition: top var(--db-duration) var(--db-ease);
+}
+
+.db-skip:focus {
+  top: var(--db-space-4);
+  color: #fff;
+}
+
+.db-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-main {
+  flex: 1;
+}
+
+.db-wrap {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: var(--db-space-5);
+}
+
+@media (max-width: 40rem) {
+  .db-wrap {
+    padding-inline: var(--db-space-4);
+  }
+}

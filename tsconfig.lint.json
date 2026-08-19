@@ -1,5 +1,14 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "noEmit": true, "composite": false, "declaration": false },
-  "include": ["packages/**/*.ts", "apps/**/*.ts", "*.ts", "*.js"]
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "jsx": "preserve",
+    "allowJs": true,
+    "paths": {
+      "@/*": ["./apps/web/src/*"]
+    }
+  },
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "*.ts", "*.js"]
 }
