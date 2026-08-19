@@ -167,12 +167,24 @@ export function GameHost({
     function onKeyDown(event: KeyboardEvent): void {
       // Escape belongs to the shell's pause menu, so it is never swallowed here.
       if (event.code === 'Escape') return;
+      // A held modifier means the player is talking to the browser or the OS, not to
+      // the game: Cmd+W closes the tab, Ctrl+R reloads, Alt+Tab switches window. Two
+      // reasons to let those through untouched. Swallowing them traps the player in the
+      // page, and on macOS a letter pressed with Command held never delivers its keyup
+      // at all — so treating it as gameplay leaves that key stuck down for the rest of
+      // the match.
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (!isSimulating(phaseRef.current)) return;
       input.keyDown(event.code);
       if (SCROLL_KEYS.has(event.code)) event.preventDefault();
     }
     function onKeyUp(event: KeyboardEvent): void {
       input.keyUp(event.code);
+    }
+    function onModifierRelease(event: KeyboardEvent): void {
+      // Safety net for the keyup that never arrives. If a modifier is released and the
+      // player was mid-chord, anything still held is cleared rather than left down.
+      if (event.key === 'Meta' || event.key === 'Control' || event.key === 'Alt') input.clear();
     }
     function onContextMenu(event: Event): void {
       // A long press is a legitimate game input; on touch it otherwise raises the
@@ -192,6 +204,7 @@ export function GameHost({
     el.addEventListener('contextmenu', onContextMenu);
     globalThis.addEventListener('keydown', onKeyDown);
     globalThis.addEventListener('keyup', onKeyUp);
+    globalThis.addEventListener('keyup', onModifierRelease);
     globalThis.addEventListener('blur', onBlur);
 
     let lastP1 = -1;
@@ -259,6 +272,7 @@ export function GameHost({
       el.removeEventListener('contextmenu', onContextMenu);
       globalThis.removeEventListener('keydown', onKeyDown);
       globalThis.removeEventListener('keyup', onKeyUp);
+      globalThis.removeEventListener('keyup', onModifierRelease);
       globalThis.removeEventListener('blur', onBlur);
       game.destroy();
     };

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
+import { formatRound } from '@/lib/format';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
 import styles from './page.module.css';
@@ -110,9 +111,4 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
       ) : null}
     </div>
   );
-}
-
-function formatRound(seconds: number): string {
-  if (seconds < 60) return `${String(seconds)} seconds`;
-  return `${String(Math.round(seconds / 60))} minutes`;
 }
