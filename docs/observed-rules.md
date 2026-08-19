@@ -5,10 +5,24 @@ transcribed while playing it on the emulator. These are research notes recording
 **mechanics** we reimplement from scratch. Mechanics and rules are not protected;
 all of our copy, art, audio, and layout is original.
 
-Captured: **101 of 107 games**. Method: repeated emulator sweeps
-driving the app with `adb`, then parallel transcription of every captured screen. The app
-draws its text to canvas, so nothing was readable through the accessibility tree — every
-line below came from looking at the screen, and no APK was ever unpacked.
+**Coverage: 107 of 107 games — complete.**
+
+Method: five emulator sweeps driving the app with `adb`, then parallel transcription of
+every captured screen. The app draws its text to canvas, so nothing was readable through
+the accessibility tree — every line below came from looking at the screen, and no APK was
+ever unpacked or decompiled.
+
+## What the modes tell us
+
+- **vs Friend:** 100 games — every game, as expected
+- **vs Bot:** 99 games — so 8 have no CPU opponent
+- **Solo:** 10 games — a score-attack mode distinct from both
+- **Per-game options gear:** 15 games
+
+A game's manifest must declare which modes it supports; assuming all three would put dead
+buttons on the lobby for the games that lack them.
+
+## Rules
 
 | Game (ours) | In reference app | Modes | Options | Rules as stated |
 |---|---|---|---|---|
@@ -33,6 +47,8 @@ line below came from looking at the screen, and no APK was ever unpacked.
 | **Cornhole** | Cornhole | friend, bot | gear | Throw your bags into the hole and try to push the other players' bags off the board. |
 | **Crabby Volley** | Crabby Volley | friend, bot |  | Drop the ball into your opponent's field! Five points to win! |
 | **Crash It** | Crash It | friend, bot |  | Drive, jump and flip your car by tapping the buttons. Hit your opponent on the head with your car to score points and watch your own head so that nothing touches it! |
+| **Cup Pong** | Cup Pong | friend, bot |  | Swipe up to throw balls into cups!
+Land in the cup to remove it. First to clear all your cups wins! |
 | **Darts** | Darts | friend, bot | gear | Take turns throwing darts and be the first to score 301 points. The last dart must hit the exact score. |
 | **Dice Yatzy** | Yazy | friend, bot | gear | Take turns rolling the dice and try to score as many points as possible based on the combinations on the sheet. |
 | **Disco Battle** | Disco Battle | friend, bot |  | Go wild at the disco! Press at the right moment when the notes hit your platform! Each mistake will lower your score, the one with more points at the end of the song wins! |
@@ -52,12 +68,15 @@ line below came from looking at the screen, and no APK was ever unpacked.
 | **Hammer Hit** | Hammer Hit | friend, bot | gear | Hit the hammer when the needle is pointing up. The closer to the white line, the stronger the hit. The best score in 3 rounds wins! |
 | **Hand Slap** | Hand Slap | friend, bot |  | Slap to score. Dodge to avoid. Dodging without a slap gives the attacker a point. First to 5 points wins! |
 | **Happy Birds** | Happy Birds | friend, bot |  | Tap to fly. Avoid the spikes! Survive 3 times to win. |
+| **Happy Hippos** | Happy Hippos | friend, bot |  | Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins! |
 | **Hot Potato** | Hot Potato | friend, bot |  | Tap at the right moment to make the potato fly into your opponent's arms. |
 | **King of the Yard** | King Of The Yard | friend, bot |  | Take the crown and keep it on your head until the time is expired! Don't let your opponent touch you! |
+| **Knife Thrower** | Knife Thrower | friend, bot |  | Tap to throw knives. Land in the wood, avoiding other knives. First to 20 wins. |
 | **Light Fingers** | Light Fingers | friend, bot |  | Steal the diamond faster than your opponent! First to 5 wins! |
 | **Ludo Dash** | Ludo | friend, bot |  | Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space. |
 | **Lumberjack** | Lumber Jack | friend, bot |  | Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches! |
 | **Mancala Pits** | Mancala | friend, bot |  | Move your stones counterclockwise across the board and try to collect more stones than your opponent! |
+| **Match Rush** | Find Match | friend, bot |  | Compare the 2 sets of objects. Find the 1 matching object before your opponent to earn a point. First to 10 points wins! |
 | **Math Duel** | Math Quiz | friend, bot |  | The first player to solve the task gets a point. For any wrong answer the opponent gets a point. First to 10 wins. |
 | **Maze Paint** | Maze Paint | solo |  | Swipe to paint all squares to complete each level! |
 | **Memory Match** | Memory | friend, bot |  | Flip 2 cards and find pairs. |
@@ -75,6 +94,7 @@ You can only move nuts onto other nuts of the same colour. |
 | **Pizza Memory** | Pizza Memory | friend, bot |  | Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell! |
 | **Pool** | Pool | friend, bot |  | A classic! Throw the balls of your color into the holes and finally the black ball! |
 | **Pop It** | Pop It | friend, bot |  | Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game. |
+| **Pull the Rope** | Pull The Rope | friend, bot |  | Tap as fast as you can to pull hard! Pull the flag across the line to win! |
 | **Racing Cars** | Racing Cars | friend, bot |  | Compete against your opponent and finish first! Move your finger to drive the car. |
 | **Rat Race** | Rat Race | friend, bot |  | Press to run! Run away from the cats' paws and collect the pieces of cheese before your opponent! |
 | **Reversi** | Reversi | friend, bot |  | Fill the board with more pieces of your color than the opponents to win! |
@@ -107,6 +127,7 @@ You can only move nuts onto other nuts of the same colour. |
 | **Taxi Race** | Taxi Race | friend, bot |  | Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up. |
 | **Tennis** | Tennis | friend, bot |  | Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast. |
 | **The Last Sashimi** | The Last Sashimi | friend, bot |  | Eat all before your opponent! First to 15 wins, sashimi is worth 1 point, onigiri is worth 3 point and for every mistake you lose a point! |
+| **Tic Tac Toe** | Tic Tac Toe | friend, bot | gear | Red is cross, blue is circle! |
 | **Traffic Jam** | Traffic Jam | friend, bot |  | Crash your opponent and be careful not to fall into the water! Use the joystick to steer. |
 | **Ultimate Tic Tac Toe** | Ultimate Tic Tac Toe | friend, bot |  | Play on a big board with nine small tic-tac-toe games. Where you place your mark tells the other player where they must play next. Win small boards, then get three small boards in a row to win. |
 | **Unfair Fishing** | Unfair Fishing | friend, bot |  | Throw the bait and rewind the reel! First to catch 25 fishes wins! |
@@ -115,9 +136,3 @@ You can only move nuts onto other nuts of the same colour. |
 | **Wheelie** | Wheelie | friend, solo |  | Accelerate your bike to pull up a wheelie. Earn more points the longer you maintain a wheelie. |
 | **Wobble Stack** | Brainrot Stack | friend, bot, solo | gear | Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop. |
 | **Wrestle** | Wrestle | friend, bot |  | Jump and try not to fall on your head. Try to push your opponent to the ground instead. Watch the wind! |
-
-## Still to research
-
-Each has an open `Research:` issue. Nothing about their mechanics is assumed.
-
-Cup Pong, Happy Hippos, Knife Thrower, Match Rush, Pull the Rope, Tic Tac Toe

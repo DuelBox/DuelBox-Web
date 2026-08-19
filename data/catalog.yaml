@@ -3,8 +3,12 @@ games:
   name: Tic Tac Toe
   category: Board
   archetype: turn-board
-  confidence: genre
+  confidence: observed
   online: true
+  rule: Red is cross, blue is circle!
+  modes: friend,bot
+  hasOptions: true
+  refName: Tic Tac Toe
 - id: ultimate-ttt
   name: Ultimate Tic Tac Toe
   category: Board
@@ -220,7 +224,12 @@ games:
   name: Cup Pong
   category: Sports
   archetype: turn-aim
-  confidence: genre
+  confidence: observed
+  rule: 'Swipe up to throw balls into cups!
+
+    Land in the cup to remove it. First to clear all your cups wins!'
+  modes: friend,bot
+  refName: Cup Pong
 - id: basketball
   name: Basketball
   category: Sports
@@ -241,7 +250,10 @@ games:
   name: Knife Thrower
   category: Shooter
   archetype: turn-aim
-  confidence: research
+  confidence: observed
+  rule: Tap to throw knives. Land in the wood, avoiding other knives. First to 20 wins.
+  modes: friend,bot
+  refName: Knife Thrower
 - id: sword-throwing
   name: Sword Throwing
   category: Shooter
@@ -373,8 +385,11 @@ games:
   name: Pull the Rope
   category: Party
   archetype: rt-split
-  confidence: research
+  confidence: observed
   online: true
+  rule: Tap as fast as you can to pull hard! Pull the flag across the line to win!
+  modes: friend,bot
+  refName: Pull The Rope
 - id: hand-slap
   name: Hand Slap
   category: Reaction
@@ -464,7 +479,10 @@ games:
   name: Happy Hippos
   category: Party
   archetype: rt-split
-  confidence: research
+  confidence: observed
+  rule: Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins!
+  modes: friend,bot
+  refName: Happy Hippos
 - id: piranha-rush
   name: Piranha Rush
   category: Party
@@ -694,9 +712,12 @@ games:
   name: Match Rush
   category: Reaction
   archetype: rt-arena
-  confidence: research
+  confidence: observed
   rename: true
-  was: Match
+  was: Find Match
+  rule: Compare the 2 sets of objects. Find the 1 matching object before your opponent to earn a point. First to 10 points wins!
+  modes: friend,bot
+  refName: Find Match
 - id: racing-cars
   name: Racing Cars
   category: Racing
