@@ -1,0 +1,9 @@
+dist
+.next
+coverage
+pnpm-lock.yaml
+BACKLOG.md
+docs/design-canvas
+data
+docs
+*.md
