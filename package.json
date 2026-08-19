@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @duelbox/web dev",
-    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost",
+    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost && pnpm check:secrets",
     "typecheck": "tsc --build && tsc --noEmit -p tsconfig.lint.json && pnpm --filter @duelbox/web typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -22,7 +22,8 @@
     "catalogue": "python3 scripts/generate_catalog.py",
     "e2e": "playwright test",
     "validate:manifests": "node scripts/validate-manifests.mjs",
-    "check:zero-cost": "node scripts/check-zero-cost.mjs"
+    "check:zero-cost": "node scripts/check-zero-cost.mjs",
+    "check:secrets": "node scripts/check-bundle-secrets.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

@@ -53,4 +53,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # A high-severity advisory in a dependency is a release blocker, not a warning.
+      # Duplicated in security.yml, which also runs nightly — an advisory published
+      # against a dependency we already have is invisible to a PR-only schedule.
       - run: pnpm audit --audit-level=high
