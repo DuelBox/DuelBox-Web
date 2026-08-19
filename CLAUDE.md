@@ -23,7 +23,15 @@ the way it is.
 6. Bots never get information, speed, or physics a human cannot get.
 7. Colour is never the only signal. Every player-owned element also differs by
    shape, pattern, or label.
-8. Nothing merges without tests, and nothing merges over the size budget.
+8. **No simulation value is ever expressed in pixels.** Games simulate in fixed
+   logical units; only the render layer knows the device. A phone and a laptop
+   must step the identical match, or cross-device play is impossible.
+9. **Neither player may ever see more of the play area than the other.** In
+   remote play both devices letterbox to a negotiated shared viewport. Surplus
+   screen space holds chrome, never extra field of view.
+10. **No game code branches on device type.** One build serves phone, tablet,
+    laptop, and desktop; differences are handled by presentation and layout.
+11. Nothing merges without tests, and nothing merges over the size budget.
 
 ## The two ideas the whole product rests on
 
@@ -35,6 +43,28 @@ player so each person reads it upright. Both live in the engine, never in a game
 **One shell, many games.** Games supply a simulation and a win condition. Countdown,
 HUD, pause, result, rematch, seat rotation, difficulty, and tournament reporting all
 come from the SDK. A bespoke version of any of those inside a game package is a bug.
+
+## Two presentations, one game
+
+Every game renders two ways, and the SDK decides which — the game never does:
+
+- **Shared-screen** — two seats on one device. The play area splits or rotates so
+  both people can read it, exactly as the reference app does.
+- **Single-seat** — one player alone on their own device, playing someone else
+  remotely. The local seat owns the whole viewport, always upright, with
+  full-device controls.
+
+Rules, scoring, and simulation are byte-identical across both. Only placement,
+rotation, and control mapping change.
+
+## Fairness across devices
+
+A thumb, a mouse, and a trackpad are not equivalent instruments, and a laptop
+screen is not a phone screen. Three rules keep cross-device matches honest:
+the shared logical viewport (rule 9), a common precision envelope so no input
+family can aim finer than another, and reaction outcomes resolved on source
+timestamps rather than packet arrival. A game that cannot be made fair
+cross-device declares itself same-class-only rather than shipping unfair.
 
 ## Layout
 
@@ -54,5 +84,7 @@ docs/               research, design docs, ADRs
 ## Definition of done
 
 Tests pass · types clean · lint clean · under size budget · both seats verified ·
-works on iOS Safari and Chrome Android · keyboard accessible · reduced-motion
-respected · playable in greyscale · assets licensed
+both presentations verified · correct from 320px to 4K in both orientations ·
+cross-device match verified against the harness · works on iOS Safari and Chrome
+Android · keyboard accessible · reduced-motion respected · playable in greyscale ·
+assets licensed

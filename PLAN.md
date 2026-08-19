@@ -59,6 +59,27 @@ pause, result, rematch, seat rotation, difficulty, and tournament reporting.
 
 ---
 
+## How people play: three configurations
+
+| Configuration | Devices | Presentation | What makes it hard |
+|---|---|---|---|
+| Shared screen | One phone, tablet, or laptop | Shared-screen, two seats | Touch ownership per seat; 180° rotation; hands colliding |
+| Cross-device | Two devices, any mix — phone vs laptop, tablet vs phone | Single-seat on each | Input parity; shared logical viewport; lockstep; clock sync |
+| Solo | One device | Single-seat | Score attack, personal bests, no opponent |
+
+Cross-device is the constraint that reaches furthest back into the engine. It is
+why simulation runs in fixed logical units rather than pixels, why both clients
+letterbox to a negotiated shared viewport rather than filling their screens, and
+why the RNG is seeded and the timestep fixed. None of that can be retrofitted.
+
+## Every screen, deliberately
+
+Phone, large phone, tablet portrait, tablet landscape, laptop, desktop, ultrawide.
+Each is a designed layout, not one layout stretched. Games render from a fixed
+logical resolution scaled to fit with letterboxing, clear of notches and home
+indicators, unaffected by mobile browser chrome appearing mid-match, and preserving
+match state exactly across rotation, resize, and fold.
+
 ## The five hard things, all confirmed by observation
 
 1. **Two players, one screen, no OS player separation.** A touch belongs to the
