@@ -27,6 +27,7 @@ const LOADERS: Record<string, Loader> = {
   'dots-and-boxes': () => import('@duelbox/game-dots-and-boxes').then((m) => m.default),
   reversi: () => import('@duelbox/game-reversi').then((m) => m.default),
   darts: () => import('@duelbox/game-darts').then((m) => m.default),
+  mancala: () => import('@duelbox/game-mancala').then((m) => m.default),
 };
 
 /**

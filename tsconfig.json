@@ -36,6 +36,9 @@
     },
     {
       "path": "./packages/games/darts"
+    },
+    {
+      "path": "./packages/games/mancala"
     }
   ]
 }

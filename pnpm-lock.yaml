@@ -64,6 +64,9 @@ importers:
       '@duelbox/game-four-in-a-row':
         specifier: workspace:*
         version: link:../../packages/games/four-in-a-row
+      '@duelbox/game-mancala':
+        specifier: workspace:*
+        version: link:../../packages/games/mancala
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
@@ -141,6 +144,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/four-in-a-row:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/mancala:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
