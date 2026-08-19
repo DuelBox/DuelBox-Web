@@ -48,18 +48,19 @@ const MATRICES = {
 
 function simulate(rgb: Rgb, kind: keyof typeof MATRICES): Rgb {
   const [r, g, b] = [linear(rgb[0]), linear(rgb[1]), linear(rgb[2])];
-  const m = MATRICES[kind];
-  const out = [
-    (m[0] ?? 0) * r + (m[1] ?? 0) * g + (m[2] ?? 0) * b,
-    (m[3] ?? 0) * r + (m[4] ?? 0) * g + (m[5] ?? 0) * b,
-    (m[6] ?? 0) * r + (m[7] ?? 0) * g + (m[8] ?? 0) * b,
-  ];
+  // Destructured rather than indexed: `as const` makes these fixed-length tuples, so
+  // every element is known to exist and a defensive `?? 0` would be dead code.
+  const [m0, m1, m2, m3, m4, m5, m6, m7, m8] = MATRICES[kind];
   const encode = (c: number): number => {
     const clamped = Math.min(1, Math.max(0, c));
     const s = clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055;
     return Math.round(s * 255);
   };
-  return [encode(out[0] ?? 0), encode(out[1] ?? 0), encode(out[2] ?? 0)];
+  return [
+    encode(m0 * r + m1 * g + m2 * b),
+    encode(m3 * r + m4 * g + m5 * b),
+    encode(m6 * r + m7 * g + m8 * b),
+  ];
 }
 
 const p1 = toRgb(SEAT_PALETTE.p1.base);
@@ -110,7 +111,7 @@ describe('the seat colours as a colour-blind player sees them', () => {
       expect(value, `${kind} contrast`).toBeGreaterThan(1);
     }
     // The gap this palette has not closed. Documented as a fact, with the target named.
-    expect(measured.deutan ?? 0).toBeLessThan(TARGET);
+    expect(measured['deutan']).toBeLessThan(TARGET);
   });
 
   it('is why colour is never the only signal', () => {
