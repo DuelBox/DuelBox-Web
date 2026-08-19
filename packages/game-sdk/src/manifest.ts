@@ -88,9 +88,7 @@ export function parseGameManifest(input: unknown): GameManifest {
   const result = gameManifestSchema.safeParse(input);
   if (!result.success) {
     const id =
-      typeof input === 'object' && input !== null && 'id' in input
-        ? String(input.id)
-        : '<unknown>';
+      typeof input === 'object' && input !== null && 'id' in input ? String(input.id) : '<unknown>';
     const detail = result.error.issues
       .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
       .join('; ');
