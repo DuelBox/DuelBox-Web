@@ -85,6 +85,9 @@ class RecordingRenderer implements Renderer {
     this.depth += 1;
     if (this.depth > this.maxDepth) this.maxDepth = this.depth;
   }
+  pushRotation(): void {
+    this.pushSeatRotation();
+  }
   popSeatRotation(): void {
     this.depth -= 1;
   }

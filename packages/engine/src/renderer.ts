@@ -64,6 +64,14 @@ export interface Renderer {
    * {@link Renderer.popSeatRotation}, including when `rotated` is false.
    */
   pushSeatRotation(rotated: boolean): void;
+  /**
+   * Turn the world by an arbitrary angle about the centre of the logical area.
+   *
+   * The continuous form of {@link Renderer.pushSeatRotation}, for the part-way
+   * orientations a seat flip passes through. Pair with
+   * {@link Renderer.popSeatRotation} exactly as with the boolean form.
+   */
+  pushRotation(radians: number): void;
   popSeatRotation(): void;
 }
 
@@ -331,14 +339,21 @@ export class Canvas2DRenderer implements Renderer {
   }
 
   pushSeatRotation(rotated: boolean): void {
+    this.pushRotation(rotated ? HALF_TURN : 0);
+  }
+
+  pushRotation(radians: number): void {
+    if (!Number.isFinite(radians)) {
+      throw new RangeError(`rotation must be a finite number of radians, received ${String(radians)}`);
+    }
     const ctx = this.#context;
-    // Saved whether or not this seat is rotated, so pushes and pops balance for both
+    // Saved whether or not there is any rotation, so pushes and pops balance for both
     // seats and the caller never has to branch on which one it is drawing.
     ctx.save();
     this.#rotationDepth += 1;
-    if (!rotated) return;
+    if (radians === 0) return;
     ctx.translate(this.#centreX, this.#centreY);
-    ctx.rotate(HALF_TURN);
+    ctx.rotate(radians);
     ctx.translate(-this.#centreX, -this.#centreY);
   }
 

@@ -192,6 +192,10 @@ class RecordingRenderer implements Renderer {
     this.#record('pushSeatRotation', rotated);
   }
 
+  pushRotation(radians: number): void {
+    this.pushSeatRotation(radians !== 0);
+  }
+
   popSeatRotation(): void {
     this.#record('popSeatRotation');
   }
