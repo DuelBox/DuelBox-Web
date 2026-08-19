@@ -7,74 +7,131 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
   <style>
     body { margin: 0; }
-    a { color: #c9852f; text-decoration: none; } a:hover { color: #e0a04d; }
+    a { color: #4b3beb; text-decoration: none; } a:hover { color: #3a2dd0; }
   </style>
 </helmet>
-<div style="width: 1200px; height: 900px; background: #14100d; color: #f0e9de; font-family: 'Instrument Sans', system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column;">
+<div style="width: 1240px; height: 980px; background: #ffffff; color: #14161f; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column;">
 
-  <div style="display: flex; align-items: center; gap: 16px; padding: 18px 40px; border-bottom: 1px solid #2e2418;">
-    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 21px;">DuelBox</div>
-    <div style="flex: 1; max-width: 420px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #1d1710; border: 1px solid #2e2418; border-radius: 3px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a7a66" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <div style="font-size: 13.5px; color: #8a7a66;">Search 107 games</div>
+  <div style="display: flex; align-items: center; gap: 30px; padding: 16px 40px; border-bottom: 1px solid #eceef6;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="11" fill="#4b3beb"/>
+        <circle cx="14.5" cy="20" r="6.5" fill="#ff5a4e"/>
+        <circle cx="25.5" cy="20" r="6.5" fill="#21b0e8"/>
+      </svg>
+      <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 22px; font-weight: 600; letter-spacing: -0.01em;">DuelBox</div>
     </div>
-    <div style="margin-left: auto; display: flex; gap: 3px; padding: 3px; background: #1d1710; border: 1px solid #2e2418; border-radius: 3px;">
-      <div style="padding: 7px 13px; font-size: 12.5px; border-radius: 2px; background: #33241c; color: #f0e9de;">Two of us</div>
-      <div style="padding: 7px 13px; font-size: 12.5px; color: #8a7a66;">Two devices</div>
-      <div style="padding: 7px 13px; font-size: 12.5px; color: #8a7a66;">Just me</div>
+    <div style="display: flex; gap: 24px; font-size: 14.5px; font-weight: 500; color: #4a4f63;">
+      <div style="color: #14161f;">Games</div><div>Categories</div><div>Tournament</div><div>How to play</div>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 9px 15px; background: #f7f8fc; border-radius: 10px; width: 210px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <div style="font-size: 13.5px; color: #9aa0b4;">Search 107 games</div>
+      </div>
+      <div style="padding: 10px 20px; background: #4b3beb; color: #fff; border-radius: 10px; font-size: 14.5px; font-weight: 600;">Play now</div>
     </div>
   </div>
 
-  <div style="display: flex; gap: 8px; padding: 16px 40px 12px; align-items: center;">
-    <div style="padding: 7px 14px; border-radius: 99px; background: #c9852f; color: #14100d; font-size: 12.5px; font-weight: 500;">All 107</div>
-    <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
-      <div style="padding: 7px 14px; border-radius: 99px; border: 1px solid #2e2418; font-size: 12.5px; color: #a89a86;">{{c.name}} <span style="color: #a08f79; font-family: 'JetBrains Mono', monospace; font-size: 11px;">{{c.n}}</span></div>
+  <div style="display: flex; align-items: center; gap: 16px; padding: 14px 40px 0;">
+    <div style="display: flex; gap: 4px; padding: 4px; background: #f7f8fc; border-radius: 99px;">
+      <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+        <div style="padding: 8px 18px; border-radius: 99px; background: {{m.bg}}; color: {{m.fg}}; font-size: 14px; font-weight: {{m.weight}};">{{m.label}}</div>
+      </sc-for>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 11px;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="40" fill="#ff5a4e"/>
+          <circle cx="36" cy="46" r="11" fill="#ffffff"/>
+          <circle cx="64" cy="46" r="11" fill="#ffffff"/>
+          <circle cx="36" cy="46" r="5.5" fill="#14161f"/>
+          <circle cx="64" cy="46" r="5.5" fill="#14161f"/>
+          <path d="M38 66q12 9 24 0" stroke="#14161f" stroke-width="4" stroke-linecap="round" fill="none"/>
+        </svg>
+        <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="40" fill="#21b0e8"/>
+          <circle cx="36" cy="46" r="11" fill="#ffffff"/>
+          <circle cx="64" cy="46" r="11" fill="#ffffff"/>
+          <circle cx="39" cy="46" r="5.5" fill="#14161f"/>
+          <circle cx="67" cy="46" r="5.5" fill="#14161f"/>
+          <path d="M38 66q12 9 24 0" stroke="#14161f" stroke-width="4" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div style="font-size: 13.5px; color: #6e7488;">Both of you on one phone, passing it across each round.</div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 40px 0;">
+    <sc-for list="{{cats}}" as="c" hint-placeholder-count="9">
+      <div style="display: flex; align-items: center; gap: 7px; padding: 8px 14px; background: {{c.bg}}; border-radius: 99px;">
+        <div style="font-size: 13px; font-weight: 600; color: {{c.fg}};">{{c.name}}</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: {{c.cf}};">{{c.count}}</div>
+      </div>
     </sc-for>
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a7a66;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a7a66" stroke-width="1.8"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-      UNDER 60s
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 9px;">
+      <div style="font-size: 12.5px; color: #6e7488;">Sort</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 99px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6e7488" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <div style="font-size: 13px; font-weight: 600; color: #14161f;">Quickest first</div>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6e7488" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
     </div>
   </div>
 
-  <div style="padding: 4px 40px 10px; display: flex; align-items: baseline; gap: 10px;">
-    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 19px;">Back to what you play</div>
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #a08f79;">RECENT</div>
-  </div>
-  <div style="display: flex; gap: 10px; padding: 0 40px 18px;">
-    <sc-for list="{{recent}}" as="g" hint-placeholder-count="5">
-      <div style="width: 148px; display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 96px; border-radius: 5px; background: {{g.tint}}; position: relative; overflow: hidden;">
-          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: {{g.side}};"></div>
+  <div style="display: flex; align-items: stretch; gap: 16px; padding: 16px 40px 0;">
+    <div style="width: 116px; flex: none; display: flex; flex-direction: column; justify-content: center; gap: 3px;">
+      <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 17px; font-weight: 600;">Jump back in</div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #9aa0b4;">LAST 7 DAYS</div>
+    </div>
+    <sc-for list="{{recent}}" as="r" hint-placeholder-count="4">
+      <div style="flex: 1; display: flex; align-items: center; gap: 11px; padding: 8px 12px 8px 8px; background: #ffffff; border: 2px solid #eceef6; border-radius: 14px;">
+        <div style="width: 38px; height: 38px; flex: none; border-radius: 11px; background: {{r.tint}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="24" height="24" viewBox="0 0 60 60" fill="none">
+            <rect x="{{r.bx}}" y="{{r.by}}" width="{{r.bw}}" height="{{r.bh}}" rx="{{r.br}}" fill="{{r.bf}}"/>
+            <circle cx="{{r.cx}}" cy="{{r.cy}}" r="{{r.cr}}" fill="{{r.cf}}"/>
+            <path d="{{r.d}}" stroke="{{r.sc}}" stroke-width="{{r.sw}}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
         </div>
-        <div style="font-size: 13.5px;">{{g.name}}</div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-size: 13px; font-weight: 600;">{{r.name}}</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.05em; color: #6e7488;">{{r.state}}</div>
+        </div>
+        <div style="margin-left: auto; width: 26px; height: 26px; flex: none; border-radius: 50%; background: #f0eeff; display: flex; align-items: center; justify-content: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#4b3beb" stroke="#4b3beb" stroke-width="2.2" stroke-linejoin="round"><path d="M9 6l9 6-9 6z"/></svg>
+        </div>
       </div>
     </sc-for>
   </div>
 
-  <div style="height: 1px; margin: 0 40px; background: #2e2418;"></div>
-
-  <div style="padding: 18px 40px 8px; display: flex; align-items: baseline; gap: 10px;">
-    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 19px;">Sports</div>
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #a08f79;">19 GAMES</div>
+  <div style="display: flex; align-items: baseline; gap: 10px; padding: 14px 40px 0;">
+    <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 21px; font-weight: 600;">All games</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #4b3beb;">107</div>
+    <div style="font-size: 13px; color: #6e7488;">shortest rounds first</div>
+    <div style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #9aa0b4;">SHOWING 1&#8211;18</div>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; padding: 6px 40px 0;">
-    <sc-for list="{{games}}" as="g" hint-placeholder-count="10">
-      <div style="display: flex; flex-direction: column; gap: 9px;">
-        <div style="height: 128px; border-radius: 6px; background: {{g.tint}}; position: relative; overflow: hidden; box-shadow: 0 5px 16px rgba(0,0,0,0.35);">
-          <div style="position: absolute; inset: 0; background: linear-gradient(105deg, transparent 48%, #14100d22 48%, #14100d22 52%, transparent 52%);"></div>
-          <div style="position: absolute; left: 11px; top: 11px; display: flex; gap: 5px;">
-            <div style="width: 7px; height: 7px; border-radius: 50%; background: #d96a44;"></div>
-            <div style="width: 7px; height: 7px; border-radius: 50%; background: #3aa88c;"></div>
+  <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px 32px; padding: 10px 40px 0;">
+    <sc-for list="{{games}}" as="g" hint-placeholder-count="18">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="aspect-ratio: 1; border-radius: 18px; background: {{g.tint}}; position: relative; display: flex; align-items: center; justify-content: center;">
+          <svg width="58" height="58" viewBox="0 0 60 60" fill="none">
+            <rect x="{{g.bx}}" y="{{g.by}}" width="{{g.bw}}" height="{{g.bh}}" rx="{{g.br}}" fill="{{g.bf}}"/>
+            <circle cx="{{g.cx}}" cy="{{g.cy}}" r="{{g.cr}}" fill="{{g.cf}}"/>
+            <path d="{{g.d}}" stroke="{{g.sc}}" stroke-width="{{g.sw}}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <div style="position: absolute; left: 10px; top: 10px; display: flex; gap: 4px;">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #ff5a4e;"></div>
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #21b0e8;"></div>
           </div>
-          <div style="position: absolute; right: 11px; top: 11px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #14100daa;">{{g.len}}</div>
+          <div style="position: absolute; right: 8px; top: 8px; padding: 3px 8px; background: #ffffff; border-radius: 99px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #6e7488;">{{g.len}}</div>
         </div>
         <div style="display: flex; flex-direction: column; gap: 3px;">
-          <div style="font-size: 14px; font-weight: 500;">{{g.name}}</div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #a08f79; letter-spacing: 0.05em;">{{g.modes}}</div>
+          <div style="font-size: 13.5px; font-weight: 600;">{{g.name}}</div>
+          <div style="font-size: 11.5px; color: #9aa0b4;">{{g.meta}}</div>
         </div>
       </div>
     </sc-for>
@@ -84,31 +141,94 @@
 <script data-dc-script data-props='{}'>
 class Component extends DCLogic {
   renderVals() {
+    const plain = { bg: '#f7f8fc', fg: '#14161f', cf: '#6e7488' };
     return {
+      modes: [
+        { label: 'Two of us', bg: '#4b3beb', fg: '#ffffff', weight: '600' },
+        { label: 'Two devices', bg: 'transparent', fg: '#6e7488', weight: '500' },
+        { label: 'Just me', bg: 'transparent', fg: '#6e7488', weight: '500' },
+      ],
       cats: [
-        { name: 'Party', n: '20' }, { name: 'Sports', n: '19' }, { name: 'Board', n: '14' },
-        { name: 'Shooter', n: '8' }, { name: 'Reaction', n: '7' }, { name: 'Arena', n: '7' },
-        { name: 'Racing', n: '7' }, { name: 'Solo', n: '7' }
+        { name: 'All', count: '107', bg: '#4b3beb', fg: '#ffffff', cf: '#d7d2fb' },
+        { name: 'Party', count: '20', ...plain },
+        { name: 'Sports', count: '19', ...plain },
+        { name: 'Board', count: '14', ...plain },
+        { name: 'Shooter', count: '8', ...plain },
+        { name: 'Reaction', count: '7', ...plain },
+        { name: 'Arena', count: '7', ...plain },
+        { name: 'Racing', count: '7', ...plain },
+        { name: 'Solo', count: '7', ...plain },
       ],
       recent: [
-        { name: 'Mini Golf', tint: '#e8e0d2', side: '#d96a44' },
-        { name: 'Air Hockey', tint: '#dcd3c2', side: '#3aa88c' },
-        { name: 'Drop Four', tint: '#e8e0d2', side: '#d96a44' },
-        { name: 'Spin War', tint: '#dcd3c2', side: '#3aa88c' },
-        { name: 'Quick Draw', tint: '#e8e0d2', side: '#c9852f' }
+        { name: 'Air Hockey', state: 'ROUND 3 · 2–1', tint: '#e8f6ff',
+          bx: '10', by: '8', bw: '40', bh: '44', br: '12', bf: '#4b3beb',
+          cx: '30', cy: '30', cr: '8', cf: '#ffffff', d: 'M18 12h24M18 48h24', sc: '#ffffff', sw: '3' },
+        { name: 'Chess', state: 'MOVE 18 · YOUR TURN', tint: '#f0eeff',
+          bx: '18', by: '40', bw: '24', bh: '10', br: '5', bf: '#14161f',
+          cx: '30', cy: '19', cr: '9', cf: '#14161f', d: 'M30 27v13', sc: '#14161f', sw: '8' },
+        { name: 'Sumo Push', state: 'BEST OF 5 · 2–2', tint: '#ffeceb',
+          bx: '24', by: '16', bw: '28', bh: '28', br: '14', bf: '#21b0e8',
+          cx: '22', cy: '30', cr: '14', cf: '#e0332a', d: 'M10 50h40', sc: '#ffc53d', sw: '3' },
+        { name: 'Racing Cars', state: 'LAP 2 OF 3', tint: '#e9f9ef',
+          bx: '10', by: '26', bw: '40', bh: '14', br: '7', bf: '#21b0e8',
+          cx: '30', cy: '22', cr: '8', cf: '#ffffff', d: 'M20 44h0M40 44h0', sc: '#14161f', sw: '8' },
       ],
       games: [
-        { name: 'Air Hockey', tint: '#e8e0d2', len: '90s', modes: 'BOTH · BOT' },
-        { name: 'Ping Pong', tint: '#dcd3c2', len: '75s', modes: 'BOTH · BOT' },
-        { name: 'Tennis', tint: '#e3d9c8', len: '90s', modes: 'BOTH · BOT' },
-        { name: 'Bowling', tint: '#dcd3c2', len: '2m', modes: 'BOTH · BOT' },
-        { name: 'Crabby Volley', tint: '#e8e0d2', len: '60s', modes: 'BOTH · BOT' },
-        { name: 'Beach Ball', tint: '#e3d9c8', len: '45s', modes: 'BOTH · BOT' },
-        { name: 'Sling Puck', tint: '#dcd3c2', len: '90s', modes: 'BOTH · BOT' },
-        { name: 'Soccer Pool', tint: '#e8e0d2', len: '2m', modes: 'BOTH · BOT' },
-        { name: 'Cup Pong', tint: '#e3d9c8', len: '90s', modes: 'BOTH · BOT' },
-        { name: 'Mini Soccer', tint: '#dcd3c2', len: '60s', modes: 'BOTH · BOT' }
-      ]
+        { name: 'Quick Draw', meta: 'Reaction · One phone', len: '15s', tint: '#e8f6ff',
+          bx: '0', by: '0', bw: '0', bh: '0', br: '0', bf: '#ffffff',
+          cx: '30', cy: '30', cr: '19', cf: '#4b3beb', d: 'M33 15l-9 16h9l-5 15', sc: '#ffffff', sw: '3.5' },
+        { name: 'Tug of War', meta: 'Party · One phone', len: '20s', tint: '#e9f9ef',
+          bx: '8', by: '27', bw: '44', bh: '6', br: '3', bf: '#ff5a4e',
+          cx: '30', cy: '30', cr: '8', cf: '#4b3beb', d: 'M12 22v16M48 22v16', sc: '#21b0e8', sw: '4' },
+        { name: 'Sumo Push', meta: 'Arena · One phone', len: '30s', tint: '#f0eeff',
+          bx: '24', by: '16', bw: '28', bh: '28', br: '14', bf: '#21b0e8',
+          cx: '22', cy: '30', cr: '14', cf: '#e0332a', d: 'M10 50h40', sc: '#ffc53d', sw: '3' },
+        { name: 'Spin War', meta: 'Arena · Bot ready', len: '40s', tint: '#ffeceb',
+          bx: '0', by: '0', bw: '0', bh: '0', br: '0', bf: '#ffffff',
+          cx: '30', cy: '30', cr: '19', cf: '#c44bd6', d: 'M30 30V16M30 30l12 8', sc: '#ffffff', sw: '4' },
+        { name: 'Ping Pong', meta: 'Sports · Two devices', len: '45s', tint: '#fff1cf',
+          bx: '29', by: '34', bw: '8', bh: '18', br: '4', bf: '#e0332a',
+          cx: '26', cy: '24', cr: '14', cf: '#ff5a4e', d: 'M46 44h0', sc: '#4b3beb', sw: '9' },
+        { name: 'Darts', meta: 'Party · Bot ready', len: '50s', tint: '#fdeeff',
+          bx: '12', by: '12', bw: '36', bh: '36', br: '18', bf: '#ff5a4e',
+          cx: '30', cy: '30', cr: '10', cf: '#ffffff', d: 'M30 30h0', sc: '#ff5a4e', sw: '8' },
+        { name: 'Drop Four', meta: 'Board · Bot ready', len: '60s', tint: '#fff1cf',
+          bx: '10', by: '10', bw: '40', bh: '40', br: '10', bf: '#4b3beb',
+          cx: '22', cy: '38', cr: '6', cf: '#ffc53d', d: 'M22 22h0M38 22h0M38 38h0', sc: '#ffffff', sw: '10' },
+        { name: 'Snake Clash', meta: 'Arena · Two devices', len: '70s', tint: '#ffeceb',
+          bx: '0', by: '0', bw: '0', bh: '0', br: '0', bf: '#ffffff',
+          cx: '38', cy: '44', cr: '5', cf: '#34c77b', d: 'M16 16h10a7 7 0 0 1 0 14h-8a7 7 0 0 0 0 14h14', sc: '#34c77b', sw: '6' },
+        { name: 'Bowling', meta: 'Sports · One phone', len: '80s', tint: '#fdeeff',
+          bx: '22', by: '10', bw: '14', bh: '32', br: '7', bf: '#4b3beb',
+          cx: '42', cy: '42', cr: '9', cf: '#21b0e8', d: 'M26 18h6M39 39h0M45 41h0', sc: '#ffffff', sw: '3' },
+        { name: 'Air Hockey', meta: 'Sports · One phone', len: '90s', tint: '#f0eeff',
+          bx: '10', by: '8', bw: '40', bh: '44', br: '12', bf: '#4b3beb',
+          cx: '30', cy: '30', cr: '8', cf: '#ffffff', d: 'M18 12h24M18 48h24', sc: '#ffffff', sw: '3' },
+        { name: 'Racing Cars', meta: 'Racing · Two devices', len: '90s', tint: '#e8f6ff',
+          bx: '10', by: '26', bw: '40', bh: '14', br: '7', bf: '#21b0e8',
+          cx: '30', cy: '22', cr: '8', cf: '#ffffff', d: 'M20 44h0M40 44h0', sc: '#14161f', sw: '8' },
+        { name: 'Mini Golf', meta: 'Sports · Two devices', len: '2m', tint: '#e9f9ef',
+          bx: '8', by: '38', bw: '44', bh: '12', br: '6', bf: '#34c77b',
+          cx: '20', cy: '42', cr: '6', cf: '#ffffff', d: 'M34 42V14l12 5-12 5', sc: '#ff5a4e', sw: '3.5' },
+        { name: 'Tennis', meta: 'Sports · Bot ready', len: '3m', tint: '#fdeeff',
+          bx: '0', by: '0', bw: '0', bh: '0', br: '0', bf: '#ffffff',
+          cx: '30', cy: '30', cr: '18', cf: '#21b0e8', d: 'M17 17q13 13 0 26M43 17q-13 13 0 26', sc: '#ffffff', sw: '3' },
+        { name: 'Reversi', meta: 'Board · Two devices', len: '3m', tint: '#f0eeff',
+          bx: '10', by: '18', bw: '24', bh: '24', br: '12', bf: '#14161f',
+          cx: '38', cy: '30', cr: '12', cf: '#ffffff', d: 'M26 30a12 12 0 1 0 24 0a12 12 0 1 0 -24 0', sc: '#14161f', sw: '2.5' },
+        { name: 'Checkers', meta: 'Board · Bot ready', len: '4m', tint: '#e8f6ff',
+          bx: '12', by: '18', bw: '26', bh: '26', br: '13', bf: '#ff5a4e',
+          cx: '38', cy: '32', cr: '13', cf: '#14161f', d: 'M38 32h0', sc: '#ffffff', sw: '6' },
+        { name: 'Mancala Pits', meta: 'Board · Bot ready', len: '4m', tint: '#e9f9ef',
+          bx: '6', by: '22', bw: '48', bh: '16', br: '8', bf: '#ffc53d',
+          cx: '30', cy: '30', cr: '0', cf: '#ffffff', d: 'M16 30h0M30 30h0M44 30h0', sc: '#ffffff', sw: '9' },
+        { name: 'Chess', meta: 'Board · Bot ready', len: '5m', tint: '#ffeceb',
+          bx: '18', by: '40', bw: '24', bh: '10', br: '5', bf: '#14161f',
+          cx: '30', cy: '19', cr: '9', cf: '#14161f', d: 'M30 27v13', sc: '#14161f', sw: '8' },
+        { name: 'Sea Battle', meta: 'Board · Two devices', len: '6m', tint: '#fff1cf',
+          bx: '12', by: '34', bw: '36', bh: '12', br: '6', bf: '#4b3beb',
+          cx: '30', cy: '30', cr: '0', cf: '#ffffff', d: 'M30 34V12l13 8-13 6', sc: '#ff5a4e', sw: '3.5' },
+      ],
     };
   }
 }

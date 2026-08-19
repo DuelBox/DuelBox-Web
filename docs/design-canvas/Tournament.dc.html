@@ -7,86 +7,239 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
   <style>
     body { margin: 0; }
-    a { color: #c9852f; text-decoration: none; } a:hover { color: #e0a04d; }
+    a { color: #4b3beb; text-decoration: none; } a:hover { color: #3a2dd0; }
   </style>
 </helmet>
-<div style="width: 1080px; height: 760px; background: #14100d; color: #f0e9de; font-family: 'Instrument Sans', system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column;">
+<div style="width: 1160px; height: 860px; background: #ffffff; color: #14161f; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; gap: 24px; padding: 32px 44px 26px; box-sizing: border-box;">
 
-  <div style="padding: 26px 44px 6px; display: flex; align-items: baseline; gap: 14px;">
-    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 34px;">The Seven</div>
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: #8a7a66;">GAME 5 OF 7</div>
-    <div style="margin-left: auto; font-size: 13.5px; color: #a89a86;">Best of seven, dealt at random. Win four and it is over.</div>
-  </div>
-
-  <div style="display: flex; align-items: center; justify-content: center; gap: 30px; padding: 16px 44px 6px;">
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-      <div style="font-size: 15px;">Ravi</div>
-      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 58px; line-height: 1; color: #d96a44;">3</div>
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: #4b3beb;">TOURNAMENT · GAME 5 OF 7</div>
+      <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em;">The Seven</div>
+      <div style="font-size: 14.5px; color: #6e7488; line-height: 1.5;">Seven games drawn at random from all 107. Take four of them and the run is yours.</div>
     </div>
-    <div style="width: 1px; height: 66px; background: #c9852f66;"></div>
-    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-      <div style="font-size: 15px;">Meera</div>
-      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 58px; line-height: 1; color: #3aa88c;">1</div>
+    <div style="display: flex; align-items: center; gap: 9px; padding: 11px 18px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 10px; font-size: 14px; font-weight: 600; color: #14161f;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6e7488" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 20H5V4h5"></path><path d="M15 16l4-4-4-4"></path><path d="M19 12H10"></path></svg>
+      <div>Leave tournament</div>
     </div>
   </div>
 
-  <div style="display: flex; gap: 11px; padding: 20px 44px 8px;">
-    <sc-for list="{{hand}}" as="c" hint-placeholder-count="7">
-      <div style="flex: 1; height: 218px; border-radius: 8px; background: {{c.bg}}; border: 1px solid {{c.border}}; padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: {{c.meta}};">{{c.n}}</div>
-        <div style="font-size: 14.5px; font-weight: 500; color: {{c.fg}}; line-height: 1.25;">{{c.name}}</div>
-        <div style="margin-top: auto; display: flex; align-items: center; gap: 7px;">
-          <div style="width: 9px; height: 9px; border-radius: 50%; background: {{c.dot}};"></div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{c.meta}};">{{c.result}}</div>
+  <div style="height: 196px; flex: none; background: #f7f8fc; border: 2px solid #eceef6; border-radius: 26px; padding: 0 24px; display: flex; align-items: center; gap: 20px; box-sizing: border-box;">
+
+    <div style="flex: 1; height: 148px; background: #ffffff; border: 2px solid #ffd9d6; border-radius: 22px; box-shadow: 0 14px 30px rgba(255,90,78,0.24); padding: 0 24px; display: flex; align-items: center; gap: 18px; box-sizing: border-box;">
+      <svg width="80" height="90" viewBox="0 0 150 168" fill="none">
+        <ellipse cx="75" cy="158" rx="42" ry="7" fill="#14161f" opacity="0.09"></ellipse>
+        <rect x="40" y="86" width="70" height="62" rx="26" fill="#ff5a4e"></rect>
+        <rect x="16" y="96" width="24" height="17" rx="8.5" fill="#ff5a4e"></rect>
+        <rect x="110" y="96" width="24" height="17" rx="8.5" fill="#ff5a4e"></rect>
+        <rect x="52" y="140" width="18" height="20" rx="8" fill="#e0332a"></rect>
+        <rect x="80" y="140" width="18" height="20" rx="8" fill="#e0332a"></rect>
+        <circle cx="75" cy="52" r="42" fill="#ff5a4e"></circle>
+        <path d="M33 48a42 42 0 0 1 84 0v-4a42 42 0 0 0-84 0z" fill="#e0332a"></path>
+        <circle cx="60" cy="50" r="12" fill="#ffffff"></circle>
+        <circle cx="90" cy="50" r="12" fill="#ffffff"></circle>
+        <circle cx="63" cy="52" r="6" fill="#14161f"></circle>
+        <circle cx="93" cy="52" r="6" fill="#14161f"></circle>
+        <circle cx="65" cy="49" r="2" fill="#ffffff"></circle>
+        <circle cx="95" cy="49" r="2" fill="#ffffff"></circle>
+        <path d="M62 68q13 15 26 0" stroke="#14161f" stroke-width="4" stroke-linecap="round" fill="none"></path>
+        <circle cx="46" cy="64" r="6" fill="#ff9d95" opacity="0.85"></circle>
+        <circle cx="104" cy="64" r="6" fill="#ff9d95" opacity="0.85"></circle>
+      </svg>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 24px; font-weight: 600;">Pip</div>
+          <div style="display: flex; align-items: center; gap: 6px; padding: 5px 11px; background: #ffeceb; border-radius: 99px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d93a31" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17h16"></path><path d="M4 8l4.5 3.5L12 5l3.5 6.5L20 8l-1.5 7h-13z"></path></svg>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #d93a31;">LEADING</div>
+          </div>
         </div>
+        <div style="display: flex; align-items: baseline; gap: 9px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 700; line-height: 1; color: #e0332a;">3</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #6e7488;">WINS</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ff5a4e;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ff5a4e;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ff5a4e;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ffffff; border: 2px solid #ffd0cc; box-sizing: border-box;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width: 250px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #6e7488;">NEEDS 4 TO WIN</div>
+      <div style="width: 46px; height: 46px; border-radius: 50%; background: #ffffff; border: 2px solid #e6e9f4; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #14161f;">VS</div>
+      </div>
+      <div style="font-size: 13px; color: #6e7488; text-align: center; line-height: 1.5;">Pip takes the run with one more win. Bo has to win all three that are left.</div>
+    </div>
+
+    <div style="flex: 1; height: 148px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 22px; padding: 0 24px; display: flex; align-items: center; gap: 18px; box-sizing: border-box;">
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #5d97b3;">CHASING</div>
+          <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 24px; font-weight: 600;">Bo</div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 9px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #6e7488;">WINS</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 700; line-height: 1; color: #118cbd;">1</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ffffff; border: 2px solid #cceffc; box-sizing: border-box;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ffffff; border: 2px solid #cceffc; box-sizing: border-box;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #ffffff; border: 2px solid #cceffc; box-sizing: border-box;"></div>
+          <div style="width: 11px; height: 11px; border-radius: 50%; background: #21b0e8;"></div>
+        </div>
+      </div>
+      <svg width="80" height="90" viewBox="0 0 150 168" fill="none">
+        <ellipse cx="75" cy="158" rx="42" ry="7" fill="#14161f" opacity="0.09"></ellipse>
+        <rect x="40" y="86" width="70" height="62" rx="26" fill="#21b0e8"></rect>
+        <rect x="16" y="96" width="24" height="17" rx="8.5" fill="#21b0e8"></rect>
+        <rect x="110" y="96" width="24" height="17" rx="8.5" fill="#21b0e8"></rect>
+        <rect x="52" y="140" width="18" height="20" rx="8" fill="#118cbd"></rect>
+        <rect x="80" y="140" width="18" height="20" rx="8" fill="#118cbd"></rect>
+        <circle cx="75" cy="52" r="42" fill="#21b0e8"></circle>
+        <path d="M33 48a42 42 0 0 1 84 0v-4a42 42 0 0 0-84 0z" fill="#118cbd"></path>
+        <circle cx="60" cy="50" r="12" fill="#ffffff"></circle>
+        <circle cx="90" cy="50" r="12" fill="#ffffff"></circle>
+        <circle cx="57" cy="52" r="6" fill="#14161f"></circle>
+        <circle cx="87" cy="52" r="6" fill="#14161f"></circle>
+        <circle cx="59" cy="49" r="2" fill="#ffffff"></circle>
+        <circle cx="89" cy="49" r="2" fill="#ffffff"></circle>
+        <path d="M63 74q12 -8 24 0" stroke="#14161f" stroke-width="4" stroke-linecap="round" fill="none"></path>
+        <circle cx="46" cy="64" r="6" fill="#7fd6f5" opacity="0.9"></circle>
+        <circle cx="104" cy="64" r="6" fill="#7fd6f5" opacity="0.9"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <div style="height: 136px; flex: none; display: flex; gap: 12px;">
+
+    <sc-for list="{{played}}" as="p" hint-placeholder-count="4">
+      <div style="flex: 1; min-width: 0; background: #ffffff; border: 2px solid #eceef6; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 8px; background: {{p.tint}}; display: flex; align-items: center; justify-content: center; flex: none;">
+            <div style="width: 9px; height: 9px; border-radius: 50%; background: {{p.mark}};"></div>
+          </div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #9aa0b4;">{{p.n}}</div>
+        </div>
+        <div style="font-size: 13.5px; font-weight: 700; line-height: 1.3;">{{p.game}}</div>
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; background: {{p.chipBg}}; border-radius: 99px; align-self: flex-start;">
+          <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="40" fill="{{p.skin}}"></circle>
+            <circle cx="36" cy="46" r="11" fill="#ffffff"></circle>
+            <circle cx="64" cy="46" r="11" fill="#ffffff"></circle>
+            <circle cx="36" cy="44" r="5.5" fill="#14161f"></circle>
+            <circle cx="64" cy="44" r="5.5" fill="#14161f"></circle>
+            <path d="M34 62q16 16 32 0" stroke="#14161f" stroke-width="4" stroke-linecap="round" fill="none"></path>
+          </svg>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: {{p.chipInk}};">{{p.winner}}</div>
+        </div>
+      </div>
+    </sc-for>
+
+    <div style="flex: 1; min-width: 0; background: #ffffff; border: 2px solid #4b3beb; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 22px rgba(75,59,235,0.20); box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 24px; height: 24px; border-radius: 8px; background: #fff1cf; display: flex; align-items: center; justify-content: center; flex: none;">
+          <div style="width: 9px; height: 9px; border-radius: 50%; background: #ffc53d;"></div>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #4b3beb;">GAME 05</div>
+      </div>
+      <div style="font-size: 13.5px; font-weight: 700; line-height: 1.3;">Drop Four</div>
+      <div style="margin-top: auto; display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: #4b3beb; border-radius: 99px; align-self: flex-start;">
+        <div style="width: 7px; height: 7px; border-radius: 50%; background: #ffffff;"></div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #ffffff;">NOW PLAYING</div>
+      </div>
+    </div>
+
+    <sc-for list="{{backs}}" as="b" hint-placeholder-count="2">
+      <div style="flex: 1; min-width: 0; border: 2px solid #ddd6ff; border-radius: 16px; background: repeating-linear-gradient(45deg, #f0eeff 0 9px, #e4dfff 9px 18px); padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; box-sizing: border-box;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #4b3beb;">{{b.n}}</div>
+        <div style="width: 46px; height: 46px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center;">
+          <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 26px; font-weight: 600; color: #4b3beb; line-height: 1;">?</div>
+        </div>
+        <div style="font-size: 11.5px; font-weight: 600; color: #4b3beb;">Face down</div>
       </div>
     </sc-for>
   </div>
 
-  <div style="padding: 14px 44px 0; display: flex; align-items: center; gap: 16px;">
-    <div style="flex: 1; height: 4px; border-radius: 2px; background: #2e2418; overflow: hidden; display: flex;">
-      <div style="width: 43%; background: #d96a44;"></div>
-      <div style="width: 14%; background: #3aa88c;"></div>
+  <div style="height: 186px; flex: none; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 24px; padding: 0 26px; display: flex; align-items: center; gap: 24px; box-sizing: border-box;">
+    <div style="width: 132px; height: 132px; flex: none; border-radius: 18px; background: #fff1cf; display: flex; align-items: center; justify-content: center;">
+      <svg width="76" height="76" viewBox="0 0 60 60" fill="none">
+        <circle cx="30" cy="7" r="4.5" fill="#ff5a4e"></circle>
+        <rect x="7" y="15" width="46" height="38" rx="11" fill="#ffc53d"></rect>
+        <circle cx="18" cy="28" r="5.5" fill="#ffffff"></circle>
+        <circle cx="30" cy="28" r="5.5" fill="#ff5a4e"></circle>
+        <circle cx="42" cy="28" r="5.5" fill="#ffffff"></circle>
+        <circle cx="18" cy="42" r="5.5" fill="#21b0e8"></circle>
+        <circle cx="30" cy="42" r="5.5" fill="#ff5a4e"></circle>
+        <circle cx="42" cy="42" r="5.5" fill="#21b0e8"></circle>
+      </svg>
     </div>
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8a7a66;">4 PLAYED &nbsp;·&nbsp; 3 TO DEAL</div>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #4b3beb;">NEXT UP · GAME 05</div>
+      <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 28px; font-weight: 600; line-height: 1.1;">Drop Four</div>
+      <div style="font-size: 14.5px; color: #6e7488; line-height: 1.5; max-width: 560px;">Take turns dropping counters into the grid — the first to line up four in a row, column or diagonal wins the game.</div>
+      <div style="display: flex; gap: 8px;">
+        <sc-for list="{{meta}}" as="m" hint-placeholder-count="3">
+          <div style="padding: 6px 12px; background: #f7f8fc; border-radius: 99px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #6e7488;">{{m.label}}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="width: 208px; flex: none; display: flex; flex-direction: column; gap: 10px;">
+      <div style="padding: 15px 28px; background: #4b3beb; color: #ffffff; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; box-shadow: 0 4px 0 #3a2dd0;">Play</div>
+      <div style="padding: 13px 24px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 12px; font-size: 15px; font-weight: 600; color: #14161f; text-align: center;">Swap this game</div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9aa0b4; text-align: center;">1 SWAP LEFT</div>
+    </div>
   </div>
 
-  <div style="margin: 22px 44px 0; padding: 22px 26px; border: 1px solid #4a3b28; border-radius: 6px; background: #1d1710; display: flex; align-items: center; gap: 22px;">
-    <div style="width: 78px; height: 106px; border-radius: 6px; background: #f0e9de; box-shadow: 0 8px 20px rgba(0,0,0,0.45); padding: 10px; display: flex; flex-direction: column; justify-content: flex-end;">
-      <div style="height: 30px; border-radius: 3px; background: #e3d9c8;"></div>
-    </div>
-    <div style="display: flex; flex-direction: column; gap: 5px;">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #c9852f;">NEXT</div>
-      <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 30px;">Sumo Push</div>
-      <div style="font-size: 13.5px; color: #a89a86;">Shove them off the platform. About thirty seconds.</div>
-    </div>
-    <div style="margin-left: auto; display: flex; gap: 10px;">
-      <div style="padding: 12px 18px; border: 1px solid #2e2418; border-radius: 3px; font-size: 13.5px; color: #a89a86;">Deal another</div>
-      <div style="padding: 12px 26px; background: #c9852f; color: #14100d; border-radius: 3px; font-size: 14.5px; font-weight: 600;">Play</div>
-    </div>
+  <div style="height: 92px; flex: none; display: flex; gap: 14px;">
+    <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+      <div style="flex: 1; background: #f7f8fc; border: 2px solid #eceef6; border-radius: 18px; padding: 0 22px; display: flex; align-items: center; gap: 16px; box-sizing: border-box;">
+        <div style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #ffffff; border: 2px solid #e6e9f4; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b3beb" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="{{s.icon}}"></path>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: #14161f;">{{s.value}}</div>
+          <div style="font-size: 12.5px; color: #6e7488;">{{s.label}}</div>
+        </div>
+      </div>
+    </sc-for>
   </div>
 </div>
 </x-dc>
 <script data-dc-script data-props='{}'>
 class Component extends DCLogic {
   renderVals() {
-    const won  = { bg: '#33241c', border: '#7a4830', fg: '#f0e9de', meta: '#c08f78', dot: '#d96a44' };
-    const lost = { bg: '#1b2b26', border: '#2f6455', fg: '#f0e9de', meta: '#7f9b8c', dot: '#3aa88c' };
-    const next = { bg: '#231b12', border: '#c9852f', fg: '#f0e9de', meta: '#c9852f', dot: '#c9852f' };
-    const face = { bg: '#1a1510', border: '#3a3025', fg: '#b3a48d', meta: '#9a8a74', dot: '#5c5140' };
+    const coral = '#ff5a4e';
+    const sky = '#21b0e8';
     return {
-      hand: [
-        { ...won,  n: 'ONE',   name: 'Mini Golf',  result: 'RAVI' },
-        { ...lost, n: 'TWO',   name: 'Air Hockey', result: 'MEERA' },
-        { ...won,  n: 'THREE', name: 'Drop Four',  result: 'RAVI' },
-        { ...won,  n: 'FOUR',  name: 'Quick Draw', result: 'RAVI' },
-        { ...next, n: 'FIVE',  name: 'Sumo Push',  result: 'NEXT' },
-        { ...face, n: 'SIX',   name: 'Face down',  result: '—' },
-        { ...face, n: 'SEVEN', name: 'Face down',  result: '—' }
-      ]
+      played: [
+        { n: 'GAME 01', game: 'Sumo Push', winner: 'Pip', skin: coral, chipBg: '#ffeceb', chipInk: '#d93a31', tint: '#ffeceb', mark: '#ff5a4e' },
+        { n: 'GAME 02', game: 'Quick Draw', winner: 'Bo', skin: sky, chipBg: '#e8f6ff', chipInk: '#0f7fae', tint: '#f0eeff', mark: '#4b3beb' },
+        { n: 'GAME 03', game: 'Mini Golf', winner: 'Pip', skin: coral, chipBg: '#ffeceb', chipInk: '#d93a31', tint: '#e9f9ef', mark: '#34c77b' },
+        { n: 'GAME 04', game: 'Spin War', winner: 'Pip', skin: coral, chipBg: '#ffeceb', chipInk: '#d93a31', tint: '#fdeeff', mark: '#c44bd6' },
+      ],
+      backs: [
+        { n: 'GAME 06' },
+        { n: 'GAME 07' },
+      ],
+      meta: [
+        { label: '60 SECONDS' },
+        { label: 'BO STARTS' },
+        { label: 'ONE DEVICE' },
+      ],
+      stats: [
+        { value: '4 of 7', label: 'Games played in this run', icon: 'M5 6h14v12H5zM12 6v12M5 12h14' },
+        { value: '1m 48s', label: 'Average round length', icon: 'M12 3a9 9 0 1 0 0.01 0M12 7v5l3 2' },
+        { value: '41 – 37', label: 'Lifetime record, Pip leads', icon: 'M4 12h16M9 7l-5 5 5 5M15 7l5 5-5 5' },
+      ],
     };
   }
 }

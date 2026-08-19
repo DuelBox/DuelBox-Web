@@ -6,7 +6,7 @@
     },
     {
       "id": "page-2",
-      "name": "Directions"
+      "name": "Concept & cast"
     }
   ],
   "artboards": [
@@ -15,116 +15,98 @@
       "page": "page-1",
       "x": 0,
       "y": 0,
-      "w": 1200,
-      "h": 900,
+      "w": 1240,
+      "h": 980,
       "title": "Landing"
     },
     {
       "file": "Catalog.dc.html",
       "page": "page-1",
-      "x": 1280,
+      "x": 1320,
       "y": 0,
-      "w": 1200,
-      "h": 900,
+      "w": 1240,
+      "h": 980,
       "title": "Browse 107 games"
     },
     {
       "file": "PreMatch.dc.html",
       "page": "page-1",
       "x": 0,
-      "y": 980,
-      "w": 1200,
-      "h": 820,
+      "y": 1060,
+      "w": 1240,
+      "h": 860,
       "title": "Pre-match"
     },
     {
       "file": "Pairing.dc.html",
       "page": "page-1",
-      "x": 1280,
-      "y": 980,
-      "w": 1080,
-      "h": 700,
+      "x": 1320,
+      "y": 1060,
+      "w": 1160,
+      "h": 780,
       "title": "Pairing two devices"
     },
     {
       "file": "Match.dc.html",
       "page": "page-1",
       "x": 0,
-      "y": 1880,
-      "w": 1080,
-      "h": 820,
+      "y": 2000,
+      "w": 1240,
+      "h": 880,
       "title": "In-match HUD"
     },
     {
       "file": "Tournament.dc.html",
       "page": "page-1",
-      "x": 1160,
-      "y": 1880,
-      "w": 1080,
-      "h": 760,
+      "x": 1320,
+      "y": 2000,
+      "w": 1160,
+      "h": 860,
       "title": "Tournament"
     },
     {
-      "file": "DirA-Seam.dc.html",
+      "file": "Hero3D.dc.html",
       "page": "page-2",
       "x": 0,
       "y": 0,
-      "w": 620,
-      "h": 700,
-      "title": "A \u00b7 The Seam"
+      "w": 1240,
+      "h": 900,
+      "title": "3D arcade hero"
     },
     {
-      "file": "DirB-Cabinet.dc.html",
+      "file": "Characters.dc.html",
       "page": "page-2",
-      "x": 680,
+      "x": 1320,
       "y": 0,
-      "w": 620,
-      "h": 700,
-      "title": "B \u00b7 Cabinet"
-    },
-    {
-      "file": "DirC-Table.dc.html",
-      "page": "page-2",
-      "x": 1360,
-      "y": 0,
-      "w": 620,
-      "h": 700,
-      "title": "C \u00b7 The Table"
-    },
-    {
-      "file": "DirD-Ledger.dc.html",
-      "page": "page-2",
-      "x": 2040,
-      "y": 0,
-      "w": 620,
-      "h": 700,
-      "title": "D \u00b7 The Ledger"
+      "w": 1240,
+      "h": 820,
+      "title": "The cast"
     }
   ],
   "annotations": [
     {
       "id": "read-me",
       "x": 0,
-      "y": -230,
-      "w": 620,
-      "text": "DuelBox \u2014 website and in-game GUI.\n\nThese six screens are drawn in Direction C, The Table: the device is the surface you both sit at, so the split between you is a physical fact rather than a graphic device.\n\nThe other three directions are on the Directions page. If you would rather go another way, say which and I will redraw these in it.",
-      "page": "page-1"
+      "y": -250,
+      "w": 640,
+      "page": "page-1",
+      "text": "DuelBox \u2014 website and in-game GUI.\n\nCartoon cast, professional layout. Pip (coral) is player one and Bo (sky) is player two; they appear on every screen so the product has a face before a thumbnail loads.\n\nThe 3D arcade hero and the character sheet are on the Concept page."
     },
     {
       "id": "not-a-clone",
-      "x": 700,
-      "y": -230,
-      "w": 560,
-      "text": "Deliberately unlike the reference app: a serif display face instead of a rounded cartoon sans, warm inked surfaces instead of flat primaries, a brass centre rule instead of edge score pills, a category-led browse with search instead of one long scroll, and a dealt hand of cards instead of a node track for the tournament.",
-      "page": "page-1"
+      "x": 720,
+      "y": -250,
+      "w": 600,
+      "page": "page-1",
+      "text": "Ours, not a copy: our own two-character cast rather than generic red/blue tokens, a browse page with search, categories and sort instead of one unbroken scroll, coloured player bars on the screen edges instead of rotated score pills, and a dealt-hand tournament rather than a node track."
     },
     {
-      "id": "pick-one",
+      "id": "hero-note",
       "x": 0,
-      "y": -180,
+      "y": -210,
       "w": 700,
-      "text": "Four directions, one axis each. C is recommended and is what the Screens page is drawn in \u2014 but the choice is yours, and the other three are real options, not strawmen. Each names its own risk.",
-      "page": "page-2"
+      "page": "page-2",
+      "text": "The arcade room is one 3D scene: tables float at different depths on a shared vanishing point and the camera walks you to the one you pick. Built as CSS 3D here to settle the composition; production would be Three.js on the landing route only, never in a game bundle.\n\nMotion is decoration \u2014 every tile is legible standing still, and reduced-motion or a low-end device gets the flat catalogue with no WebGL downloaded at all."
     }
   ],
   "launch": {

@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #4b3beb; text-decoration: none; } a:hover { color: #3a2dd0; }
+
+    /* The arcade room is one 3D scene. Everything below sits on a shared perspective
+       origin so the tiles, the table and the cast share a single vanishing point. */
+    .stage { perspective: 1400px; perspective-origin: 50% 42%; }
+    .room { transform-style: preserve-3d; transform: rotateX(52deg) rotateZ(-38deg); }
+
+    @keyframes drift { 0%, 100% { transform: translateZ(var(--z)) translateY(0); }
+                       50%      { transform: translateZ(var(--z)) translateY(-14px); } }
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 0.35; transform: scale(1); }
+                       50%      { opacity: 0.9;  transform: scale(1.35); } }
+
+    .tile  { animation: drift 6s ease-in-out infinite; }
+    .puck  { animation: spin 9s linear infinite; }
+    .ping  { animation: pulse 2.6s ease-in-out infinite; }
+
+    /* Motion here is decoration, not information — every tile is legible standing still. */
+    @media (prefers-reduced-motion: reduce) {
+      .tile, .puck, .ping { animation: none; }
+    }
+  </style>
+</helmet>
+<div style="width: 1240px; height: 900px; background: radial-gradient(120% 90% at 50% 8%, #f4f2ff 0%, #ffffff 58%); color: #14161f; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; overflow: hidden; position: relative;">
+
+  <div style="position: absolute; left: 44px; top: 34px; display: flex; flex-direction: column; gap: 10px; z-index: 3; max-width: 430px;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 7px 14px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 99px;">
+      <div style="width: 7px; height: 7px; border-radius: 50%; background: #4b3beb;"></div>
+      <div style="font-size: 12.5px; font-weight: 600; color: #4b3beb;">Scroll to walk the arcade</div>
+    </div>
+    <div style="font-family: Fredoka, system-ui, sans-serif; font-size: 62px; font-weight: 600; line-height: 1.02; letter-spacing: -0.02em;">Pick a table.<br>Pull up a chair.</div>
+    <div style="font-size: 16.5px; line-height: 1.6; color: #6e7488;">The whole catalogue is one room you move through, not a list you scroll past. Every table is a game, already running — walk up and take a seat.</div>
+    <div style="display: flex; gap: 11px; margin-top: 8px;">
+      <div style="padding: 15px 28px; background: #4b3beb; color: #fff; border-radius: 12px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 0 #3a2dd0;">Enter the arcade</div>
+      <div style="padding: 15px 24px; background: #ffffff; border: 2px solid #e6e9f4; border-radius: 12px; font-size: 16px; font-weight: 600;">Skip to the list</div>
+    </div>
+  </div>
+
+  <div class="stage" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+    <div class="room" style="position: relative; width: 620px; height: 620px; margin-left: 210px; margin-top: 70px;">
+
+      <div style="position: absolute; inset: 0; border-radius: 40px; background: linear-gradient(145deg, #eceafd 0%, #e6f4fd 100%); box-shadow: 0 60px 90px -40px rgba(75,59,235,0.42);"></div>
+
+      <div style="position: absolute; inset: 40px; border-radius: 30px; border: 3px dashed #cfd6ef; opacity: 0.75;"></div>
+
+      <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) translateZ(26px); width: 300px; height: 300px; border-radius: 26px; background: #ffffff; box-shadow: 0 26px 44px -22px rgba(20,22,31,0.35); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="height: 50%; background: #ffeceb;"></div>
+        <div style="height: 50%; background: #e8f6ff;"></div>
+        <div style="position: absolute; left: 0; right: 0; top: 50%; height: 4px; background: #ffffff;"></div>
+        <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 96px; height: 96px; border: 4px solid #ffffff; border-radius: 50%;"></div>
+        <div class="puck" style="position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; margin: -13px 0 0 -13px; width: 26px; height: 26px; border-radius: 50%; background: #14161f;"></div>
+        <div style="position: absolute; left: 50%; top: 24%; transform: translate(-50%,-50%); width: 54px; height: 54px; border-radius: 50%; background: #ff5a4e; border: 5px solid #e0332a;"></div>
+        <div style="position: absolute; left: 44%; top: 76%; transform: translate(-50%,-50%); width: 54px; height: 54px; border-radius: 50%; background: #21b0e8; border: 5px solid #118cbd;"></div>
+      </div>
+
+      <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+        <div class="tile" style="--z: {{t.z}}; position: absolute; left: {{t.left}}; top: {{t.top}}; width: 132px; height: 132px; border-radius: 22px; background: {{t.tint}}; box-shadow: 0 22px 36px -18px rgba(20,22,31,0.42); transform: translateZ({{t.z}}); animation-delay: {{t.delay}}; display: flex; align-items: center; justify-content: center;">
+          <div style="width: 52px; height: 52px; border-radius: {{t.markRadius}}; background: {{t.mark}};"></div>
+        </div>
+      </sc-for>
+
+      <div class="ping" style="position: absolute; left: 22%; top: 18%; width: 16px; height: 16px; border-radius: 50%; background: #4b3beb; transform: translateZ(150px);"></div>
+      <div class="ping" style="position: absolute; left: 78%; top: 72%; width: 12px; height: 12px; border-radius: 50%; background: #ffc53d; transform: translateZ(120px); animation-delay: 1.1s;"></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 44px; bottom: 34px; right: 44px; display: flex; align-items: flex-end; gap: 22px; z-index: 3;">
+    <div style="display: flex; gap: 10px;">
+      <sc-for list="{{beats}}" as="b" hint-placeholder-count="4">
+        <div style="width: 176px; padding: 14px 16px; background: rgba(255,255,255,0.92); border: 2px solid #e6e9f4; border-radius: 14px; display: flex; flex-direction: column; gap: 5px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; color: #4b3beb;">{{b.step}}</div>
+          <div style="font-size: 13.5px; font-weight: 700;">{{b.title}}</div>
+          <div style="font-size: 12px; color: #6e7488; line-height: 1.45;">{{b.body}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-left: auto; max-width: 250px; font-size: 12px; color: #9aa0b4; line-height: 1.5; text-align: right;">Low-end devices and reduced-motion get the flat catalogue instead — no WebGL is downloaded at all.</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      tiles: [
+        { left: '2%',  top: '10%', z: '96px',  delay: '0s',   tint: '#fff1cf', mark: '#ffc53d', markRadius: '12px' },
+        { left: '68%', top: '2%',  z: '132px', delay: '0.8s', tint: '#e9f9ef', mark: '#34c77b', markRadius: '50%' },
+        { left: '76%', top: '38%', z: '78px',  delay: '1.6s', tint: '#f0eeff', mark: '#4b3beb', markRadius: '12px' },
+        { left: '-4%', top: '52%', z: '116px', delay: '2.4s', tint: '#ffeceb', mark: '#ff5a4e', markRadius: '50%' },
+        { left: '20%', top: '80%', z: '64px',  delay: '3.2s', tint: '#e8f6ff', mark: '#21b0e8', markRadius: '12px' },
+        { left: '58%', top: '86%', z: '104px', delay: '4s',   tint: '#fdeeff', mark: '#c44bd6', markRadius: '50%' },
+      ],
+      beats: [
+        { step: 'BEAT 01', title: 'The room', body: 'Camera drifts over the arcade floor; tables breathe.' },
+        { step: 'BEAT 02', title: 'Walk up', body: 'Scroll pushes the camera toward a table until it fills the frame.' },
+        { step: 'BEAT 03', title: 'Sit down', body: 'The table flattens into the real board and play begins.' },
+        { step: 'BEAT 04', title: 'Stand up', body: 'Result screen lifts back out to the room for the next game.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

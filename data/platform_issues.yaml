@@ -42,6 +42,7 @@ labels:
   - {name: "epic:originality",  color: "BF3989", description: "Our own UI, our own identity - deliberately not a clone"}
   - {name: "epic:security",     color: "A40E26", description: "Secure coding, OWASP Top 10, CWE/SANS Top 25, threat modelling"}
   - {name: "epic:scale",        color: "0A3069", description: "Capacity, reliability and cost at five million users"}
+  - {name: "epic:zero-cost",    color: "1F883D", description: "Runs on the player's device; the server serves static bytes and little else"}
   - {name: "epic:docs",         color: "BFDADC", description: "Documentation"}
   - {name: "type:epic",         color: "EEEEEE", description: "Parent issue tracking a group of work"}
   - {name: "type:research",     color: "EEEEEE", description: "Play, observe, document. No shipping code"}
@@ -3134,3 +3135,246 @@ issues:
     - "Any residual difference is documented per archetype"
   labels: ["epic:input", "epic:qa", "type:qa", "priority:P2", "size:M"]
   milestone: M2 Game Catalog
+
+# =====================================================================
+# E27 ZERO-COST HOSTING
+# The game runs on the player's device, not ours. Every match is simulated
+# in their browser on their compute; our server's whole job is to hand over
+# static bytes once and then get out of the way. That is both the cheapest
+# way to run a games site and, for a fixed-timestep local game, the fastest.
+# The point of this epic is to keep it true as features arrive.
+# =====================================================================
+
+- title: "Commit to a static-first hosting target and write down the cost model"
+  epic: zero-cost
+  why: "A games site that needs a server per match cannot be run on a small budget. Deciding now that the browser does the computing, and that the origin only ever serves files, is what keeps the bill near zero as the catalogue grows."
+  actions:
+    - "Choose a static host with no per-request billing and generous free bandwidth, and record why over the alternatives"
+    - "Write the cost model: bytes per first session, bytes per repeat session, and the monthly total at 10k, 100k and 1M sessions"
+    - "State the rule plainly: local play - one device, or one player against a bot - must cost zero requests after the first load"
+    - "Identify the only things that can ever cost money and cap each: signalling, relay, and error reporting"
+  acceptance:
+    - "ADR committed naming the host, the cost model and the free-tier limits"
+    - "Local play is proven to need no origin request after first load"
+    - "Every paid dependency has a named cap and a documented behaviour when the cap is hit"
+  labels: ["epic:zero-cost", "epic:backend", "type:spec", "priority:P0", "size:M"]
+  milestone: M1 Playable Shell
+
+- title: "Pre-render every route at build time with no request-time compute"
+  epic: zero-cost
+  why: "Server-side rendering per request is a bill that scales with popularity. Static generation turns 107 game pages into 107 files a CDN serves for nothing, and it is better for search anyway."
+  actions:
+    - "Generate every content route statically at build: landing, catalogue, category hubs, and one page per game"
+    - "Ban request-time server rendering in the build config, and fail the build if a route opts into it"
+    - "Read the catalogue from data at build time rather than from an API at runtime"
+    - "Confirm the deployed output is a directory of files with no server runtime"
+  acceptance:
+    - "The whole site deploys as static files with no server process"
+    - "Adding a dynamic route fails the build with a clear message"
+    - "Every game page is in view-source without JavaScript"
+  labels: ["epic:zero-cost", "epic:seo", "type:feat", "priority:P0", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Make the second play of a game cost zero requests"
+  epic: zero-cost
+  why: "The service worker is the difference between paying for every play and paying for the first one. Once a game's chunk is in the player's cache, every later match is free to us and instant for them."
+  actions:
+    - "Precache the app shell; cache each game chunk and its assets on first play"
+    - "Serve cached games from the cache first, revalidating in the background"
+    - "Verify with the network panel that a repeat play issues no origin request at all"
+    - "Keep the cache versioned so a deploy does not strand a player on mixed versions"
+  acceptance:
+    - "A repeat play of a cached game issues zero network requests, verified in a test"
+    - "A previously played game starts with the network disabled"
+    - "A deploy migrates the cache without a hard reload"
+  labels: ["epic:zero-cost", "epic:pwa", "type:feat", "priority:P1", "size:L"]
+  milestone: M3 Premium Site
+
+- title: "Set and enforce a per-session byte budget"
+  epic: zero-cost
+  why: "On a static host, bandwidth is the only meaningful cost, so bytes per session IS the hosting bill. It is also the player's mobile data, which makes it worth controlling twice over."
+  actions:
+    - "Budget bytes for a first session (shell plus one game) and for a browsing session"
+    - "Fail CI when a change pushes either budget over"
+    - "Prefer generated vector art and CSS over bitmaps wherever it holds up"
+    - "Track real per-session bytes in field data, not just the lab number"
+  acceptance:
+    - "Budgets committed and enforced in CI, not aspirational"
+    - "A first session on a phone stays within the agreed budget"
+  labels: ["epic:zero-cost", "epic:perf", "type:chore", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Keep all gameplay computation on the player's device"
+  epic: zero-cost
+  why: "The simulation, the bots and the physics all run in the browser. This is what makes the site nearly free to host, and it also removes a round trip from every input - so it is better for the player, not a compromise."
+  actions:
+    - "Confirm no gameplay path calls the network: simulation, bot decisions, scoring and win conditions are all local"
+    - "Budget bot thinking time so a hard bot on a low-end phone still holds the frame rate"
+    - "Move any expensive search - minimax, pathfinding - off the render path, using a worker or a time-sliced budget per step"
+    - "Add a test that a full local match completes with the network blocked entirely"
+  acceptance:
+    - "A full local match completes with the network disabled"
+    - "No gameplay module imports a network client"
+    - "The hardest bot holds the frame budget on the slowest device in the matrix"
+  labels: ["epic:zero-cost", "epic:engine", "type:feat", "priority:P0", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Store all player data locally, with no database in v1"
+  epic: zero-cost
+  why: "Head-to-head records, favourites, settings and personal bests belong to the device that made them. Keeping them local costs nothing to run, needs no account, and removes an entire class of privacy obligation."
+  actions:
+    - "Keep records, favourites, settings and stats in local storage under a versioned schema"
+    - "Handle corrupt or foreign data by resetting to defaults rather than throwing"
+    - "Offer export and import so a player can move devices without an account"
+    - "Design the shape so a future optional sync can adopt it without a migration"
+  acceptance:
+    - "Every feature through M3 works with no backend at all"
+    - "Corrupt storage never breaks a launch"
+    - "A player can carry their record to another device without signing in"
+  labels: ["epic:zero-cost", "epic:meta", "type:feat", "priority:P1", "size:M"]
+  milestone: M2 Game Catalog
+
+- title: "Make cross-device play peer-to-peer so matches do not touch our servers"
+  epic: zero-cost
+  why: "This is the one feature that could carry a real bill. If the two browsers talk directly, we pay only for the handshake; if traffic relays through us, we pay for every packet of every match."
+  actions:
+    - "Carry all match traffic over a WebRTC data channel between the two browsers"
+    - "Keep signalling to the smallest possible exchange - offer, answer, candidates - and nothing after the connection is up"
+    - "Measure what share of connections succeed peer-to-peer versus needing a relay, on real mobile networks"
+    - "Never route gameplay through an origin server as a convenience"
+  acceptance:
+    - "A connected match sends no gameplay traffic to our infrastructure"
+    - "The peer-to-peer success rate is measured and recorded, not assumed"
+  labels: ["epic:zero-cost", "epic:crossplay", "type:feat", "priority:P1", "size:L"]
+  milestone: M4 Online
+
+- title: "Run signalling on a free-tier serverless function with hard limits"
+  epic: zero-cost
+  why: "Two browsers cannot find each other unaided, so a small brokering step is unavoidable. It should be the only compute we run, it should be brief, and it must not become an open door."
+  actions:
+    - "Implement signalling as a single stateless function: create a room, exchange offer and answer, then close"
+    - "Hold room state in an ephemeral store with a short expiry rather than a database"
+    - "Rate limit room creation per address and cap concurrent rooms"
+    - "Shed load gracefully when the free tier is exhausted: explain, and offer local play or the bot"
+  acceptance:
+    - "A room's whole lifetime is a handful of small requests"
+    - "Exhausting the quota degrades to a clear message, never a broken page"
+    - "No gameplay message ever passes through the function"
+  labels: ["epic:zero-cost", "epic:online", "type:feat", "priority:P2", "size:L"]
+  milestone: M4 Online
+
+- title: "Decide the relay policy before it becomes a bill"
+  epic: zero-cost
+  why: "A share of mobile networks block peer-to-peer, and relaying their traffic is metered by the gigabyte. That is the single most likely way this project acquires an unaffordable invoice."
+  actions:
+    - "Measure how often a relay is actually needed across real networks"
+    - "Model the cost per relayed match-minute at realistic volumes"
+    - "Decide the policy: no relay at all with an honest message, a capped free allowance, or a paid tier - and write down the reasoning"
+    - "If relaying is offered, cap it globally and per match, and fall back cleanly when the cap is reached"
+  acceptance:
+    - "Written policy with the measured relay rate and modelled cost behind it"
+    - "A player who cannot connect gets a clear explanation and a working alternative"
+    - "No configuration exists in which relay spending is unbounded"
+  labels: ["epic:zero-cost", "epic:online", "type:spec", "priority:P1", "size:M"]
+  milestone: M4 Online
+
+- title: "Guarantee the site degrades to local play when anything paid is unavailable"
+  epic: zero-cost
+  why: "Every paid dependency will eventually be exhausted, throttled or down. On a free-tier budget that is a normal Tuesday, not an incident, so the product has to be designed for it."
+  actions:
+    - "Enumerate every paid or metered dependency and its degraded behaviour"
+    - "Guarantee local two-player and bot play work with all of them unavailable"
+    - "Show an honest, specific message rather than a spinner when a remote feature is off"
+    - "Test each degraded path by deliberately disabling the dependency"
+  acceptance:
+    - "The site is fully playable locally with every external service disabled"
+    - "Each degraded path is verified by fault injection, not by inspection"
+  labels: ["epic:zero-cost", "epic:scale", "type:feat", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Generate share images and previews at build time, never on request"
+  epic: zero-cost
+  why: "On-demand image generation is compute per request, which is exactly what this architecture avoids. There are 107 games and their cards do not change between deploys."
+  actions:
+    - "Generate the social card for every game and category page during the build"
+    - "Render the post-match share image in the player's browser on canvas rather than on a server"
+    - "Keep every generated image inside the byte budget"
+  acceptance:
+    - "No image is generated at request time"
+    - "Share images render locally and can be saved without an upload"
+  labels: ["epic:zero-cost", "epic:seo", "type:feat", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Keep analytics and error reporting free-tier sized"
+  epic: zero-cost
+  why: "Telemetry is billed per event, and a games site generates a lot of events. Unsampled reporting can cost more than the hosting it monitors."
+  actions:
+    - "Sample events rather than sending everything, and document the sampling rate"
+    - "Batch and send on idle rather than per interaction"
+    - "Choose providers with a workable free tier, or self-host a lightweight collector"
+    - "Cap the client so a bug cannot flood the endpoint"
+  acceptance:
+    - "Event volume stays inside the free tier at the projected traffic"
+    - "A client-side error loop cannot generate unbounded reports"
+  labels: ["epic:zero-cost", "epic:analytics", "type:feat", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Add a deploy that works on any static host"
+  epic: zero-cost
+  why: "Free tiers change their terms. If the build output is ordinary static files with no host-specific glue, moving providers is an afternoon rather than a rewrite."
+  actions:
+    - "Keep the build output a plain directory of files with no proprietary adapter"
+    - "Document deploying it to at least two different static hosts"
+    - "Keep host-specific configuration - headers, redirects - in one small, replaceable file"
+    - "Verify a deploy to a second host actually works before launch"
+  acceptance:
+    - "The same build artefact deploys to two different hosts unchanged"
+    - "Nothing in the application code depends on a particular provider"
+  labels: ["epic:zero-cost", "epic:setup", "type:chore", "priority:P2", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Guard the zero-cost properties in CI"
+  epic: zero-cost
+  why: "These properties decay quietly. One convenient server call added during a busy week turns a free site into a metered one, and nobody notices until the invoice."
+  actions:
+    - "Assert the build output contains no server runtime"
+    - "Assert no gameplay module imports a network client"
+    - "Assert the per-session byte budget"
+    - "Fail the build when a new route opts into request-time rendering"
+  acceptance:
+    - "Each property has a CI check that fails on regression"
+    - "The checks name the property they protect, so a failure explains itself"
+  labels: ["epic:zero-cost", "epic:qa", "type:chore", "priority:P1", "size:M"]
+  milestone: M3 Premium Site
+
+- title: "Build the per-game artwork system: one illustrated tile per game"
+  epic: originality
+  why: "Every one of the 107 games needs its own picture, or the catalogue is a wall of text. The reference app draws a full illustration per game; ours must be as recognisable but cheap enough to ship 107 of on a byte budget, and generated consistently rather than commissioned one at a time."
+  actions:
+    - "Define the tile anatomy: a flat background tint from the palette, one bold central mark that says what the game is, and the two-player dots - the game's NAME always sits with the tile, never inside the art"
+    - "Draw the marks as flat SVG on a shared grid with the same stroke weight and corner radius, so 107 tiles read as one set"
+    - "Assign each game a tint and a mark in the catalogue data, so a new game is two data fields rather than a new asset"
+    - "Generate the raster thumbnails and social cards from the SVG at build time"
+    - "Record every mark in the asset licence manifest as original work"
+  acceptance:
+    - "All 107 games have a distinct tile that is recognisable at 128px and at 32px"
+    - "The whole set fits inside the catalogue byte budget"
+    - "Adding a game needs no new hand-drawn asset"
+    - "Nothing is traced from or derived from another product's art"
+  labels: ["epic:originality", "epic:design", "epic:perf", "type:feat", "priority:P1", "size:L", "needs-design"]
+  milestone: M2 Game Catalog
+
+- title: "Design the launch sequence"
+  epic: originality
+  why: "The first two seconds decide whether the site reads as a cheap games portal or a made thing. A short, deliberate opening is one of the few places a games site can show craft before anything is played."
+  actions:
+    - "Design a brief opening beat that resolves into the hero rather than delaying it - the page must be interactive throughout"
+    - "Bring the two characters in as part of it, so the cast is established before the catalogue"
+    - "Cap it hard: it must never delay the largest contentful paint or block first input"
+    - "Skip it entirely under reduced-motion, on a repeat visit, and on a low-end device"
+  acceptance:
+    - "The opening never delays interactivity, measured not assumed"
+    - "It plays once per visit at most, and never on a return within the session"
+    - "Reduced-motion goes straight to the hero"
+  labels: ["epic:originality", "epic:perf", "epic:a11y", "type:feat", "priority:P2", "size:M", "needs-design"]
+  milestone: M3 Premium Site

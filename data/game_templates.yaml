@@ -192,7 +192,7 @@ templates:
   title: "[{name}] Create original art and wire the audio events"
   why: "Mechanics are free to reimplement; art and audio are not. Everything here must be ours and its licence recorded."
   actions:
-    - "Create original sprites and a thumbnail in the DuelBox visual language"
+    - "Create original sprites and the game's catalogue tile - a flat tint plus one bold central mark from the shared artwork system, recognisable at both 128px and 32px"
     - "Trigger the shared sound events rather than adding bespoke ones without reason"
     - "Add an assets.license.json entry for every file"
   acceptance:
