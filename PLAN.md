@@ -1,31 +1,33 @@
 # DuelBox — project plan
 
-Web-based collection of two-player mini-games. Two people, one device, one browser
-tab, no download, no account. Original implementations of public-domain game genres.
+A browser-based collection of two-player mini-games. Two people, one device, one
+browser tab, no download, no account. Original implementations of game genres that
+are free to reimplement.
 
-**Scale:** 44 games · ~575 issues · ~2,600 story points · 5 milestones.
+**Scale:** 101 games · 1,699 issues · 5 milestones.
+
+This plan is derived from **playing the reference app**, not from imagining it.
+The observations are in `docs/reference-analysis.md`; the catalog in
+`data/catalog.yaml`; the backlog in `data/platform_issues.yaml` and
+`data/game_templates.yaml`.
 
 ---
 
-## What we can and cannot take from the reference app
+## What we may and may not take
 
 | Element | Protected? | What that means here |
 |---|---|---|
-| Rules and mechanics | No | Pong, air hockey, sumo push, tic-tac-toe are all free to build |
-| Genre concepts | No | "Collection of two-player games on one device" is not ownable |
+| Rules and mechanics | No | Air hockey, sumo, tic-tac-toe, mini golf are all free to build |
+| Genre concepts | No | "Two-player games on one device" is not ownable |
 | Source code | Yes | Never decompile, never reuse |
-| Art, sprites, animations | Yes | Commission or create originals |
-| Sound and music | Yes | Original or properly licensed, with the licence recorded |
-| Specific UI layouts | Yes | Design your own |
+| Art, sprites, animation | Yes | Ours, original, licence recorded |
+| Sound and music | Yes | Ours or properly licensed |
+| Exact UI layouts | Yes | We design our own |
 | Game and app names | Often | Renamed the risky ones in the catalog |
-| Level and stage layouts | Yes | Design your own |
 
-Names changed to avoid live trademarks: **Drop Four** (not Connect Four),
-**Reversi** (not Othello), **Sea Battle** (not Battleship), **Light Trails**
-(not Tron light cycles).
-
-The emulator is a **research tool for observing gameplay**, not an extraction
-tool. Loop 1 in `CLAUDE_CODE_LOOP.md` carries that boundary explicitly.
+The emulator is a **research tool for observing gameplay**, never an extraction
+tool. That boundary is stated in `CLAUDE.md`, in `CONTRIBUTING.md`, and in every
+per-game research issue.
 
 ---
 
@@ -33,85 +35,86 @@ tool. Loop 1 in `CLAUDE_CODE_LOOP.md` carries that boundary explicitly.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Build | Vite + pnpm workspaces | Per-game code splitting is the requirement |
-| Language | TypeScript, strict | Physics code with loose typing is a bug farm |
-| Framework | React for shell, none inside games | Games run on raw canvas |
-| Rendering | Canvas2D default, WebGL where needed | Most games don't need WebGL |
-| Physics | Custom | Matter.js/Planck are heavier than 44 simple games need |
-| 3D landing | React Three Fiber | Isolated to the landing route, never loaded in-game |
-| Site rendering | SSG/SSR | A client-rendered games site is invisible to search |
-| Backend | Edge functions + Postgres | Only needed from M3 |
-| Offline | Service worker | Strongest differentiator against browser games portals |
-
----
+| Framework | Next.js 15, App Router, TypeScript strict | A client-rendered games portal earns no organic traffic; SSG/SSR is the whole discovery strategy |
+| Styling | Tailwind v4 over CSS custom-property tokens | One token source shared by shell CSS and canvas drawing code |
+| Game engine | Custom, Canvas2D, fixed timestep | 101 small games do not need a physics library, and React must never enter a game loop |
+| 3D landing | React Three Fiber, landing route only | Isolated structurally, asserted in CI, never in a game bundle |
+| State | Zustand for the shell | Games hold their own state; the shell holds session and settings |
+| Testing | Vitest and Playwright | Rules headless, journeys across three browsers |
+| Packaging | pnpm workspaces | Each game is an independently loadable chunk |
+| Hosting | Vercel edge with preview deploys | Two-player feel cannot be reviewed from a diff |
 
 ## Architecture
 
 ```
-apps/web              shell, routing, landing, catalog
-packages/engine       fixed-timestep loop, renderer, collision, input, audio
-packages/game-sdk     the Game contract + shared match flow, HUD, difficulty
-packages/games/*      44 folders, each an independently loaded chunk
+apps/web              shell, routing, landing, catalog, game host
+packages/engine       fixed-timestep loop, renderer, collision, input, seats, audio
+packages/game-sdk     the Game contract, match flow, HUD, win conditions, bots
+packages/games/*      101 folders, each its own chunk
 packages/ui           shared components
-packages/analytics    event layer
 ```
 
-Games supply simulation and a win condition. The SDK supplies countdown, HUD,
-result screen, rematch, pause, difficulty scaffolding, and tournament reporting.
+Games supply a simulation and a win condition. The SDK supplies countdown, HUD,
+pause, result, rematch, seat rotation, difficulty, and tournament reporting.
 
-## The three technically hard things
+---
 
-1. **Two players, one browser, no OS player separation.** A touch belongs to
-   P1 or P2 based on which zone it *started* in, and keeps that ownership even
-   when the finger crosses the midline. Design doc first, code second.
-2. **Fixed timestep.** Fixed accumulator with interpolated rendering, from day
-   one — retrofitting it means rewriting every game.
-3. **Ergonomics.** Two people holding one 6-inch phone is a physical problem.
-   Only moderated playtests with real pairs surface it.
+## The five hard things, all confirmed by observation
 
-## Design direction
+1. **Two players, one screen, no OS player separation.** A touch belongs to the
+   seat it *started* in and keeps that ownership across the midline. Every touch
+   game is subtly broken if this is wrong.
+2. **Seat rotation.** The reference app rotates the play area 180° and recolours it
+   to the active player so each person reads it upright. This must be an engine
+   concept, not a per-game hack.
+3. **Fixed timestep.** Physics must behave identically at 60, 90, and 120Hz.
+   Retrofitting means rewriting every game.
+4. **A bot for nearly every game.** The reference app offers vs-bot almost
+   everywhere, so the AI interface belongs in the game contract.
+5. **Ergonomics.** Two people holding one phone is a physical problem that only
+   moderated playtests with real pairs surface.
 
-**Signature: the seam.** One diagonal split dividing P1 from P2 territory,
-carried from the landing hero through the catalog into the live game HUDs.
+## Observed product model
 
-```
---ink     #08090F    --p1    #FF3B6B
---surface #12141F    --p2    #21E6C1
---paper   #E8E6DF    --gold  #FFC94A
-```
+- **Three play modes**, declared per game: vs Friend, vs Bot, Solo score attack.
+  Not every game has all three, so the manifest declares which.
+- **Red is player one, blue is player two**, on every screen, in every game.
+- **One pre-game screen for all games**: rules in a sentence, how-to-play video,
+  mode buttons, favourite star, and sometimes a per-game options gear.
+- **HUD anchored to the screen edges** — score pill on one side, exit on the other,
+  rotated so both seats can read it, never overlapping the play area.
+- **Tournament**: seven random games, a progress track ending in a trophy.
+- **Win conditions seen**: first to N, lead by 2, reduce health to zero, highest
+  accumulated score at the end. All belong in a shared helper, not in each game.
 
-Display **Archivo Expanded**, body **Inter Tight**, scores and timers
-**JetBrains Mono**. The 3D landing is an arcade cabinet split along the seam;
-scroll drives a fixed camera spline — no scroll-jacking. Budget: LCP under 2.5s
-on 4G; low-end devices get a designed static hero.
+## Where we beat the reference app
+
+The catalog is one flat scroll of 101 cards with no search, no categories, and no
+filters. Ours gets search, category filters, sort, favourites, recently played,
+animated card previews, per-game indexable pages, offline play, and installability.
 
 ## Milestones
 
-| | Contents | Points |
-|---|---|---|
-| **M0 Foundation** | Repo, engine loop, collision, input abstraction, SDK contract | ~180 |
-| **M1 First Playable** | Shell, match flow, 6 launch games, tournament | ~520 |
-| **M2 Catalog** | Remaining 38 games, AI, audio, a11y, i18n | ~1,100 |
-| **M3 Launch** | 3D landing, SEO, PWA, analytics, monetization, legal | ~600 |
-| **M4 Online** | Remote multiplayer, accounts, leaderboards, live ops | ~250 |
-
-**Launch six:** Ping Pong (paddle), Air Hockey (impulse physics), Tic Tac Toe
-(board + AI), Sumo Push (arena physics), Drop Four (minimax), Quick Draw
-(input latency) — covering the full technical range so the remaining 38 are
-variations on solved problems.
+| | Contents |
+|---|---|
+| **M0 Foundation** | Repo, CI, tokens, engine loop, seats, collision, input, SDK contract |
+| **M1 Playable Shell** | Shell routes, game host, match flow, HUD, tournament, first games |
+| **M2 Game Catalog** | The 101 games, bots, audio, i18n, accessibility |
+| **M3 Premium Site** | 3D landing, motion, SEO, PWA, analytics, legal, launch |
+| **M4 Online** | Remote multiplayer, accounts, leaderboards, live ops |
 
 ## Files
 
 ```
-data/games.yaml                  44 game specs
-data/issues.yaml                 platform issues, 5 milestones, labels
-data/game_issue_templates.yaml   8 templates × 44 games = 352 issues
-scripts/seed_issues.py           creates everything via gh CLI, idempotent
-scripts/run-loop.sh              build loop driver
-prompts/build-iteration.md       per-iteration build prompt
-CLAUDE_CODE_LOOP.md              the three loops
-CLAUDE.md                        repo constitution
+docs/reference-analysis.md    what was observed by playing, and what it implies
+data/catalog.yaml             101 games with archetype, category, and observed rules
+data/platform_issues.yaml     198 granular website and platform issues
+data/game_templates.yaml      14 issues per game, generated per archetype
+scripts/seed.py               creates everything via gh, idempotent, resumable
+prompts/build-iteration.md    the per-issue build loop prompt
+CLAUDE_CODE_LOOP.md           the three loops
+CLAUDE.md                     repo constitution
 ```
 
-Add a game by appending to `games.yaml` and rerunning the seeder — it generates
-8 new issues and skips everything that already exists.
+Add a game by appending to `catalog.yaml` and rerunning the seeder — it generates
+that game's 14 issues and skips everything that already exists.
