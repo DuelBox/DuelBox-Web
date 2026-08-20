@@ -108,3 +108,67 @@ async function cycle(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Pause the match' }).click();
   await page.getByRole('button', { name: 'Quit match' }).click();
 }
+
+test.describe('a match that is left and come back to', () => {
+  /**
+   * Tab away mid-match and the accumulator must not fast-forward when you return.
+   *
+   * Two mechanisms answer this and both are needed. The host asks the shell to pause when
+   * the document hides, and the loop clamps any single frame to a quarter of a second — so
+   * even a gap the pause did not catch cannot be replayed as simulated time. Without the
+   * clamp, a minute away is a minute of match played in one frame.
+   */
+  test('pauses when the tab is hidden and does not fast-forward on return', async ({ page }) => {
+    await page.goto('/play/king-of-the-yard/');
+    await page.getByRole('button', { name: /Play against/ }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+
+    const hud = page.getByRole('group', { name: 'Score' });
+    /**
+     * Just the two numbers, not the whole scoreboard.
+     *
+     * Its text also carries the pause button, which disappears the moment the match
+     * pauses — so comparing the whole thing compares the chrome as well as the state, and
+     * fails for a reason that has nothing to do with fast-forwarding.
+     */
+    const scores = async (): Promise<string> => {
+      const text = await hud.innerText();
+      return (text.match(/has (\d+) points?/g) ?? []).join(' ');
+    };
+
+    // Let the bot bank a little, so there is something to fast-forward.
+    await page.waitForTimeout(1500);
+    const before = await scores();
+
+    // Hide the document, exactly as switching tab does.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible({ timeout: 3000 });
+    await page.waitForTimeout(2500);
+
+    const during = await scores();
+    expect(during, 'a hidden match does not play on').toBe(before);
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Still paused: coming back does not resume by itself, and must not replay the gap.
+    const after = await scores();
+    expect(after, 'and returning does not replay the time away').toBe(before);
+  });
+});
