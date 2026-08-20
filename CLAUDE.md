@@ -97,9 +97,11 @@ the nightly workflow runs — the suite passes on Firefox and has since it was f
 tried, so paying for a third engine on every push buys nothing. If a nightly ever
 fails, move it back to every push.
 
-**CI is over its own budget.** The verify job takes about 14 minutes against the
-8 minutes issue #2459 names. Most of it is `pnpm e2e` running the same tests across
-four projects. Worth fixing; not fixed.
+**CI was over its own budget** — 14 minutes against the 8 that issue #2459 names —
+for two reasons, both now addressed: Playwright defaults to a **single worker on CI**,
+and `smoke.spec.ts` was re-confirming the same server-rendered HTML on four engines.
+Two workers and one engine for pure-content specs. Check a real run before trusting
+the arithmetic.
 
 ## Definition of done
 
