@@ -64,6 +64,9 @@ importers:
       '@duelbox/game-cornhole':
         specifier: workspace:*
         version: link:../../packages/games/cornhole
+      '@duelbox/game-crabby-volley':
+        specifier: workspace:*
+        version: link:../../packages/games/crabby-volley
       '@duelbox/game-darts':
         specifier: workspace:*
         version: link:../../packages/games/darts
@@ -168,6 +171,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/cornhole:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/crabby-volley:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

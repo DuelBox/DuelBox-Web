@@ -30,6 +30,7 @@
     "@duelbox/game-ultimate-ttt": "workspace:*",
     "@duelbox/game-checkers": "workspace:*",
     "@duelbox/game-color-wars": "workspace:*",
+    "@duelbox/game-crabby-volley": "workspace:*",
     "@duelbox/game-cornhole": "workspace:*",
     "@duelbox/game-pop-it": "workspace:*",
     "@duelbox/game-hand-slap": "workspace:*",

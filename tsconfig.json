@@ -53,6 +53,9 @@
       "path": "./packages/games/color-wars"
     },
     {
+      "path": "./packages/games/crabby-volley"
+    },
+    {
       "path": "./packages/games/cornhole"
     },
     {
