@@ -16,7 +16,7 @@ constitution and its rules are non-negotiable.
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
 ```
 
-**2,358 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
+**2,509 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
@@ -78,8 +78,8 @@ games not yet built, of which about twelve are closeable by building the game.
 |---|---|
 | `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It, Shut the Box, Sea Battle, Dice Yatzy, Ludo Dash |
 | `turn-aim` | Darts, Cornhole, Pool, Bowling |
-| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato, Mini Soccer |
-| `rt-arena` | Sumo Push, King of the Yard |
+| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato, Mini Soccer, Penalty Kicks |
+| `rt-arena` | Sumo Push, King of the Yard, Snake Clash |
 | `rt-race` | Road Dodge |
 
 Building one closes about twelve of its nineteen issues. The rest are blocked on things
@@ -95,7 +95,17 @@ every keyboard game, Sea Battle found that a game's zone split could not change 
 Dice Yatzy found a bot weighting that preferred 30 in sixes to a 50-point yatzy, and Pool
 found that a match had no way to end — which then found the same hole in Air Hockey,
 Bowling found that the ball sailed on for eight seconds after every delivery, and Ludo Dash
-found a stuck state a human could reach with no move and no pass.
+found a stuck state a human could reach with no move and no pass, Snake Clash found that a
+`getActiveSeat` returning null was being refused by our own guard, and Penalty Kicks found
+that the bot-cost guard failed on a single garbage collection.
+
+**Two habits earned their keep repeatedly.** *Measure the thing you are about to argue
+about* — Ludo's capture-avoidance was worth −0.2 points, Dice Yatzy's straight-chasing cost
+6.3, and Penalty Kicks' difficulty tiers turned out to be worth **nothing** until identical
+bots were played against each other and the 63% "skill" gap proved to be first-kicker
+advantage. *And look at it in a browser* — Bowling's ball flew for eight seconds after every
+delivery, Ludo's status line sat under the board, and Penalty Kicks drew both players'
+cursors on a shared goal, which simply hands the keeper the answer.
 
 **Bots now think under a node budget** (`SearchBudget` in the SDK). The five searching games
 were spending up to 31.5 ms on the single step a bot commits to a move — twice a 60 Hz
