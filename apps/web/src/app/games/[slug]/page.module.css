@@ -89,3 +89,43 @@
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
   gap: var(--db-space-4);
 }
+
+/* The call to action for a game that can actually be played. */
+.play {
+  display: inline-block;
+  margin-top: var(--db-space-4);
+  padding: var(--db-space-3) var(--db-space-6);
+  min-height: var(--db-touch-target);
+  border-radius: var(--db-radius);
+  background: var(--db-brand);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 0 var(--db-brand-deep);
+}
+
+.play:hover {
+  filter: brightness(1.05);
+}
+
+/* Controls per seat, from the game's own manifest — the same words the play page uses. */
+.controls {
+  margin-top: var(--db-space-5);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--db-space-2) var(--db-space-4);
+  align-items: baseline;
+}
+
+.controls dt {
+  font-size: var(--db-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--db-faint);
+  white-space: nowrap;
+}
+
+.controls dd {
+  margin: 0;
+  color: var(--db-muted);
+}

@@ -5,6 +5,7 @@ import { CATALOGUE } from '@/data/catalogue.generated';
 import { formatRound } from '@/lib/format';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
+import { CONTROLS } from '@/data/controls';
 import styles from './page.module.css';
 
 /**
@@ -59,6 +60,15 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
     (other) => other.category === game.category && other.id !== game.id,
   ).slice(0, 6);
 
+  /**
+   * A playable game gets a way to play it; an unbuilt one gets an honest note.
+   *
+   * Every one of these hundred and seven pages used to carry the note, including the
+   * twenty-two that were playable — a page telling a player the game is not ready while
+   * the game sits one click away.
+   */
+  const controls = CONTROLS.get(game.slug);
+
   return (
     <div className="db-wrap">
       <nav className={styles.crumbs} aria-label="Breadcrumb">
@@ -92,10 +102,28 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
             })}
           </div>
 
-          <p className={styles.soon}>
-            This game is still being built. Its rules and controls are settled; the playable build
-            lands with its milestone.
-          </p>
+          {controls ? (
+            <>
+              <Link href={`/play/${game.slug}/`} className={styles.play}>
+                Play {game.name}
+              </Link>
+              <dl className={styles.controls}>
+                <dt>On a keyboard</dt>
+                <dd>{controls.keyboard}</dd>
+                {controls.pointer ? (
+                  <>
+                    <dt>By touch</dt>
+                    <dd>{controls.pointer}</dd>
+                  </>
+                ) : null}
+              </dl>
+            </>
+          ) : (
+            <p className={styles.soon}>
+              This game is still being built. Its rules and controls are settled; the playable
+              build lands with its milestone.
+            </p>
+          )}
         </div>
       </div>
 

@@ -90,3 +90,37 @@ test.describe('the navigation', () => {
     await expect(page.getByRole('table')).toContainText('Player two');
   });
 });
+
+test.describe('a game landing page', () => {
+  /**
+   * Every one of the hundred and seven landing pages used to say "This game is still being
+   * built" — including the twenty-two that were playable, with the game one click away and
+   * no link offered to it. The note is honest for a game that has no build; it was a
+   * plain falsehood on the ones that do.
+   */
+  test('offers a playable game a way to play it, and its controls', async ({ page }) => {
+    await page.goto('/games/tic-tac-toe/');
+    await expect(page.locator('a[href="/play/tic-tac-toe/"]')).toBeVisible();
+    await expect(page.getByText(/still being built/i)).toHaveCount(0);
+    // The controls come from the game's own manifest, so the landing page and the play
+    // page cannot disagree about what the keys do.
+    await expect(page.getByText('On a keyboard')).toBeVisible();
+  });
+
+  test('tells the truth about a game that has no build yet', async ({ page }) => {
+    await page.goto('/games/chess/');
+    await expect(page.locator('a[href="/play/chess/"]')).toHaveCount(0);
+    await expect(page.getByText(/still being built/i)).toBeVisible();
+  });
+
+  test('names each game in its own title and description', async ({ page }) => {
+    // "Unique title and description per game, no templated filler."
+    await page.goto('/games/crabby-volley/');
+    await expect(page).toHaveTitle(/Crabby Volley/);
+    const description = await page
+      .locator('meta[name="description"]')
+      .getAttribute('content');
+    expect(description ?? '').toMatch(/ball|field|point/i);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Crabby Volley');
+  });
+});
