@@ -263,7 +263,10 @@ describe('playing', () => {
     cellCentre(point, indexOf(3, 3));
     input.tap('p2', point.x, point.y);
     game.update(STEP, input);
-    expect(game.position.cells[indexOf(3, 3)]?.owner, 'a tap during the flip is ignored').toBeNull();
+    expect(
+      game.position.cells[indexOf(3, 3)]?.owner,
+      'a tap during the flip is ignored',
+    ).toBeNull();
   });
 
   it('cascades through the game module exactly as the rules do', () => {

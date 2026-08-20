@@ -768,8 +768,7 @@ describe('a tap keeps its coordinates', () => {
   const STEP = 1 / 60;
   const SIZE = { width: 600, height: 1000 };
   /** This block has its own logical box, so it needs its own lattice. */
-  const here = (value: number): number =>
-    Math.round(value / envelopeFor(SIZE)) * envelopeFor(SIZE);
+  const here = (value: number): number => Math.round(value / envelopeFor(SIZE)) * envelopeFor(SIZE);
 
   it('reports the pointer as active on the step the press is reported', () => {
     // A press with no position cannot be aimed, so a game told "actionPressed" and
@@ -866,7 +865,9 @@ describe('the precision envelope', () => {
   });
 
   it('takes the shorter side, so a long box is not quantised by its length', () => {
-    expect(envelopeFor({ width: 2000, height: 500 })).toBe(envelopeFor({ width: 500, height: 500 }));
+    expect(envelopeFor({ width: 2000, height: 500 })).toBe(
+      envelopeFor({ width: 500, height: 500 }),
+    );
   });
 
   it('rounds a pointer onto the lattice', () => {

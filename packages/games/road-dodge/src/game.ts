@@ -208,15 +208,35 @@ export class RoadDodgeGame implements Game {
     const context = this.#context;
     if (context === null || this.#winner !== null) return;
 
-    this.#driveSeat('p1', this.#p1, this.#runtimeP1, this.#botP1, input, fixedDeltaSeconds, context);
-    this.#driveSeat('p2', this.#p2, this.#runtimeP2, this.#botP2, input, fixedDeltaSeconds, context);
+    this.#driveSeat(
+      'p1',
+      this.#p1,
+      this.#runtimeP1,
+      this.#botP1,
+      input,
+      fixedDeltaSeconds,
+      context,
+    );
+    this.#driveSeat(
+      'p2',
+      this.#p2,
+      this.#runtimeP2,
+      this.#botP2,
+      input,
+      fixedDeltaSeconds,
+      context,
+    );
 
     // Both seats step before either is judged, so a step in which both crash is the draw
     // it actually is rather than a win for whoever happened to be simulated first.
     this.#runtimeP1.prevPosition = this.#p1.position;
     this.#runtimeP2.prevPosition = this.#p2.position;
-    this.#runtimeP1.lastAdvance = this.#p1.crashed ? 0 : speedAt(this.#p1.elapsed) * fixedDeltaSeconds;
-    this.#runtimeP2.lastAdvance = this.#p2.crashed ? 0 : speedAt(this.#p2.elapsed) * fixedDeltaSeconds;
+    this.#runtimeP1.lastAdvance = this.#p1.crashed
+      ? 0
+      : speedAt(this.#p1.elapsed) * fixedDeltaSeconds;
+    this.#runtimeP2.lastAdvance = this.#p2.crashed
+      ? 0
+      : speedAt(this.#p2.elapsed) * fixedDeltaSeconds;
 
     this.#runtimeP1.scroll = (this.#runtimeP1.scroll + this.#runtimeP1.lastAdvance) % DASH_PITCH;
     this.#runtimeP2.scroll = (this.#runtimeP2.scroll + this.#runtimeP2.lastAdvance) % DASH_PITCH;
@@ -328,12 +348,7 @@ export class RoadDodgeGame implements Game {
    * change of lane, and repeating it while held is exactly the advantage over a
    * touchscreen that makes this archetype same-input-class only in the first place.
    */
-  #steerFromKeys(
-    seat: SeatId,
-    state: SeatState,
-    runtime: SeatRuntime,
-    seatInput: SeatInput,
-  ): void {
+  #steerFromKeys(seat: SeatId, state: SeatState, runtime: SeatRuntime, seatInput: SeatInput): void {
     const mirror = this.#isFlipped(seat) ? -1 : 1;
     const direction = axis(seatInput.move.x) * mirror;
     if (runtime.resync) {
@@ -471,7 +486,21 @@ export class RoadDodgeGame implements Game {
     // findable on a screen holding two races at once.
     const width = runtime.crashSteps > 0 ? 9 : 5;
     const reach = CAR_HEIGHT * 0.42;
-    renderer.line(centreX - half, centreY - reach, centreX + half, centreY + reach, width, COLOUR_WRECK);
-    renderer.line(centreX - half, centreY + reach, centreX + half, centreY - reach, width, COLOUR_WRECK);
+    renderer.line(
+      centreX - half,
+      centreY - reach,
+      centreX + half,
+      centreY + reach,
+      width,
+      COLOUR_WRECK,
+    );
+    renderer.line(
+      centreX - half,
+      centreY + reach,
+      centreX + half,
+      centreY - reach,
+      width,
+      COLOUR_WRECK,
+    );
   }
 }

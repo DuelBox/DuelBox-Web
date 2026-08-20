@@ -600,7 +600,24 @@ describe('rendering', () => {
         const radius = renderer.args[cursor + 2];
         if (typeof radius === 'number') radii.push(radius);
       }
-      cursor += op === 'clear' ? 1 : op === 'circle' ? 4 : op === 'strokeCircle' ? 5 : op === 'rect' ? 5 : op === 'strokeRect' ? 6 : op === 'line' ? 6 : op === 'text' ? 6 : op === 'popSeatRotation' ? 0 : 1;
+      cursor +=
+        op === 'clear'
+          ? 1
+          : op === 'circle'
+            ? 4
+            : op === 'strokeCircle'
+              ? 5
+              : op === 'rect'
+                ? 5
+                : op === 'strokeRect'
+                  ? 6
+                  : op === 'line'
+                    ? 6
+                    : op === 'text'
+                      ? 6
+                      : op === 'popSeatRotation'
+                        ? 0
+                        : 1;
     }
     const distinct = new Set(radii.map((r) => Math.round(r)));
     expect(distinct.size, 'pressed and unpressed are different sizes').toBeGreaterThan(1);

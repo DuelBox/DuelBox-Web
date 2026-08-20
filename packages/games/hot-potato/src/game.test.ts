@@ -240,7 +240,8 @@ describe('the match', () => {
       const out: string[] = [];
       for (let i = 0; i < 60 * 90; i += 1) {
         game.update(STEP, input);
-        if (i % 30 === 0) out.push(`${game.position.holder}${String(Math.round(game.position.fuse))}`);
+        if (i % 30 === 0)
+          out.push(`${game.position.holder}${String(Math.round(game.position.fuse))}`);
       }
       return out.join('|');
     };
@@ -306,9 +307,23 @@ describe('rendering', () => {
         if (op === 'rect') {
           const y = renderer.args[cursor + 1];
           const w = renderer.args[cursor + 2];
-          if (typeof y === 'number' && typeof w === 'number' && y < 100) widest = Math.max(widest, w);
+          if (typeof y === 'number' && typeof w === 'number' && y < 100)
+            widest = Math.max(widest, w);
         }
-        cursor += op === 'clear' ? 1 : op === 'rect' ? 5 : op === 'strokeRect' ? 6 : op === 'circle' ? 4 : op === 'strokeCircle' ? 5 : op === 'line' ? 6 : 1;
+        cursor +=
+          op === 'clear'
+            ? 1
+            : op === 'rect'
+              ? 5
+              : op === 'strokeRect'
+                ? 6
+                : op === 'circle'
+                  ? 4
+                  : op === 'strokeCircle'
+                    ? 5
+                    : op === 'line'
+                      ? 6
+                      : 1;
       }
       return widest;
     };

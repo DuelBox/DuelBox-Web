@@ -353,7 +353,11 @@ export function botSteer(
   if (threat === null || Math.abs(state.lane - threat.lane) >= 1) {
     // Nothing to dodge. Drift back to the middle, which has two escapes rather than one.
     const middle = Math.floor(LANES / 2);
-    if (state.lane !== middle && judgementRoll < profile.recentre && laneIsClear(state, middle, profile.lookahead)) {
+    if (
+      state.lane !== middle &&
+      judgementRoll < profile.recentre &&
+      laneIsClear(state, middle, profile.lookahead)
+    ) {
       return state.lane < middle ? 1 : -1;
     }
     return 0;
@@ -394,7 +398,8 @@ export function botSteer(
   // doing double duty a low value always picked the first option *and* always fired the
   // mistake, so the two were perfectly correlated and the mistake rate did not mean what
   // it said. A default for the second would let a caller slip back into that silently.
-  const chosen = options[Math.floor(choiceRoll * options.length) % options.length] ?? options[0] ?? 0;
+  const chosen =
+    options[Math.floor(choiceRoll * options.length) % options.length] ?? options[0] ?? 0;
   // A mistake is hesitation: the bot sees the obstacle and does not move in time.
   //
   // Steering the *wrong* way was the first model and it barely graded at all, because on a

@@ -117,9 +117,7 @@ test.describe('a game landing page', () => {
     // "Unique title and description per game, no templated filler."
     await page.goto('/games/crabby-volley/');
     await expect(page).toHaveTitle(/Crabby Volley/);
-    const description = await page
-      .locator('meta[name="description"]')
-      .getAttribute('content');
+    const description = await page.locator('meta[name="description"]').getAttribute('content');
     expect(description ?? '').toMatch(/ball|field|point/i);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Crabby Volley');
   });

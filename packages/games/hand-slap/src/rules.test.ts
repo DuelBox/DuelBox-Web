@@ -375,7 +375,14 @@ describe('determinism', () => {
       const bot = createBotState();
       const out: string[] = [];
       for (let i = 0; i < 60 * 60; i += 1) {
-        const action = botAction(state, bot, BOT_PROFILES.normal, state.attacker, STEP, rng.float());
+        const action = botAction(
+          state,
+          bot,
+          BOT_PROFILES.normal,
+          state.attacker,
+          STEP,
+          rng.float(),
+        );
         if (action === 'swing') swing(state);
         step(state, STEP, rng);
         out.push(`${state.phase[0] ?? '?'}${String(state.p1)}${String(state.p2)}`);

@@ -329,7 +329,14 @@ function copyInto(target: Game, source: Readonly<Game>): void {
   target.moves.p2 = source.moves.p2;
 }
 
-function search(game: Game, seat: SeatId, depth: number, ply: number, alpha: number, beta: number): number {
+function search(
+  game: Game,
+  seat: SeatId,
+  depth: number,
+  ply: number,
+  alpha: number,
+  beta: number,
+): number {
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
@@ -366,7 +373,12 @@ function search(game: Game, seat: SeatId, depth: number, ply: number, alpha: num
  * Every tier sees exactly the board a human sees. Difficulty is search depth and blunder
  * rate, never extra information.
  */
-export function bestMove(game: Readonly<Game>, seat: SeatId, rng: Rng, difficulty: BotDifficulty): number {
+export function bestMove(
+  game: Readonly<Game>,
+  seat: SeatId,
+  rng: Rng,
+  difficulty: BotDifficulty,
+): number {
   const buffer = moveBuffers[0] ?? [];
   const count = legalMoves(buffer, game, seat);
   if (count === 0) return -1;

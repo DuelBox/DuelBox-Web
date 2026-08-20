@@ -308,7 +308,14 @@ export class HandSlapGame implements Game {
     const mirror = (y: number): number => (flipped ? manifest.logical.height - y : y);
     renderer.pushSeatRotation(flipped);
     // Out at the seat's own edge, well clear of the hands and the arm.
-    renderer.text(role, CENTRE_X, mirror(fromMiddle(ROLE_DEPTH)), LABEL_SIZE, COLOUR_READY, 'centre');
+    renderer.text(
+      role,
+      CENTRE_X,
+      mirror(fromMiddle(ROLE_DEPTH)),
+      LABEL_SIZE,
+      COLOUR_READY,
+      'centre',
+    );
     renderer.text(status, CENTRE_X, mirror(fromMiddle(STATUS_DEPTH)), STATE_SIZE, colour, 'centre');
     renderer.popSeatRotation();
   }

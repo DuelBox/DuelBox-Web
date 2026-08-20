@@ -206,7 +206,12 @@ describe('bags shoving each other', () => {
     if (!sitting) throw new Error('no bag');
     // Within touching distance: two bags only interact inside `BAG_RADIUS * 2`, and the
     // first version of this fixture sat two units outside it and shoved nothing.
-    const landed = { seat: 'p1' as SeatId, x: HOLE_X, y: HOLE_Y + SHOVE + BAG_RADIUS, holed: false };
+    const landed = {
+      seat: 'p1' as SeatId,
+      x: HOLE_X,
+      y: HOLE_Y + SHOVE + BAG_RADIUS,
+      holed: false,
+    };
     game.bags.push(landed);
     settle(game, landed);
     expect(sitting.holed, 'shoved up and in').toBe(true);

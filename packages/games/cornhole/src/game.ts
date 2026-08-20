@@ -265,7 +265,13 @@ export class CornholeGame implements Game {
         renderer.circle(bag.x, bag.y, BAG_RADIUS, palette.base);
         renderer.strokeCircle(bag.x, bag.y, BAG_RADIUS - 3, 4, COLOUR_INK);
       } else {
-        renderer.rect(bag.x - BAG_RADIUS, bag.y - BAG_RADIUS, BAG_RADIUS * 2, BAG_RADIUS * 2, palette.base);
+        renderer.rect(
+          bag.x - BAG_RADIUS,
+          bag.y - BAG_RADIUS,
+          BAG_RADIUS * 2,
+          BAG_RADIUS * 2,
+          palette.base,
+        );
         renderer.strokeRect(
           bag.x - BAG_RADIUS + 3,
           bag.y - BAG_RADIUS + 3,

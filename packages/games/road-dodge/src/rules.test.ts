@@ -126,7 +126,7 @@ describe('the ramp', () => {
 });
 
 describe('crashing', () => {
-  it('happens when an obstacle reaches the car in the car\'s lane', () => {
+  it("happens when an obstacle reaches the car in the car's lane", () => {
     const state = createSeatState();
     emptyPool(state);
     spawn(state, 1);
@@ -289,7 +289,14 @@ describe('the bot', () => {
     const state = createSeatState();
     const rng = new Rng(3);
     for (let i = 0; i < 500; i += 1) {
-      const direction = botSteer(state, createBotState(), BOT_PROFILES.hard, STEP, rng.float(), rng.float());
+      const direction = botSteer(
+        state,
+        createBotState(),
+        BOT_PROFILES.hard,
+        STEP,
+        rng.float(),
+        rng.float(),
+      );
       expect([-1, 0, 1]).toContain(direction);
       steer(state, direction);
       expect(state.lane).toBeGreaterThanOrEqual(0);
@@ -312,7 +319,10 @@ describe('the bot', () => {
     const obstacle = state.obstacles[0];
     if (!obstacle) return;
     obstacle.y = CAR_Y - 40;
-    expect(botSteer(state, createBotState(), BOT_PROFILES.hard, STEP, 0.5, 0.5), 'it must move').not.toBe(0);
+    expect(
+      botSteer(state, createBotState(), BOT_PROFILES.hard, STEP, 0.5, 0.5),
+      'it must move',
+    ).not.toBe(0);
   });
 
   it('does not steer into another obstacle', () => {
@@ -365,7 +375,10 @@ describe('the bot', () => {
         const rng = new Rng(400 + run);
         let steps = 0;
         while (!state.crashed && steps < 60 * 90) {
-          steer(state, botSteer(state, bot, BOT_PROFILES[difficulty], STEP, rng.float(), rng.float()));
+          steer(
+            state,
+            botSteer(state, bot, BOT_PROFILES[difficulty], STEP, rng.float(), rng.float()),
+          );
           stepSeat(state, STEP, rng);
           steps += 1;
         }

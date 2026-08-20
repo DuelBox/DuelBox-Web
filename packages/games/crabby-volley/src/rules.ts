@@ -181,7 +181,12 @@ export const SERVE_SPEED = 520;
 export const SERVE_DROP = 0;
 
 /** Move a crab along its own half. `direction` is -1, 0 or 1. */
-export function steer(game: Game, seat: SeatId, direction: number, fixedDeltaSeconds: number): void {
+export function steer(
+  game: Game,
+  seat: SeatId,
+  direction: number,
+  fixedDeltaSeconds: number,
+): void {
   const crab = seat === 'p1' ? game.p1 : game.p2;
   const half = halfOf(seat);
   const step = (direction > 0 ? 1 : direction < 0 ? -1 : 0) * CRAB_SPEED * fixedDeltaSeconds;

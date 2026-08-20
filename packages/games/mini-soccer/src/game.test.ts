@@ -333,13 +333,17 @@ describe('rendering', () => {
     const p2 = game.position.p2;
     const discAtP1 = renderer.calls.some(
       (call) =>
-        call.op === 'circle' && call.args[0] === p1.x && call.args[1] === p1.y &&
+        call.op === 'circle' &&
+        call.args[0] === p1.x &&
+        call.args[1] === p1.y &&
         call.args[2] === PLAYER_RADIUS,
     );
     const squareAtP2 = renderer.calls.some(
       (call) =>
-        call.op === 'rect' && call.args[0] === p2.x - PLAYER_RADIUS &&
-        call.args[2] === PLAYER_RADIUS * 2 && call.args[3] === PLAYER_RADIUS * 2,
+        call.op === 'rect' &&
+        call.args[0] === p2.x - PLAYER_RADIUS &&
+        call.args[2] === PLAYER_RADIUS * 2 &&
+        call.args[3] === PLAYER_RADIUS * 2,
     );
     expect(discAtP1, 'p1 is drawn as a disc').toBe(true);
     expect(squareAtP2, 'p2 is drawn as a square').toBe(true);

@@ -64,7 +64,9 @@ const gameChunks = new Map();
 for (const file of files) {
   if (file.includes(`${'app'}/`)) continue; // route shells, not game chunks
   const source = readFileSync(file, 'utf8');
-  const named = playable.filter((slug) => source.includes(`"${slug}"`) || source.includes(`'${slug}'`));
+  const named = playable.filter(
+    (slug) => source.includes(`"${slug}"`) || source.includes(`'${slug}'`),
+  );
   if (named.length === 1) gameChunks.set(named[0], file);
 }
 

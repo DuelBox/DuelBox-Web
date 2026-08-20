@@ -60,7 +60,6 @@ describe('design tokens', () => {
   });
 });
 
-
 /**
  * Every design token a stylesheet uses must actually exist.
  *

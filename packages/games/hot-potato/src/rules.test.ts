@@ -41,8 +41,10 @@ function playOut(p1: BotDifficulty, p2: BotDifficulty, seed: number): Game {
   const botP1 = createBotState();
   const botP2 = createBotState();
   for (let i = 0; i < 60 * 400 && winnerOf(game) === null; i += 1) {
-    if (botThrows(game, botP1, BOT_PROFILES[p1], 'p1', STEP, rng.float())) tryThrow(game, 'p1', rng);
-    if (botThrows(game, botP2, BOT_PROFILES[p2], 'p2', STEP, rng.float())) tryThrow(game, 'p2', rng);
+    if (botThrows(game, botP1, BOT_PROFILES[p1], 'p1', STEP, rng.float()))
+      tryThrow(game, 'p1', rng);
+    if (botThrows(game, botP2, BOT_PROFILES[p2], 'p2', STEP, rng.float()))
+      tryThrow(game, 'p2', rng);
     step(game, STEP, rng);
   }
   return game;

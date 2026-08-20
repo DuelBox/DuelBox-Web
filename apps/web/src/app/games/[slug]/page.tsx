@@ -120,8 +120,8 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
             </>
           ) : (
             <p className={styles.soon}>
-              This game is still being built. Its rules and controls are settled; the playable
-              build lands with its milestone.
+              This game is still being built. Its rules and controls are settled; the playable build
+              lands with its milestone.
             </p>
           )}
         </div>

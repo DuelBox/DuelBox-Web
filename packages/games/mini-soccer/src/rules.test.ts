@@ -128,9 +128,7 @@ describe('the ball', () => {
     game.ball.vy = 0;
     for (let i = 0; i < 60; i += 1) step(game, STEP, rng);
     expect(game.phase, 'nothing was scored').toBe('playing');
-    expect(Math.hypot(game.ball.vx, game.ball.vy), 'a second on, it has slowed').toBeLessThan(
-      120,
-    );
+    expect(Math.hypot(game.ball.vx, game.ball.vy), 'a second on, it has slowed').toBeLessThan(120);
   });
 
   it('does not roll further just because the step is smaller', () => {
@@ -156,9 +154,10 @@ describe('the ball', () => {
     // exactly across step sizes, and demanding that it does tests the arithmetic rather
     // than the property — which is that halving the step does not change how far a ball
     // rolls in any way a player could notice.
-    expect(Math.abs(fine - coarse) / coarse, `${fine.toFixed(1)} vs ${coarse.toFixed(1)}`).toBeLessThan(
-      0.01,
-    );
+    expect(
+      Math.abs(fine - coarse) / coarse,
+      `${fine.toFixed(1)} vs ${coarse.toFixed(1)}`,
+    ).toBeLessThan(0.01);
   });
 
   it('bounces off the side rails but not off the goal mouth', () => {
@@ -300,7 +299,15 @@ describe('the bot', () => {
     game.ball.x = PITCH_WIDTH - 120;
     game.ball.y = PITCH_HEIGHT / 2;
     const bot = createBotState();
-    botHeading(heading, game, bot, 'p1', { reaction: 0.1, wobble: 0, lead: 0, approach: 0 }, STEP, 0.5);
+    botHeading(
+      heading,
+      game,
+      bot,
+      'p1',
+      { reaction: 0.1, wobble: 0, lead: 0, approach: 0 },
+      STEP,
+      0.5,
+    );
     expect(heading.x, 'the ball is to the right').toBeGreaterThan(0);
   });
 
@@ -317,9 +324,25 @@ describe('the bot', () => {
 
     const charging = createBotState();
     const positioning = createBotState();
-    botHeading(heading, game, charging, 'p1', { reaction: 0.1, wobble: 0, lead: 0, approach: 0 }, STEP, 0.5);
+    botHeading(
+      heading,
+      game,
+      charging,
+      'p1',
+      { reaction: 0.1, wobble: 0, lead: 0, approach: 0 },
+      STEP,
+      0.5,
+    );
     const chargeX = heading.x;
-    botHeading(heading, game, positioning, 'p1', { reaction: 0.1, wobble: 0, lead: 0, approach: 120 }, STEP, 0.5);
+    botHeading(
+      heading,
+      game,
+      positioning,
+      'p1',
+      { reaction: 0.1, wobble: 0, lead: 0, approach: 120 },
+      STEP,
+      0.5,
+    );
     expect(heading.x, 'it aims behind the ball, away from the goal it attacks').toBeLessThan(
       chargeX,
     );
@@ -381,9 +404,10 @@ describe('the bot', () => {
     }
     // Measured at 12 wins and 3 draws in 16, with 4.4 goals a match. Draws are real
     // outcomes here, so the check is that it does not *lose*.
-    expect(wins, `hard won ${String(wins)}, lost ${String(losses)} of ${String(games)}`).toBeGreaterThan(
-      losses,
-    );
+    expect(
+      wins,
+      `hard won ${String(wins)}, lost ${String(losses)} of ${String(games)}`,
+    ).toBeGreaterThan(losses);
   });
 
   it('produces matches with goals in them', { timeout: 240_000 }, () => {
@@ -415,7 +439,8 @@ describe('a whole match', () => {
         botHeading(heading, game, bot, 'p1', BOT_PROFILES.normal, STEP, rng.float());
         drive(game, 'p1', heading.x, heading.y, STEP);
         step(game, STEP, rng);
-        if (i % 30 === 0) out.push(`${String(Math.round(game.ball.x))},${String(Math.round(game.ball.y))}`);
+        if (i % 30 === 0)
+          out.push(`${String(Math.round(game.ball.x))},${String(Math.round(game.ball.y))}`);
       }
       return out.join('|');
     };

@@ -116,7 +116,15 @@ export class MiniSoccerGame implements Game {
     dt: number,
   ): void {
     if (difficulty !== null) {
-      botHeading(this.#heading, this.#position, bot, seat, BOT_PROFILES[difficulty], dt, this.#rng.float());
+      botHeading(
+        this.#heading,
+        this.#position,
+        bot,
+        seat,
+        BOT_PROFILES[difficulty],
+        dt,
+        this.#rng.float(),
+      );
       drive(this.#position, seat, this.#heading.x, this.#heading.y, dt);
       return;
     }
@@ -141,9 +149,22 @@ export class MiniSoccerGame implements Game {
   #drawPitch(renderer: Renderer): void {
     for (let i = 0; i < STRIPES; i += 1) {
       const width = PITCH_WIDTH / STRIPES;
-      renderer.rect(i * width, 0, width, PITCH_HEIGHT, i % 2 === 0 ? COLOUR_GRASS : COLOUR_GRASS_ALT);
+      renderer.rect(
+        i * width,
+        0,
+        width,
+        PITCH_HEIGHT,
+        i % 2 === 0 ? COLOUR_GRASS : COLOUR_GRASS_ALT,
+      );
     }
-    renderer.strokeRect(WALL, WALL, PITCH_WIDTH - WALL * 2, PITCH_HEIGHT - WALL * 2, 4, COLOUR_LINE);
+    renderer.strokeRect(
+      WALL,
+      WALL,
+      PITCH_WIDTH - WALL * 2,
+      PITCH_HEIGHT - WALL * 2,
+      4,
+      COLOUR_LINE,
+    );
     renderer.line(PITCH_WIDTH / 2, WALL, PITCH_WIDTH / 2, PITCH_HEIGHT - WALL, 4, COLOUR_LINE);
     renderer.strokeCircle(PITCH_WIDTH / 2, PITCH_HEIGHT / 2, 88, 4, COLOUR_LINE);
 
@@ -153,7 +174,14 @@ export class MiniSoccerGame implements Game {
       const mouth = goalMouth(seat);
       const x = seat === 'p1' ? mouth.x - GOAL_DEPTH : mouth.x;
       renderer.rect(x, mouth.top, GOAL_DEPTH, mouth.bottom - mouth.top, SEAT_PALETTE[seat].deep);
-      renderer.strokeRect(x, mouth.top, GOAL_DEPTH, mouth.bottom - mouth.top, 4, SEAT_PALETTE[seat].base);
+      renderer.strokeRect(
+        x,
+        mouth.top,
+        GOAL_DEPTH,
+        mouth.bottom - mouth.top,
+        4,
+        SEAT_PALETTE[seat].base,
+      );
     }
   }
 
@@ -165,7 +193,13 @@ export class MiniSoccerGame implements Game {
       renderer.circle(me.x, me.y, PLAYER_RADIUS, palette.base);
       renderer.strokeCircle(me.x, me.y, PLAYER_RADIUS - 4, 5, COLOUR_INK);
     } else {
-      renderer.rect(me.x - PLAYER_RADIUS, me.y - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2, palette.base);
+      renderer.rect(
+        me.x - PLAYER_RADIUS,
+        me.y - PLAYER_RADIUS,
+        PLAYER_RADIUS * 2,
+        PLAYER_RADIUS * 2,
+        palette.base,
+      );
       renderer.strokeRect(
         me.x - PLAYER_RADIUS + 4,
         me.y - PLAYER_RADIUS + 4,

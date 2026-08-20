@@ -127,11 +127,7 @@ export function GameHost({
      */
     const turnBased = typeof game.getActiveSeat === 'function';
     const input = new InputManager(logical, {
-      split: turnBased
-        ? 'shared'
-        : manifest.zoneSplit === 'vertical'
-          ? 'vertical'
-          : 'horizontal',
+      split: turnBased ? 'shared' : manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
       bottomSeat: turnBased ? (game.getActiveSeat?.() ?? localSeat) : localSeat,
     });
 

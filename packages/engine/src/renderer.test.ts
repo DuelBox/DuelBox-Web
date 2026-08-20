@@ -474,7 +474,9 @@ describe('setViewport', () => {
     expect(clip.length, 'exactly one clip a frame').toBe(1);
 
     const path = fake.calls.filter((call) => call.op === 'rect');
-    expect(path[0]?.args, 'the clip is the logical box, in logical units').toEqual([0, 0, 800, 600]);
+    expect(path[0]?.args, 'the clip is the logical box, in logical units').toEqual([
+      0, 0, 800, 600,
+    ]);
 
     // And it is established before the game draws anything at all.
     const clipIndex = fake.calls.findIndex((call) => call.op === 'clip');

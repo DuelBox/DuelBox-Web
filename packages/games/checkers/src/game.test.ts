@@ -564,7 +564,9 @@ describe('rendering', () => {
       const on = dark.some(
         (r) => disc.x > r.x && disc.x < r.x + r.w && disc.y > r.y && disc.y < r.y + r.h,
       );
-      expect(on, `a disc at ${String(Math.round(disc.x))},${String(Math.round(disc.y))}`).toBe(true);
+      expect(on, `a disc at ${String(Math.round(disc.x))},${String(Math.round(disc.y))}`).toBe(
+        true,
+      );
     }
   });
 

@@ -1,4 +1,13 @@
-import { GridCursor, Rng, SEAT_PALETTE, SeatFlip, seatView, set, toWorld, vec2 } from '@duelbox/engine';
+import {
+  GridCursor,
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  seatView,
+  set,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';

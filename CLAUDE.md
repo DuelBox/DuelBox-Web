@@ -81,6 +81,17 @@ docs/               research, design docs, ADRs
 
 `pnpm dev` · `pnpm test` · `pnpm lint` · `pnpm typecheck` · `pnpm build` · `pnpm size`
 
+The gate CI runs, in order — run all of it before claiming a change is done:
+
+```
+pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
+```
+
+`format:check` is first because it is cheapest and it is the one that gets skipped:
+CI failed on it for every commit until 20 August 2026 while local runs of the other
+five passed, so the repository looked green and was not. `pnpm build` runs
+`pnpm size` at the end, so the size budget is checked as part of it.
+
 ## Definition of done
 
 Tests pass · types clean · lint clean · under size budget · both seats verified ·

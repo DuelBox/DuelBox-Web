@@ -181,7 +181,10 @@ const solved = new Map<string, boolean>();
 
 export function winsFromSegments(segments: readonly number[]): boolean {
   if (segments.length === 0) return true;
-  const key = segments.slice().sort((a, b) => a - b).join(',');
+  const key = segments
+    .slice()
+    .sort((a, b) => a - b)
+    .join(',');
   const known = solved.get(key);
   if (known !== undefined) return known;
 

@@ -81,9 +81,10 @@ describe('the board', () => {
       const column = columnOf(slot);
       expect(slotAt(row, column), `slot ${String(slot)} round-trips`).toBe(slot);
       // And it really is a dark square: row and column differ in parity.
-      expect(row % 2 === column % 2, `slot ${String(slot)} at (${String(row)},${String(column)})`).toBe(
-        false,
-      );
+      expect(
+        row % 2 === column % 2,
+        `slot ${String(slot)} at (${String(row)},${String(column)})`,
+      ).toBe(false);
     }
   });
 
@@ -108,7 +109,8 @@ describe('the board', () => {
     expect(p2).toBe(PIECES_PER_SEAT);
     for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
       const row = rowOf(slot);
-      if (row === 3 || row === 4) expect(game.slots[slot], `row ${String(row)} is empty`).toBeNull();
+      if (row === 3 || row === 4)
+        expect(game.slots[slot], `row ${String(row)} is empty`).toBeNull();
     }
     expect(game.toMove).toBe('p1');
   });
@@ -131,7 +133,10 @@ describe('moving', () => {
     const game = createGame();
     const moves = movesOf(game);
     expect(moves.length).toBe(7);
-    expect(moves.every((move) => !isCapture(move)), 'no captures exist yet').toBe(true);
+    expect(
+      moves.every((move) => !isCapture(move)),
+      'no captures exist yet',
+    ).toBe(true);
   });
 
   it('sends a man forward only', () => {
@@ -209,7 +214,10 @@ describe('capturing', () => {
     put(game, 2, 1, 'p2', 'man');
     game.toMove = 'p1';
     const moves = movesOf(game).filter((move) => move.from === from);
-    expect(moves.some((move) => isCapture(move)), 'the landing square is taken').toBe(false);
+    expect(
+      moves.some((move) => isCapture(move)),
+      'the landing square is taken',
+    ).toBe(false);
   });
 
   it('cannot jump its own piece', () => {
@@ -217,7 +225,11 @@ describe('capturing', () => {
     const from = put(game, 4, 3, 'p1', 'man');
     put(game, 3, 2, 'p1', 'man');
     game.toMove = 'p1';
-    expect(movesOf(game).filter((move) => move.from === from).some(isCapture)).toBe(false);
+    expect(
+      movesOf(game)
+        .filter((move) => move.from === from)
+        .some(isCapture),
+    ).toBe(false);
   });
 
   it('makes capturing compulsory', () => {

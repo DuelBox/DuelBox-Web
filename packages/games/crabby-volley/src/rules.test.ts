@@ -125,7 +125,7 @@ describe('the serve', () => {
   it('hangs before it is released', () => {
     const game = createGame(new Rng(1));
     const before = { ...game.ball };
-    for (let i = 0; i < Math.floor((SERVE_SECONDS / STEP) / 2); i += 1) step(game, STEP, new Rng(1));
+    for (let i = 0; i < Math.floor(SERVE_SECONDS / STEP / 2); i += 1) step(game, STEP, new Rng(1));
     expect(game.phase).toBe('serving');
     expect(game.ball.x, 'still hanging').toBe(before.x);
   });

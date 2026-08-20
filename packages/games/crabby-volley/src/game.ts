@@ -143,7 +143,15 @@ export class CrabbyVolleyGame implements Game {
     dt: number,
   ): void {
     if (difficulty !== null) {
-      botIntent(this.#intent, this.#position, bot, seat, BOT_PROFILES[difficulty], dt, this.#rng.float());
+      botIntent(
+        this.#intent,
+        this.#position,
+        bot,
+        seat,
+        BOT_PROFILES[difficulty],
+        dt,
+        this.#rng.float(),
+      );
       steer(this.#position, seat, this.#intent.direction, dt);
       if (this.#intent.jump) jump(this.#position, seat);
       return;
@@ -179,7 +187,13 @@ export class CrabbyVolleyGame implements Game {
     renderer.rect(0, FLOOR_Y, COURT_WIDTH, manifest.logical.height - FLOOR_Y, COLOUR_SAND);
     renderer.rect(0, FLOOR_Y, COURT_WIDTH, 8, COLOUR_SAND_DEEP);
     // The net: a post with a banded top, so its height is legible at a glance.
-    renderer.rect(NET_X - NET_HALF_WIDTH, NET_TOP, NET_HALF_WIDTH * 2, FLOOR_Y - NET_TOP, COLOUR_NET_POST);
+    renderer.rect(
+      NET_X - NET_HALF_WIDTH,
+      NET_TOP,
+      NET_HALF_WIDTH * 2,
+      FLOOR_Y - NET_TOP,
+      COLOUR_NET_POST,
+    );
     renderer.rect(NET_X - NET_HALF_WIDTH - 6, NET_TOP, NET_HALF_WIDTH * 2 + 12, 14, COLOUR_NET);
   }
 
@@ -198,10 +212,26 @@ export class CrabbyVolleyGame implements Game {
     if (seat === 'p1') {
       renderer.circle(crab.x, crab.y, CRAB_RADIUS, palette.base);
       renderer.strokeCircle(crab.x, crab.y, CRAB_RADIUS - 4, 5, palette.deep);
-      renderer.circle(crab.x + facing * CRAB_RADIUS * EYE_OFFSET, crab.y - CRAB_RADIUS * 0.45, 8, COLOUR_INK);
-      renderer.circle(crab.x + facing * CRAB_RADIUS * 0.12, crab.y - CRAB_RADIUS * 0.55, 8, COLOUR_INK);
+      renderer.circle(
+        crab.x + facing * CRAB_RADIUS * EYE_OFFSET,
+        crab.y - CRAB_RADIUS * 0.45,
+        8,
+        COLOUR_INK,
+      );
+      renderer.circle(
+        crab.x + facing * CRAB_RADIUS * 0.12,
+        crab.y - CRAB_RADIUS * 0.55,
+        8,
+        COLOUR_INK,
+      );
     } else {
-      renderer.rect(crab.x - CRAB_RADIUS, crab.y - CRAB_RADIUS * 0.8, CRAB_RADIUS * 2, CRAB_RADIUS * 1.6, palette.base);
+      renderer.rect(
+        crab.x - CRAB_RADIUS,
+        crab.y - CRAB_RADIUS * 0.8,
+        CRAB_RADIUS * 2,
+        CRAB_RADIUS * 1.6,
+        palette.base,
+      );
       renderer.strokeRect(
         crab.x - CRAB_RADIUS + 4,
         crab.y - CRAB_RADIUS * 0.8 + 4,
@@ -210,7 +240,13 @@ export class CrabbyVolleyGame implements Game {
         5,
         palette.deep,
       );
-      renderer.rect(crab.x - CRAB_RADIUS * 0.55, crab.y - CRAB_RADIUS * 0.35, CRAB_RADIUS * 1.1, 10, COLOUR_INK);
+      renderer.rect(
+        crab.x - CRAB_RADIUS * 0.55,
+        crab.y - CRAB_RADIUS * 0.35,
+        CRAB_RADIUS * 1.1,
+        10,
+        COLOUR_INK,
+      );
     }
   }
 

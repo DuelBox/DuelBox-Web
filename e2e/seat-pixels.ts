@@ -62,9 +62,13 @@ export async function seatCentroids(page: Page): Promise<SeatCentroids> {
     }
 
     const centre = (seat: 'p1' | 'p2'): { x: number; y: number; count: number } | null =>
-      sums[seat].count === 0 ?
-        null
-      : { x: sums[seat].x / sums[seat].count, y: sums[seat].y / sums[seat].count, count: sums[seat].count };
+      sums[seat].count === 0
+        ? null
+        : {
+            x: sums[seat].x / sums[seat].count,
+            y: sums[seat].y / sums[seat].count,
+            count: sums[seat].count,
+          };
 
     return { p1: centre('p1'), p2: centre('p2') };
   });

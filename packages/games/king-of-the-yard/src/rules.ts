@@ -128,8 +128,16 @@ export function move(
   if (length === 0) return;
   const speed = SPEED * (game.wearer === seat ? CROWN_DRAG : 1);
   const step = speed * fixedDeltaSeconds;
-  mover.x = clamp(mover.x + (dx / length) * step, WALL + PLAYER_RADIUS, YARD_WIDTH - WALL - PLAYER_RADIUS);
-  mover.y = clamp(mover.y + (dy / length) * step, WALL + PLAYER_RADIUS, YARD_HEIGHT - WALL - PLAYER_RADIUS);
+  mover.x = clamp(
+    mover.x + (dx / length) * step,
+    WALL + PLAYER_RADIUS,
+    YARD_WIDTH - WALL - PLAYER_RADIUS,
+  );
+  mover.y = clamp(
+    mover.y + (dy / length) * step,
+    WALL + PLAYER_RADIUS,
+    YARD_HEIGHT - WALL - PLAYER_RADIUS,
+  );
 }
 
 export function distanceBetween(a: Readonly<Mover>, b: Readonly<Mover>): number {
@@ -175,7 +183,8 @@ export function step(game: Game, fixedDeltaSeconds: number, rng: Rng): StepResul
       const d1 = distanceBetween(game.p1, game.crown);
       const d2 = distanceBetween(game.p2, game.crown);
       if (d1 !== d2) game.wearer = d1 < d2 ? 'p1' : 'p2';
-      else if (game.worn.p1 !== game.worn.p2) game.wearer = game.worn.p1 < game.worn.p2 ? 'p1' : 'p2';
+      else if (game.worn.p1 !== game.worn.p2)
+        game.wearer = game.worn.p1 < game.worn.p2 ? 'p1' : 'p2';
       else game.wearer = rng.bool(0.5) ? 'p1' : 'p2';
     } else {
       game.wearer = p1Near ? 'p1' : 'p2';

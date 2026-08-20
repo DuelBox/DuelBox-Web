@@ -112,9 +112,10 @@ test.describe('both players can see which keys are theirs', () => {
     // "Both crabs moved" used to be asserted as "a canvas exists", which passes with the
     // whole input system deleted. Read where the two bodies actually are instead.
     const after = await seatCentroids(page);
-    expect((after.p1?.y ?? 0) - (start.p1?.y ?? 0), 'S took seat one down the yard').toBeGreaterThan(
-      6,
-    );
+    expect(
+      (after.p1?.y ?? 0) - (start.p1?.y ?? 0),
+      'S took seat one down the yard',
+    ).toBeGreaterThan(6);
     expect(
       (after.p2?.y ?? 0) - (start.p2?.y ?? 0),
       'the up arrow took seat two the other way in the same span',

@@ -179,7 +179,8 @@ export function readyDelay(rng: Rng): number {
  * settled point starts the next round with the seats swapped.
  */
 export function step(state: State, fixedDeltaSeconds: number, rng: Rng): void {
-  if (state.dodgeCooldown > 0) state.dodgeCooldown = Math.max(0, state.dodgeCooldown - fixedDeltaSeconds);
+  if (state.dodgeCooldown > 0)
+    state.dodgeCooldown = Math.max(0, state.dodgeCooldown - fixedDeltaSeconds);
   if (state.dodgeRemaining > 0) {
     state.dodgeRemaining = Math.max(0, state.dodgeRemaining - fixedDeltaSeconds);
   }

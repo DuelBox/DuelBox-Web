@@ -181,7 +181,13 @@ export function settle(game: Game, landed: Bag): void {
  * Returns false when it is not this seat's turn or they have none left, so a refusal is
  * never mistaken for a throw that scored nothing.
  */
-export function throwBag(game: Game, seat: SeatId, angle: number, power: number, rng: Rng): boolean {
+export function throwBag(
+  game: Game,
+  seat: SeatId,
+  angle: number,
+  power: number,
+  rng: Rng,
+): boolean {
   if (game.phase !== 'aiming') return false;
   if (game.toThrow !== seat) return false;
   const left = seat === 'p1' ? game.left.p1 : game.left.p2;

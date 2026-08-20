@@ -124,7 +124,15 @@ export class KingOfTheYardGame implements Game {
     dt: number,
   ): void {
     if (difficulty !== null) {
-      botHeading(this.#heading, this.#position, bot, seat, BOT_PROFILES[difficulty], dt, this.#rng.float());
+      botHeading(
+        this.#heading,
+        this.#position,
+        bot,
+        seat,
+        BOT_PROFILES[difficulty],
+        dt,
+        this.#rng.float(),
+      );
       move(this.#position, seat, this.#heading.x, this.#heading.y, dt);
       return;
     }
@@ -167,7 +175,13 @@ export class KingOfTheYardGame implements Game {
       renderer.circle(me.x, me.y, PLAYER_RADIUS, palette.base);
       renderer.strokeCircle(me.x, me.y, PLAYER_RADIUS - 4, 5, COLOUR_INK);
     } else {
-      renderer.rect(me.x - PLAYER_RADIUS, me.y - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2, palette.base);
+      renderer.rect(
+        me.x - PLAYER_RADIUS,
+        me.y - PLAYER_RADIUS,
+        PLAYER_RADIUS * 2,
+        PLAYER_RADIUS * 2,
+        palette.base,
+      );
       renderer.strokeRect(
         me.x - PLAYER_RADIUS + 4,
         me.y - PLAYER_RADIUS + 4,
@@ -189,7 +203,13 @@ export class KingOfTheYardGame implements Game {
     const at = wearer === null ? position.crown : wearer === 'p1' ? position.p1 : position.p2;
     const y = wearer === null ? at.y : at.y - PLAYER_RADIUS - CROWN_RADIUS * 0.7;
     // Three points and a band, so it is a crown in silhouette rather than a yellow blob.
-    renderer.rect(at.x - CROWN_RADIUS, y + CROWN_RADIUS * 0.4, CROWN_RADIUS * 2, CROWN_RADIUS * 0.5, COLOUR_CROWN);
+    renderer.rect(
+      at.x - CROWN_RADIUS,
+      y + CROWN_RADIUS * 0.4,
+      CROWN_RADIUS * 2,
+      CROWN_RADIUS * 0.5,
+      COLOUR_CROWN,
+    );
     for (const offset of [-CROWN_RADIUS * 0.7, 0, CROWN_RADIUS * 0.7]) {
       renderer.line(
         at.x + offset,

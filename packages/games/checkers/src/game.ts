@@ -1,4 +1,13 @@
-import { GridCursor, Rng, SEAT_PALETTE, SeatFlip, seatView, set, toWorld, vec2 } from '@duelbox/engine';
+import {
+  GridCursor,
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  seatView,
+  set,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -332,13 +341,7 @@ export class CheckersGame implements Game {
       const move = moveScratch[i];
       if (move === undefined || !isCapture(move)) continue;
       slotCentre(this.#scratch, move.from);
-      renderer.strokeCircle(
-        this.#scratch.x,
-        this.#scratch.y,
-        PIECE_RADIUS + 8,
-        4,
-        COLOUR_FORCED,
-      );
+      renderer.strokeCircle(this.#scratch.x, this.#scratch.y, PIECE_RADIUS + 8, 4, COLOUR_FORCED);
     }
   }
 

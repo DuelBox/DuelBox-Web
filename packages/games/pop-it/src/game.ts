@@ -1,4 +1,13 @@
-import { GridCursor, Rng, SEAT_PALETTE, SeatFlip, seatView, set, toWorld, vec2 } from '@duelbox/engine';
+import {
+  GridCursor,
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  seatView,
+  set,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -58,10 +67,8 @@ const SHEET_OUTER_HEIGHT = SHEET_HEIGHT + (SHEET_PAD + BUBBLE_RADIUS) * 2;
  * Any game that rotates its board has to be centred, so this is computed rather than
  * chosen, and a test asserts it.
  */
-export const BOARD_ORIGIN_X =
-  (900 - SHEET_OUTER_WIDTH) / 2 + SHEET_PAD + BUBBLE_RADIUS;
-export const BOARD_ORIGIN_Y =
-  (900 - SHEET_OUTER_HEIGHT) / 2 + SHEET_PAD + BUBBLE_RADIUS;
+export const BOARD_ORIGIN_X = (900 - SHEET_OUTER_WIDTH) / 2 + SHEET_PAD + BUBBLE_RADIUS;
+export const BOARD_ORIGIN_Y = (900 - SHEET_OUTER_HEIGHT) / 2 + SHEET_PAD + BUBBLE_RADIUS;
 
 /** The centre of a bubble, in logical units. */
 export function bubbleCentre(out: Vec2, row: number, index: number): Vec2 {
@@ -352,7 +359,12 @@ export class PopItGame implements Game {
           renderer.strokeCircle(x, y, BUBBLE_RADIUS + 6, 6, palette.base);
           renderer.rect(x - BUBBLE_RADIUS * 0.5, y - 4, BUBBLE_RADIUS, 8, palette.base);
         }
-        if (cursor !== null && cursor.row === row && cursor.index === index && this.#cursor.visible) {
+        if (
+          cursor !== null &&
+          cursor.row === row &&
+          cursor.index === index &&
+          this.#cursor.visible
+        ) {
           renderer.strokeCircle(x, y, BUBBLE_RADIUS + 14, 4, palette.deep);
         }
       }

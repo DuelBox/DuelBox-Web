@@ -267,7 +267,9 @@ describe('the match', () => {
       for (let i = 0; i < 60 * 90; i += 1) {
         game.update(STEP, input);
         if (i % 30 === 0) {
-          out.push(`${String(Math.round(game.position.ball.x))},${String(Math.round(game.position.ball.y))}`);
+          out.push(
+            `${String(Math.round(game.position.ball.x))},${String(Math.round(game.position.ball.y))}`,
+          );
         }
       }
       return out.join('|');

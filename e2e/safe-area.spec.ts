@@ -74,7 +74,10 @@ test.describe('a running match keeps clear of the cutout', () => {
    * device — 44 on every side of a 343-tall window leaves 190 for a header, two
    * scoreboards and a board.
    */
-  function insetsFor(width: number, height: number): {
+  function insetsFor(
+    width: number,
+    height: number,
+  ): {
     top: number;
     right: number;
     bottom: number;
@@ -108,36 +111,34 @@ test.describe('a running match keeps clear of the cutout', () => {
     // One frame for the layout to settle under the new insets.
     await page.waitForTimeout(200);
 
-    const offenders = await page.evaluate((inset: {
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-    }) => {
-      const bad: string[] = [];
-      const targets = document.querySelectorAll('a, button, [role="button"]');
-      for (const node of targets) {
-        const el = node as HTMLElement;
-        const style = getComputedStyle(el);
-        if (style.display === 'none' || style.visibility === 'hidden') continue;
-        if (el.classList.contains('db-skip')) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) continue;
-        if (
-          r.left < inset.left ||
-          r.top < inset.top ||
-          r.right > window.innerWidth - inset.right ||
-          r.bottom > window.innerHeight - inset.bottom
-        ) {
-          bad.push(
-            `${el.tagName}${el.className ? '.' + String(el.className).split(' ')[0] : ''} at ` +
-              `${String(Math.round(r.left))},${String(Math.round(r.top))} ` +
-              `${String(Math.round(r.right))},${String(Math.round(r.bottom))}`,
-          );
+    const offenders = await page.evaluate(
+      (inset: { top: number; right: number; bottom: number; left: number }) => {
+        const bad: string[] = [];
+        const targets = document.querySelectorAll('a, button, [role="button"]');
+        for (const node of targets) {
+          const el = node as HTMLElement;
+          const style = getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') continue;
+          if (el.classList.contains('db-skip')) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 && r.height === 0) continue;
+          if (
+            r.left < inset.left ||
+            r.top < inset.top ||
+            r.right > window.innerWidth - inset.right ||
+            r.bottom > window.innerHeight - inset.bottom
+          ) {
+            bad.push(
+              `${el.tagName}${el.className ? '.' + String(el.className).split(' ')[0] : ''} at ` +
+                `${String(Math.round(r.left))},${String(Math.round(r.top))} ` +
+                `${String(Math.round(r.right))},${String(Math.round(r.bottom))}`,
+            );
+          }
         }
-      }
-      return bad;
-    }, inset);
+        return bad;
+      },
+      inset,
+    );
 
     expect(offenders, 'controls inside the cutout band during a match').toEqual([]);
   });
@@ -166,8 +167,6 @@ test.describe('a running match keeps clear of the cutout', () => {
     expect(box).not.toBeNull();
     if (!box) return;
     expect(box.y, 'the panel starts below the cutout').toBeGreaterThanOrEqual(0);
-    expect(box.y + box.height, 'and ends above the indicator').toBeLessThanOrEqual(
-      viewport.height,
-    );
+    expect(box.y + box.height, 'and ends above the indicator').toBeLessThanOrEqual(viewport.height);
   });
 });

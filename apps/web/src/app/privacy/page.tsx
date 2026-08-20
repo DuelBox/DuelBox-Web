@@ -30,15 +30,15 @@ export default function PrivacyPage() {
 
         <h2>What we collect</h2>
         <p>
-          Nothing. We have no server that receives anything from you while you play, so there is
-          no data for us to hold, lose or be asked for.
+          Nothing. We have no server that receives anything from you while you play, so there is no
+          data for us to hold, lose or be asked for.
         </p>
 
         <h2>What stays on your device</h2>
         <p>
           Scores and settings are kept in your browser&apos;s own storage on the device you played
-          on. They are never sent anywhere. Clearing your browser&apos;s site data removes them,
-          and nothing else remembers them.
+          on. They are never sent anywhere. Clearing your browser&apos;s site data removes them, and
+          nothing else remembers them.
         </p>
 
         <h2>Cookies</h2>
@@ -46,17 +46,17 @@ export default function PrivacyPage() {
 
         <h2>How the site is delivered</h2>
         <p>
-          The pages and games are static files. Your browser downloads them from a content
-          delivery network the same way it downloads any web page, and that network keeps its own
-          ordinary server logs — the sort every web host keeps — which are outside our control and
-          are not used to identify or profile anyone. Once a game has loaded it runs entirely on
-          your device and works with no connection at all.
+          The pages and games are static files. Your browser downloads them from a content delivery
+          network the same way it downloads any web page, and that network keeps its own ordinary
+          server logs — the sort every web host keeps — which are outside our control and are not
+          used to identify or profile anyone. Once a game has loaded it runs entirely on your device
+          and works with no connection at all.
         </p>
 
         <h2>Children</h2>
         <p>
-          The games are suitable for all ages. Since we collect no personal information from
-          anyone, we collect none from children either.
+          The games are suitable for all ages. Since we collect no personal information from anyone,
+          we collect none from children either.
         </p>
 
         <h2>Changes</h2>

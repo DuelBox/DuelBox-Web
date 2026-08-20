@@ -23,16 +23,15 @@ export default function TermsPage() {
 
         <h2>Using DuelBox</h2>
         <p>
-          You may play the games here for free, for as long as you like, on any device. You may
-          not misrepresent the site as your own, or redistribute its code or artwork as if it
-          were.
+          You may play the games here for free, for as long as you like, on any device. You may not
+          misrepresent the site as your own, or redistribute its code or artwork as if it were.
         </p>
 
         <h2>What we promise</h2>
         <p>
           Very little, honestly. The site is provided as it is, without warranty. Games may have
-          bugs, may change, and may occasionally be taken away and rewritten. Nothing here is
-          fit for any particular purpose beyond passing ten minutes with somebody.
+          bugs, may change, and may occasionally be taken away and rewritten. Nothing here is fit
+          for any particular purpose beyond passing ten minutes with somebody.
         </p>
 
         <h2>Our games are our own</h2>
@@ -45,8 +44,8 @@ export default function TermsPage() {
 
         <h2>Your data</h2>
         <p>
-          We do not have any. See <Link href="/privacy/">Privacy</Link>, which is short for the
-          same reason.
+          We do not have any. See <Link href="/privacy/">Privacy</Link>, which is short for the same
+          reason.
         </p>
 
         <h2>Getting in touch</h2>

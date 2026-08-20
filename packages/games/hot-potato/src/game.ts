@@ -157,7 +157,16 @@ export class HotPotatoGame implements Game {
     if (runtime.missSteps > 0) runtime.missSteps -= 1;
 
     if (difficulty !== null) {
-      if (botThrows(this.#position, runtime.bot, BOT_PROFILES[difficulty], seat, dt, this.#rng.float())) {
+      if (
+        botThrows(
+          this.#position,
+          runtime.bot,
+          BOT_PROFILES[difficulty],
+          seat,
+          dt,
+          this.#rng.float(),
+        )
+      ) {
         if (tryThrow(this.#position, seat, this.#rng) === 'missed') runtime.missSteps = MISS_STEPS;
       }
       return;
@@ -239,7 +248,13 @@ export class HotPotatoGame implements Game {
       renderer.circle(x, y, POTATO_RADIUS, palette.base);
       renderer.strokeCircle(x, y, POTATO_RADIUS - 5, 6, COLOUR_INK);
     } else {
-      renderer.rect(x - POTATO_RADIUS, y - POTATO_RADIUS, POTATO_RADIUS * 2, POTATO_RADIUS * 2, palette.base);
+      renderer.rect(
+        x - POTATO_RADIUS,
+        y - POTATO_RADIUS,
+        POTATO_RADIUS * 2,
+        POTATO_RADIUS * 2,
+        palette.base,
+      );
       renderer.strokeRect(
         x - POTATO_RADIUS + 5,
         y - POTATO_RADIUS + 5,

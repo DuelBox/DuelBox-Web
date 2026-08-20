@@ -4,7 +4,14 @@ import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import { KingOfTheYardGame } from './game.js';
-import { LOOSE_SECONDS, PLAYER_RADIUS, TARGET_SECONDS, WALL, YARD_HEIGHT, YARD_WIDTH } from './rules.js';
+import {
+  LOOSE_SECONDS,
+  PLAYER_RADIUS,
+  TARGET_SECONDS,
+  WALL,
+  YARD_HEIGHT,
+  YARD_WIDTH,
+} from './rules.js';
 import type { BotDifficulty, Game as Position } from './rules.js';
 
 const STEP = 1 / 60;
@@ -213,7 +220,8 @@ describe('the match', () => {
       const out: string[] = [];
       for (let i = 0; i < 60 * 60; i += 1) {
         game.update(STEP, input);
-        if (i % 30 === 0) out.push(`${String(Math.round(game.position.p1.x))}${game.position.wearer ?? '-'}`);
+        if (i % 30 === 0)
+          out.push(`${String(Math.round(game.position.p1.x))}${game.position.wearer ?? '-'}`);
       }
       return out.join('|');
     };
@@ -316,14 +324,21 @@ describe('rendering', () => {
       if (op === 'circle' && renderer.args[cursor + 3] === SEAT_PALETTE.p1.base) p1Circles += 1;
       if (op === 'rect' && renderer.args[cursor + 4] === SEAT_PALETTE.p2.base) p2Rects += 1;
       cursor +=
-        op === 'clear' ? 1
-        : op === 'circle' ? 4
-        : op === 'strokeCircle' ? 5
-        : op === 'rect' ? 5
-        : op === 'strokeRect' ? 6
-        : op === 'line' ? 6
-        : op === 'text' ? 6
-        : 1;
+        op === 'clear'
+          ? 1
+          : op === 'circle'
+            ? 4
+            : op === 'strokeCircle'
+              ? 5
+              : op === 'rect'
+                ? 5
+                : op === 'strokeRect'
+                  ? 6
+                  : op === 'line'
+                    ? 6
+                    : op === 'text'
+                      ? 6
+                      : 1;
     }
     expect(p1Circles, 'p1 is a disc').toBeGreaterThan(0);
     expect(p2Rects, 'p2 is a square').toBeGreaterThan(0);
