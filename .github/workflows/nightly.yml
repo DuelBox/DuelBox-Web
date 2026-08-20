@@ -1,0 +1,38 @@
+name: Nightly
+
+# Everything that is too slow to pay for on every push.
+#
+# Today that is one thing: the third browser engine. The whole suite passes on Firefox and
+# has done since it was first tried, so running it per-push would spend install and run time
+# to re-confirm a clean result — while the verify job already takes 14 minutes against a
+# stated budget of 8. Once a night is the right price for finding out if that changes.
+on:
+  schedule:
+    # 03:15 UTC, which is a quiet hour for the free-tier runners.
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  all-engines:
+    name: every browser engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: npx playwright install --with-deps chromium webkit firefox
+      - run: pnpm e2e
+        env:
+          DUELBOX_ALL_ENGINES: '1'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

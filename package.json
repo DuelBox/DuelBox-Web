@@ -21,6 +21,7 @@
     "create-game": "node scripts/create-game.mjs",
     "catalogue": "python3 scripts/generate_catalog.py",
     "e2e": "playwright test",
+    "e2e:all": "DUELBOX_ALL_ENGINES=1 playwright test",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "check:zero-cost": "node scripts/check-zero-cost.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
