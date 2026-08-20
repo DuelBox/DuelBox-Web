@@ -36,6 +36,7 @@
     "@duelbox/game-sdk": "workspace:*",
     "@duelbox/game-sea-battle": "workspace:*",
     "@duelbox/game-shut-the-box": "workspace:*",
+    "@duelbox/game-snakes": "workspace:*",
     "@duelbox/game-sumo": "workspace:*",
     "@duelbox/game-tic-tac-toe": "workspace:*",
     "@duelbox/game-ultimate-ttt": "workspace:*",

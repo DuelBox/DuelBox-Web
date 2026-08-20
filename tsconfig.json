@@ -74,6 +74,9 @@
       "path": "./packages/games/ludo"
     },
     {
+      "path": "./packages/games/snakes"
+    },
+    {
       "path": "./packages/games/king-of-the-yard"
     },
     {

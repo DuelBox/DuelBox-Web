@@ -37,14 +37,21 @@ describe('turn-based games', () => {
   });
 
   it('never claims a real-time game has turns', async () => {
-    // The other direction matters too: a real-time game that grew a `getActiveSeat` would
-    // silently switch the shell into shared-board mode and take one seat's keys away.
+    // The other direction matters: a real-time game that reported an active seat would
+    // switch the shell into shared-board mode and take one seat's pointer zone away.
+    //
+    // Checked on the **value**, not on whether the method exists. That distinction is
+    // newer than this test: the host used to decide from the method's presence alone, so
+    // having it at all meant "turn-based". Since Sea Battle it reads the live value, and
+    // the contract has always documented null as "no turns right now" — which is now how
+    // a simultaneous game with a `getActiveSeat` says so. Snake Clash is one.
     const wrong: string[] = [];
     for (const [slug, load] of Object.entries(LOADERS_FOR_TEST)) {
       const loaded = await load();
       if (!loaded.manifest.archetype.startsWith('rt-')) continue;
       const game = loaded.create();
-      if (typeof game.getActiveSeat === 'function') wrong.push(slug);
+      const seat = game.getActiveSeat?.() ?? null;
+      if (seat !== null) wrong.push(`${slug} (${seat})`);
     }
     expect(wrong, `these are real-time but claim to have turns: ${wrong.join(', ')}`).toEqual([]);
   });
