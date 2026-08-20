@@ -12,19 +12,48 @@ import { LOADERS_FOR_TEST } from './registry';
  * of 16.7 ms, on a development machine. A phone is several times slower again.
  *
  * The real fix is the deterministic node budget in `@duelbox/game-sdk`; its own unit tests
- * prove the mechanism. **This is the check that it is wired in** — a smoke ceiling rather
- * than a budget, set well above what any game costs now and well below where they were, so
- * it catches a bot going unbounded again without flaking on a slow CI runner.
+ * prove the mechanism. **This is the check that it is wired in.**
  *
  * A clock is the wrong way to *limit* a search — it would make the depth reached depend on
  * how fast the device is, and rule 8 says a phone and a laptop must step the identical
- * match. It is the right way to notice one has got out of hand.
+ * match. It is the right way to notice one has got out of hand — but only if the ceiling
+ * knows how fast the machine is.
+ *
+ * The first version did not, and failed on CI at 45 ms against a 22 ms ceiling while
+ * costing 9.7 ms locally. CI is roughly four to five times slower than a development
+ * machine, which is precisely the objection to clocks, aimed back at the test that made it.
+ *
+ * So the ceiling is **calibrated**: a fixed synthetic workload is timed at the start of the
+ * run and the allowance scaled by how long it took. A slow runner gets a proportionally
+ * larger budget, and the thing this exists to catch — a search with no ceiling, four to
+ * five times over — is still caught anywhere.
  */
 
 const STEP = 1 / 60;
-/** Generous on purpose: the worst game costs about 10 ms here and used to cost 31. */
-const CEILING_MS = 22;
 const STEPS = 60 * 180;
+
+/**
+ * A fixed lump of arithmetic, timed to find out how fast this machine is.
+ *
+ * Three million square roots takes about 17.5 ms on the development machine these numbers
+ * were taken on. Anything slower scales the allowance up in proportion.
+ */
+function calibrationMs(): number {
+  const started = performance.now();
+  let acc = 0;
+  for (let i = 1; i <= 3_000_000; i += 1) acc += Math.sqrt(i) % 7;
+  if (acc < 0) throw new Error('unreachable');
+  return performance.now() - started;
+}
+
+const REFERENCE_CALIBRATION_MS = 17.5;
+/** Generous on purpose: the worst game costs about 10 ms on the reference machine. */
+const REFERENCE_CEILING_MS = 22;
+
+// Timed once for the whole file. Floored at 1 so a suspiciously fast reading cannot make
+// the ceiling smaller than it was measured against.
+const machine = Math.max(1, calibrationMs() / REFERENCE_CALIBRATION_MS);
+const CEILING_MS = REFERENCE_CEILING_MS * machine;
 
 describe('no bot stalls a frame', () => {
   const entries = Object.entries(LOADERS_FOR_TEST);
@@ -61,11 +90,18 @@ describe('no bot stalls a frame', () => {
 
     expect(
       worst,
-      `${slug}'s hardest bot spent ${worst.toFixed(1)}ms on one step — see the note at the top of this file`,
+      `${slug}'s hardest bot spent ${worst.toFixed(1)}ms on one step, against a ceiling of ` +
+        `${CEILING_MS.toFixed(0)}ms for a machine ${machine.toFixed(1)}× the reference — ` +
+        'see the note at the top of this file',
     ).toBeLessThan(CEILING_MS);
   });
 
   it('covers every game, or it is guarding nothing', () => {
     expect(entries.length).toBeGreaterThan(20);
+  });
+
+  it('scales its ceiling to the machine it is running on', () => {
+    expect(machine, 'never tighter than the reference').toBeGreaterThanOrEqual(1);
+    expect(CEILING_MS).toBeGreaterThanOrEqual(REFERENCE_CEILING_MS);
   });
 });
