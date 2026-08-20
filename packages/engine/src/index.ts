@@ -78,7 +78,9 @@ export {
 } from './collision.js';
 export type { Circle, Aabb, Obb, Segment, Contact } from './collision.js';
 
-export { InputState, InputManager, DEFAULT_BINDINGS } from './input.js';
+export { InputState, InputManager,
+  PRECISION_ENVELOPE,
+  envelopeFor, DEFAULT_BINDINGS } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 
 export { InputView } from './input-view.js';

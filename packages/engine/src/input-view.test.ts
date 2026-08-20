@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { InputManager } from './input.js';
+import { envelopeFor, InputManager } from './input.js';
 import { InputView } from './input-view.js';
 
 const LOGICAL = { width: 600, height: 1000 };
+
+/**
+ * Where a coordinate lands once the precision envelope has rounded it.
+ *
+ * These tests are about the *view* handing a game the pointer, not about the lattice, so
+ * they say "wherever 800 ends up" rather than hard-coding the rounded number.
+ */
+const onLattice = (value: number): number =>
+  Math.round(value / envelopeFor(LOGICAL)) * envelopeFor(LOGICAL);
 const STEP = 1 / 60;
 
 function manager(): InputManager {
@@ -37,8 +46,8 @@ describe('InputView', () => {
     input.pointerDown(1, 300, 800);
     view.sync(input.beginStep(STEP));
     expect(view.seat('p1').pointer).not.toBeNull();
-    expect(view.seat('p1').pointer?.x).toBe(300);
-    expect(view.seat('p1').pointer?.y).toBe(800);
+    expect(view.seat('p1').pointer?.x).toBe(onLattice(300));
+    expect(view.seat('p1').pointer?.y).toBe(onLattice(800));
 
     input.pointerUp(1);
     view.sync(input.beginStep(STEP));
@@ -52,8 +61,8 @@ describe('InputView', () => {
     input.pointerDown(2, 300, 200); // p2 zone
     view.sync(input.beginStep(STEP));
 
-    expect(view.seat('p1').pointer?.y).toBe(800);
-    expect(view.seat('p2').pointer?.y).toBe(200);
+    expect(view.seat('p1').pointer?.y).toBe(onLattice(800));
+    expect(view.seat('p2').pointer?.y).toBe(onLattice(200));
   });
 
   it('carries the action edges and hold duration through', () => {
@@ -95,7 +104,7 @@ describe('InputView', () => {
     expect(view.seat('p1').move).toBe(move);
     // Same vector instance, updated in place, rather than a fresh object per step.
     expect(view.seat('p1').pointer).toBe(pointer);
-    expect(view.seat('p1').pointer?.x).toBe(120);
+    expect(view.seat('p1').pointer?.x).toBe(onLattice(120));
   });
 
   it('returns itself from sync so it can be passed straight to a game', () => {

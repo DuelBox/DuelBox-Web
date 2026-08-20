@@ -208,3 +208,52 @@ test.describe('a quick tap, in every game that takes one', () => {
     });
   }
 });
+
+test.describe('aiming still works through the precision envelope', () => {
+  /**
+   * Pointer positions are rounded onto a shared lattice so no input family can aim finer
+   * than another. It has to level the two aiming games without flattening them — a
+   * deliberate drag must still land a throw.
+   */
+  const AIMING_GAMES = [
+    { slug: 'darts', logical: { w: 700, h: 1000 } },
+    { slug: 'cornhole', logical: { w: 900, h: 900 } },
+  ];
+
+  for (const { slug, logical } of AIMING_GAMES) {
+    test(`${slug} takes a deliberate aim and throw`, async ({ page }) => {
+      await page.goto(`/play/${slug}/`);
+      await page.getByRole('button', { name: 'Play together here' }).click();
+      await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+        timeout: 10_000,
+      });
+
+      const hud = page.getByRole('group', { name: 'Score' });
+      const before = await hud.innerText();
+
+      const box = await page.locator('canvas').boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) throw new Error('no canvas');
+      const scale = Math.min(box.width / logical.w, box.height / logical.h);
+      const originX = box.x + (box.width - logical.w * scale) / 2;
+      const originY = box.y + (box.height - logical.h * scale) / 2;
+
+      // Down, drag, up — with dwell at each end, as a real hand has.
+      await page.mouse.move(originX + logical.w * 0.5 * scale, originY + logical.h * 0.72 * scale);
+      await page.mouse.down();
+      await page.waitForTimeout(200);
+      await page.mouse.move(
+        originX + logical.w * 0.54 * scale,
+        originY + logical.h * 0.86 * scale,
+        { steps: 14 },
+      );
+      await page.waitForTimeout(200);
+      await page.mouse.up();
+
+      // Something happened: either the score moved or the turn did.
+      await expect(async () => {
+        expect(await hud.innerText()).not.toBe(before);
+      }).toPass({ timeout: 4000 });
+    });
+  }
+});

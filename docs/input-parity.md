@@ -55,7 +55,7 @@ only unit both can count identically.
 | Archetype | Advantaged family | Why | Ruling |
 |---|---|---|---|
 | `turn-board` | None material | Discrete targets, no time pressure; a cell is a cell | **Fair cross-device** |
-| `turn-aim` | Mouse and pen | Sub-pixel aim over a continuous angle is a real edge | **Fair with the precision envelope**; without it, mouse wins |
+| `turn-aim` | Mouse and pen | Sub-pixel aim over a continuous angle is a real edge | **Fair** — the precision envelope is implemented |
 | `rt-split` | Touch | Absolute positioning beats travel when tracking a fast object | **Fair cross-device** — the envelope narrows it, and the mouse's precision offsets it |
 | `rt-arena` | None material | Rate-based movement suits every family; no absolute aiming | **Fair cross-device** |
 | `rt-race` | Keyboard and gamepad | Discrete, low-latency, no travel at all; a thumb repeatedly tapping cannot match a held key | **Same-input-class only** |
@@ -79,10 +79,24 @@ the fixed delta. Source-timestamp resolution — `resolveSimultaneous`, with tes
 the tolerance window and simultaneous outcomes resolving as draws. One code path for every
 pointing device — pointer events only, no branching on `pointerType` anywhere.
 
-**Not implemented: the precision envelope.** Pointer position reaches games unquantised,
-so a mouse can currently aim finer than a thumb. It does not matter yet — no `turn-aim`
-game is built, and `turn-aim` is where it bites. It must exist before the first one ships,
-and it belongs in the engine's input path where every game gets it without asking.
+**Implemented: the precision envelope.** Every pointer position is rounded onto a shared
+lattice before a game sees it, in `InputManager` — the one place logical coordinates enter
+the engine, so every game gets it without asking and none can opt out.
+
+The lattice is **one two-hundredth of the shorter logical side**: 4.5 units in a 900-unit
+box, about 1.6 device pixels on a 320px phone and 5.8 on a 1440px desktop. So the desktop
+gives up precision it had and the phone gives up none it ever had, which is the whole idea.
+
+It removes *excess* precision rather than inventing any. Quantising cannot make a thumb
+steadier — that is a property of hands, not of software — but it stops a mouse from aiming
+between the points the game asks anyone to hit. Two aims inside one envelope give the same
+answer; two a whole envelope apart still differ, so the game is levelled and not flattened.
+
+This was overdue. The note here said it "must exist before the first `turn-aim` game
+ships", and by the time it landed **two had** — Darts and Cornhole. Darts had mitigated it
+locally, by nudging its reticle at a rate rather than jumping it; Cornhole had not, and the
+measurement on its issue is worth reading, because the gap turned out to be smaller than
+the game's own seeded wobble. Both are now levelled by the engine instead of by argument.
 
 **Not implemented: gamepad support.** #130 covers it. The table above anticipates it so
 the decision is not made twice.

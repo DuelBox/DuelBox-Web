@@ -231,9 +231,36 @@ interface KeyTarget {
   readonly slot: KeySlot;
 }
 
+/**
+ * The precision envelope: the finest distinction any pointing device may express.
+ *
+ * A mouse resolves a single device pixel; a thumb covers dozens of them and hides what it
+ * is touching. Left alone, a cross-device match is decided by which instrument the players
+ * happened to be holding, which is exactly what `docs/input-parity.md` exists to prevent.
+ *
+ * The fix is to *remove excess precision* rather than to invent any: every pointer position
+ * is rounded onto a lattice fine enough that nobody can feel it and coarse enough that no
+ * device can aim between its points. Quantising cannot make a thumb steadier — that is a
+ * property of hands, not software — but it does stop a mouse from aiming finer than the
+ * game asks anyone to.
+ *
+ * Expressed as a fraction of the play area rather than in pixels, because the whole point
+ * is that it must mean the same thing on a phone and on a desktop (rule 8). One
+ * two-hundredth of the shorter side puts it at 4.5 units in a 900-unit box: about 1.6
+ * device pixels on a 320px phone and about 5.8 on a 1440px desktop, so the desktop loses
+ * precision it had and the phone loses none it ever had.
+ */
+export const PRECISION_ENVELOPE = 1 / 200;
+
+/** The lattice spacing for a logical box, in logical units. */
+export function envelopeFor(logical: LogicalSize): number {
+  return Math.min(logical.width, logical.height) * PRECISION_ENVELOPE;
+}
+
 export class InputManager {
   readonly #logical: LogicalSize;
   readonly #split: ZoneSplit;
+  readonly #envelope: number;
   #bottomSeat: SeatId;
   readonly #bindings: Record<SeatId, KeyBinding>;
   readonly #keyTargets = new Map<string, KeyTarget>();
@@ -259,6 +286,7 @@ export class InputManager {
     this.#logical = logical;
     this.#split = options?.split ?? 'horizontal';
     this.#bottomSeat = options?.bottomSeat ?? 'p1';
+    this.#envelope = envelopeFor(logical);
     this.#bindings = { p1, p2 };
     this.#rebuildKeyTargets();
   }
@@ -302,8 +330,20 @@ export class InputManager {
     target.sources.keys[target.slot] = false;
   }
 
+  /**
+   * Round a logical coordinate onto the shared precision lattice.
+   *
+   * See {@link PRECISION_ENVELOPE}. Applied at the one place logical coordinates enter the
+   * engine, so every game gets it without asking and none can opt out.
+   */
+  #quantise(value: number): number {
+    return Math.round(value / this.#envelope) * this.#envelope;
+  }
+
   /** The seat is decided here, from the zone the pointer went down in, and only here. */
-  pointerDown(pointerId: number, logicalX: number, logicalY: number): void {
+  pointerDown(pointerId: number, rawX: number, rawY: number): void {
+    const logicalX = this.#quantise(rawX);
+    const logicalY = this.#quantise(rawY);
     const live = this.#ownership.seatOf(pointerId);
     if (live !== undefined) {
       // A second down for a live id is the same finger, not another one; do not double-count it.
@@ -326,12 +366,12 @@ export class InputManager {
    * Position only. A drag that crosses the divider keeps feeding the seat it started
    * in — without that, one player's swipe would be handed to the other mid-gesture.
    */
-  pointerMove(pointerId: number, logicalX: number, logicalY: number): void {
+  pointerMove(pointerId: number, rawX: number, rawY: number): void {
     const seat = this.#ownership.seatOf(pointerId);
     if (seat === undefined) return;
     const sources = this.#sourcesFor(seat);
-    sources.pointerX = logicalX;
-    sources.pointerY = logicalY;
+    sources.pointerX = this.#quantise(rawX);
+    sources.pointerY = this.#quantise(rawY);
   }
 
   pointerUp(pointerId: number): void {

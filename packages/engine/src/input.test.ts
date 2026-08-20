@@ -2,9 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_BINDINGS, InputManager, InputState } from './input.js';
 import type { KeyBinding, SeatInputState } from './input.js';
 import { SEATS } from './seat.js';
+import { envelopeFor } from './input.js';
 import type { LogicalSize, SeatId } from './seat.js';
 
 const SIZE: LogicalSize = { width: 800, height: 600 };
+
+/**
+ * Where a coordinate lands once the precision envelope has rounded it.
+ *
+ * Pointer positions are quantised onto a shared lattice so no input family can aim finer
+ * than another — see `PRECISION_ENVELOPE`. These tests are about *tracking* a pointer, not
+ * about the lattice, so they say what they mean rather than hard-coding the rounded
+ * numbers: `onLattice(400)` reads as "wherever 400 ends up", which is the point.
+ */
+const onLattice = (value: number): number =>
+  Math.round(value / envelopeFor(SIZE)) * envelopeFor(SIZE);
 const DT = 1 / 60;
 
 /** Under the default horizontal split with p1 at the bottom, p1 owns y >= 300. */
@@ -307,8 +319,8 @@ describe('InputManager pointers', () => {
     const state = manager.beginStep(DT);
     const p1 = state.seat('p1');
     expect(p1.pointerActive).toBe(true);
-    expect(p1.pointerX).toBe(120);
-    expect(p1.pointerY).toBe(P1_ZONE_Y);
+    expect(p1.pointerX).toBe(onLattice(120));
+    expect(p1.pointerY).toBe(onLattice(P1_ZONE_Y));
     expect(p1.actionPressed).toBe(true);
     expect(p1.actionHeld).toBe(true);
     expect(state.seat('p2').pointerActive).toBe(false);
@@ -323,18 +335,18 @@ describe('InputManager pointers', () => {
 
     let state = manager.beginStep(DT);
     expect(state.seat('p1').pointerActive).toBe(true);
-    expect(state.seat('p1').pointerX).toBe(400);
-    expect(state.seat('p1').pointerY).toBe(10);
+    expect(state.seat('p1').pointerX).toBe(onLattice(400));
+    expect(state.seat('p1').pointerY).toBe(onLattice(10));
     expect(state.seat('p2').pointerActive).toBe(false);
-    expect(state.seat('p2').pointerX).toBe(0);
-    expect(state.seat('p2').pointerY).toBe(0);
+    expect(state.seat('p2').pointerX).toBe(onLattice(0));
+    expect(state.seat('p2').pointerY).toBe(onLattice(0));
 
     // A new pointer going down over there still belongs to that zone's owner.
     manager.pointerDown(8, 400, 10);
     state = manager.beginStep(DT);
     expect(state.seat('p2').pointerActive).toBe(true);
-    expect(state.seat('p2').pointerY).toBe(10);
-    expect(state.seat('p1').pointerY).toBe(10);
+    expect(state.seat('p2').pointerY).toBe(onLattice(10));
+    expect(state.seat('p1').pointerY).toBe(onLattice(10));
 
     manager.pointerUp(7);
     state = manager.beginStep(DT);
@@ -349,17 +361,17 @@ describe('InputManager pointers', () => {
     manager.pointerDown(2, 700, P2_ZONE_Y);
 
     let state = manager.beginStep(DT);
-    expect(state.seat('p1').pointerX).toBe(100);
-    expect(state.seat('p1').pointerY).toBe(P1_ZONE_Y);
+    expect(state.seat('p1').pointerX).toBe(onLattice(100));
+    expect(state.seat('p1').pointerY).toBe(onLattice(P1_ZONE_Y));
     expect(state.seat('p1').pointerActive).toBe(true);
-    expect(state.seat('p2').pointerX).toBe(700);
-    expect(state.seat('p2').pointerY).toBe(P2_ZONE_Y);
+    expect(state.seat('p2').pointerX).toBe(onLattice(700));
+    expect(state.seat('p2').pointerY).toBe(onLattice(P2_ZONE_Y));
     expect(state.seat('p2').pointerActive).toBe(true);
 
     manager.pointerMove(1, 150, 550);
     state = manager.beginStep(DT);
-    expect(state.seat('p1').pointerX).toBe(150);
-    expect(state.seat('p2').pointerX).toBe(700);
+    expect(state.seat('p1').pointerX).toBe(onLattice(150));
+    expect(state.seat('p2').pointerX).toBe(onLattice(700));
 
     manager.pointerUp(1);
     state = manager.beginStep(DT);
@@ -380,10 +392,10 @@ describe('InputManager pointers', () => {
     expect(state.seat('p1').pointerActive).toBe(true);
     expect(state.seat('p2').pointerActive).toBe(true);
     // The most recent event for a seat owns its position: ids 8 and 9 went down last.
-    expect(state.seat('p1').pointerX).toBe(40 * 8 + 10);
-    expect(state.seat('p1').pointerY).toBe(P1_ZONE_Y);
-    expect(state.seat('p2').pointerX).toBe(40 * 9 + 10);
-    expect(state.seat('p2').pointerY).toBe(P2_ZONE_Y);
+    expect(state.seat('p1').pointerX).toBe(onLattice(40 * 8 + 10));
+    expect(state.seat('p1').pointerY).toBe(onLattice(P1_ZONE_Y));
+    expect(state.seat('p2').pointerX).toBe(onLattice(40 * 9 + 10));
+    expect(state.seat('p2').pointerY).toBe(onLattice(P2_ZONE_Y));
 
     // Nine lifted: p1 has none left, p2 still holds id 9.
     for (let id = 0; id < 9; id += 1) {
@@ -418,7 +430,7 @@ describe('InputManager pointers', () => {
 
     let state = manager.beginStep(DT);
     expect(state.seat('p1').pointerActive).toBe(true);
-    expect(state.seat('p1').pointerX).toBe(140);
+    expect(state.seat('p1').pointerX).toBe(onLattice(140));
 
     manager.pointerUp(3);
     state = manager.beginStep(DT);
@@ -452,8 +464,8 @@ describe('InputManager pointers', () => {
 
     const p1 = manager.beginStep(DT).seat('p1');
     expect(p1.moveX).toBe(1);
-    expect(p1.pointerX).toBe(260);
-    expect(p1.pointerY).toBe(470);
+    expect(p1.pointerX).toBe(onLattice(260));
+    expect(p1.pointerY).toBe(onLattice(470));
   });
 
   it('honours a vertical split with p2 at the bottom', () => {
@@ -463,9 +475,9 @@ describe('InputManager pointers', () => {
 
     const state = manager.beginStep(DT);
     expect(state.seat('p2').pointerActive).toBe(true);
-    expect(state.seat('p2').pointerX).toBe(100);
+    expect(state.seat('p2').pointerX).toBe(onLattice(100));
     expect(state.seat('p1').pointerActive).toBe(true);
-    expect(state.seat('p1').pointerX).toBe(700);
+    expect(state.seat('p1').pointerX).toBe(onLattice(700));
   });
 });
 
@@ -720,8 +732,8 @@ describe('a tap that begins and ends between two steps', () => {
     input.pointerDown(1, 321, 654);
     input.pointerUp(1);
     const state = input.beginStep(STEP);
-    expect(state.seat('p1').pointerX).toBe(321);
-    expect(state.seat('p1').pointerY).toBe(654);
+    expect(state.seat('p1').pointerX).toBe(onLattice(321));
+    expect(state.seat('p1').pointerY).toBe(onLattice(654));
   });
 
   it('does the same for a key tapped between steps', () => {
@@ -755,6 +767,9 @@ describe('a tap that begins and ends between two steps', () => {
 describe('a tap keeps its coordinates', () => {
   const STEP = 1 / 60;
   const SIZE = { width: 600, height: 1000 };
+  /** This block has its own logical box, so it needs its own lattice. */
+  const here = (value: number): number =>
+    Math.round(value / envelopeFor(SIZE)) * envelopeFor(SIZE);
 
   it('reports the pointer as active on the step the press is reported', () => {
     // A press with no position cannot be aimed, so a game told "actionPressed" and
@@ -765,8 +780,8 @@ describe('a tap keeps its coordinates', () => {
     const seat = input.beginStep(STEP).seat('p1');
     expect(seat.actionPressed).toBe(true);
     expect(seat.pointerActive).toBe(true);
-    expect(seat.pointerX).toBe(250);
-    expect(seat.pointerY).toBe(900);
+    expect(seat.pointerX).toBe(here(250));
+    expect(seat.pointerY).toBe(here(900));
   });
 
   it('stops reporting it on the following step', () => {
@@ -827,5 +842,73 @@ describe('which keys the game claims', () => {
     });
     expect(input.isBound('KeyI')).toBe(true);
     expect(input.isBound('KeyW')).toBe(false);
+  });
+});
+
+describe('the precision envelope', () => {
+  /**
+   * A mouse resolves a device pixel; a thumb covers dozens of them. Left alone, a
+   * cross-device match is decided by which instrument the players happened to be holding.
+   *
+   * The fix removes *excess* precision rather than inventing any: every pointer position
+   * is rounded onto a shared lattice. It cannot make a thumb steadier — that is a property
+   * of hands — but it stops a mouse aiming between the points the game asks anyone for.
+   */
+  const size: LogicalSize = { width: 900, height: 900 };
+  const step = envelopeFor(size);
+
+  it('is a fraction of the play area, not a count of pixels', () => {
+    // The whole point is that it means the same thing on a phone and on a desktop, so it
+    // cannot be expressed in device pixels (rule 8).
+    expect(envelopeFor({ width: 900, height: 900 })).toBe(4.5);
+    expect(envelopeFor({ width: 600, height: 1000 })).toBe(3);
+    expect(envelopeFor({ width: 1800, height: 1800 })).toBe(9);
+  });
+
+  it('takes the shorter side, so a long box is not quantised by its length', () => {
+    expect(envelopeFor({ width: 2000, height: 500 })).toBe(envelopeFor({ width: 500, height: 500 }));
+  });
+
+  it('rounds a pointer onto the lattice', () => {
+    const manager = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    manager.pointerDown(1, 451, 700);
+    const state = manager.beginStep(1 / 60);
+    expect(state.seat('p1').pointerX % step, 'on a lattice point').toBe(0);
+    expect(state.seat('p1').pointerY % step).toBe(0);
+  });
+
+  it('gives two aims inside one envelope the same answer', () => {
+    // The property that matters: a mouse cannot express a distinction a thumb cannot.
+    const a = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    const b = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    a.pointerDown(1, 450, 700);
+    b.pointerDown(1, 450 + step * 0.4, 700);
+    expect(b.beginStep(1 / 60).seat('p1').pointerX).toBe(a.beginStep(1 / 60).seat('p1').pointerX);
+  });
+
+  it('still tells two aims a whole envelope apart from each other', () => {
+    // And it must not flatten the game: a deliberate move of one lattice step lands.
+    const a = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    const b = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    a.pointerDown(1, 450, 700);
+    b.pointerDown(1, 450 + step, 700);
+    expect(b.beginStep(1 / 60).seat('p1').pointerX).not.toBe(
+      a.beginStep(1 / 60).seat('p1').pointerX,
+    );
+  });
+
+  it('quantises a drag as well as a press', () => {
+    const manager = new InputManager(size, { split: 'horizontal', bottomSeat: 'p1' });
+    manager.pointerDown(1, 450, 700);
+    manager.pointerMove(1, 451.3, 703.7);
+    const state = manager.beginStep(1 / 60);
+    expect(state.seat('p1').pointerX % step).toBe(0);
+    expect(state.seat('p1').pointerY % step).toBe(0);
+  });
+
+  it('is fine enough that nobody can feel it', () => {
+    // A twentieth of a bubble, a tenth of a checkers square: below the size of anything a
+    // game asks a player to hit.
+    expect(envelopeFor({ width: 900, height: 900 })).toBeLessThan(6);
   });
 });
