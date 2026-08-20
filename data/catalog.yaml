@@ -418,8 +418,8 @@ games:
   refName: Math Quiz
 - id: pop-it
   name: Pop It
-  category: Reaction
-  archetype: rt-split
+  category: Puzzle
+  archetype: turn-board
   confidence: observed
   rule: Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game.
   modes: friend,bot

@@ -163,3 +163,48 @@ test.describe('reaching the whole board', () => {
     );
   });
 });
+
+test.describe('a quick tap, in every game that takes one', () => {
+  /**
+   * Most touchscreen taps put their press and their release on the same simulation step.
+   *
+   * A game that arms on the press and waits for a *later* step to see the release
+   * therefore does nothing at all unless the player holds on long enough to straddle two
+   * steps. Tic Tac Toe was fixed for this once; Drop Four still had it, and shipped with
+   * it, because the tap test only ever covered Tic Tac Toe.
+   *
+   * Each entry names a point where a single tap is a complete move for the first player.
+   */
+  const ONE_TAP_GAMES = [
+    { slug: 'tic-tac-toe', logical: 900, point: { x: 450, y: 670 } },
+    { slug: 'four-in-a-row', logical: 900, point: { x: 450, y: 620 } },
+    { slug: 'color-wars', logical: 900, point: { x: 450, y: 450 } },
+    { slug: 'pop-it', logical: 900, point: { x: 450, y: 450 } },
+    { slug: 'reversi', logical: 900, point: { x: 405, y: 315 } },
+    { slug: 'dots-and-boxes', logical: 900, point: { x: 300, y: 200 } },
+  ];
+
+  for (const { slug, logical, point } of ONE_TAP_GAMES) {
+    test(`${slug} moves on a quick tap, not only on a hold`, async ({ page }) => {
+      await page.goto(`/play/${slug}/`);
+      await page.getByRole('button', { name: 'Play together here' }).click();
+      await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+        timeout: 10_000,
+      });
+
+      const box = await page.locator('canvas').boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) throw new Error('no canvas');
+      const scale = Math.min(box.width / logical, box.height / logical);
+      const originX = box.x + (box.width - logical * scale) / 2;
+      const originY = box.y + (box.height - logical * scale) / 2;
+
+      // A click, not a hold: Playwright presses and releases with no wait between.
+      await page.mouse.click(originX + point.x * scale, originY + point.y * scale);
+      await expect(page.getByRole('group', { name: 'Score' })).toContainText(
+        /Player two has \d+ points?, and it is their turn/,
+        { timeout: 3000 },
+      );
+    });
+  }
+});

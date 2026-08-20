@@ -79,6 +79,9 @@ importers:
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
+      '@duelbox/game-pop-it':
+        specifier: workspace:*
+        version: link:../../packages/games/pop-it
       '@duelbox/game-pull-the-rope':
         specifier: workspace:*
         version: link:../../packages/games/pull-the-rope
@@ -207,6 +210,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/memory:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/pop-it:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

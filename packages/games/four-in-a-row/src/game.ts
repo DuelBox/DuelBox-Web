@@ -229,6 +229,15 @@ export class DropFourGame implements Game {
         this.#hoverColumn = column;
         this.#armed = true;
       }
+      // A quick tap arrives with its press and its release on the **same** step, which on
+      // a touchscreen is most taps. Waiting for a later step to see the release meant a
+      // tap armed the column and then nothing ever happened: only a deliberate hold, long
+      // enough to straddle two steps, dropped a disc. That is the bug this repository
+      // already fixed once, in Tic Tac Toe, and it was still here.
+      if (this.#armed && seatInput.actionReleased) {
+        this.#armed = false;
+        this.#drop(this.#hoverColumn, active);
+      }
       return;
     }
 

@@ -1026,15 +1026,15 @@
       "id": "pop-it",
       "slug": "pop-it",
       "name": "Pop It",
-      "category": "Reaction",
-      "archetype": "rt-split",
+      "category": "Puzzle",
+      "archetype": "turn-board",
       "modes": [
         "friend",
         "bot"
       ],
-      "roundSeconds": 60,
-      "tint": "p2Tint",
-      "mark": "split",
+      "roundSeconds": 90,
+      "tint": "sunTint",
+      "mark": "grid",
       "rule": "Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game.",
       "researched": true
     },
