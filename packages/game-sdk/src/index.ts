@@ -42,3 +42,5 @@ export {
   shouldDecide,
 } from './bot-judgement.js';
 export type { Judgement } from './bot-judgement.js';
+
+export { SearchBudget, DEFAULT_SEARCH_NODES, deepen } from './search-budget.js';

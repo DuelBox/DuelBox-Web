@@ -1,5 +1,6 @@
 import { otherSeat } from '@duelbox/engine';
 import type { Rng, SeatId } from '@duelbox/engine';
+import { DEFAULT_SEARCH_NODES, SearchBudget, deepen } from '@duelbox/game-sdk';
 
 /**
  * The rules of Drop Four, with nothing else in them.
@@ -371,7 +372,17 @@ function evaluate(seat: SeatId): number {
  * the distance from the root and biases a win towards happening sooner and a loss
  * towards later, which is what makes the bot finish a won game instead of shuffling.
  */
-function search(toMove: SeatId, depth: number, ply: number, alpha: number, beta: number): number {
+function search(
+  toMove: SeatId,
+  depth: number,
+  ply: number,
+  alpha: number,
+  beta: number,
+  budget: SearchBudget,
+): number {
+  // Charged on every node, leaves included: leaves are the overwhelming majority of the
+  // work, and charging only internal nodes puts the ceiling above the thing it limits.
+  if (!budget.spend()) return evaluate(toMove);
   const opponent = otherSeat(toMove);
   let best = SCORE_FLOOR;
   let lower = alpha;
@@ -386,7 +397,7 @@ function search(toMove: SeatId, depth: number, ply: number, alpha: number, beta:
     let score: number;
     if (completesLine(row, col, toMove)) score = WIN_SCORE - ply;
     else if (depth <= 1) score = evaluate(toMove);
-    else score = -search(opponent, depth - 1, ply + 1, -beta, -lower);
+    else score = -search(opponent, depth - 1, ply + 1, -beta, -lower, budget);
 
     popDisc(col);
     if (score > best) best = score;
@@ -429,26 +440,45 @@ export function bestColumn(
     searchHeights[col] = columnHeight(board, col);
   }
 
-  const depth = SEARCH_DEPTH[difficulty];
   const opponent = otherSeat(seat);
-  let bestIndex = -1;
-  let bestScore = SCORE_FLOOR;
+  const budget = new SearchBudget(DEFAULT_SEARCH_NODES);
 
+  /** One full sweep at a fixed depth, or null when the budget ran out part-way. */
+  const sweep = (depth: number): number | null => {
+    let bestIndex = -1;
+    let bestScore = SCORE_FLOOR;
+    for (let i = 0; i < COLUMNS; i += 1) {
+      const col = MOVE_ORDER[i] ?? i;
+      const row = pushDisc(col, seat);
+      if (row < 0) continue;
+
+      let score: number;
+      if (completesLine(row, col, seat)) score = WIN_SCORE;
+      else if (depth <= 1) score = evaluate(seat);
+      else score = -search(opponent, depth - 1, 1, -Infinity, -bestScore, budget);
+
+      popDisc(col);
+      if (budget.exhausted) return null;
+      if (bestIndex < 0 || score > bestScore) {
+        bestScore = score;
+        bestIndex = col;
+      }
+    }
+    return bestIndex;
+  };
+
+  // Iterative deepening under a node budget rather than one sweep at a fixed depth. The
+  // single sweep took 12 ms on a development machine, which is most of a 60 Hz frame here
+  // and several frames on a phone.
+  const found = deepen(budget, SEARCH_DEPTH[difficulty], sweep);
+  return found >= 0 ? found : firstPlayableColumn();
+}
+
+/** The leftmost column with room, for the case where not even depth one finished. */
+function firstPlayableColumn(): number {
   for (let i = 0; i < COLUMNS; i += 1) {
     const col = MOVE_ORDER[i] ?? i;
-    const row = pushDisc(col, seat);
-    if (row < 0) continue;
-
-    let score: number;
-    if (completesLine(row, col, seat)) score = WIN_SCORE;
-    else if (depth <= 1) score = evaluate(seat);
-    else score = -search(opponent, depth - 1, 1, -Infinity, -bestScore);
-
-    popDisc(col);
-    if (bestIndex < 0 || score > bestScore) {
-      bestScore = score;
-      bestIndex = col;
-    }
+    if ((searchHeights[col] ?? ROWS) < ROWS) return col;
   }
-  return bestIndex;
+  return -1;
 }

@@ -1,4 +1,5 @@
 import type { Rng, SeatId } from '@duelbox/engine';
+import { DEFAULT_SEARCH_NODES, SearchBudget } from '@duelbox/game-sdk';
 
 /**
  * Checkers, as pure rules.
@@ -394,7 +395,17 @@ function copyInto(target: Game, source: Game): void {
   target.chain = source.chain;
 }
 
-function search(game: Game, depth: number, ply: number, alpha: number, beta: number): number {
+function search(
+  game: Game,
+  depth: number,
+  ply: number,
+  alpha: number,
+  beta: number,
+  budget: SearchBudget,
+): number {
+  // Charged on every node, leaves included: leaves are the overwhelming majority of the
+  // work, and charging only internal nodes puts the ceiling above the thing it limits.
+  if (!budget.spend()) return evaluate(game, game.toMove);
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
@@ -417,8 +428,8 @@ function search(game: Game, depth: number, ply: number, alpha: number, beta: num
     // A jump chain does not pass the turn, so the same seat keeps searching at this sign.
     const score =
       next.toMove === mover
-        ? search(next, depth - 1, ply + 1, alpha, beta)
-        : -search(next, depth - 1, ply + 1, -beta, -alpha);
+        ? search(next, depth - 1, ply + 1, alpha, beta, budget)
+        : -search(next, depth - 1, ply + 1, -beta, -alpha, budget);
     if (score > best) best = score;
     if (best > alpha) alpha = best;
     if (alpha >= beta) break;
@@ -439,25 +450,41 @@ export function bestMove(game: Game, rng: Rng, difficulty: BotDifficulty): Move 
 
   if (rng.bool(BLUNDER_CHANCE[difficulty])) return buffer[rng.int(0, count)] ?? null;
 
-  const depth = SEARCH_DEPTH[difficulty];
   const next = searchStates[0] ?? game;
   const mover = game.toMove;
-  let best: Move | null = buffer[0] ?? null;
-  let bestScore = -Infinity;
+  const budget = new SearchBudget(DEFAULT_SEARCH_NODES);
 
-  for (let i = 0; i < count; i += 1) {
-    const move = buffer[i];
-    if (move === undefined) continue;
-    copyInto(next, game);
-    applyMove(next, move.from, move.to);
-    const score =
-      next.toMove === mover
-        ? search(next, depth - 1, 1, -Infinity, Infinity)
-        : -search(next, depth - 1, 1, -Infinity, Infinity);
-    if (score > bestScore) {
-      bestScore = score;
-      best = move;
+  /** One full sweep at a fixed depth, or null when the budget ran out part-way. */
+  const sweep = (depth: number): Move | null | undefined => {
+    let best: Move | null = buffer[0] ?? null;
+    let bestScore = -Infinity;
+    for (let i = 0; i < count; i += 1) {
+      const move = buffer[i];
+      if (move === undefined) continue;
+      copyInto(next, game);
+      applyMove(next, move.from, move.to);
+      const score =
+        next.toMove === mover
+          ? search(next, depth - 1, 1, -Infinity, Infinity, budget)
+          : -search(next, depth - 1, 1, -Infinity, Infinity, budget);
+      if (budget.exhausted) return undefined;
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
     }
+    return best;
+  };
+
+  // Iterative deepening under a node budget rather than one sweep at a fixed depth. A
+  // partial depth is thrown away: half a ply is not an opinion, it is whichever moves
+  // happened to be generated first.
+  let found: Move | null = buffer[0] ?? null;
+  for (let depth = 1; depth <= SEARCH_DEPTH[difficulty]; depth += 1) {
+    const move = sweep(depth);
+    if (move === undefined) break;
+    found = move;
+    if (budget.exhausted) break;
   }
-  return best;
+  return found;
 }

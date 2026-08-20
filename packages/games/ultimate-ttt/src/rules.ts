@@ -1,4 +1,5 @@
 import type { Rng, SeatId } from '@duelbox/engine';
+import { DEFAULT_SEARCH_NODES, SearchBudget, deepen } from '@duelbox/game-sdk';
 
 /**
  * Ultimate Tic Tac Toe, as pure rules.
@@ -253,7 +254,11 @@ function search(
   ply: number,
   alpha: number,
   beta: number,
+  budget: SearchBudget,
 ): number {
+  // Charged on every node, leaves included: leaves are the overwhelming majority of the
+  // work, and charging only internal nodes puts the ceiling above the thing it limits.
+  if (!budget.spend()) return evaluate(game, toMove);
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
@@ -270,7 +275,7 @@ function search(
   for (let i = 0; i < count; i += 1) {
     copyInto(next, game);
     applyMove(next, buffer[i] as number, toMove);
-    const score = -search(next, otherOf(toMove), depth - 1, ply + 1, -beta, -alpha);
+    const score = -search(next, otherOf(toMove), depth - 1, ply + 1, -beta, -alpha, budget);
     if (score > best) best = score;
     if (best > alpha) alpha = best;
     if (alpha >= beta) break;
@@ -291,20 +296,31 @@ export function bestMove(game: Game, seat: SeatId, rng: Rng, difficulty: BotDiff
 
   if (rng.bool(BLUNDER_CHANCE[difficulty])) return buffer[rng.int(0, count)] as number;
 
-  const depth = SEARCH_DEPTH[difficulty];
   const candidates = buffer.slice(0, count);
   const next = searchStates[0] ?? game;
-  let best = candidates[0] as number;
-  let bestScore = -Infinity;
+  const budget = new SearchBudget(DEFAULT_SEARCH_NODES);
 
-  for (const move of candidates) {
-    copyInto(next, game);
-    applyMove(next, move, seat);
-    const score = -search(next, otherOf(seat), depth - 1, 1, -Infinity, Infinity);
-    if (score > bestScore) {
-      bestScore = score;
-      best = move;
+  /** One full sweep at a fixed depth, or null when the budget ran out part-way. */
+  const sweep = (depth: number): number | null => {
+    let best = candidates[0] as number;
+    let bestScore = -Infinity;
+    for (const move of candidates) {
+      copyInto(next, game);
+      applyMove(next, move, seat);
+      const score = -search(next, otherOf(seat), depth - 1, 1, -Infinity, Infinity, budget);
+      if (budget.exhausted) return null;
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
     }
-  }
-  return best;
+    return best;
+  };
+
+  // Iterative deepening under a node budget rather than one sweep at a fixed depth. The
+  // single sweep took 27 ms on a development machine — well over a 60 Hz frame, and several
+  // frames on a phone. Deepening is what makes running out safe: the best move from the
+  // last depth that finished is already in hand.
+  const found = deepen(budget, SEARCH_DEPTH[difficulty], sweep);
+  return found >= 0 ? found : (candidates[0] as number);
 }

@@ -1,4 +1,5 @@
 import type { Rng, SeatId } from '@duelbox/engine';
+import { DEFAULT_SEARCH_NODES, SearchBudget, deepen } from '@duelbox/game-sdk';
 
 /**
  * Reversi, as pure rules.
@@ -288,7 +289,16 @@ function search(
   ply: number,
   alpha: number,
   beta: number,
+  budget: SearchBudget,
 ): number {
+  // Charged before the leaf check, not after. Charging only internal nodes left the leaves
+  // — which are the overwhelming majority of the work, and all of the evaluation — free,
+  // so a depth-four sweep counted about 1,100 nodes while actually visiting 11,000. The
+  // ceiling sat above the thing it was meant to limit and nothing changed.
+  //
+  // Out of budget: hand back a static score rather than a lie. The caller throws the whole
+  // depth away, so this value is never what a move is chosen on.
+  if (!budget.spend()) return evaluate(board, toMove);
   if (depth === 0) return evaluate(board, toMove);
 
   const buffer = moveBuffers[ply] ?? [];
@@ -302,7 +312,7 @@ function search(
       const theirs = toMove === 'p1' ? p2 : p1;
       return (mine - theirs) * 1000;
     }
-    return -search(board, otherOf(toMove), depth, ply, -beta, -alpha);
+    return -search(board, otherOf(toMove), depth, ply, -beta, -alpha, budget);
   }
 
   const next = searchBoards[ply] ?? board;
@@ -310,7 +320,7 @@ function search(
   for (let i = 0; i < count; i += 1) {
     copyInto(next, board);
     applyMove(next, buffer[i] as number, toMove);
-    const score = -search(next, otherOf(toMove), depth - 1, ply + 1, -beta, -alpha);
+    const score = -search(next, otherOf(toMove), depth - 1, ply + 1, -beta, -alpha, budget);
     if (score > best) best = score;
     if (best > alpha) alpha = best;
     if (alpha >= beta) break;
@@ -333,20 +343,36 @@ export function bestMove(board: Board, seat: SeatId, rng: Rng, difficulty: BotDi
     return buffer[rng.int(0, count)] as number;
   }
 
-  const depth = SEARCH_DEPTH[difficulty];
   const candidates = buffer.slice(0, count);
-  let best = candidates[0] as number;
-  let bestScore = -Infinity;
   const next = searchBoards[0] ?? board;
+  const budget = new SearchBudget(DEFAULT_SEARCH_NODES);
 
-  for (const move of candidates) {
-    copyInto(next, board);
-    applyMove(next, move, seat);
-    const score = -search(next, otherOf(seat), depth - 1, 1, -Infinity, Infinity);
-    if (score > bestScore) {
-      bestScore = score;
-      best = move;
+  /**
+   * One full sweep at a fixed depth, or null when the budget ran out part-way.
+   *
+   * A partial depth is thrown away rather than trusted: half a ply is not an opinion, it
+   * is whichever moves happened to be generated first.
+   */
+  const sweep = (depth: number): number | null => {
+    let best = candidates[0] as number;
+    let bestScore = -Infinity;
+    for (const move of candidates) {
+      copyInto(next, board);
+      applyMove(next, move, seat);
+      const score = -search(next, otherOf(seat), depth - 1, 1, -Infinity, Infinity, budget);
+      if (budget.exhausted) return null;
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
     }
-  }
-  return best;
+    return best;
+  };
+
+  // Iterative deepening under a node budget rather than a single sweep at a fixed depth.
+  // The single sweep took 31.5 ms on a development machine — twice a 60 Hz frame, and
+  // several frames on a phone. Deepening is what makes running out of budget safe: the
+  // best move from the last depth that finished is already in hand.
+  const found = deepen(budget, SEARCH_DEPTH[difficulty], sweep);
+  return found >= 0 ? found : (candidates[0] as number);
 }

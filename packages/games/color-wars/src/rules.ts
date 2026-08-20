@@ -1,4 +1,5 @@
 import type { Rng, SeatId } from '@duelbox/engine';
+import { DEFAULT_SEARCH_NODES, SearchBudget, deepen } from '@duelbox/game-sdk';
 
 /**
  * Colour Wars, as pure rules.
@@ -336,7 +337,11 @@ function search(
   ply: number,
   alpha: number,
   beta: number,
+  budget: SearchBudget,
 ): number {
+  // Charged on every node, leaves included: leaves are the overwhelming majority of the
+  // work, and charging only internal nodes puts the ceiling above the thing it limits.
+  if (!budget.spend()) return evaluate(game, seat);
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
@@ -354,7 +359,7 @@ function search(
   for (let i = 0; i < count; i += 1) {
     copyInto(next, game);
     applyMove(next, buffer[i] as number, next.toMove);
-    const score = search(next, seat, depth - 1, ply + 1, alpha, beta);
+    const score = search(next, seat, depth - 1, ply + 1, alpha, beta, budget);
     if (maximising) {
       if (score > best) best = score;
       if (best > alpha) alpha = best;
@@ -385,19 +390,28 @@ export function bestMove(
 
   if (rng.bool(BLUNDER_CHANCE[difficulty])) return buffer[rng.int(0, count)] as number;
 
-  const depth = SEARCH_DEPTH[difficulty];
   const next = searchStates[0] ?? createGame();
-  let best = buffer[0] as number;
-  let bestScore = -Infinity;
-  for (let i = 0; i < count; i += 1) {
-    const move = buffer[i] as number;
-    copyInto(next, game);
-    applyMove(next, move, seat);
-    const score = search(next, seat, depth - 1, 1, -Infinity, Infinity);
-    if (score > bestScore) {
-      bestScore = score;
-      best = move;
+  const budget = new SearchBudget(DEFAULT_SEARCH_NODES);
+
+  /** One full sweep at a fixed depth, or null when the budget ran out part-way. */
+  const sweep = (depth: number): number | null => {
+    let best = buffer[0] as number;
+    let bestScore = -Infinity;
+    for (let i = 0; i < count; i += 1) {
+      const move = buffer[i] as number;
+      copyInto(next, game);
+      applyMove(next, move, seat);
+      const score = search(next, seat, depth - 1, 1, -Infinity, Infinity, budget);
+      if (budget.exhausted) return null;
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
     }
-  }
-  return best;
+    return best;
+  };
+
+  // Iterative deepening under a node budget rather than one sweep at a fixed depth.
+  const found = deepen(budget, SEARCH_DEPTH[difficulty], sweep);
+  return found >= 0 ? found : (buffer[0] as number);
 }
