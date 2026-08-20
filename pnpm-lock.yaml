@@ -82,6 +82,9 @@ importers:
       '@duelbox/game-hot-potato':
         specifier: workspace:*
         version: link:../../packages/games/hot-potato
+      '@duelbox/game-king-of-the-yard':
+        specifier: workspace:*
+        version: link:../../packages/games/king-of-the-yard
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
@@ -228,6 +231,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/hot-potato:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/king-of-the-yard:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

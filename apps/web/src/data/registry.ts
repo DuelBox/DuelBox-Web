@@ -33,6 +33,7 @@ const LOADERS: Record<string, Loader> = {
   checkers: () => import('@duelbox/game-checkers').then((m) => m.default),
   'color-wars': () => import('@duelbox/game-color-wars').then((m) => m.default),
   cornhole: () => import('@duelbox/game-cornhole').then((m) => m.default),
+  'king-of-the-yard': () => import('@duelbox/game-king-of-the-yard').then((m) => m.default),
   'hot-potato': () => import('@duelbox/game-hot-potato').then((m) => m.default),
   'crabby-volley': () => import('@duelbox/game-crabby-volley').then((m) => m.default),
   'pop-it': () => import('@duelbox/game-pop-it').then((m) => m.default),
