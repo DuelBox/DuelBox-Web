@@ -1,6 +1,21 @@
+/*
+ * The header sits at the very top of the page, which on a notched phone is under the
+ * cutout.
+ *
+ * It had no inset at all: the brand, the navigation and the Play button all sat in the
+ * band a notch occupies. The page gutters, the footer and the match panels each inset
+ * themselves and are checked for it; this one was simply missed, and nothing looked wrong
+ * because the simulator reports every inset as zero.
+ *
+ * `max()` rather than an addition, so an inset can only ever widen the padding and never
+ * narrow it — the same rule the rest of the layout follows.
+ */
 .header {
   border-bottom: 1px solid var(--db-hairline);
   background: var(--db-paper);
+  padding-top: max(0px, var(--db-safe-top));
+  padding-left: max(0px, var(--db-safe-left));
+  padding-right: max(0px, var(--db-safe-right));
 }
 
 .inner {

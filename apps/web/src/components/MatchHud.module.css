@@ -133,11 +133,21 @@
  * is no better than the 85px the stacked layout gave it.
  */
 @media (max-height: 30rem) and (orientation: landscape) {
+  /*
+   * The column has to fit the height it is given, not the height it would like.
+   *
+   * Without `min-height: 0` a flex column refuses to shrink below its content, so the
+   * scoreboard simply grew past the bottom of the screen and took the pause button with
+   * it — measured at a bottom edge of 344 in a 343-tall window, which is a control nobody
+   * can press and which no amount of safe-area padding would have rescued.
+   */
   .hud {
     flex-direction: column;
-    justify-content: center;
-    gap: var(--db-space-2);
-    padding: var(--db-space-2);
+    justify-content: space-between;
+    gap: var(--db-space-1);
+    padding: var(--db-space-1);
+    min-height: 0;
+    overflow: hidden;
   }
 
   .seat {
@@ -169,6 +179,12 @@
 
   .rounds {
     flex-direction: column;
+  }
+
+  /* A smaller target, but still a real one: the web minimum is 44px. */
+  .pause {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 

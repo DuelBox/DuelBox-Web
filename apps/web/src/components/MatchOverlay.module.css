@@ -18,16 +18,37 @@
   z-index: 2;
 }
 
+/*
+ * The panel fits the screen it is on, however short that screen is.
+ *
+ * Measured on a phone held sideways with a generous inset: the pause panel was 146 tall in
+ * a 343 window and still ended up with its top at **-31** — off the screen, with the
+ * heading unreadable and the first button unreachable. The overlay centres it, so a panel
+ * taller than the space left after the insets overflows in *both* directions at once.
+ *
+ * `max-height` plus a scroll is the honest fix: it always fits, and when it genuinely
+ * cannot, the content moves rather than the panel.
+ */
 .panel {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--db-space-4);
   width: min(24rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
   padding: var(--db-space-5);
   background: var(--db-paper);
   border-radius: var(--db-radius-lg);
   box-shadow: var(--db-shadow-lg);
+}
+
+/* On a short screen the panel is mostly padding, so it gives some back. */
+@media (max-height: 30rem) {
+  .panel {
+    gap: var(--db-space-3);
+    padding: var(--db-space-4);
+  }
 }
 
 .heading {

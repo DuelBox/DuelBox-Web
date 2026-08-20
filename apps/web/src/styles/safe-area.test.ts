@@ -49,7 +49,27 @@ describe('the surfaces that touch a screen edge', () => {
       what: 'the page gutters and the skip link',
       edges: ['left', 'right'],
     },
+    /**
+     * The header sits at the very top of the page, which on a notched phone is under the
+     * cutout — and it was the one surface with no inset at all. The list below was the
+     * check, and the check had a hole in it.
+     */
+    {
+      file: 'components/SiteHeader.module.css',
+      what: 'the header',
+      edges: ['top', 'left', 'right'],
+    },
     { file: 'components/SiteFooter.module.css', what: 'the footer', edges: ['bottom'] },
+    /**
+     * The play surface is full-height, so its own edges are the screen's edges — and the
+     * bottom one is where the pause button lives *and* where a phone puts its home
+     * indicator. A browser test caught the button sitting squarely in that band.
+     */
+    {
+      file: 'components/PlaySurface.module.css',
+      what: 'the play surface',
+      edges: ['top', 'right', 'bottom', 'left'],
+    },
     {
       file: 'components/MatchOverlay.module.css',
       what: 'the pause and result panels',
