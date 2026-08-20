@@ -200,18 +200,30 @@ test.describe('a quick tap, in every game that takes one', () => {
       const originY = box.y + (box.height - logical * scale) / 2;
 
       // A click, not a hold: Playwright presses and releases with no wait between.
-      await page.mouse.click(originX + point.x * scale, originY + point.y * scale);
-
-      // Twelve seconds, not three. These games hold a move on screen before handing over —
-      // Pop It waits about 1.75 s between its think and settle delays alone — and a CI
-      // runner is roughly four times slower than a development machine, which puts that
-      // close to seven. Three seconds was a guess with no headroom in it, and Pop It duly
-      // failed on CI while passing everywhere else. A tap that does nothing still fails
-      // here; it just takes longer to say so.
-      await expect(page.getByRole('group', { name: 'Score' })).toContainText(
-        /Player two has \d+ points?, and it is their turn/,
-        { timeout: 12_000 },
-      );
+      //
+      // Tapped **repeatedly** until the turn passes, rather than once. These boards rotate
+      // to face whoever is to move and refuse input while they are part-way round, so a
+      // tap that lands during the opening flip is correctly dropped — and on a slow runner
+      // the flip is still going when the countdown clears. Reversi failed on CI showing
+      // its untouched 2-2 opening while passing everywhere else.
+      //
+      // Retrying is safe on every game here: they are all turn-based, so once the move has
+      // landed the extra taps belong to a seat whose turn it is not, and are ignored. A
+      // game that genuinely ignores a quick tap still fails, it just takes eight goes to
+      // say so.
+      const hud = page.getByRole('group', { name: 'Score' });
+      const theirTurn = /Player two has \d+ points?, and it is their turn/;
+      await expect
+        .poll(
+          async () => {
+            if (theirTurn.test((await hud.textContent()) ?? '')) return true;
+            await page.mouse.click(originX + point.x * scale, originY + point.y * scale);
+            await page.waitForTimeout(400);
+            return theirTurn.test((await hud.textContent()) ?? '');
+          },
+          { timeout: 20_000, message: `${slug} never took a quick tap` },
+        )
+        .toBe(true);
     });
   }
 });
