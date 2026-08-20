@@ -10,28 +10,55 @@ constitution and its rules are non-negotiable.
 
 ## Where things stand
 
-`main` is green and **CI passes**: `pnpm typecheck && pnpm lint && pnpm test && pnpm build
-&& pnpm e2e`. **1,745 unit tests, 289 browser tests** across four Playwright projects —
-Desktop Chrome, Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real
-WebKit**.
+`main` is green and **CI passes** — verified, on commit `08d0919`. The gate, in the order
+CI runs it:
 
-That CI sentence is newer than it sounds. Until 20 August, CI had failed on every commit
-since the repository was created — 45 failures, 0 successes — because `pnpm/action-setup`
-was given `version: 9` while `package.json` pins `packageManager`, which the action treats
-as a conflict and refuses to install. Every job died before its first real step, so nothing
-the workflow claimed to verify had ever been verified there. A green tick now means
-something.
+```
+pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
+```
 
-**~2,015 issues open.** The bulk is the per-game backlog: 14 issues each across the 85
+**1,803 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
+Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
+
+That sentence has been wrong twice, so it is worth saying exactly what was fixed.
+
+First: until 20 August, CI failed on every commit since the repository was created — 45
+failures, 0 successes — because `pnpm/action-setup` was given `version: 9` while
+`package.json` pins `packageManager`, which the action treats as a conflict and refuses to
+install. Every job died before its first real step.
+
+Second, and this document asserted otherwise: once the install was fixed, CI still failed
+on every commit — on `pnpm format:check`, its **first** step, with 56 unformatted files.
+The green tick people were reading belonged to the Security workflow, which runs
+separately and did pass. The gate everyone was running locally omitted `format:check`
+entirely, so the repository looked green from both directions and was not. Both are fixed
+now, and CLAUDE.md spells the gate out so "I ran the gate" and "CI will pass" mean the
+same thing.
+
+Two other guards this project's own rules claimed to have, and did not:
+
+- **`pnpm size`** did not exist. Rule 11 and the definition of done both require it, so
+  `pnpm size` fell through to the system `size(1)`, which reported on a non-existent
+  `a.out` and exited 0. There had never been a size budget. `scripts/check-size.mjs` now
+  budgets the shell (274.1 KB gzipped) and each game's chunk (2.5–3.9 KB), and fails if
+  any playable game has no chunk of its own.
+- **Asset licensing** was not enforced either, though rule 3 says "CI enforces it".
+  `scripts/check-asset-licenses.mjs` now does. The count is currently zero — every game
+  draws with primitives — which is exactly why it was cheap to write today.
+
+The lesson worth carrying: **a rule written in CLAUDE.md is not a rule that runs.** When
+one of them matters, check whether anything actually executes it.
+
+**~1,995 issues open.** The bulk is the per-game backlog: 14 issues each across the 84
 games not yet built.
 
-**Twenty-two games play end to end**, each with a `SPEC.md` and 40–110 tests:
+**Twenty-three games play end to end**, each with a `SPEC.md` and 40–110 tests:
 
 | Archetype | Games |
 |---|---|
 | `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It |
 | `turn-aim` | Darts, Cornhole |
-| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato |
+| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato, Mini Soccer |
 | `rt-arena` | Sumo Push, King of the Yard |
 | `rt-race` | Road Dodge |
 
@@ -43,9 +70,9 @@ of the thirteen `SPEC.md` files are the pattern.
 
 1. **Build more games.** It is the highest-value work available and the pattern is
    established: scaffold, rules module with tests, game module, spec, verify in a browser,
-   close the twelve issues with evidence. `rt-race` has nothing built, so a game there
-   proves the last untested archetype. Checkers, Snowball Throw and Crabby Volley are all
-   well-specified in `data/catalog.yaml`.
+   close the twelve issues with evidence. All five archetypes now have at least one game,
+   so any of the 84 remaining is a matter of picking a well-specified one from
+   `data/catalog.yaml`.
 2. **#2322 needs a decision from a person, and it is blocking design work.** Our two seat
    colours give **1.03:1 contrast under deuteranopia** — indistinguishable, for roughly
    one man in sixteen. Our sky is also within an RGB delta of (3, 40, 3) of a typical
