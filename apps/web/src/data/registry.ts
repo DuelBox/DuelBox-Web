@@ -41,6 +41,7 @@ const LOADERS: Record<string, Loader> = {
   'hand-slap': () => import('@duelbox/game-hand-slap').then((m) => m.default),
   'shut-the-box': () => import('@duelbox/game-shut-the-box').then((m) => m.default),
   'sea-battle': () => import('@duelbox/game-sea-battle').then((m) => m.default),
+  yazy: () => import('@duelbox/game-yazy').then((m) => m.default),
   'rock-paper-scissors': () =>
     import('@duelbox/game-rock-paper-scissors').then((m) => m.default),
 };

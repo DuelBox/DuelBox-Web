@@ -32,6 +32,7 @@ import { manifest as shutTheBox } from '@duelbox/game-shut-the-box';
 import { manifest as sumo } from '@duelbox/game-sumo';
 import { manifest as ticTacToe } from '@duelbox/game-tic-tac-toe';
 import { manifest as ultimateTtt } from '@duelbox/game-ultimate-ttt';
+import { manifest as yazy } from '@duelbox/game-yazy';
 import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
 import type { GameManifest } from '@duelbox/game-sdk';
 
@@ -61,6 +62,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   ticTacToe,
   ultimateTtt,
   whackAMole,
+  yazy,
 ];
 
 export interface GameControls {
