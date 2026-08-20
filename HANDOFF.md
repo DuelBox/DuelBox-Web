@@ -11,7 +11,7 @@ constitution and its rules are non-negotiable.
 ## Where things stand
 
 `main` is green and **CI passes**: `pnpm typecheck && pnpm lint && pnpm test && pnpm build
-&& pnpm e2e`. **1,740 unit tests, 245 browser tests** across four Playwright projects —
+&& pnpm e2e`. **1,745 unit tests, 289 browser tests** across four Playwright projects —
 Desktop Chrome, Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real
 WebKit**.
 
@@ -115,6 +115,19 @@ through all of them.
   `/how-to-play/` and `/privacy/`.
 - **Portrait games were unplayable in landscape**, rendering an 85px-wide board on a phone
   held sideways, because two scoreboards took the height.
+- **The site header had no safe-area inset at all**, so on a notched phone its brand,
+  navigation and Play button sat under the cutout. The play surface had none either, which
+  put the pause button in the home-indicator band. The unit test listing which surfaces
+  inset themselves had holes, and that list *was* the check.
+- **The pause panel could not fit a phone held sideways** — 146px tall in a 343px window
+  with its top at -31, so the heading was off-screen and the first button unreachable.
+- **A live match could be thrown away by pull-to-refresh.** The canvas declared
+  `touch-action: none`, but a swipe starting on the letterbox beside the board never
+  touches the canvas.
+- **Every game landing page said "This game is still being built"**, including the
+  twenty-two that were playable, with no link offered to the game one click away.
+- **The controls panel never said which keys were whose.** "W A S D or the arrow keys"
+  tells a player what the game accepts, not what is theirs.
 
 ## How to work
 
