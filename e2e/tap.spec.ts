@@ -299,13 +299,19 @@ test.describe('the browser own gestures', () => {
       return {
         touchAction: computed.touchAction,
         // Safari reports this only under the prefix, which is also the only spelling it
-        // honours — hence both in the stylesheet, and both read here.
-        userSelect: computed.userSelect ?? computed.getPropertyValue('-webkit-user-select'),
+        // honours — hence both in the stylesheet, and both read here. The type says
+        // `userSelect` is always a string; WebKit disagrees at runtime, so read both and
+        // accept either rather than trusting the declaration.
+        userSelect: computed.getPropertyValue('user-select'),
+        webkitUserSelect: computed.getPropertyValue('-webkit-user-select'),
         overscroll: computed.overscrollBehaviorY,
       };
     });
     expect(style.touchAction, 'no scroll, pan or double-tap zoom').toBe('none');
-    expect(style.userSelect, 'a drag does not select the page').toBe('none');
+    expect(
+      style.userSelect === 'none' || style.webkitUserSelect === 'none',
+      `a drag does not select the page (user-select ${style.userSelect || 'unset'}, prefixed ${style.webkitUserSelect || 'unset'})`,
+    ).toBe(true);
     expect(style.overscroll).not.toBe('auto');
   });
 });

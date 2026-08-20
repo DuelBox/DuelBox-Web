@@ -87,3 +87,21 @@ jobs:
       # Scans the real artefact rather than the source: a key can reach a bundle through
       # a dependency or a generated file that no source scan would look at.
       - run: pnpm build
+
+  committed-secrets:
+    name: Secrets in the repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 22
+      # A different risk from the shipped-output scan, with a different blast radius: a key
+      # in the source is in the history for ever, is visible to everyone who clones, and
+      # survives every rebuild. A key that never reaches a bundle is still published.
+      #
+      # GitHub's own secret scanning with push protection is enabled on this repository and
+      # is the first line — this is the one that runs on a fork, on a branch, and locally.
+      - run: pnpm check:source-secrets

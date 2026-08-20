@@ -126,3 +126,35 @@ a fact is how every scoreboard on the internet became fiction.
 They do not, often. When they seem to, the rule is: **say so in the issue rather than
 working around it quietly.** Every one of these came from a real failure mode, and a
 deliberate, recorded exception is fine. An undocumented one is how a standard rots.
+
+## Where a finding goes
+
+Automated scanning is worthless if its output lands in a dashboard nobody opens, so the
+routing is written down rather than assumed.
+
+| Scanner | Runs | Where a finding appears |
+|---|---|---|
+| CodeQL, `security-extended` | every PR, every push to main, nightly | GitHub code scanning |
+| Dependency review | every PR | a comment on the PR, on failure |
+| `pnpm audit --audit-level=high` | every PR, nightly | the job fails |
+| `check-bundle-secrets` | every `pnpm build` | the build fails |
+| `check-source-secrets` | every PR, nightly, and locally | the job fails |
+| GitHub secret scanning | on every push | an alert, and **the push is blocked** |
+
+**Two of those block rather than report**, which is the important distinction. A scanner
+that only reports is a scanner somebody has to remember to read; push protection and a
+failing build are the ones that cannot be ignored.
+
+**Anything that reports rather than blocks gets an issue labelled `security:triage`.** That
+label is the queue: a finding that is not in it is a finding nobody owns. Triage means
+deciding one of three things and writing down which — fix it now, accept it with a reason,
+or file it with a date. A finding left in the queue without one of those is the failure
+mode this whole section exists to prevent.
+
+### What is enabled on the repository itself
+
+Secret scanning, **push protection**, Dependabot alerts and Dependabot security updates are
+all on. Push protection is the one worth knowing about day to day: it refuses a push that
+contains a recognised credential, which is a better outcome than an alert about a key that
+is already public. GitHub Advanced Security features beyond those — validity checks and
+non-provider patterns — are not available on this plan.

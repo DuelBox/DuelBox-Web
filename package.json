@@ -23,7 +23,8 @@
     "e2e": "playwright test",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "check:zero-cost": "node scripts/check-zero-cost.mjs",
-    "check:secrets": "node scripts/check-bundle-secrets.mjs"
+    "check:secrets": "node scripts/check-bundle-secrets.mjs",
+    "check:source-secrets": "node scripts/check-source-secrets.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
