@@ -25,6 +25,7 @@ import { manifest as mancala } from '@duelbox/game-mancala';
 import { manifest as memory } from '@duelbox/game-memory';
 import { manifest as miniSoccer } from '@duelbox/game-mini-soccer';
 import { manifest as pool } from '@duelbox/game-pool';
+import { manifest as penaltyKicks } from '@duelbox/game-penalty-kicks';
 import { manifest as popIt } from '@duelbox/game-pop-it';
 import { manifest as pullTheRope } from '@duelbox/game-pull-the-rope';
 import { manifest as reversi } from '@duelbox/game-reversi';
@@ -57,6 +58,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   mancala,
   memory,
   miniSoccer,
+  penaltyKicks,
   popIt,
   pool,
   pullTheRope,

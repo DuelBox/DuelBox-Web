@@ -46,6 +46,7 @@ const LOADERS: Record<string, Loader> = {
   bowling: () => import('@duelbox/game-bowling').then((m) => m.default),
   ludo: () => import('@duelbox/game-ludo').then((m) => m.default),
   snakes: () => import('@duelbox/game-snakes').then((m) => m.default),
+  'penalty-kicks': () => import('@duelbox/game-penalty-kicks').then((m) => m.default),
   'rock-paper-scissors': () =>
     import('@duelbox/game-rock-paper-scissors').then((m) => m.default),
 };
