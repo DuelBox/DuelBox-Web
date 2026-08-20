@@ -65,8 +65,11 @@ cannot fix: the interaction *is* rapid discrete input, which is exactly what a k
 and exactly what a touchscreen is worst at. Those games declare `sameInputClassOnly: true`
 in their manifest rather than shipping a match one player cannot win.
 
-That field already exists in the schema. **No game sets it today**, because none of the
-seven built so far is `rt-race`. The first one must.
+That field already exists in the schema. **Road Dodge sets it** — the first game in the
+repository to, and the first `rt-race` game built. Its manifest carries the reasoning and
+`packages/games/road-dodge/SPEC.md` records what the ruling does and does not mitigate:
+lane changes are discrete and a held key does not repeat, which narrows the gap, but it
+does not close it, because the gap is how fast a thumb can leave the glass and come back.
 
 ## What is implemented, and what is not
 

@@ -27,7 +27,8 @@
     "@duelbox/game-darts": "workspace:*",
     "@duelbox/game-mancala": "workspace:*",
     "@duelbox/game-rock-paper-scissors": "workspace:*",
-    "@duelbox/game-ultimate-ttt": "workspace:*"
+    "@duelbox/game-ultimate-ttt": "workspace:*",
+    "@duelbox/game-road-dodge": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",

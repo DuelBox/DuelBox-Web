@@ -25,7 +25,7 @@ something.
 **~2,160 issues open.** The bulk is the per-game backlog: 14 issues each across the 95
 games not yet built.
 
-**Twelve games play end to end**, each with a `SPEC.md` and 40–80 tests:
+**Thirteen games play end to end**, each with a `SPEC.md` and 40–80 tests:
 
 | Archetype | Games |
 |---|---|
@@ -33,7 +33,7 @@ games not yet built.
 | `turn-aim` | Darts |
 | `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors |
 | `rt-arena` | Sumo Push |
-| `rt-race` | *none yet — the one archetype with nothing built* |
+| `rt-race` | Road Dodge |
 
 Building one closes about twelve of its fourteen issues; the other two (research, art and
 audio) are blocked on things that do not exist yet. `docs/game-spec-template.md` and any

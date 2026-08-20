@@ -76,6 +76,9 @@ importers:
       '@duelbox/game-reversi':
         specifier: workspace:*
         version: link:../../packages/games/reversi
+      '@duelbox/game-road-dodge':
+        specifier: workspace:*
+        version: link:../../packages/games/road-dodge
       '@duelbox/game-rock-paper-scissors':
         specifier: workspace:*
         version: link:../../packages/games/rock-paper-scissors
@@ -186,6 +189,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/reversi:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/road-dodge:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

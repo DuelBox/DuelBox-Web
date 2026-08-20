@@ -29,6 +29,7 @@ const LOADERS: Record<string, Loader> = {
   darts: () => import('@duelbox/game-darts').then((m) => m.default),
   mancala: () => import('@duelbox/game-mancala').then((m) => m.default),
   'ultimate-ttt': () => import('@duelbox/game-ultimate-ttt').then((m) => m.default),
+  'road-dodge': () => import('@duelbox/game-road-dodge').then((m) => m.default),
   'rock-paper-scissors': () =>
     import('@duelbox/game-rock-paper-scissors').then((m) => m.default),
 };

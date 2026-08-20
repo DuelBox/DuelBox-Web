@@ -247,6 +247,16 @@ export function GameHost({
 
     let lastP1 = -1;
     let lastP2 = -1;
+    /**
+     * The winner reported last, so the end of a match is never missed.
+     *
+     * Watching only the two score numbers was a real bug: a match can end on a step that
+     * changes neither. Road Dodge is the plain case — a crash decides it and nobody's
+     * count moves — and the match simply never ended, the result screen never appeared,
+     * and the game sat frozen behind a live pause button. Any game whose win condition is
+     * survival rather than points would have hit exactly this.
+     */
+    let lastWinner: SeatId | 'draw' | null = null;
     let lastSeat: SeatId | null | undefined;
 
     const loop = new FixedLoop({
@@ -261,9 +271,10 @@ export function GameHost({
         }
         game.update(dt, inputView.sync(input.beginStep(dt)));
         const score = game.getScore();
-        if (score.p1 !== lastP1 || score.p2 !== lastP2) {
+        if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
           lastP1 = score.p1;
           lastP2 = score.p2;
+          lastWinner = score.winner;
           onScoreRef.current?.(score.p1, score.p2, score.winner);
         }
         const seat = game.getActiveSeat?.() ?? null;

@@ -21,6 +21,19 @@ test.describe('the match flow', () => {
     await expect(page.locator('canvas')).toBeVisible();
   });
 
+  test('ends a match decided by survival, where no score changes', async ({ page }) => {
+    // The regression this pins: the host reported the score — and the winner riding along
+    // with it — only when one of the two numbers changed. A match decided by a crash
+    // changes neither, so Road Dodge ran to its end and then sat frozen behind a live
+    // pause button, with no result screen, for as long as anyone cared to watch.
+    await page.goto('/play/road-dodge/');
+    await page.getByRole('button', { name: /Play against/ }).click();
+
+    // Nobody touches the controls, so the human seat crashes and the bot outlives it.
+    await expect(page.getByText(/wins|draw/i).first()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible();
+  });
+
   test('shows both seats and their scores in one shared HUD', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     await page.getByRole('button', { name: 'Play together here' }).click();

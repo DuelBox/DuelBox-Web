@@ -45,6 +45,9 @@
     },
     {
       "path": "./packages/games/ultimate-ttt"
+    },
+    {
+      "path": "./packages/games/road-dodge"
     }
   ]
 }
