@@ -1,0 +1,7 @@
+{
+  "_comment": "Gzipped bytes. Rule 11: nothing merges over the size budget. Raising a number here is a decision, not a formality — say why in the commit.",
+  "_shell": "Everything a visitor downloads before choosing a game. Does not grow when a game is added, so it is the number worth defending.",
+  "shellBytes": 286720,
+  "_game": "One game's own chunk — the marginal cost of the game a player actually picked.",
+  "gameChunkBytes": 12288
+}

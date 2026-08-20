@@ -15,7 +15,7 @@ export const manifest = parseGameManifest({
   // again from the pause menu, so a game without it would advertise nothing to a player
   // holding a keyboard. Written for a player rather than as a spec.
   controls: {
-    keyboard: 'A and D or the arrow keys to choose, Space or Enter to lock it in',
+    keyboard: 'A and D then Space on the left, arrow keys then Enter on the right',
     pointer: 'Tap one of your three buttons before the bar runs out',
   },
   tags: ['quick', 'simultaneous'],

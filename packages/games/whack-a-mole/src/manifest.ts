@@ -15,7 +15,7 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 60,
   controls: {
-    keyboard: 'W A S D or arrow keys to pick a hole, Space or Enter to strike',
+    keyboard: 'W A S D then Space for the near seat, arrow keys then Enter for the far',
     pointer: 'Tap a mole the moment it appears',
   },
   tags: [],

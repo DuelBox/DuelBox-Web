@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTROLS } from './controls.js';
+import { CONTROLS, MANIFESTS } from './controls.js';
 import { PLAYABLE } from './registry.js';
 
 /**
@@ -25,5 +25,36 @@ describe('the controls map', () => {
       // field must exist rather than being undefined.
       expect(typeof controls.pointer, `${slug} pointer`).toBe('string');
     }
+  });
+});
+
+/**
+ * In a real-time game both seats play at once, and the engine binds W A S D to the near
+ * seat and the arrow keys to the far one — strictly disjoint, so one player can never
+ * drive the other. Four manifests used to read "W A S D or the arrow keys", which tells
+ * the second player to press keys that move their opponent. In a turn-based game the two
+ * sets really are alternatives for whoever is to move, so the phrasing is only wrong for
+ * the simultaneous archetypes.
+ */
+describe('keyboard controls in simultaneous games', () => {
+  const NAMES_A_SIDE = /seat|left|right|near|far/i;
+
+  it('never offers the two key halves as alternatives', () => {
+    for (const manifest of MANIFESTS) {
+      if (!manifest.archetype.startsWith('rt-')) continue;
+      const { keyboard } = manifest.controls;
+      if (!/arrow/i.test(keyboard)) continue;
+      expect(keyboard, `${manifest.id} presents both key halves as one player's choice`).not.toMatch(
+        /\bor\b[^,]*arrow/i,
+      );
+      expect(keyboard, `${manifest.id} does not say which half belongs to which seat`).toMatch(
+        NAMES_A_SIDE,
+      );
+    }
+  });
+
+  it('covers every real-time game, or it is guarding nothing', () => {
+    const realtime = MANIFESTS.filter((manifest) => manifest.archetype.startsWith('rt-'));
+    expect(realtime.length).toBeGreaterThan(3);
   });
 });

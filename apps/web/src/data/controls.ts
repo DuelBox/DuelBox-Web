@@ -21,6 +21,7 @@ import { manifest as hotPotato } from '@duelbox/game-hot-potato';
 import { manifest as kingOfTheYard } from '@duelbox/game-king-of-the-yard';
 import { manifest as mancala } from '@duelbox/game-mancala';
 import { manifest as memory } from '@duelbox/game-memory';
+import { manifest as miniSoccer } from '@duelbox/game-mini-soccer';
 import { manifest as popIt } from '@duelbox/game-pop-it';
 import { manifest as pullTheRope } from '@duelbox/game-pull-the-rope';
 import { manifest as reversi } from '@duelbox/game-reversi';
@@ -32,7 +33,7 @@ import { manifest as ultimateTtt } from '@duelbox/game-ultimate-ttt';
 import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
 import type { GameManifest } from '@duelbox/game-sdk';
 
-const MANIFESTS: readonly GameManifest[] = [
+export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
   checkers,
   colorWars,
@@ -46,6 +47,7 @@ const MANIFESTS: readonly GameManifest[] = [
   kingOfTheYard,
   mancala,
   memory,
+  miniSoccer,
   popIt,
   pullTheRope,
   reversi,

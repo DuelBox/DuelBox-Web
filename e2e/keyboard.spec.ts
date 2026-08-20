@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { seatCentroids } from './seat-pixels.js';
 
 /**
  * The keyboard as a first-class control.
@@ -96,14 +97,28 @@ test.describe('both players can see which keys are theirs', () => {
       timeout: 10_000,
     });
 
-    // Both seats hold a diagonal at once, which is four keys plus two actions.
-    for (const key of ['KeyW', 'KeyD', 'ArrowUp', 'ArrowLeft']) await page.keyboard.down(key);
-    await page.waitForTimeout(700);
-    for (const key of ['KeyW', 'KeyD', 'ArrowUp', 'ArrowLeft']) await page.keyboard.up(key);
+    const start = await seatCentroids(page);
+    expect(start.p1, 'seat one is on the yard to begin with').not.toBeNull();
+    expect(start.p2, 'seat two is on the yard to begin with').not.toBeNull();
 
-    // Both crabs moved, which is only possible if both halves were heard together.
-    const moved = await page.evaluate(() => document.querySelectorAll('canvas').length > 0);
-    expect(moved).toBe(true);
+    // Both seats hold a direction at once, and deliberately opposite ones. Holding the
+    // same direction would let a build where both seats secretly read one key half still
+    // look right: both bodies would move, just together.
+    const HELD = ['KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft'];
+    for (const key of HELD) await page.keyboard.down(key);
+    await page.waitForTimeout(700);
+    for (const key of HELD) await page.keyboard.up(key);
+
+    // "Both crabs moved" used to be asserted as "a canvas exists", which passes with the
+    // whole input system deleted. Read where the two bodies actually are instead.
+    const after = await seatCentroids(page);
+    expect((after.p1?.y ?? 0) - (start.p1?.y ?? 0), 'S took seat one down the yard').toBeGreaterThan(
+      6,
+    );
+    expect(
+      (after.p2?.y ?? 0) - (start.p2?.y ?? 0),
+      'the up arrow took seat two the other way in the same span',
+    ).toBeLessThan(-6);
     // Escape still reaches the pause menu after all that.
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();

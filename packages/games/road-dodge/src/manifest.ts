@@ -15,7 +15,7 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'vertical',
   roundSeconds: 60,
   controls: {
-    keyboard: 'A and D or the arrow keys to change lane',
+    keyboard: 'A and D change lane on the left road, arrow keys on the right',
     pointer: 'Tap or drag the left or right half of your road',
   },
   tags: ['reflex', 'endless'],

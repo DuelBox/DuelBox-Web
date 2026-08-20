@@ -14,7 +14,7 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 90,
   controls: {
-    keyboard: 'W A S D or the arrow keys to run',
+    keyboard: 'W A S D for the near seat, arrow keys for the far seat, to run',
     pointer: 'Drag anywhere to run that way',
   },
   tags: ['arena', 'chase'],

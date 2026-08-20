@@ -10,6 +10,14 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  /**
+   * Four browser projects run at once, two of them real WebKit. On a machine that is also
+   * doing something else the default thirty seconds is enough to lose a handful of tests
+   * to nothing worse than a slow paint — three runs during a build lost one, one and five
+   * tests, each waiting on a button that a clean run finds in under a second. Sixty
+   * seconds keeps a genuinely broken page failing while a busy one does not.
+   */
+  timeout: 60_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',

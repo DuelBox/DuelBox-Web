@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @duelbox/web dev",
-    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost && pnpm check:secrets",
+    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost && pnpm check:secrets && pnpm size",
     "typecheck": "tsc --build && tsc --noEmit -p tsconfig.lint.json && pnpm --filter @duelbox/web typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -24,6 +24,7 @@
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "check:zero-cost": "node scripts/check-zero-cost.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
+    "size": "node scripts/check-size.mjs",
     "check:source-secrets": "node scripts/check-source-secrets.mjs"
   },
   "devDependencies": {

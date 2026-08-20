@@ -2,20 +2,20 @@ import { parseGameManifest } from '@duelbox/game-sdk';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const manifest: GameManifest = parseGameManifest({
-  id: 'crabby-volley',
-  name: 'Crabby Volley',
+  id: 'mini-soccer',
+  name: 'Mini Soccer',
   category: 'Sports',
   archetype: 'rt-split',
   modes: ['friend', 'bot'],
   presentations: ['shared-screen', 'single-seat'],
-  // The court is wide: two halves side by side with a net between them.
-  logical: { width: 1000, height: 620 },
+  logical: { width: 1000, height: 640 },
   orientation: 'landscape',
+  // One pitch, two ends. Both players roam all of it.
   zoneSplit: 'vertical',
-  roundSeconds: 120,
+  roundSeconds: 90,
   controls: {
-    keyboard: 'A and D then W to move and jump on the left, arrow keys on the right',
-    pointer: 'Drag on your half to move, tap to jump',
+    keyboard: 'W A S D for the left seat, arrow keys for the right seat, to run',
+    pointer: 'Drag anywhere to run that way',
   },
-  tags: ['sports', 'reflex'],
+  tags: ['sports', 'arena'],
 });
