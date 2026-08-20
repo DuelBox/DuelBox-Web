@@ -79,6 +79,9 @@ importers:
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
+      '@duelbox/game-hot-potato':
+        specifier: workspace:*
+        version: link:../../packages/games/hot-potato
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
@@ -216,6 +219,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/hand-slap:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/hot-potato:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
