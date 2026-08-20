@@ -11,7 +11,7 @@ constitution and its rules are non-negotiable.
 ## Where things stand
 
 `main` is green and **CI passes**: `pnpm typecheck && pnpm lint && pnpm test && pnpm build
-&& pnpm e2e`. **1,169 unit tests, 165 browser tests** across four Playwright projects —
+&& pnpm e2e`. **1,492 unit tests, 237 browser tests** across four Playwright projects —
 Desktop Chrome, Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real
 WebKit**.
 
@@ -22,16 +22,16 @@ as a conflict and refuses to install. Every job died before its first real step,
 the workflow claimed to verify had ever been verified there. A green tick now means
 something.
 
-**~2,160 issues open.** The bulk is the per-game backlog: 14 issues each across the 95
+**~2,080 issues open.** The bulk is the per-game backlog: 14 issues each across the 89
 games not yet built.
 
-**Thirteen games play end to end**, each with a `SPEC.md` and 40–80 tests:
+**Eighteen games play end to end**, each with a `SPEC.md` and 40–110 tests:
 
 | Archetype | Games |
 |---|---|
-| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe |
+| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It |
 | `turn-aim` | Darts |
-| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors |
+| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap |
 | `rt-arena` | Sumo Push |
 | `rt-race` | Road Dodge |
 
@@ -92,6 +92,29 @@ through all of them.
   controls — the shell was telling players about a control that did not exist.
 - **Safe-area tokens were inert**, consumed in one place that double-counted them.
 - **49 game pages read "about 1 minutes."**
+- **A match decided by survival never ended.** The host reported the winner only when one
+  of the two *score numbers* changed, and a crash changes neither, so Road Dodge played to
+  its end and sat frozen behind a live pause button. Twelve games had shipped without
+  hitting it because every one of them scores points.
+- **A tap in the far half of the device did nothing, on every turn-based shared board.**
+  Seat zones exist so two people playing at once each own their touches; on a board that
+  rotates to face whoever has the move, the far side sits in the *other* seat's zone and
+  every tap there was dropped. In Tic Tac Toe the far row could not be reached by touch at
+  all. Ten games had it. It hid because the tap test aimed at a point commented as "well
+  clear of the seat midline" — that is, only where it already worked.
+- **Drop Four could not be played by tapping**, and had shipped that way. It waited for a
+  *later* step to see the release, but a quick tap puts press and release on one step. The
+  same bug had already been fixed in Tic Tac Toe; the test only covered Tic Tac Toe.
+- **A rotating board that is not centred in its logical box moves when it turns.**
+  `pushRotation` turns about the logical centre, so Pop It's sheet jumped across the screen
+  between turns and the second player's taps landed on nothing.
+- **The renderer never clipped to the logical box**, so a board turning through the seat
+  flip painted fragments over the letterbox bars — one player seeing outside the shared
+  viewport, which is a rule 9 problem rather than a cosmetic one.
+- **Three of the site's own navigation links 404ed** on every page: `/tournament/`,
+  `/how-to-play/` and `/privacy/`.
+- **Portrait games were unplayable in landscape**, rendering an 85px-wide board on a phone
+  held sideways, because two scoreboards took the height.
 
 ## How to work
 
@@ -109,6 +132,14 @@ through all of them.
     box, including a wrong one;
   - the listener-leak test needed a guard against comparing zero to zero.
 - **Beware checks satisfied by a comment.** That has now happened twice.
+- **A passing grep is not a passing suite.** Filtering `pnpm test` output through
+  `grep "Tests "` hides a suite that failed to *collect* — the summary line still prints.
+  Watch `Test Files` too, or the count.
+- **Check the build succeeded before trusting a mutation.** A mutation that fails to
+  compile leaves the previous `apps/web/out` in place, so the e2e suite runs against the
+  *fixed* build and passes — which looks exactly like a vacuous test.
+- **Assume nothing is a new file.** I overwrote `tokens.test.ts` believing I had created
+  it, silently destroying six tests.
 - **Verify an edit landed.** Two edits to `e2e/offline.spec.ts` silently did nothing —
   scripted `replace` calls whose pattern no longer matched after Prettier reformatted the
   file, reporting success anyway. CI failed twice on an exclusion I believed I had added.
