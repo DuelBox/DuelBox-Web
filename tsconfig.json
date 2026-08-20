@@ -50,6 +50,9 @@
       "path": "./packages/games/checkers"
     },
     {
+      "path": "./packages/games/color-wars"
+    },
+    {
       "path": "./packages/games/hand-slap"
     },
     {

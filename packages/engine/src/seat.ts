@@ -76,11 +76,25 @@ export function toScreen(
   return toWorld(out, worldX, worldY, size, rotated);
 }
 
-export type ZoneSplit = 'horizontal' | 'vertical';
+/**
+ * How the pointer surface is divided between the two seats.
+ *
+ * `'shared'` is not a division at all: the whole surface belongs to one seat. It exists
+ * for **turn-based** games, where only one player acts at a time and the board rotates to
+ * face them. Dividing the surface there was a real and serious bug — the board turns to
+ * face whoever is to move, so the far side of it sits in the *other* seat's zone, and
+ * every tap aimed at it was handed to a player whose turn it was not and dropped. In Tic
+ * Tac Toe that made the far row of cells unreachable by touch entirely.
+ *
+ * Zones are right for real-time games, where both seats act at once and a touch really
+ * does need to belong to the person it came from.
+ */
+export type ZoneSplit = 'horizontal' | 'vertical' | 'shared';
 
 /**
  * Which seat owns the zone a point falls in. `bottomSeat` owns the lower half
- * under a horizontal split and the left half under a vertical one.
+ * under a horizontal split, the left half under a vertical one, and **everything**
+ * under a shared one.
  *
  * Tie-break: a point exactly on the dividing line belongs to `bottomSeat`, so
  * the two zones never both claim, and never both refuse, the same point.
@@ -92,6 +106,7 @@ export function seatForPoint(
   split: ZoneSplit,
   bottomSeat: SeatId,
 ): SeatId {
+  if (split === 'shared') return bottomSeat;
   if (split === 'horizontal') {
     return screenY >= size.height / 2 ? bottomSeat : otherSeat(bottomSeat);
   }

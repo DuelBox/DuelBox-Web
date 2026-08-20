@@ -111,12 +111,30 @@ export function GameHost({
     }
     motion.addEventListener('change', onMotionChange);
     const inputView = new InputView();
+    const game = createGame();
+    /**
+     * A game with turns owns the whole pointer surface; only a real-time game has zones.
+     *
+     * This was a serious bug, and it hid behind a test that aimed only where it worked.
+     * A turn-based board **rotates to face whoever is to move**, so its far side sits in
+     * the other seat's zone — and every tap aimed there was attributed to a player whose
+     * turn it was not, and dropped. In Tic Tac Toe the far row of cells could not be
+     * reached by touch at all. Ten shared-board games had the same hole.
+     *
+     * `getActiveSeat` is the honest discriminator rather than the manifest's `zoneSplit`:
+     * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs
+     * its zones exactly as much as Tic Tac Toe needed to lose them.
+     */
+    const turnBased = typeof game.getActiveSeat === 'function';
     const input = new InputManager(logical, {
-      split: manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
-      bottomSeat: localSeat,
+      split: turnBased
+        ? 'shared'
+        : manifest.zoneSplit === 'vertical'
+          ? 'vertical'
+          : 'horizontal',
+      bottomSeat: turnBased ? (game.getActiveSeat?.() ?? localSeat) : localSeat,
     });
 
-    const game = createGame();
     gameRef.current = game;
     const gameContext: GameContext = {
       manifest,
@@ -280,6 +298,8 @@ export function GameHost({
         const seat = game.getActiveSeat?.() ?? null;
         if (seat !== lastSeat) {
           lastSeat = seat;
+          // The board changed hands, so the pointer surface does too.
+          if (seat !== null) input.setBoardSeat(seat);
           onActiveSeatRef.current?.(seat);
         }
       },

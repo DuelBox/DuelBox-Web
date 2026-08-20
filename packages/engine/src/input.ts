@@ -234,7 +234,7 @@ interface KeyTarget {
 export class InputManager {
   readonly #logical: LogicalSize;
   readonly #split: ZoneSplit;
-  readonly #bottomSeat: SeatId;
+  #bottomSeat: SeatId;
   readonly #bindings: Record<SeatId, KeyBinding>;
   readonly #keyTargets = new Map<string, KeyTarget>();
   readonly #ownership = new PointerOwnership();
@@ -261,6 +261,16 @@ export class InputManager {
     this.#bottomSeat = options?.bottomSeat ?? 'p1';
     this.#bindings = { p1, p2 };
     this.#rebuildKeyTargets();
+  }
+
+  /**
+   * Hand the whole pointer surface to a seat. Only meaningful under a shared split.
+   *
+   * A turn-based game's board belongs to whoever is to move, and that changes every turn,
+   * so it cannot be fixed at construction the way a real-time game's zones can.
+   */
+  setBoardSeat(seat: SeatId): void {
+    this.#bottomSeat = seat;
   }
 
   get state(): Readonly<InputState> {

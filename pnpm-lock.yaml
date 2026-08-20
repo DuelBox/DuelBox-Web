@@ -58,6 +58,9 @@ importers:
       '@duelbox/game-checkers':
         specifier: workspace:*
         version: link:../../packages/games/checkers
+      '@duelbox/game-color-wars':
+        specifier: workspace:*
+        version: link:../../packages/games/color-wars
       '@duelbox/game-darts':
         specifier: workspace:*
         version: link:../../packages/games/darts
@@ -141,6 +144,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/checkers:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/color-wars:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

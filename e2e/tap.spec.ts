@@ -87,3 +87,79 @@ test.describe('placing a mark', () => {
     expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
   });
 });
+
+test.describe('reaching the whole board', () => {
+  /**
+   * A turn-based board belongs to whoever is to move — all of it.
+   *
+   * The seat zones exist so that two people playing *at once* each own their own touches.
+   * Applied to a turn-based board they were actively harmful: the board rotates to face
+   * whoever has the move, so its far side sits in the other seat's zone, and every tap
+   * aimed there was attributed to a player whose turn it was not and dropped. In Tic Tac
+   * Toe the far row of cells could not be reached by touch at all, and ten shared-board
+   * games had the same hole.
+   *
+   * It hid because the test above deliberately aims at a point "well clear of the seat
+   * midline" — that is, only where it already worked.
+   */
+  const SHARED_BOARD_GAMES = [
+    { slug: 'tic-tac-toe', logical: 900, point: { x: 200, y: 200 } },
+    { slug: 'color-wars', logical: 900, point: { x: 210, y: 210 } },
+    // Reversi only accepts a move that flips something, so this is one of its four
+    // opening moves — the one that sits in the far half.
+    { slug: 'reversi', logical: 900, point: { x: 405, y: 315 } },
+    { slug: 'dots-and-boxes', logical: 900, point: { x: 300, y: 200 } },
+  ];
+
+  for (const { slug, logical, point } of SHARED_BOARD_GAMES) {
+    test(`${slug} accepts a tap in the far half of the device`, async ({ page }) => {
+      await page.goto(`/play/${slug}/`);
+      await page.getByRole('button', { name: 'Play together here' }).click();
+      await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+        timeout: 10_000,
+      });
+
+      const box = await page.locator('canvas').boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) throw new Error('no canvas');
+      const scale = Math.min(box.width / logical, box.height / logical);
+      const originX = box.x + (box.width - logical * scale) / 2;
+      const originY = box.y + (box.height - logical * scale) / 2;
+      const target = { x: originX + point.x * scale, y: originY + point.y * scale };
+
+      // The point really is in the far half of the *device*, which is what makes the tap
+      // meaningful — otherwise this test would pass on the broken build too.
+      expect(target.y, 'the target must sit above the seat midline').toBeLessThan(
+        box.y + box.height / 2,
+      );
+
+      const hud = page.getByRole('group', { name: 'Score' });
+      // Before the tap it is p1's turn. Asserting only "somebody's turn" was the first
+      // version of this and it passed on the broken build too, because that sentence is
+      // already on the page — the same vacuous-assertion trap this file exists to record.
+      // Score-agnostic, because not every game starts level — Reversi opens two apiece.
+      await expect(hud).toContainText(/Pip has \d+ points?, and it is their turn/);
+
+      await page.mouse.click(target.x, target.y);
+
+      // The turn passing to the *other* seat is the proof the tap was accepted.
+      await expect(hud).toContainText(/Player two has \d+ points?, and it is their turn/);
+    });
+  }
+
+  test('a real-time shared board still divides its touches by seat', async ({ page }) => {
+    // The other half of the rule: Whack a Mole is a shared board too, but both seats
+    // swing at it at once, so it needs its zones exactly as much as Tic Tac Toe needed
+    // to lose them. A game with no turns must keep them.
+    await page.goto('/play/whack-a-mole/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    // No turn indicator at all is the observable difference, and it is what the host
+    // keys the decision on.
+    await expect(page.getByRole('group', { name: 'Score' })).not.toContainText(
+      'and it is their turn',
+    );
+  });
+});

@@ -29,6 +29,7 @@
     "@duelbox/game-rock-paper-scissors": "workspace:*",
     "@duelbox/game-ultimate-ttt": "workspace:*",
     "@duelbox/game-checkers": "workspace:*",
+    "@duelbox/game-color-wars": "workspace:*",
     "@duelbox/game-hand-slap": "workspace:*",
     "@duelbox/game-road-dodge": "workspace:*"
   },
