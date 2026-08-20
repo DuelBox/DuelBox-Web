@@ -204,6 +204,10 @@ class RecordingContext implements Canvas2DLike {
     this.#record('clearRect', x, y, width, height);
   }
 
+  clip(): void {
+    this.#record('clip');
+  }
+
   /** Where the current transform puts a logical point. */
   deviceX(x: number, y: number): number {
     const m = this.#matrix;
@@ -285,10 +289,15 @@ describe('construction', () => {
 
     renderer.beginFrame();
 
+    // The clip is part of opening a frame now: a game may not paint outside its declared
+    // box, because the letterbox is where rule 9's boundary lives.
     expect(fake.calls).toEqual([
       { op: 'save', args: [] },
       { op: 'translate', args: [0, 0] },
       { op: 'scale', args: [1, 1] },
+      { op: 'beginPath', args: [] },
+      { op: 'rect', args: [0, 0, 800, 600] },
+      { op: 'clip', args: [] },
     ]);
   });
 });
@@ -412,7 +421,66 @@ describe('setViewport', () => {
       { op: 'save', args: [] },
       { op: 'translate', args: [200, 0] },
       { op: 'scale', args: [2, 2] },
+      // Clipped in logical units, inside the scale, so it is the game's own box whatever
+      // the device does with it.
+      { op: 'beginPath', args: [] },
+      { op: 'rect', args: [0, 0, 800, 600] },
+      { op: 'clip', args: [] },
     ]);
+  });
+
+  it('tucks a turning board in so its corners are not clipped away', () => {
+    // With the frame clipped to the logical box, a board part-way through the seat flip
+    // had its corners cut off and the pieces standing in them vanished for a few frames:
+    // a rectangle rotated off-axis needs |cos| + |sin| times its extent, root two at
+    // forty-five degrees. The factor is 1 at every resting angle, so a settled board is
+    // never scaled — which is why the scale call is absent at 0 and at half a turn.
+    const { fake, renderer } = setup();
+    renderer.setViewport(VIEW);
+    renderer.beginFrame();
+    fake.calls.length = 0;
+
+    renderer.pushRotation(Math.PI / 4);
+    const scales = fake.calls.filter((call) => call.op === 'scale');
+    expect(scales.length, 'mid-turn, the board is scaled to fit').toBe(1);
+    const factor = scales[0]?.args[0];
+    expect(typeof factor).toBe('number');
+    expect(factor).toBeCloseTo(1 / Math.SQRT2, 6);
+    renderer.popSeatRotation();
+
+    fake.calls.length = 0;
+    renderer.pushRotation(Math.PI);
+    expect(
+      fake.calls.filter((call) => call.op === 'scale').length,
+      'a settled board is never scaled',
+    ).toBe(0);
+    renderer.popSeatRotation();
+    renderer.endFrame();
+  });
+
+  it('confines a frame to the logical box, whatever a game draws', () => {
+    // The bug this exists for: a board turning through the seat flip sweeps its corners
+    // out by a factor of root two, which took a 720-unit board well past the edge of its
+    // 900-unit box and painted over the letterbox bars. Visible in Checkers as fragments
+    // of board scattered above and below the play area, on the page's own background.
+    //
+    // It is a fairness rule rather than a tidiness one. The letterbox is where rule 9's
+    // boundary lives, so anything spilling past it shows a player more of the world.
+    const { fake, renderer } = setup();
+    renderer.setViewport(VIEW);
+    renderer.beginFrame();
+
+    const clip = fake.calls.filter((call) => call.op === 'clip');
+    expect(clip.length, 'exactly one clip a frame').toBe(1);
+
+    const path = fake.calls.filter((call) => call.op === 'rect');
+    expect(path[0]?.args, 'the clip is the logical box, in logical units').toEqual([0, 0, 800, 600]);
+
+    // And it is established before the game draws anything at all.
+    const clipIndex = fake.calls.findIndex((call) => call.op === 'clip');
+    renderer.rect(0, 0, 10, 10, '#fff');
+    const firstDraw = fake.calls.findIndex((call) => call.op === 'fillRect');
+    expect(firstDraw, 'the clip precedes the first draw').toBeGreaterThan(clipIndex);
   });
 
   it('places the logical corners where the fitted viewport says', () => {

@@ -116,6 +116,8 @@ export interface Canvas2DLike {
   /** Only `width` is used, so a fake need not model the rest of TextMetrics. */
   measureText(text: string): { readonly width: number };
   clearRect(x: number, y: number, width: number, height: number): void;
+  /** Confines drawing to the current path. Used once a frame, to the logical box. */
+  clip(): void;
 }
 
 function assertPositiveFinite(value: number, name: string): void {
@@ -221,6 +223,17 @@ export class Canvas2DRenderer implements Renderer {
     ctx.save();
     ctx.translate(this.#offsetX, this.#offsetY);
     ctx.scale(this.#scale, this.#scale);
+    // Confined to the logical box for the whole frame.
+    //
+    // Without this the letterbox bars are fair game, and a game that draws outside its
+    // declared box paints over them. It is not only untidy: rule 9 says neither player may
+    // ever see more of the play area than the other, and the letterbox *is* where that
+    // boundary lives — so anything spilling past it is showing one player more of the
+    // world. A board turning through the seat flip does exactly that, because a square
+    // rotating about its centre sweeps its corners out by a factor of root two.
+    ctx.beginPath();
+    ctx.rect(0, 0, this.#logicalWidth, this.#logicalHeight);
+    ctx.clip();
   }
 
   /**
@@ -372,6 +385,17 @@ export class Canvas2DRenderer implements Renderer {
     if (angle === 0) return;
     ctx.translate(this.#centreX, this.#centreY);
     ctx.rotate(angle);
+    // Tucked in while it turns, so the corners stay inside the box.
+    //
+    // A rectangle rotated off-axis needs `|cos| + |sin|` times its own extent — root two
+    // at forty-five degrees — and the frame is clipped to the logical box, so without this
+    // the corners of a turning board are simply cut off and the pieces standing in them
+    // vanish for a few frames. The factor is 1 at every resting angle, so a settled board
+    // is never scaled: it only breathes in through the turn and back out at the end.
+    const fit = 1 / (Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle)));
+    // Skipped entirely at a resting angle, where the factor is 1 to within rounding: a
+    // settled board must produce the same calls it always did.
+    if (fit < 1 - 1e-9) ctx.scale(fit, fit);
     ctx.translate(-this.#centreX, -this.#centreY);
   }
 

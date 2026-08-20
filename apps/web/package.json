@@ -28,6 +28,7 @@
     "@duelbox/game-mancala": "workspace:*",
     "@duelbox/game-rock-paper-scissors": "workspace:*",
     "@duelbox/game-ultimate-ttt": "workspace:*",
+    "@duelbox/game-checkers": "workspace:*",
     "@duelbox/game-road-dodge": "workspace:*"
   },
   "devDependencies": {
