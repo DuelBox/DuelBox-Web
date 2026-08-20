@@ -55,6 +55,9 @@ importers:
       '@duelbox/game-air-hockey':
         specifier: workspace:*
         version: link:../../packages/games/air-hockey
+      '@duelbox/game-bowling':
+        specifier: workspace:*
+        version: link:../../packages/games/bowling
       '@duelbox/game-checkers':
         specifier: workspace:*
         version: link:../../packages/games/checkers
@@ -165,6 +168,15 @@ importers:
         version: 3.25.76
 
   packages/games/air-hockey:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/bowling:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

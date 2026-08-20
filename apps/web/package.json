@@ -12,6 +12,7 @@
   "dependencies": {
     "@duelbox/engine": "workspace:*",
     "@duelbox/game-air-hockey": "workspace:*",
+    "@duelbox/game-bowling": "workspace:*",
     "@duelbox/game-checkers": "workspace:*",
     "@duelbox/game-color-wars": "workspace:*",
     "@duelbox/game-cornhole": "workspace:*",

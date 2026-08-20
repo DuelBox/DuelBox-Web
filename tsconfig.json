@@ -68,6 +68,9 @@
       "path": "./packages/games/pool"
     },
     {
+      "path": "./packages/games/bowling"
+    },
+    {
       "path": "./packages/games/king-of-the-yard"
     },
     {

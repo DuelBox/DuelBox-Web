@@ -72,9 +72,11 @@ test.describe('resizing mid-match', () => {
     await page.setViewportSize({ width: 800, height: 400 });
     await page.waitForTimeout(300);
     await page.setViewportSize({ width: 400, height: 800 });
-    await page.waitForTimeout(300);
 
-    expect(await hudText(page)).toBe(before);
+    // Polled rather than slept on. A fixed wait is a guess about how long a resize takes,
+    // and on a loaded machine the guess is wrong — these two tests failed in a full run
+    // and passed alone, which is the signature of exactly that.
+    await expect.poll(() => hudText(page), { timeout: 5000 }).toBe(before);
   });
 
   test('keeps the board on screen at every size it passes through', async ({ page }) => {
@@ -88,16 +90,30 @@ test.describe('resizing mid-match', () => {
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(size);
-      await page.waitForTimeout(200);
-      const box = await page.locator('canvas').boundingBox();
-      expect(box, `no canvas at ${size.width}x${size.height}`).not.toBeNull();
-      if (!box) continue;
       const where = `${size.width}x${size.height}`;
-      expect(box.y, where).toBeGreaterThanOrEqual(-1);
-      expect(box.y + box.height, where).toBeLessThanOrEqual(size.height + 1);
-      expect(box.x + box.width, where).toBeLessThanOrEqual(size.width + 1);
-      expect(box.width, `${where}: board collapsed`).toBeGreaterThan(40);
-      expect(box.height, `${where}: board collapsed`).toBeGreaterThan(40);
+
+      // Polled, not slept on: a fixed wait is a guess about how long the layout takes to
+      // settle, and a loaded machine makes the guess wrong — these tests failed in a full
+      // run and passed alone, which is the signature of exactly that. A board that never
+      // fits still fails; it just gets five seconds to prove it rather than two hundred
+      // milliseconds.
+      //
+      // The poll reports *what is wrong* rather than a bare false, so a genuine failure
+      // still names the edge that overflowed instead of only the viewport.
+      await expect
+        .poll(
+          async () => {
+            const current = await page.locator('canvas').boundingBox();
+            if (!current) return 'no canvas at all';
+            if (current.width <= 40 || current.height <= 40) return 'the board collapsed';
+            if (current.y < -1) return 'the top is off screen';
+            if (current.y + current.height > size.height + 1) return 'the bottom is off screen';
+            if (current.x + current.width > size.width + 1) return 'the right edge is off screen';
+            return 'fits';
+          },
+          { timeout: 5000, message: `at ${where}` },
+        )
+        .toBe('fits');
     }
   });
 

@@ -9,6 +9,7 @@
  * so this pulls in a schema, not a hundred games.
  */
 import { manifest as airHockey } from '@duelbox/game-air-hockey';
+import { manifest as bowling } from '@duelbox/game-bowling';
 import { manifest as checkers } from '@duelbox/game-checkers';
 import { manifest as colorWars } from '@duelbox/game-color-wars';
 import { manifest as cornhole } from '@duelbox/game-cornhole';
@@ -39,6 +40,7 @@ import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
+  bowling,
   checkers,
   colorWars,
   cornhole,
