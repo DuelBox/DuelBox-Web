@@ -1,0 +1,42 @@
+.head {
+  padding-block: var(--db-space-7) var(--db-space-4);
+}
+
+.head h1 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-3xl);
+}
+
+.updated {
+  margin-top: var(--db-space-2);
+  color: var(--db-faint);
+  font-size: var(--db-text-sm);
+}
+
+.prose {
+  max-width: 44rem;
+  padding-bottom: var(--db-space-7);
+}
+
+.prose h2 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-xl);
+  margin-top: var(--db-space-6);
+  margin-bottom: var(--db-space-3);
+}
+
+.prose p,
+.prose li {
+  margin-bottom: var(--db-space-3);
+  line-height: 1.65;
+}
+
+.prose ul {
+  padding-left: var(--db-space-5);
+  list-style: disc;
+}
+
+.lead {
+  font-size: var(--db-text-lg);
+  color: var(--db-muted);
+}

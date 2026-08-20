@@ -55,3 +55,38 @@ test.describe('the static build', () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+test.describe('the navigation', () => {
+  test('every header link goes somewhere that exists', async ({ page }) => {
+    // Two of the four did not. `/tournament/` and `/how-to-play/` were both in the header
+    // and neither was a route, so on every page of the site half the navigation 404ed —
+    // visible only as a pair of failed requests in the console, because Next prefetches
+    // them. The Tournament link has gone until there is a tournament; How to play is now
+    // a real page.
+    await page.goto('/');
+    const links = page.getByRole('navigation').getByRole('link');
+    const count = await links.count();
+    expect(count, 'the header has links to check').toBeGreaterThan(0);
+
+    const targets: string[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const href = await links.nth(i).getAttribute('href');
+      if (href && href.startsWith('/')) targets.push(href);
+    }
+    expect(targets.length).toBeGreaterThan(0);
+
+    for (const href of targets) {
+      const response = await page.request.get(href);
+      expect(response.status(), `${href} is a dead link`).toBeLessThan(400);
+    }
+  });
+
+  test('how to play explains the seats and the keys', async ({ page }) => {
+    await page.goto('/how-to-play/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('How to play');
+    await expect(page.getByRole('heading', { name: 'Sit opposite each other' })).toBeVisible();
+    // The keyboard split is the thing two people on one laptop most need to be told.
+    await expect(page.getByRole('table')).toContainText('Player one');
+    await expect(page.getByRole('table')).toContainText('Player two');
+  });
+});

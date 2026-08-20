@@ -1,0 +1,126 @@
+.head {
+  padding-block: var(--db-space-7) var(--db-space-5);
+}
+
+.head h1 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-3xl);
+}
+
+.lede {
+  max-width: 46rem;
+  margin-top: var(--db-space-3);
+  color: var(--db-muted);
+  font-size: var(--db-text-lg);
+}
+
+.section {
+  padding-block: var(--db-space-5);
+  border-top: 1px solid var(--db-hairline);
+}
+
+.section h2 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-2xl);
+  margin-bottom: var(--db-space-3);
+}
+
+.section p {
+  max-width: 46rem;
+  margin-bottom: var(--db-space-3);
+}
+
+.cards {
+  display: grid;
+  gap: var(--db-space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 40rem) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card {
+  padding: var(--db-space-4);
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+}
+
+.card h3 {
+  font-size: var(--db-text-lg);
+  margin-bottom: var(--db-space-2);
+}
+
+.card p {
+  color: var(--db-muted);
+  margin: 0;
+}
+
+/*
+ * A seat diagram drawn in CSS rather than an image: it has to be correct at 320px and it
+ * has to survive greyscale, and two labelled boxes do both without an asset to license.
+ */
+.device {
+  max-width: 20rem;
+  margin-block: var(--db-space-4);
+  border: 3px solid var(--db-border);
+  border-radius: var(--db-radius);
+  overflow: hidden;
+}
+
+.seat {
+  padding: var(--db-space-5) var(--db-space-3);
+  text-align: center;
+  font-weight: 700;
+  font-family: var(--db-font-mono);
+}
+
+.seatTop {
+  background: var(--db-p2-tint);
+  color: var(--db-ink);
+  /* Upside down, because that is exactly how the player opposite reads it. */
+  transform: rotate(180deg);
+}
+
+.seatBottom {
+  background: var(--db-p1-tint);
+  color: var(--db-ink);
+}
+
+.divider {
+  height: 3px;
+  background: var(--db-border);
+}
+
+.keys {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--db-space-3);
+}
+
+.keys th,
+.keys td {
+  text-align: left;
+  padding: var(--db-space-2) var(--db-space-3);
+  border-bottom: 1px solid var(--db-hairline);
+}
+
+.keys th {
+  font-size: var(--db-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--db-faint);
+}
+
+.keys kbd {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-sm);
+  padding: 2px 6px;
+  border: 1px solid var(--db-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--db-paper);
+}

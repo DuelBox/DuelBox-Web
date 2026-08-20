@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { colour, seatColour } from './tokens.js';
 
@@ -56,5 +57,69 @@ describe('design tokens', () => {
     const reduced = css.slice(css.indexOf('prefers-reduced-motion'));
     expect(reduced).toContain('--db-duration: 1ms');
     expect(reduced).toContain('--db-duration-slow: 1ms');
+  });
+});
+
+
+/**
+ * Every design token a stylesheet uses must actually exist.
+ *
+ * CSS fails silently: `background: var(--db-p1-soft)` where the token is really
+ * `--db-p1-tint` does not warn, does not error, and does not paint — the declaration is
+ * simply invalid and the element keeps whatever it had. That is exactly what happened to
+ * the seat diagram on the How to play page, and it looked fine enough in a screenshot
+ * that it could easily have shipped.
+ *
+ * There is no way to catch this in the cascade, so it is caught here.
+ */
+const here = dirname(fileURLToPath(import.meta.url));
+const web = join(here, '..');
+
+function stylesheets(dir: string, found: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) stylesheets(path, found);
+    else if (path.endsWith('.css')) found.push(path);
+  }
+  return found;
+}
+
+/** Every custom property the stylesheets define, from anywhere. */
+function definedTokens(sheets: string[]): Set<string> {
+  const defined = new Set<string>();
+  for (const path of sheets) {
+    const css = readFileSync(path, 'utf8');
+    for (const match of css.matchAll(/(--[a-z0-9-]+)\s*:/gi)) {
+      const name = match[1];
+      if (name) defined.add(name);
+    }
+  }
+  return defined;
+}
+
+describe('the design tokens', () => {
+  const sheets = stylesheets(web);
+  const defined = definedTokens(sheets);
+
+  it('finds the stylesheets to check', () => {
+    expect(sheets.length).toBeGreaterThan(5);
+    expect(defined.size, 'and the tokens they define').toBeGreaterThan(20);
+  });
+
+  it('is only ever asked for a token that exists', () => {
+    const missing: string[] = [];
+    for (const path of sheets) {
+      const css = readFileSync(path, 'utf8');
+      for (const match of css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)) {
+        const name = match[1];
+        // A `var()` with a fallback is fine even if the token is absent, because the
+        // fallback is what paints — so only bare references are checked.
+        if (!name || defined.has(name)) continue;
+        const after = css.slice(match.index + match[0].length);
+        if (after.startsWith(',')) continue;
+        missing.push(`${path.slice(web.length + 1)} uses ${name}`);
+      }
+    }
+    expect(missing, `undefined token: ${missing.join(', ')}`).toEqual([]);
   });
 });

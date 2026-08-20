@@ -11,7 +11,6 @@ export function SiteHeader() {
         </Link>
         <nav className={styles.nav} aria-label="Main">
           <Link href="/games/">Games</Link>
-          <Link href="/tournament/">Tournament</Link>
           <Link href="/how-to-play/">How to play</Link>
         </nav>
         <Link href="/games/" className={styles.cta}>
