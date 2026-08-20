@@ -201,9 +201,16 @@ test.describe('a quick tap, in every game that takes one', () => {
 
       // A click, not a hold: Playwright presses and releases with no wait between.
       await page.mouse.click(originX + point.x * scale, originY + point.y * scale);
+
+      // Twelve seconds, not three. These games hold a move on screen before handing over —
+      // Pop It waits about 1.75 s between its think and settle delays alone — and a CI
+      // runner is roughly four times slower than a development machine, which puts that
+      // close to seven. Three seconds was a guess with no headroom in it, and Pop It duly
+      // failed on CI while passing everywhere else. A tap that does nothing still fails
+      // here; it just takes longer to say so.
       await expect(page.getByRole('group', { name: 'Score' })).toContainText(
         /Player two has \d+ points?, and it is their turn/,
-        { timeout: 3000 },
+        { timeout: 12_000 },
       );
     });
   }
