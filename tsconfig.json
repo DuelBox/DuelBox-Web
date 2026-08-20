@@ -59,6 +59,9 @@
       "path": "./packages/games/shut-the-box"
     },
     {
+      "path": "./packages/games/sea-battle"
+    },
+    {
       "path": "./packages/games/king-of-the-yard"
     },
     {

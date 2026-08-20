@@ -981,3 +981,45 @@ describe('a direction key tapped between two steps', () => {
     expect(input.beginStep(STEP).seat('p1').moveX).toBe(0);
   });
 });
+
+describe('a game whose split changes mid-match', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 900, height: 900 };
+
+  /**
+   * Most games never need this. But simultaneous and turn-based are phases of one game
+   * rather than two kinds of game: Sea Battle has both players lay out their fleets at the
+   * same time on their own half, and only then starts taking turns at a shared grid.
+   * Fixing the split at construction made one of those two phases unplayable.
+   */
+  it('divides the surface between seats, then hands all of it to one', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+
+    // Split: the far half is the other player's.
+    input.pointerDown(1, 450, 100);
+    expect(input.beginStep(STEP).seat('p2').actionPressed, 'the top half is seat two').toBe(true);
+    input.pointerUp(1);
+    input.beginStep(STEP);
+
+    // Shared, owned by seat one: the same point is now seat one's.
+    input.setSplit('shared');
+    input.setBoardSeat('p1');
+    input.pointerDown(2, 450, 100);
+    expect(
+      input.beginStep(STEP).seat('p1').actionPressed,
+      'the whole board belongs to whoever is to move',
+    ).toBe(true);
+    expect(input.state.seat('p2').actionPressed).toBe(false);
+  });
+
+  it('gives the two zones back when the turns stop', () => {
+    const input = new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+    input.setSplit('shared');
+    input.setBoardSeat('p2');
+    input.setSplit('horizontal');
+    input.setBoardSeat('p1');
+
+    input.pointerDown(1, 450, 100);
+    expect(input.beginStep(STEP).seat('p2').actionPressed, 'zoned again').toBe(true);
+  });
+});

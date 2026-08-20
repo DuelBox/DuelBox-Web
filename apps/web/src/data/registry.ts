@@ -40,6 +40,7 @@ const LOADERS: Record<string, Loader> = {
   'pop-it': () => import('@duelbox/game-pop-it').then((m) => m.default),
   'hand-slap': () => import('@duelbox/game-hand-slap').then((m) => m.default),
   'shut-the-box': () => import('@duelbox/game-shut-the-box').then((m) => m.default),
+  'sea-battle': () => import('@duelbox/game-sea-battle').then((m) => m.default),
   'rock-paper-scissors': () =>
     import('@duelbox/game-rock-paper-scissors').then((m) => m.default),
 };

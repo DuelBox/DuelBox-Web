@@ -280,7 +280,7 @@ export function envelopeFor(logical: LogicalSize): number {
 
 export class InputManager {
   readonly #logical: LogicalSize;
-  readonly #split: ZoneSplit;
+  #split: ZoneSplit;
   readonly #envelope: number;
   #bottomSeat: SeatId;
   readonly #bindings: Record<SeatId, KeyBinding>;
@@ -320,6 +320,20 @@ export class InputManager {
    */
   setBoardSeat(seat: SeatId): void {
     this.#bottomSeat = seat;
+  }
+
+  /**
+   * Change how the pointer surface is divided, mid-match.
+   *
+   * Most games never call this: a real-time game splits the device between two seats for
+   * its whole life, and a turn-based one hands the whole board to whoever is to move. But
+   * the two are phases of one game rather than two kinds of game — Sea Battle has both
+   * players lay out their fleets at the same time on their own half, and only then starts
+   * taking turns at a shared grid. Fixing the split at construction made that unplayable
+   * in one direction or the other.
+   */
+  setSplit(split: ZoneSplit): void {
+    this.#split = split;
   }
 
   get state(): Readonly<InputState> {

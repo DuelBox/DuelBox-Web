@@ -15,6 +15,7 @@ import {
   viewportToLogical,
   vec2,
   type SeatId,
+  type ZoneSplit,
 } from '@duelbox/engine';
 import {
   isSimulating,
@@ -125,10 +126,17 @@ export function GameHost({
      * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs
      * its zones exactly as much as Tic Tac Toe needed to lose them.
      */
-    const turnBased = typeof game.getActiveSeat === 'function';
+    // Read from the *live* value rather than from whether the method exists. The contract
+    // has always said returning null means "no turns right now", and a game can mean it
+    // for part of its life: Sea Battle has both players lay out their fleets at the same
+    // time, each on their own half, and only then starts taking turns at a shared grid.
+    const zonedSplit: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
+    const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
+
+    const initialSeat = game.getActiveSeat?.() ?? null;
     const input = new InputManager(logical, {
-      split: turnBased ? 'shared' : manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
-      bottomSeat: turnBased ? (game.getActiveSeat?.() ?? localSeat) : localSeat,
+      split: splitFor(initialSeat),
+      bottomSeat: initialSeat ?? localSeat,
     });
 
     gameRef.current = game;
@@ -294,8 +302,10 @@ export function GameHost({
         const seat = game.getActiveSeat?.() ?? null;
         if (seat !== lastSeat) {
           lastSeat = seat;
-          // The board changed hands, so the pointer surface does too.
-          if (seat !== null) input.setBoardSeat(seat);
+          // The board changed hands, so the pointer surface does too — and a game that
+          // goes back to having no turns gets its two zones back.
+          input.setSplit(splitFor(seat));
+          input.setBoardSeat(seat ?? localSeat);
           onActiveSeatRef.current?.(seat);
         }
       },
