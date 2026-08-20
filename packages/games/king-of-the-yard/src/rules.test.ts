@@ -304,10 +304,12 @@ describe('the bot', () => {
   it('clears its state on reset', () => {
     const bot = createBotState();
     bot.headingX = 1;
-    bot.sinceDecision = 5;
+    bot.judgement.remaining = 5;
+    bot.judgement.decided = true;
     resetBotState(bot);
     expect(bot.headingX).toBe(0);
-    expect(bot.sinceDecision).toBe(0);
+    expect(bot.judgement.remaining).toBe(0);
+    expect(bot.judgement.decided).toBe(false);
   });
 
   it('beats the weaker tier over a series', { timeout: 240_000 }, () => {

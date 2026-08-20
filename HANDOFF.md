@@ -11,7 +11,7 @@ constitution and its rules are non-negotiable.
 ## Where things stand
 
 `main` is green and **CI passes**: `pnpm typecheck && pnpm lint && pnpm test && pnpm build
-&& pnpm e2e`. **1,492 unit tests, 237 browser tests** across four Playwright projects —
+&& pnpm e2e`. **1,740 unit tests, 245 browser tests** across four Playwright projects —
 Desktop Chrome, Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real
 WebKit**.
 
@@ -22,17 +22,17 @@ as a conflict and refuses to install. Every job died before its first real step,
 the workflow claimed to verify had ever been verified there. A green tick now means
 something.
 
-**~2,080 issues open.** The bulk is the per-game backlog: 14 issues each across the 89
+**~2,015 issues open.** The bulk is the per-game backlog: 14 issues each across the 85
 games not yet built.
 
-**Eighteen games play end to end**, each with a `SPEC.md` and 40–110 tests:
+**Twenty-two games play end to end**, each with a `SPEC.md` and 40–110 tests:
 
 | Archetype | Games |
 |---|---|
 | `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It |
-| `turn-aim` | Darts |
-| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap |
-| `rt-arena` | Sumo Push |
+| `turn-aim` | Darts, Cornhole |
+| `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato |
+| `rt-arena` | Sumo Push, King of the Yard |
 | `rt-race` | Road Dodge |
 
 Building one closes about twelve of its fourteen issues; the other two (research, art and
@@ -163,6 +163,16 @@ through all of them.
 - **Delays in whole simulation steps, never seconds.** And a delay sized in `init` is sized
   before the step rate is known: Rock Paper Scissors' first round lasted one step because
   of exactly that.
+- **A bot's error must be drawn once and held, never re-rolled per step.** A fresh random
+  error sixty times a second averages to zero, so the bot sits on exactly the right answer
+  however large its supposed inaccuracy and every tier plays identically. This has now been
+  written wrong three times — Road Dodge, Crabby Volley, King of the Yard — so it lives in
+  `packages/game-sdk/src/bot-judgement.ts` with the measurements that justify it. **Use it
+  rather than writing the counter again.**
+- **Measure a bot's tiers; never assume them.** Every real-time bot in this repository has
+  had at least one lever pointing the wrong way on the first attempt: looking further ahead
+  was worse, jumping more was worse, a wrong-way mistake barely graded. Play the tiers
+  against each other and count.
 - **Shape as well as colour, every time.** Whack a Mole is the sharpest case — telling the
   two seats' moles apart *is* the game, so colour-only would make it unplayable rather
   than merely harder.

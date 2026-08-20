@@ -1,4 +1,12 @@
 import type { Rng, SeatId } from '@duelbox/engine';
+import {
+  commit,
+  createJudgement,
+  misjudgement,
+  resetJudgement,
+  shouldDecide,
+} from '@duelbox/game-sdk';
+import type { Judgement } from '@duelbox/game-sdk';
 
 /**
  * King of the Yard, as pure rules.
@@ -227,24 +235,30 @@ export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.
   hard: { reaction: 0.12, wobble: 0.12, lead: 0.5 },
 });
 
-/** What a bot remembers: the heading it has committed to, and when it last chose one. */
+/**
+ * What a bot remembers: the heading it has committed to, and when it last chose one.
+ *
+ * The timing is the SDK's {@link Judgement}, not a counter of our own. Three games in this
+ * repository each wrote that counter separately and each got it wrong the same way, so it
+ * now lives in one place with the measurements that justify it.
+ */
 export interface BotState {
   headingX: number;
   headingY: number;
-  sinceDecision: number;
+  readonly judgement: Judgement;
   /** Where the target was last time it looked, so it can estimate their motion. */
   lastTargetX: number;
   lastTargetY: number;
 }
 
 export function createBotState(): BotState {
-  return { headingX: 0, headingY: 0, sinceDecision: 0, lastTargetX: 0, lastTargetY: 0 };
+  return { headingX: 0, headingY: 0, judgement: createJudgement(), lastTargetX: 0, lastTargetY: 0 };
 }
 
 export function resetBotState(bot: BotState): void {
   bot.headingX = 0;
   bot.headingY = 0;
-  bot.sinceDecision = 0;
+  resetJudgement(bot.judgement);
   bot.lastTargetX = 0;
   bot.lastTargetY = 0;
 }
@@ -266,9 +280,8 @@ export function botHeading(
   fixedDeltaSeconds: number,
   roll: number,
 ): { x: number; y: number } {
-  bot.sinceDecision -= fixedDeltaSeconds;
-  if (bot.sinceDecision <= 0) {
-    bot.sinceDecision = profile.reaction;
+  if (shouldDecide(bot.judgement, fixedDeltaSeconds)) {
+    commit(bot.judgement, 0, profile.reaction);
 
     const me = seat === 'p1' ? game.p1 : game.p2;
     let targetX: number;
@@ -293,7 +306,7 @@ export function botHeading(
       bot.lastTargetY = prey.y;
     }
 
-    const angle = Math.atan2(targetY - me.y, targetX - me.x) + (roll - 0.5) * 2 * profile.wobble;
+    const angle = Math.atan2(targetY - me.y, targetX - me.x) + misjudgement(roll, profile.wobble);
     bot.headingX = Math.cos(angle);
     bot.headingY = Math.sin(angle);
   }

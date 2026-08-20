@@ -32,3 +32,13 @@ export type { MatchPhase, MatchEvent, MatchEventKind, MatchRules, MatchState } f
 
 export { resolve, resolveSimultaneous } from './win-conditions.js';
 export type { WinCondition, Outcome, Tally } from './win-conditions.js';
+
+export {
+  commit,
+  createJudgement,
+  invalidate,
+  misjudgement,
+  resetJudgement,
+  shouldDecide,
+} from './bot-judgement.js';
+export type { Judgement } from './bot-judgement.js';
