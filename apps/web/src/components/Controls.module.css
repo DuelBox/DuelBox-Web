@@ -36,3 +36,37 @@
   text-transform: uppercase;
   color: var(--db-faint);
 }
+
+/* Which keys are whose, before anything about what they do. */
+.seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-3) var(--db-space-5);
+  margin-bottom: var(--db-space-3);
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-2);
+}
+
+.seatName {
+  font-weight: 700;
+}
+
+.keys {
+  display: inline-flex;
+  gap: var(--db-space-1);
+}
+
+.keys kbd {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+  padding: 2px 6px;
+  border: 1px solid var(--db-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--db-paper);
+  white-space: nowrap;
+}

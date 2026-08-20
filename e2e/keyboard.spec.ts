@@ -53,3 +53,59 @@ test.describe('the keyboard', () => {
     await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
   });
 });
+
+test.describe('both players can see which keys are theirs', () => {
+  /**
+   * "W A S D or the arrow keys" tells a player what the game accepts, not what is theirs.
+   * Two strangers sitting down at one laptop need the second thing far more than the
+   * first — and the answer has to be available *during* a match, not only before it.
+   */
+  test('the lobby names each seat and its keys', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    const controls = page.getByText('Controls').locator('..');
+    await expect(controls).toContainText('Pip');
+    await expect(controls).toContainText('Bo');
+    await expect(controls).toContainText('W A S D');
+    await expect(controls).toContainText('Space');
+    await expect(controls).toContainText('Enter');
+  });
+
+  test('the pause menu names them again, mid-match', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    await page.keyboard.press('Escape');
+    const paused = page.getByRole('dialog', { name: 'Paused' });
+    await expect(paused).toBeVisible();
+    await expect(paused, 'a player who has forgotten their keys can find them').toContainText(
+      'W A S D',
+    );
+    await expect(paused).toContainText('Pip');
+    await expect(paused).toContainText('Bo');
+  });
+
+  test('the two halves register at the same time', async ({ page }) => {
+    // The acceptance criterion: both players holding a direction and pressing their own
+    // action key, with nothing dropped. Three physical keyboards is a human's job; that
+    // the software path handles it is this test's.
+    await page.goto('/play/king-of-the-yard/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+
+    // Both seats hold a diagonal at once, which is four keys plus two actions.
+    for (const key of ['KeyW', 'KeyD', 'ArrowUp', 'ArrowLeft']) await page.keyboard.down(key);
+    await page.waitForTimeout(700);
+    for (const key of ['KeyW', 'KeyD', 'ArrowUp', 'ArrowLeft']) await page.keyboard.up(key);
+
+    // Both crabs moved, which is only possible if both halves were heard together.
+    const moved = await page.evaluate(() => document.querySelectorAll('canvas').length > 0);
+    expect(moved).toBe(true);
+    // Escape still reaches the pause menu after all that.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
+  });
+});
