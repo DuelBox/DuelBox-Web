@@ -61,6 +61,22 @@ canvas:focus-visible {
   outline: none;
 }
 
+/* While a match is live the document refuses the browser's own pull-to-refresh.
+ *
+ * The canvas already declares `overscroll-behavior: contain`, but that only covers a
+ * gesture that *starts on the canvas*. A match letterboxes, so on a phone there is page
+ * either side of the board, and a swipe down starting there reaches the document and pulls
+ * the page to refresh — throwing away the match. `touch-action` on the canvas cannot help,
+ * because the finger never touched the canvas.
+ *
+ * The attribute is set only while a match is running, so a player looking at a lobby or a
+ * result can still refresh the page the ordinary way, and the rest of the site is
+ * untouched. */
+html[data-match='live'],
+html[data-match='live'] body {
+  overscroll-behavior-y: none;
+}
+
 /* The canvas owns its gestures. Scoped here rather than globally so the rest of the
    site keeps pull-to-refresh, pinch zoom and text selection.
 

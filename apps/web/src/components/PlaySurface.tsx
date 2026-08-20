@@ -98,6 +98,29 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [match.phase]);
 
   // Counted once per match, when the machine enters its terminal phase.
+  /**
+   * Stop the browser's own pull-to-refresh while a match is running.
+   *
+   * The canvas already declares `overscroll-behavior: contain`, but that only covers a
+   * gesture that *starts on the canvas*. A match letterboxes, so on a phone there is page
+   * either side of the board — and a swipe down that starts there reaches the document and
+   * pulls the page to refresh, throwing away the match. `touch-action` on the canvas
+   * cannot help, because the finger never touched the canvas.
+   *
+   * Scoped to a live match rather than to the whole route, so a player looking at a lobby
+   * or a result can still refresh the page the ordinary way.
+   */
+  useEffect(() => {
+    const live =
+      match.phase === 'countdown' || match.phase === 'playing' || match.phase === 'paused';
+    if (!live) return;
+    const root = document.documentElement;
+    root.dataset.match = 'live';
+    return () => {
+      delete root.dataset.match;
+    };
+  }, [match.phase]);
+
   useEffect(() => {
     if (match.phase !== 'match-over') return;
     const outcome = match.matchOutcome;

@@ -257,3 +257,55 @@ test.describe('aiming still works through the precision envelope', () => {
     });
   }
 });
+
+test.describe('the browser own gestures', () => {
+  /**
+   * Pull-to-refresh throws away a match, and it does not need the canvas to do it.
+   *
+   * The canvas declares `overscroll-behavior: contain`, but that only covers a gesture
+   * that *starts on the canvas*. A match letterboxes, so on a phone there is page either
+   * side of the board — a swipe down starting there reaches the document, and
+   * `touch-action` on the canvas cannot help because the finger never touched it.
+   */
+  test('a live match refuses pull-to-refresh; the rest of the site does not', async ({ page }) => {
+    await page.goto('/games/');
+    const catalogue = await page.evaluate(
+      () => getComputedStyle(document.documentElement).overscrollBehaviorY,
+    );
+    expect(catalogue, 'the catalogue keeps its ordinary gestures').not.toBe('none');
+
+    await page.goto('/play/tic-tac-toe/');
+    const lobby = await page.evaluate(
+      () => getComputedStyle(document.documentElement).overscrollBehaviorY,
+    );
+    expect(lobby, 'a lobby can still be refreshed the ordinary way').not.toBe('none');
+
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    const live = await page.evaluate(
+      () => getComputedStyle(document.documentElement).overscrollBehaviorY,
+    );
+    expect(live, 'a running match refuses it').toBe('none');
+  });
+
+  test('the canvas refuses scroll, zoom and selection', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.locator('canvas')).toBeVisible();
+    const style = await page.locator('canvas').evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        touchAction: computed.touchAction,
+        // Safari reports this only under the prefix, which is also the only spelling it
+        // honours — hence both in the stylesheet, and both read here.
+        userSelect: computed.userSelect ?? computed.getPropertyValue('-webkit-user-select'),
+        overscroll: computed.overscrollBehaviorY,
+      };
+    });
+    expect(style.touchAction, 'no scroll, pan or double-tap zoom').toBe('none');
+    expect(style.userSelect, 'a drag does not select the page').toBe('none');
+    expect(style.overscroll).not.toBe('auto');
+  });
+});
