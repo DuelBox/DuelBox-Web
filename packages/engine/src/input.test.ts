@@ -913,3 +913,71 @@ describe('the precision envelope', () => {
     expect(envelopeFor({ width: 900, height: 900 })).toBeLessThan(6);
   });
 });
+
+describe('a direction key tapped between two steps', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 600, height: 1000 };
+
+  function manager(): InputManager {
+    return new InputManager(SIZE, { split: 'horizontal', bottomSeat: 'p1' });
+  }
+
+  /**
+   * The action key has been latched since the beginning, with a comment explaining that
+   * sampling "is it down now" loses a tap whose press and release land inside one frame.
+   * Movement was never given the same treatment, so a quick tap of a direction key was
+   * dropped outright and the cursor did not move — in every keyboard-driven grid game in
+   * the collection. A human tap usually spans several frames and got away with it; a slow
+   * frame, or any automated harness, did not. Shut the Box is where it finally showed.
+   */
+  it('still moves, exactly as a tapped action key still presses', () => {
+    const input = manager();
+    input.keyDown('KeyD');
+    input.keyUp('KeyD');
+    expect(input.beginStep(STEP).seat('p1').moveX, 'the tap was not dropped').toBe(1);
+  });
+
+  it('is one step of movement and not a phantom hold', () => {
+    const input = manager();
+    input.keyDown('KeyD');
+    input.keyUp('KeyD');
+    expect(input.beginStep(STEP).seat('p1').moveX).toBe(1);
+    expect(input.beginStep(STEP).seat('p1').moveX, 'and it is over').toBe(0);
+  });
+
+  it('leaves a held key behaving exactly as before', () => {
+    const input = manager();
+    input.keyDown('KeyD');
+    expect(input.beginStep(STEP).seat('p1').moveX).toBe(1);
+    expect(input.beginStep(STEP).seat('p1').moveX, 'still held').toBe(1);
+    input.keyUp('KeyD');
+    expect(input.beginStep(STEP).seat('p1').moveX, 'released').toBe(0);
+  });
+
+  it('keeps each seat to its own keys', () => {
+    const input = manager();
+    input.keyDown('ArrowRight');
+    input.keyUp('ArrowRight');
+    const state = input.beginStep(STEP);
+    expect(state.seat('p2').moveX, 'the arrow key is seat two').toBe(1);
+    expect(state.seat('p1').moveX, 'and did not move seat one').toBe(0);
+  });
+
+  it('cancels an unconsumed tap when focus is lost', () => {
+    // Otherwise a key tapped on the way out of the tab fires when the player comes back.
+    const input = manager();
+    input.keyDown('KeyD');
+    input.keyUp('KeyD');
+    input.clear();
+    expect(input.beginStep(STEP).seat('p1').moveX).toBe(0);
+  });
+
+  it('two opposite taps in one frame cancel, as holding both would', () => {
+    const input = manager();
+    input.keyDown('KeyA');
+    input.keyUp('KeyA');
+    input.keyDown('KeyD');
+    input.keyUp('KeyD');
+    expect(input.beginStep(STEP).seat('p1').moveX).toBe(0);
+  });
+});

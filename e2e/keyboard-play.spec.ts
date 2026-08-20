@@ -39,12 +39,35 @@ test.describe('keyboard-only play', () => {
           return String(hash);
         });
 
-      const before = await sample();
-      for (const key of ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'Enter', 'Space']) {
+      // Direction keys *alone* first, with no action key anywhere near them.
+      //
+      // This used to press Enter and Space in the same sweep and assert only that
+      // something changed — which the action keys satisfy on their own, so it passed
+      // while every direction tap was being dropped by the engine. `keyboard.press` is a
+      // down and an up with nothing between them, and until the direction keys were
+      // latched the way the action key always had been, a tap that began and ended inside
+      // one frame moved no cursor at all.
+      //
+      // W A S D, not the arrows: keyboard halves are fixed to seats, and seat one moves
+      // first. The arrow keys are the *other* player's, on their own turn.
+      const beforeMoving = await sample();
+      for (const key of ['KeyD', 'KeyS', 'KeyD']) {
         await page.keyboard.press(key);
         await page.waitForTimeout(120);
       }
-      await expect.poll(sample, { timeout: 5000 }).not.toBe(before);
+      await expect
+        .poll(sample, { timeout: 5000, message: 'the cursor moved on direction keys alone' })
+        .not.toBe(beforeMoving);
+
+      // Then the action key, which is the other half of playing without a pointer.
+      const beforeActing = await sample();
+      for (const key of ['Space']) {
+        await page.keyboard.press(key);
+        await page.waitForTimeout(120);
+      }
+      await expect
+        .poll(sample, { timeout: 5000, message: 'the action key did something' })
+        .not.toBe(beforeActing);
     });
   }
 });

@@ -15,7 +15,8 @@ export const manifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 60,
   controls: {
-    keyboard: 'Arrow keys or W A S D to move between cards, Space or Enter to turn one over',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: move between cards and turn one',
     pointer: 'Tap a card to turn it over',
   },
   tags: [],

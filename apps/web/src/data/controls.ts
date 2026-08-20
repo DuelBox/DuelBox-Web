@@ -27,6 +27,7 @@ import { manifest as pullTheRope } from '@duelbox/game-pull-the-rope';
 import { manifest as reversi } from '@duelbox/game-reversi';
 import { manifest as roadDodge } from '@duelbox/game-road-dodge';
 import { manifest as rockPaperScissors } from '@duelbox/game-rock-paper-scissors';
+import { manifest as shutTheBox } from '@duelbox/game-shut-the-box';
 import { manifest as sumo } from '@duelbox/game-sumo';
 import { manifest as ticTacToe } from '@duelbox/game-tic-tac-toe';
 import { manifest as ultimateTtt } from '@duelbox/game-ultimate-ttt';
@@ -53,6 +54,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   reversi,
   roadDodge,
   rockPaperScissors,
+  shutTheBox,
   sumo,
   ticTacToe,
   ultimateTtt,

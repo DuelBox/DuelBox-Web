@@ -15,7 +15,8 @@ export const manifest = parseGameManifest({
   // again from the pause menu, so a game without it would advertise nothing to a player
   // holding a keyboard. Written for a player rather than as a spec.
   controls: {
-    keyboard: 'Arrow keys or W A S D to move between squares, Space or Enter to place',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: move between squares and place',
     pointer: 'Tap a square in the highlighted board',
   },
   tags: ['strategy', 'deep'],

@@ -29,32 +29,51 @@ describe('the controls map', () => {
 });
 
 /**
- * In a real-time game both seats play at once, and the engine binds W A S D to the near
- * seat and the arrow keys to the far one — strictly disjoint, so one player can never
- * drive the other. Four manifests used to read "W A S D or the arrow keys", which tells
- * the second player to press keys that move their opponent. In a turn-based game the two
- * sets really are alternatives for whoever is to move, so the phrasing is only wrong for
- * the simultaneous archetypes.
+ * The two keyboard halves belong to two different people, in every game.
+ *
+ * `DEFAULT_BINDINGS` binds W A S D and Space to seat one and the arrow keys and Enter to
+ * seat two, strictly disjointly, and nothing anywhere remaps them — `setBoardSeat` moves
+ * *pointer* ownership when a turn changes and touches the keyboard not at all. So "W A S D
+ * **or** the arrow keys" is false whatever the archetype. It is merely false in two
+ * different ways: in a simultaneous game the other half moves your opponent, and in a
+ * turn-based one it does nothing at all until it is that player's turn.
+ *
+ * Eighteen manifests said it. The first sweep only fixed the five real-time ones, on the
+ * reasoning that both halves drive whoever is to move in a turn game — which a browser
+ * disproved: holding the right arrow in Tic Tac Toe on seat one's turn moves nothing.
  */
-describe('keyboard controls in simultaneous games', () => {
-  const NAMES_A_SIDE = /seat|left|right|near|far/i;
+describe('keyboard controls', () => {
+  const NAMES_A_SEAT = /player one|player two|seat|left|right|near|far/i;
 
-  it('never offers the two key halves as alternatives', () => {
+  it("never offers the two key halves as one player's choice", () => {
     for (const manifest of MANIFESTS) {
-      if (!manifest.archetype.startsWith('rt-')) continue;
       const { keyboard } = manifest.controls;
       if (!/arrow/i.test(keyboard)) continue;
-      expect(keyboard, `${manifest.id} presents both key halves as one player's choice`).not.toMatch(
-        /\bor\b[^,]*arrow/i,
-      );
-      expect(keyboard, `${manifest.id} does not say which half belongs to which seat`).toMatch(
-        NAMES_A_SIDE,
-      );
+      expect(
+        keyboard,
+        `${manifest.id} presents both key halves as one player's choice`,
+      ).not.toMatch(/\bor\b[^,:]*arrow/i);
+      expect(
+        keyboard,
+        `${manifest.id} does not say which half belongs to which player`,
+      ).toMatch(NAMES_A_SEAT);
     }
   });
 
-  it('covers every real-time game, or it is guarding nothing', () => {
-    const realtime = MANIFESTS.filter((manifest) => manifest.archetype.startsWith('rt-'));
-    expect(realtime.length).toBeGreaterThan(3);
+  it("never tells one seat to use the other seat's keys", () => {
+    // Pop It said "Arrow keys to pick a bubble" and nothing else, which is simply seat
+    // two's keys presented as everybody's.
+    for (const manifest of MANIFESTS) {
+      const { keyboard } = manifest.controls;
+      const mentionsArrows = /arrow/i.test(keyboard);
+      const mentionsWasd = /w a s d|\ba and d\b|left and right/i.test(keyboard);
+      if (mentionsArrows && !mentionsWasd) {
+        expect.fail(`${manifest.id} names only seat two's keys: "${keyboard}"`);
+      }
+    }
+  });
+
+  it('covers every game, or it is guarding nothing', () => {
+    expect(MANIFESTS.length).toBeGreaterThan(20);
   });
 });

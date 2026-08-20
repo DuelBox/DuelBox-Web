@@ -13,7 +13,8 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 240,
   controls: {
-    keyboard: 'Arrow keys or W A S D to pick a cell, Space or Enter to add a dot',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: pick a cell and add a dot',
     pointer: 'Tap an empty cell or one of your own',
   },
   tags: ['strategy', 'chain-reaction'],

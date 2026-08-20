@@ -8,10 +8,17 @@ import { seatCentroids } from './seat-pixels.js';
  * the whole desktop experience of a two-player site rather than a fallback.
  */
 test.describe('the keyboard', () => {
+  // These used to assert the literal words "Space or Enter to place your mark", which is
+  // how the manifest read — and that reading was false. The keyboard halves are fixed to
+  // seats and nothing remaps them, so "or" told the second player to press keys that do
+  // nothing on their opponent's turn. What matters is that the page tells each player
+  // which keys are theirs, so that is what is asserted now.
   test('shows both players their controls before the match', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     await expect(page.getByText('Controls')).toBeVisible();
-    await expect(page.getByText(/Space or Enter to place your mark/)).toBeVisible();
+    // The shell already shows a per-seat <kbd> legend; the game's own line must agree
+    // with it rather than contradict it, which is what "or" used to do.
+    await expect(page.getByText(/Player one W A S D then Space, player two arrows/)).toBeVisible();
   });
 
   test('shows them again from the pause menu, without quitting', async ({ page }) => {
@@ -19,7 +26,8 @@ test.describe('the keyboard', () => {
     await page.getByRole('button', { name: 'Play together here' }).click();
     await page.getByRole('button', { name: 'Pause the match' }).click();
     const paused = page.getByRole('dialog', { name: 'Paused' });
-    await expect(paused.getByText(/Space or Enter to place your mark/)).toBeVisible();
+    await expect(paused.getByText(/player one/i)).toBeVisible();
+    await expect(paused.getByText(/player two/i)).toBeVisible();
   });
 
   test("seat two's action key plays rather than activating a button", async ({ page }) => {

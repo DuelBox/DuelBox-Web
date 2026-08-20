@@ -13,7 +13,8 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 240,
   controls: {
-    keyboard: 'Left and right to aim, hold Space or Enter to build power, release to throw',
+    keyboard:
+      'Player one A and D then hold Space, player two arrows then hold Enter: aim, build power, release',
     pointer: 'Drag to aim and pull back for power, release to throw',
   },
   tags: ['aim', 'sports'],

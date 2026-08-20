@@ -12,7 +12,8 @@ export const manifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 60,
   controls: {
-    keyboard: 'Arrow keys or W A S D to pick a square, Space or Enter to place your mark',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: pick a square and place your mark',
     pointer: 'Tap the square you want',
   },
   tags: ['classic', 'quick'],

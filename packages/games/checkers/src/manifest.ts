@@ -15,7 +15,8 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 300,
   controls: {
-    keyboard: 'Arrow keys or W A S D to pick a square, Space or Enter to lift and place',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: pick a square, lift and place',
     pointer: 'Tap a piece, then tap where it goes',
   },
   tags: ['strategy', 'classic'],

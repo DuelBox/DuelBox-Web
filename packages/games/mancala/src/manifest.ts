@@ -15,7 +15,7 @@ export const manifest = parseGameManifest({
   // again from the pause menu, so a game without it would advertise nothing to a player
   // holding a keyboard. Written for a player rather than as a spec.
   controls: {
-    keyboard: 'A and D or the arrow keys to pick a pit, Space or Enter to sow it',
+    keyboard: 'Player one A and D then Space, player two arrows then Enter: pick a pit and sow it',
     pointer: 'Tap one of your own pits to sow it',
   },
   tags: ['classic', 'strategy'],

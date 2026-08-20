@@ -168,6 +168,18 @@ function validateBinding(
 /** Live hardware state for one seat. Not exported: games read SeatInputState instead. */
 interface SeatSources {
   readonly keys: Record<KeySlot, boolean>;
+  /**
+   * Whether each direction went down since the last step, even if it was released again
+   * before the step ran.
+   *
+   * The same reasoning as `actionLatched`, which has carried this comment since the
+   * beginning: sampling "is it down now" loses a tap whose press and release both land
+   * inside one frame. That was applied to the action key and not to movement, so a quick
+   * tap of a direction key was dropped outright and the cursor did not move — in every
+   * keyboard-driven grid game in the collection. A human tap usually spans several frames
+   * and got away with it; a slow frame, or any automated harness, did not.
+   */
+  readonly latchedKeys: Record<KeySlot, boolean>;
   /** Number of pointers owned by this seat that are currently down. */
   pointerCount: number;
   pointerX: number;
@@ -197,6 +209,7 @@ interface SeatSources {
 function createSeatSources(): SeatSources {
   return {
     keys: { up: false, down: false, left: false, right: false, action: false },
+    latchedKeys: { up: false, down: false, left: false, right: false, action: false },
     pointerCount: 0,
     pointerX: 0,
     pointerY: 0,
@@ -213,6 +226,14 @@ function releaseKeys(sources: SeatSources): void {
   keys.left = false;
   keys.right = false;
   keys.action = false;
+  // The direction latch goes too. This runs when focus is lost, and a tap that has not
+  // been consumed by a step yet must not fire when the player comes back to the tab.
+  const latched = sources.latchedKeys;
+  latched.up = false;
+  latched.down = false;
+  latched.left = false;
+  latched.right = false;
+  latched.action = false;
 }
 
 function releaseSources(sources: SeatSources): void {
@@ -322,6 +343,7 @@ export class InputManager {
     if (target.sources.keys[target.slot]) return;
     target.sources.keys[target.slot] = true;
     if (target.slot === 'action') target.sources.actionLatched = true;
+    else target.sources.latchedKeys[target.slot] = true;
   }
 
   keyUp(code: string): void {
@@ -432,8 +454,19 @@ export class InputManager {
 
   #applySeat(out: SeatInputState, sources: SeatSources, delta: number): void {
     const keys = sources.keys;
+    const taps = sources.latchedKeys;
     const move = this.#move;
-    set(move, (keys.right ? 1 : 0) - (keys.left ? 1 : 0), (keys.down ? 1 : 0) - (keys.up ? 1 : 0));
+    // Held now, or pressed and released since the last step. The latch is consumed below
+    // so a tap moves a cursor exactly one cell rather than lingering into the next step.
+    const right = keys.right || taps.right;
+    const left = keys.left || taps.left;
+    const down = keys.down || taps.down;
+    const up = keys.up || taps.up;
+    set(move, (right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
+    taps.right = false;
+    taps.left = false;
+    taps.down = false;
+    taps.up = false;
     // Two keys at once must not out-run one. Capped rather than normalised outright so
     // a future analogue source keeps its shorter vectors short.
     if (lengthSq(move) > 1) normalise(move, move);

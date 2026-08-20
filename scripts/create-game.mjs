@@ -132,6 +132,8 @@ export const manifest = parseGameManifest({
 `,
 );
 
+const turnBased = archetype.startsWith('turn-');
+
 write(
   'src/rules.ts',
   `import type { SeatId } from '@duelbox/engine';
@@ -143,11 +145,17 @@ write(
 
 export interface State {
   readonly p1: number;
-  readonly p2: number;
+  readonly p2: number;${
+    turnBased
+      ? `
+  /** Whose turn it is. A turn-based game has to answer this — see \`getActiveSeat\`. */
+  seat: SeatId;`
+      : ''
+  }
 }
 
 export function createState(): State {
-  return { p1: 0, p2: 0 };
+  return { p1: 0, p2: 0${turnBased ? ", seat: 'p1'" : ''} };
 }
 
 export function winnerOf(_state: State): SeatId | 'draw' | null {
@@ -177,12 +185,31 @@ describe('${name} rules', () => {
 
 write(
   'src/game.ts',
-  `import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
+  `import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';${
+    turnBased ? "\nimport type { SeatId } from '@duelbox/engine';" : ''
+  }
 import { manifest } from './manifest.js';
 import { createState, type State } from './rules.js';
 
 export class ${name.replace(/[^A-Za-z0-9]/g, '')}Game implements Game {
-  #state: State = createState();
+  #state: State = createState();${
+    turnBased
+      ? `
+
+  /**
+   * Whose turn it is.
+   *
+   * The shell decides a game is turn-based by the *presence* of this method, and only
+   * then does it hand the whole board to the active seat and map both keyboard halves
+   * onto them. Leave it out of a \`turn-*\` game and the arrow keys drive the player who
+   * is not playing, while half the device goes dead to a finger. Return the seat that may
+   * act right now.
+   */
+  getActiveSeat(): SeatId {
+    return this.#state.seat;
+  }`
+      : ''
+  }
 
   init(_context: GameContext): void {
     this.#state = createState();

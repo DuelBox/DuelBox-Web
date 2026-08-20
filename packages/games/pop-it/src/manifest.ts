@@ -15,7 +15,8 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 180,
   controls: {
-    keyboard: 'Arrow keys to pick a bubble, Space or Enter to start and end a run',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: pick a bubble, start and end a run',
     pointer: 'Drag across the bubbles you want to press',
   },
   tags: ['strategy', 'classic'],

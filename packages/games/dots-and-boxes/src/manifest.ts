@@ -12,7 +12,8 @@ export const manifest = parseGameManifest({
   zoneSplit: 'shared-board',
   roundSeconds: 90,
   controls: {
-    keyboard: 'Arrow keys or W A S D to move between the lines, Space or Enter to draw one',
+    keyboard:
+      'Player one W A S D then Space, player two arrows then Enter: move between lines and draw one',
     pointer: 'Tap the line you want to draw',
   },
   tags: ['classic', 'strategy'],
