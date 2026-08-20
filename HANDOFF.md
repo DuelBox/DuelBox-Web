@@ -10,14 +10,13 @@ constitution and its rules are non-negotiable.
 
 ## Where things stand
 
-`main` is green and **CI passes** — verified, on commit `08d0919`. The gate, in the order
-CI runs it:
+`main` is green and **CI passes** — verified. The gate, in the order CI runs it:
 
 ```
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
 ```
 
-**1,803 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
+**2,158 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
@@ -35,7 +34,7 @@ entirely, so the repository looked green from both directions and was not. Both 
 now, and CLAUDE.md spells the gate out so "I ran the gate" and "CI will pass" mean the
 same thing.
 
-Two other guards this project's own rules claimed to have, and did not:
+Three other guards this project's own rules claimed to have, and did not:
 
 - **`pnpm size`** did not exist. Rule 11 and the definition of done both require it, so
   `pnpm size` fell through to the system `size(1)`, which reported on a non-existent
@@ -45,34 +44,68 @@ Two other guards this project's own rules claimed to have, and did not:
 - **Asset licensing** was not enforced either, though rule 3 says "CI enforces it".
   `scripts/check-asset-licenses.mjs` now does. The count is currently zero — every game
   draws with primitives — which is exactly why it was cheap to write today.
+- **`roundSeconds` ends nothing.** Every manifest declares it, the schema validates it, and
+  the only thing that reads it is the catalogue card printing "about 5 min". Two games have
+  now shipped unable to finish — a survival mode, and a frame of Pool — and Air Hockey was
+  a third, found by the guard below rather than by accident.
 
 The lesson worth carrying: **a rule written in CLAUDE.md is not a rule that runs.** When
-one of them matters, check whether anything actually executes it.
+one of them matters, check whether anything actually executes it. Three of them did not.
 
-**~1,995 issues open.** The bulk is the per-game backlog: 14 issues each across the 84
+### The guards that now exist
+
+Each was checked by making it fail before being trusted:
+
+| | What it refuses |
+|---|---|
+| `check-size.mjs` | a game chunk or the shell over budget, or a game with no chunk of its own |
+| `check-asset-licenses.mjs` | any shipped image, sound, video or font without a source, licence and author |
+| `termination.test.ts` | any game two `easy` bots cannot finish in ten minutes of play |
+| `turn-seat.test.ts` | a `turn-*` game that never says whose turn it is, or an `rt-*` game that claims turns |
+| `controls.test.ts` | a manifest offering both keyboard halves as one player's choice |
+
+The termination one is worth a note: the first version played `hard` against `easy` and was
+worthless — it passed with Pool's stalemate rule deleted, because that pairing finishes by
+potting the black. **The weakest pairing is the one that finds positions nothing resolves.**
+
+**~1,940 issues open.** The bulk is the per-game backlog: 14 issues each across the 80
 games not yet built.
 
-**Twenty-three games play end to end**, each with a `SPEC.md` and 40–110 tests:
+**Twenty-seven games play end to end**, each with a `SPEC.md` and 38–90 tests:
 
 | Archetype | Games |
 |---|---|
-| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It |
-| `turn-aim` | Darts, Cornhole |
+| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It, Shut the Box, Sea Battle, Dice Yatzy |
+| `turn-aim` | Darts, Cornhole, Pool |
 | `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato, Mini Soccer |
 | `rt-arena` | Sumo Push, King of the Yard |
 | `rt-race` | Road Dodge |
 
-Building one closes about twelve of its fourteen issues; the other two (research, art and
-audio) are blocked on things that do not exist yet. `docs/game-spec-template.md` and any
-of the thirteen `SPEC.md` files are the pattern.
+Building one closes about twelve of its nineteen issues. The rest are blocked on things
+that do not exist: research means playing the reference genre (a person's job), art and
+audio means an audio pipeline nobody has built, and the QA and remote-play issues wait on
+the cross-device harness in #1862. `docs/game-spec-template.md` and any of the twenty-seven
+`SPEC.md` files are the pattern.
+
+**Every game so far has found a platform bug.** That is the real reason to keep building
+them, and it has not stopped being true at twenty-seven: Mini Soccer found five lying
+control strings, Shut the Box found that the engine dropped quick taps of direction keys in
+every keyboard game, Sea Battle found that a game's zone split could not change mid-match,
+Dice Yatzy found a bot weighting that preferred 30 in sixes to a 50-point yatzy, and Pool
+found that a match had no way to end — which then found the same hole in Air Hockey.
 
 ## Start here
 
 1. **Build more games.** It is the highest-value work available and the pattern is
    established: scaffold, rules module with tests, game module, spec, verify in a browser,
-   close the twelve issues with evidence. All five archetypes now have at least one game,
-   so any of the 84 remaining is a matter of picking a well-specified one from
-   `data/catalog.yaml`.
+   close the twelve issues with evidence. All five archetypes have at least one game, so any
+   of the 80 remaining is a matter of picking a well-specified one from `data/catalog.yaml`.
+
+   Two habits are worth copying rather than rediscovering. **Mutate every test until it
+   fails before trusting it** — roughly one in six turned out to prove nothing, and two of
+   those were hiding real bugs. And **measure the bot rather than reasoning about it**: in
+   Dice Yatzy, three of four "experts do this" settings made it play worse, and one of them
+   cost 6.3 points a game.
 2. **#2322 needs a decision from a person, and it is blocking design work.** Our two seat
    colours give **1.03:1 contrast under deuteranopia** — indistinguishable, for roughly
    one man in sixteen. Our sky is also within an RGB delta of (3, 40, 3) of a typical
