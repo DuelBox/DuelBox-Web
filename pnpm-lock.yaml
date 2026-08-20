@@ -94,6 +94,9 @@ importers:
       '@duelbox/game-mini-soccer':
         specifier: workspace:*
         version: link:../../packages/games/mini-soccer
+      '@duelbox/game-pool':
+        specifier: workspace:*
+        version: link:../../packages/games/pool
       '@duelbox/game-pop-it':
         specifier: workspace:*
         version: link:../../packages/games/pop-it
@@ -279,6 +282,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/mini-soccer:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/pool:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
