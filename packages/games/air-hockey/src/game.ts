@@ -23,6 +23,18 @@ import {
 /** Goals that win a match. */
 export const GOAL_TARGET = 7;
 
+/**
+ * The longest a match can run, in seconds. Most goals at the whistle, drawn if level.
+ *
+ * First to seven is the rule and this is a backstop, not a redesign: two people trading
+ * goals reach seven inside a couple of minutes and never see it. Two cautious players do
+ * not, and there was previously **nothing at all** that ended such a match — `roundSeconds`
+ * is validated by the manifest schema and read only by the catalogue card that prints
+ * "about 1m 30s". A registry-wide termination test found it by playing two `easy` bots
+ * against each other: 2–4 after thirty minutes of simulated play, and still going.
+ */
+export const MATCH_SECONDS = 240;
+
 /** Length of the post-goal pause, counted in simulation steps rather than seconds. */
 export const SERVE_STEPS = 60;
 
@@ -64,6 +76,17 @@ export class AirHockeyGame implements Game {
   readonly #condition: WinCondition = { kind: 'first-to', target: GOAL_TARGET };
   /** Doubles as the tally handed to resolve(): the score is the tally. */
   readonly #score: MutableScore = { p1: 0, p2: 0, winner: null };
+  /** Seconds left before the whistle. */
+  #clock = MATCH_SECONDS;
+
+  /** Exposed for tests, which need to reach the whistle without playing four minutes. */
+  get clock(): number {
+    return this.#clock;
+  }
+
+  set clock(seconds: number) {
+    this.#clock = seconds;
+  }
 
   #context: GameContext | null = null;
   #botP1: BotDifficulty | null = null;
@@ -100,6 +123,7 @@ export class AirHockeyGame implements Game {
     this.#score.p1 = 0;
     this.#score.p2 = 0;
     this.#score.winner = null;
+    this.#clock = MATCH_SECONDS;
     this.#serveToward = context.rng.bool() ? 'p1' : 'p2';
 
     const p1 = this.#malletP1;
@@ -121,6 +145,13 @@ export class AirHockeyGame implements Game {
     const context = this.#context;
     if (context === null) return;
     if (this.#score.winner !== null) return;
+
+    this.#clock = Math.max(0, this.#clock - fixedDeltaSeconds);
+    if (this.#clock === 0) {
+      this.#score.winner =
+        this.#score.p1 === this.#score.p2 ? 'draw' : this.#score.p1 > this.#score.p2 ? 'p1' : 'p2';
+      return;
+    }
 
     this.#prevPuckX = this.#puck.x;
     this.#prevPuckY = this.#puck.y;
@@ -176,6 +207,13 @@ export class AirHockeyGame implements Game {
     renderer.strokeCircle(centreX, centreY, 9, 5, COLOUR_LINE);
     renderer.strokeCircle(centreX, 0, 170, 4, COLOUR_LINE_SOFT);
     renderer.strokeCircle(centreX, height, 170, 4, COLOUR_LINE_SOFT);
+
+    // The backstop clock, as a bar down the left edge. It exists so a cautious match
+    // cannot run for ever, and a rule nobody can see is a rule nobody can play to — so it
+    // is drawn even though most matches reach seven goals long before it matters.
+    const left = Math.max(0, Math.min(1, this.#clock / MATCH_SECONDS));
+    renderer.rect(BORDER - 10, BORDER, 6, height - BORDER * 2, COLOUR_LINE_SOFT);
+    renderer.rect(BORDER - 10, BORDER, 6, (height - BORDER * 2) * left, COLOUR_LINE);
 
     // p2 defends the top; its goal and its mallet both carry two stripes, p1's carry
     // one, so the seats stay apart in greyscale.

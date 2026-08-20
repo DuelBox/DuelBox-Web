@@ -38,6 +38,24 @@ split the manifest declares.
 rather than by a comparison written here. **[ours]** — the reference says three; seven
 makes a match last closer to the 90 s the catalogue advertises.
 
+### And a backstop clock, at 240 seconds
+
+First to seven is the rule. The clock is what stops a cautious match running for ever, and
+until it was added **nothing did**: `roundSeconds` is validated by the manifest schema and
+read only by the catalogue card that prints "about 1m 30s". It ends nothing.
+
+A registry-wide termination test found it, by playing two `easy` bots against each other:
+**2–4 after thirty minutes of simulated play, and still going.** Goals were being scored —
+about one every five minutes — so it was not stuck, merely unbounded, which for a player is
+the same thing.
+
+At the whistle the higher score takes it and a level match is a draw. Two people trading
+goals reach seven inside a couple of minutes and never see it; the measured bot pace is
+four to seven minutes, so the tiers do occasionally meet it.
+
+The bar down the left edge exists because **a rule nobody can see is a rule nobody can play
+to** — it would have been easier to leave the clock invisible and it would have been worse.
+
 A goal is scored when the puck's centre crosses a goal line within the goal width. The
 `GoalResult` type names the seat that **scored**, not the one whose goal was entered,
 because every caller wants the scorer and the alternative is an inversion bug waiting to
