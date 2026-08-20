@@ -16,7 +16,7 @@ constitution and its rules are non-negotiable.
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
 ```
 
-**2,158 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
+**2,358 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
@@ -61,6 +61,7 @@ Each was checked by making it fail before being trusted:
 | `check-size.mjs` | a game chunk or the shell over budget, or a game with no chunk of its own |
 | `check-asset-licenses.mjs` | any shipped image, sound, video or font without a source, licence and author |
 | `termination.test.ts` | any game two `easy` bots cannot finish in ten minutes of play |
+| `bot-cost.test.ts` | a bot spending more than a frame on one step, ceiling calibrated to the machine |
 | `turn-seat.test.ts` | a `turn-*` game that never says whose turn it is, or an `rt-*` game that claims turns |
 | `controls.test.ts` | a manifest offering both keyboard halves as one player's choice |
 
@@ -68,15 +69,15 @@ The termination one is worth a note: the first version played `hard` against `ea
 worthless — it passed with Pool's stalemate rule deleted, because that pairing finishes by
 potting the black. **The weakest pairing is the one that finds positions nothing resolves.**
 
-**~1,940 issues open.** The bulk is the per-game backlog: 14 issues each across the 80
-games not yet built.
+**~1,910 issues open.** The bulk is the per-game backlog: 19 issues each across the 78
+games not yet built, of which about twelve are closeable by building the game.
 
-**Twenty-seven games play end to end**, each with a `SPEC.md` and 38–90 tests:
+**Twenty-nine games play end to end**, each with a `SPEC.md` and 38–90 tests:
 
 | Archetype | Games |
 |---|---|
-| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It, Shut the Box, Sea Battle, Dice Yatzy |
-| `turn-aim` | Darts, Cornhole, Pool |
+| `turn-board` | Tic Tac Toe, Drop Four, Memory Match, Dots and Boxes, Reversi, Mancala Pits, Ultimate Tic Tac Toe, Checkers, Colour Wars, Pop It, Shut the Box, Sea Battle, Dice Yatzy, Ludo Dash |
+| `turn-aim` | Darts, Cornhole, Pool, Bowling |
 | `rt-split` | Air Hockey, Pull the Rope, Whack a Mole, Rock Paper Scissors, Hand Slap, Crabby Volley, Hot Potato, Mini Soccer |
 | `rt-arena` | Sumo Push, King of the Yard |
 | `rt-race` | Road Dodge |
@@ -92,7 +93,17 @@ them, and it has not stopped being true at twenty-seven: Mini Soccer found five 
 control strings, Shut the Box found that the engine dropped quick taps of direction keys in
 every keyboard game, Sea Battle found that a game's zone split could not change mid-match,
 Dice Yatzy found a bot weighting that preferred 30 in sixes to a 50-point yatzy, and Pool
-found that a match had no way to end — which then found the same hole in Air Hockey.
+found that a match had no way to end — which then found the same hole in Air Hockey,
+Bowling found that the ball sailed on for eight seconds after every delivery, and Ludo Dash
+found a stuck state a human could reach with no move and no pass.
+
+**Bots now think under a node budget** (`SearchBudget` in the SDK). The five searching games
+were spending up to 31.5 ms on the single step a bot commits to a move — twice a 60 Hz
+frame on a development machine, several frames on a phone. A stopwatch is the wrong
+instrument, because the depth reached would then depend on the device and rule 8 forbids
+that; counting nodes is deterministic. The ceiling was picked by measuring the trade —
+1,500 nodes keeps 87.5% of the strongest tier's edge against 93.3% unbounded, for a fifth
+of the cost.
 
 ## Start here
 
