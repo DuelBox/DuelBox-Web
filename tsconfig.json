@@ -71,6 +71,9 @@
       "path": "./packages/games/bowling"
     },
     {
+      "path": "./packages/games/ludo"
+    },
+    {
       "path": "./packages/games/king-of-the-yard"
     },
     {

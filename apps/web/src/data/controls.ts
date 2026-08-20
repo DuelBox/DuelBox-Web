@@ -20,6 +20,7 @@ import { manifest as fourInARow } from '@duelbox/game-four-in-a-row';
 import { manifest as handSlap } from '@duelbox/game-hand-slap';
 import { manifest as hotPotato } from '@duelbox/game-hot-potato';
 import { manifest as kingOfTheYard } from '@duelbox/game-king-of-the-yard';
+import { manifest as ludo } from '@duelbox/game-ludo';
 import { manifest as mancala } from '@duelbox/game-mancala';
 import { manifest as memory } from '@duelbox/game-memory';
 import { manifest as miniSoccer } from '@duelbox/game-mini-soccer';
@@ -51,6 +52,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   handSlap,
   hotPotato,
   kingOfTheYard,
+  ludo,
   mancala,
   memory,
   miniSoccer,

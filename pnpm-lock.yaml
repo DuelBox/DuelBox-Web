@@ -88,6 +88,9 @@ importers:
       '@duelbox/game-king-of-the-yard':
         specifier: workspace:*
         version: link:../../packages/games/king-of-the-yard
+      '@duelbox/game-ludo':
+        specifier: workspace:*
+        version: link:../../packages/games/ludo
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
@@ -267,6 +270,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/king-of-the-yard:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/ludo:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
