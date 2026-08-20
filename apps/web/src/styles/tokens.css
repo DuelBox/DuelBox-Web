@@ -93,6 +93,8 @@
   --db-bp-tablet: 40rem;
   --db-bp-laptop: 64rem;
   --db-bp-wide: 90rem;
+  /* The only height class. A phone held sideways: see docs/responsive.md. */
+  --db-bp-short: 30rem;
 
   --db-safe-top: env(safe-area-inset-top, 0px);
   --db-safe-right: env(safe-area-inset-right, 0px);

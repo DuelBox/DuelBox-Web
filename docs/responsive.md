@@ -89,6 +89,27 @@ wide, not easier.
 
 Ultrawide is not a class. It is `wide` with more margin, on purpose.
 
+### The one height class
+
+Width is not the whole story for a *match*. A phone held sideways is 844x390: wide enough
+for anything, and short enough that a scoreboard above the board and another below leaves
+the board almost nothing. Measured, before this class existed, a portrait 600x1000 game in
+a 844x390 viewport got a **796x144** area and letterboxed inside it to about **85px wide**.
+Unplayable — and identical for Whack a Mole, Air Hockey and Road Dodge, so it was the
+shell rather than any one game.
+
+| Class | Up to | Design intent |
+|---|---|---|
+| **short** | 30rem / 480px tall | The two scoreboards move to the sides of the board rather than above and below it. |
+
+This is rule 9 doing its job rather than an exception to it: in a short, wide viewport the
+surplus is *horizontal*, so that is where the chrome goes. It also matches how two people
+actually hold a phone sideways between them — on opposite sides, left and right, which is
+exactly where their own scoreboards then are.
+
+`--db-bp-short` is the only permitted height breakpoint, and `breakpoints.test.ts` enforces
+that on height queries the same way it does on width.
+
 ### Container queries
 
 Used where a component's own box matters more than the viewport's — a game card in a

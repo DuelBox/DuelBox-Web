@@ -15,6 +15,32 @@
   font-size: var(--db-text-lg);
 }
 
+/*
+ * A phone held sideways: the scoreboards move to the sides of the board.
+ *
+ * Stacked, the two of them plus the header leave a 844x390 viewport about 144px of height,
+ * inside which a portrait 600x1000 game letterboxes to roughly 85px wide — unplayable, and
+ * it was identical for Whack a Mole, Air Hockey and Road Dodge, so it was never any one
+ * game's bug. Turned sideways they cost width, which a landscape phone has to spare.
+ *
+ * This is rule 9 doing its job rather than an exception to it: surplus space holds chrome,
+ * and in a short wide viewport the surplus is horizontal. It also puts each player's own
+ * scoreboard on the side they are actually sitting on.
+ */
+@media (max-height: 30rem) and (orientation: landscape) {
+  /* The scoreboards themselves stack in MatchHud.module.css, which owns their class. */
+  .surface {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .boardArea {
+    /* Height is the scarce axis now, so the floor that protects a stacked layout would
+       force the board taller than the viewport here. */
+    min-height: 0;
+  }
+}
+
 .seat b {
   font-size: 1.4em;
 }

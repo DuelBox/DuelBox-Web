@@ -21,6 +21,16 @@ const web = join(here, '..');
 /** The named classes from docs/responsive.md. A sixth belongs in the doc first. */
 const ALLOWED = new Set(['30rem', '40rem', '64rem', '90rem']);
 
+/**
+ * Height queries get the same treatment, and there is exactly one class.
+ *
+ * Guarding width alone left the other axis wide open, which is not a theoretical gap: a
+ * phone held sideways is short rather than narrow, and every portrait game rendered its
+ * board about 85px wide there because the two scoreboards took the height. The fix needed
+ * a height breakpoint, and a height breakpoint needs the same discipline as a width one.
+ */
+const ALLOWED_HEIGHT = new Set(['30rem']);
+
 function stylesheets(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry);
@@ -51,9 +61,23 @@ describe('the device-class scale', () => {
     expect(offenders, `add it to docs/responsive.md first: ${offenders.join(', ')}`).toEqual([]);
   });
 
+  it('uses only the named breakpoint in height media queries', () => {
+    const offenders: string[] = [];
+    for (const path of sheets) {
+      const css = readFileSync(path, 'utf8');
+      for (const match of css.matchAll(/@media[^{]*?\(\s*(?:min|max)-height:\s*([^)\s]+)\s*\)/g)) {
+        const height = match[1];
+        if (height && !ALLOWED_HEIGHT.has(height)) {
+          offenders.push(`${path.slice(web.length + 1)} uses ${height}`);
+        }
+      }
+    }
+    expect(offenders, `add it to docs/responsive.md first: ${offenders.join(', ')}`).toEqual([]);
+  });
+
   it('documents each class as a token, so the scale has one home', () => {
     const tokens = readFileSync(join(web, 'styles', 'tokens.css'), 'utf8');
-    for (const name of ['phone', 'tablet', 'laptop', 'wide']) {
+    for (const name of ['phone', 'tablet', 'laptop', 'wide', 'short']) {
       expect(tokens).toContain(`--db-bp-${name}:`);
     }
   });
@@ -63,7 +87,7 @@ describe('the device-class scale', () => {
     for (const match of tokens.matchAll(/--db-bp-[a-z]+:\s*([^;]+);/g)) {
       const value = match[1]?.trim();
       expect(
-        ALLOWED.has(value ?? ''),
+        ALLOWED.has(value ?? '') || ALLOWED_HEIGHT.has(value ?? ''),
         `token value ${String(value)} is not in the allowed set`,
       ).toBe(true);
     }

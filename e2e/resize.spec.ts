@@ -128,3 +128,46 @@ test.describe('resizing mid-match', () => {
     expect(await mounts(page), 'unfolding rebuilt the game').toBe(before);
   });
 });
+
+test.describe('a phone held sideways', () => {
+  // Every portrait game rendered its board about 85px wide in a landscape phone viewport,
+  // because a scoreboard above it and another below left 144px of height for a 600x1000
+  // box. It was identical for Whack a Mole, Air Hockey and Road Dodge, so it was the shell
+  // rather than any one game — and it failed "correct in both orientations" for all of
+  // them at once. The scoreboards now sit either side of the board at this class.
+  for (const slug of ['road-dodge', 'tic-tac-toe', 'air-hockey']) {
+    test(`gives ${slug} a board worth playing on in landscape`, async ({ page }) => {
+      await page.setViewportSize({ width: 844, height: 390 });
+      await page.goto(`/play/${slug}/`);
+      await page.getByRole('button', { name: 'Play together here' }).click();
+
+      const canvas = page.locator('canvas');
+      await expect(canvas).toBeVisible();
+      const box = await canvas.boundingBox();
+      if (!box) throw new Error('the board has no box');
+
+      // The stacked layout gave 144px of height here. Anything near that is the bug back.
+      expect(box.height, `board was ${Math.round(box.height)}px tall`).toBeGreaterThan(240);
+
+      // And it still fits: a taller board that overflows is not an improvement.
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow, 'the page must not scroll sideways').toBeLessThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(390 + 1);
+    });
+  }
+
+  test('keeps the pause button reachable beside the board', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/play/road-dodge/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    const pause = page.getByRole('button', { name: 'Pause the match' });
+    await expect(pause).toBeVisible();
+    const box = await pause.boundingBox();
+    if (!box) throw new Error('the pause button has no box');
+    // A control the layout pushed off the edge is a control that does not exist.
+    expect(box.x + box.width).toBeLessThanOrEqual(844 + 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(390 + 1);
+  });
+});

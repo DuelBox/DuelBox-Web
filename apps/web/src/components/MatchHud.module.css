@@ -124,6 +124,54 @@
   }
 }
 
+/*
+ * A phone held sideways. The scoreboard becomes a narrow column beside the board.
+ *
+ * `PlaySurface` turns the match layout into a row at this class; this is the other half of
+ * that change, and without it the scoreboards keep their horizontal shape and eat the width
+ * they were meant to save — measured, a 844x390 viewport left the board 108px wide, which
+ * is no better than the 85px the stacked layout gave it.
+ */
+@media (max-height: 30rem) and (orientation: landscape) {
+  .hud {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--db-space-2);
+    padding: var(--db-space-2);
+  }
+
+  .seat {
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--db-space-1);
+    padding: var(--db-space-1);
+  }
+
+  /* Both seats read top-to-bottom now; the far one is turned as a whole by `.flipped`. */
+  .right {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .name {
+    display: none;
+  }
+
+  .middle {
+    /* "vs" between two stacked seats is decoration once the layout already separates
+       them, and the round pips are the part worth the space. */
+    gap: 0;
+  }
+
+  .label {
+    display: none;
+  }
+
+  .rounds {
+    flex-direction: column;
+  }
+}
+
 /* The copy for the player on the far side of the device. Same information, turned to
    face them — a scoreboard only one of the two can read is half a scoreboard. It is
    hidden from assistive technology so the score is announced once, not twice. */
