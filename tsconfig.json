@@ -53,6 +53,9 @@
       "path": "./packages/games/color-wars"
     },
     {
+      "path": "./packages/games/cornhole"
+    },
+    {
       "path": "./packages/games/pop-it"
     },
     {

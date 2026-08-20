@@ -32,6 +32,7 @@ const LOADERS: Record<string, Loader> = {
   'road-dodge': () => import('@duelbox/game-road-dodge').then((m) => m.default),
   checkers: () => import('@duelbox/game-checkers').then((m) => m.default),
   'color-wars': () => import('@duelbox/game-color-wars').then((m) => m.default),
+  cornhole: () => import('@duelbox/game-cornhole').then((m) => m.default),
   'pop-it': () => import('@duelbox/game-pop-it').then((m) => m.default),
   'hand-slap': () => import('@duelbox/game-hand-slap').then((m) => m.default),
   'rock-paper-scissors': () =>

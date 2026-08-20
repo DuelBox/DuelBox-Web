@@ -61,6 +61,9 @@ importers:
       '@duelbox/game-color-wars':
         specifier: workspace:*
         version: link:../../packages/games/color-wars
+      '@duelbox/game-cornhole':
+        specifier: workspace:*
+        version: link:../../packages/games/cornhole
       '@duelbox/game-darts':
         specifier: workspace:*
         version: link:../../packages/games/darts
@@ -156,6 +159,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/color-wars:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/cornhole:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
