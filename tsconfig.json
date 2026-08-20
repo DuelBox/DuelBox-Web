@@ -80,6 +80,9 @@
       "path": "./packages/games/penalty-kicks"
     },
     {
+      "path": "./packages/games/paint-fight"
+    },
+    {
       "path": "./packages/games/king-of-the-yard"
     },
     {

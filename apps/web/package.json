@@ -27,6 +27,7 @@
     "@duelbox/game-mancala": "workspace:*",
     "@duelbox/game-memory": "workspace:*",
     "@duelbox/game-mini-soccer": "workspace:*",
+    "@duelbox/game-paint-fight": "workspace:*",
     "@duelbox/game-penalty-kicks": "workspace:*",
     "@duelbox/game-pool": "workspace:*",
     "@duelbox/game-pop-it": "workspace:*",

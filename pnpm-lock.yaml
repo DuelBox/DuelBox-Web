@@ -100,6 +100,9 @@ importers:
       '@duelbox/game-mini-soccer':
         specifier: workspace:*
         version: link:../../packages/games/mini-soccer
+      '@duelbox/game-paint-fight':
+        specifier: workspace:*
+        version: link:../../packages/games/paint-fight
       '@duelbox/game-penalty-kicks':
         specifier: workspace:*
         version: link:../../packages/games/penalty-kicks
@@ -312,6 +315,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/mini-soccer:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/paint-fight:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
