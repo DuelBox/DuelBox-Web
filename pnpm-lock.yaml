@@ -172,6 +172,9 @@ importers:
       '@duelbox/game-shut-the-box':
         specifier: workspace:*
         version: link:../../packages/games/shut-the-box
+      '@duelbox/game-sling-puck':
+        specifier: workspace:*
+        version: link:../../packages/games/sling-puck
       '@duelbox/game-slot-cars':
         specifier: workspace:*
         version: link:../../packages/games/slot-cars
@@ -187,6 +190,9 @@ importers:
       '@duelbox/game-sumo':
         specifier: workspace:*
         version: link:../../packages/games/sumo
+      '@duelbox/game-tanks':
+        specifier: workspace:*
+        version: link:../../packages/games/tanks
       '@duelbox/game-tic-tac-toe':
         specifier: workspace:*
         version: link:../../packages/games/tic-tac-toe
@@ -578,6 +584,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/sling-puck:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/slot-cars:
     dependencies:
       '@duelbox/engine':
@@ -615,6 +630,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/sumo:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/tanks:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

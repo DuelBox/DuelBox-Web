@@ -299,7 +299,11 @@ games:
 - id: tanks
   name: Tanks
   category: Shooter
-  archetype: turn-aim
+  # Was `turn-aim`, which contradicted this entry's own rule: two sticks, one to move and one
+  # to shoot, is a real-time arena and not an alternating aim-and-fire. Cannon Duel already
+  # holds the turn-aim artillery slot, and building this one as turn-aim too would have made
+  # the pair near-identical.
+  archetype: rt-arena
   confidence: observed
   rule: Destroy the enemy tank. Use the left stick to move and the right to shoot!
   modes: friend,bot

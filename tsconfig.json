@@ -150,6 +150,12 @@
     },
     {
       "path": "./packages/games/spike-attacks"
+    },
+    {
+      "path": "./packages/games/sling-puck"
+    },
+    {
+      "path": "./packages/games/tanks"
     }
   ]
 }

@@ -9,8 +9,14 @@ import { defineConfig } from 'vitest/config';
  * timeouts — so `pnpm test:coverage` had never once completed, and the coverage gate issue
  * #6 asks for was unrunnable. Nothing failed on a normal run, so nobody looked.
  *
- * The plain run keeps the tight default: a test that takes five seconds without
- * instrumentation is a test worth noticing.
+ * The plain run is not tight, and deliberately so. A timeout is there to catch a test that is
+ * *stuck*, not one that is slower than somebody guessed — and this suite is 132 files run in
+ * parallel, many of them balance tests that play several hundred matches to measure a bot. The
+ * two heaviest take 2.1 seconds alone and 5.8 on a machine that is also building something, so
+ * the five-second default failed them on load and passed them on quiet, which is the worst
+ * behaviour a gate can have: it taught whoever saw it to re-run rather than to look. Thirty
+ * seconds still fails a genuine hang inside a minute and stops reporting the machine's mood as
+ * a code defect.
  */
 const underCoverage = process.env.DUELBOX_COVERAGE === '1';
 
@@ -18,7 +24,7 @@ export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.ts'],
     environment: 'node',
-    testTimeout: underCoverage ? 120_000 : 5_000,
+    testTimeout: underCoverage ? 120_000 : 30_000,
     coverage: {
       provider: 'v8',
       include: ['packages/engine/src/**/*.ts', 'packages/**/src/**/rules.ts'],

@@ -1489,14 +1489,14 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "slug": "tanks",
     "name": "Tanks",
     "category": "Shooter",
-    "archetype": "turn-aim",
+    "archetype": "rt-arena",
     "modes": [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
-    "tint": "grassTint",
-    "mark": "target",
+    "roundSeconds": 40,
+    "tint": "p1Tint",
+    "mark": "ring",
     "rule": "Destroy the enemy tank. Use the left stick to move and the right to shoot!",
     "researched": true
   },

@@ -56,6 +56,8 @@ import { manifest as brokenTiles } from '@duelbox/game-broken-tiles';
 import { manifest as starCatcher } from '@duelbox/game-star-catcher';
 import { manifest as hammerHit } from '@duelbox/game-hammer-hit';
 import { manifest as spikeAttacks } from '@duelbox/game-spike-attacks';
+import { manifest as slingPuck } from '@duelbox/game-sling-puck';
+import { manifest as tankBattle } from '@duelbox/game-tanks';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -99,11 +101,13 @@ export const MANIFESTS: readonly GameManifest[] = [
   rockPaperScissors,
   seaBattle,
   shutTheBox,
+  slingPuck,
   slotCars,
   snakes,
   spikeAttacks,
   starCatcher,
   sumo,
+  tankBattle,
   ticTacToe,
   ultimateTtt,
   whackAMole,
