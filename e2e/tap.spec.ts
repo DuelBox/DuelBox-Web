@@ -104,7 +104,7 @@ test.describe('reaching the whole board', () => {
    */
   const SHARED_BOARD_GAMES = [
     { slug: 'tic-tac-toe', logical: 900, point: { x: 200, y: 200 } },
-    { slug: 'color-wars', logical: 900, point: { x: 210, y: 210 } },
+    { slug: 'colour-wars', logical: 900, point: { x: 210, y: 210 } },
     // Reversi only accepts a move that flips something, so this is one of its four
     // opening moves — the one that sits in the far half.
     { slug: 'reversi', logical: 900, point: { x: 405, y: 315 } },
@@ -177,8 +177,8 @@ test.describe('a quick tap, in every game that takes one', () => {
    */
   const ONE_TAP_GAMES = [
     { slug: 'tic-tac-toe', logical: 900, point: { x: 450, y: 670 } },
-    { slug: 'four-in-a-row', logical: 900, point: { x: 450, y: 620 } },
-    { slug: 'color-wars', logical: 900, point: { x: 450, y: 450 } },
+    { slug: 'drop-four', logical: 900, point: { x: 450, y: 620 } },
+    { slug: 'colour-wars', logical: 900, point: { x: 450, y: 450 } },
     { slug: 'pop-it', logical: 900, point: { x: 450, y: 450 } },
     { slug: 'reversi', logical: 900, point: { x: 405, y: 315 } },
     { slug: 'dots-and-boxes', logical: 900, point: { x: 300, y: 200 } },

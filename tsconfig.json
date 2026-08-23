@@ -141,6 +141,15 @@
     },
     {
       "path": "./packages/games/broken-tiles"
+    },
+    {
+      "path": "./packages/games/star-catcher"
+    },
+    {
+      "path": "./packages/games/hammer-hit"
+    },
+    {
+      "path": "./packages/games/spike-attacks"
     }
   ]
 }

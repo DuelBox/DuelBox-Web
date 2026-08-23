@@ -97,6 +97,9 @@ importers:
       '@duelbox/game-gravity-run':
         specifier: workspace:*
         version: link:../../packages/games/gravity-run
+      '@duelbox/game-hammer-hit':
+        specifier: workspace:*
+        version: link:../../packages/games/hammer-hit
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
@@ -175,6 +178,12 @@ importers:
       '@duelbox/game-snakes':
         specifier: workspace:*
         version: link:../../packages/games/snakes
+      '@duelbox/game-spike-attacks':
+        specifier: workspace:*
+        version: link:../../packages/games/spike-attacks
+      '@duelbox/game-star-catcher':
+        specifier: workspace:*
+        version: link:../../packages/games/star-catcher
       '@duelbox/game-sumo':
         specifier: workspace:*
         version: link:../../packages/games/sumo
@@ -345,6 +354,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/gravity-run:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/hammer-hit:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -570,6 +588,24 @@ importers:
         version: link:../../game-sdk
 
   packages/games/snakes:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/spike-attacks:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/star-catcher:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

@@ -53,6 +53,9 @@ import { manifest as gravityRun } from '@duelbox/game-gravity-run';
 import { manifest as match } from '@duelbox/game-match';
 import { manifest as frogsFight } from '@duelbox/game-frogs-fight';
 import { manifest as brokenTiles } from '@duelbox/game-broken-tiles';
+import { manifest as starCatcher } from '@duelbox/game-star-catcher';
+import { manifest as hammerHit } from '@duelbox/game-hammer-hit';
+import { manifest as spikeAttacks } from '@duelbox/game-spike-attacks';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -72,6 +75,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   frogsFight,
   fruitDuel,
   gravityRun,
+  hammerHit,
   handSlap,
   hotPotato,
   kingOfTheYard,
@@ -97,6 +101,8 @@ export const MANIFESTS: readonly GameManifest[] = [
   shutTheBox,
   slotCars,
   snakes,
+  spikeAttacks,
+  starCatcher,
   sumo,
   ticTacToe,
   ultimateTtt,

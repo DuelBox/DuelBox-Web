@@ -11,8 +11,8 @@ import { expect, test } from '@playwright/test';
 test.describe('keyboard-only play', () => {
   const games = [
     { slug: 'tic-tac-toe', name: 'Tic Tac Toe' },
-    { slug: 'memory', name: 'Memory Match' },
-    { slug: 'four-in-a-row', name: 'Drop Four' },
+    { slug: 'memory-match', name: 'Memory Match' },
+    { slug: 'drop-four', name: 'Drop Four' },
   ];
 
   for (const game of games) {

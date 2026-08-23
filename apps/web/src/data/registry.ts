@@ -64,6 +64,9 @@ const LOADERS: Record<string, Loader> = {
   match: () => import('@duelbox/game-match').then((m) => m.default),
   'frogs-fight': () => import('@duelbox/game-frogs-fight').then((m) => m.default),
   'broken-tiles': () => import('@duelbox/game-broken-tiles').then((m) => m.default),
+  'star-catcher': () => import('@duelbox/game-star-catcher').then((m) => m.default),
+  'hammer-hit': () => import('@duelbox/game-hammer-hit').then((m) => m.default),
+  'spike-attacks': () => import('@duelbox/game-spike-attacks').then((m) => m.default),
 };
 
 /**
