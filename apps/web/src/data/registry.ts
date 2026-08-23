@@ -58,6 +58,8 @@ const LOADERS: Record<string, Loader> = {
   'robot-arena': () => import('@duelbox/game-robot-arena').then((m) => m.default),
   'flappy-jump': () => import('@duelbox/game-flappy-jump').then((m) => m.default),
   'cannon-duel': () => import('@duelbox/game-cannon-duel').then((m) => m.default),
+  'slot-cars': () => import('@duelbox/game-slot-cars').then((m) => m.default),
+  'gravity-run': () => import('@duelbox/game-gravity-run').then((m) => m.default),
 };
 
 /**

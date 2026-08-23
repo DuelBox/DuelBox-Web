@@ -88,6 +88,9 @@ importers:
       '@duelbox/game-fruit-duel':
         specifier: workspace:*
         version: link:../../packages/games/fruit-duel
+      '@duelbox/game-gravity-run':
+        specifier: workspace:*
+        version: link:../../packages/games/gravity-run
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
@@ -157,6 +160,9 @@ importers:
       '@duelbox/game-shut-the-box':
         specifier: workspace:*
         version: link:../../packages/games/shut-the-box
+      '@duelbox/game-slot-cars':
+        specifier: workspace:*
+        version: link:../../packages/games/slot-cars
       '@duelbox/game-snakes':
         specifier: workspace:*
         version: link:../../packages/games/snakes
@@ -303,6 +309,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/fruit-duel:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/gravity-run:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -501,6 +516,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/shut-the-box:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/slot-cars:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

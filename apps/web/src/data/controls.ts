@@ -48,6 +48,8 @@ import { manifest as lumberJack } from '@duelbox/game-lumber-jack';
 import { manifest as robotArena } from '@duelbox/game-robot-arena';
 import { manifest as flappyJump } from '@duelbox/game-flappy-jump';
 import { manifest as cannonDuel } from '@duelbox/game-cannon-duel';
+import { manifest as slotCars } from '@duelbox/game-slot-cars';
+import { manifest as gravityRun } from '@duelbox/game-gravity-run';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -63,6 +65,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   flappyJump,
   fourInARow,
   fruitDuel,
+  gravityRun,
   handSlap,
   hotPotato,
   kingOfTheYard,
@@ -85,6 +88,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   rockPaperScissors,
   seaBattle,
   shutTheBox,
+  slotCars,
   snakes,
   sumo,
   ticTacToe,

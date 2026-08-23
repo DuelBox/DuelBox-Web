@@ -126,6 +126,12 @@
     },
     {
       "path": "./packages/games/cannon-duel"
+    },
+    {
+      "path": "./packages/games/slot-cars"
+    },
+    {
+      "path": "./packages/games/gravity-run"
     }
   ]
 }
