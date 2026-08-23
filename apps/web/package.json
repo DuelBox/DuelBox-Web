@@ -29,6 +29,7 @@
     "@duelbox/game-mini-soccer": "workspace:*",
     "@duelbox/game-paint-fight": "workspace:*",
     "@duelbox/game-penalty-kicks": "workspace:*",
+    "@duelbox/game-ping-pong": "workspace:*",
     "@duelbox/game-pool": "workspace:*",
     "@duelbox/game-pop-it": "workspace:*",
     "@duelbox/game-pull-the-rope": "workspace:*",

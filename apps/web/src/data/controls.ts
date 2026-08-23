@@ -40,6 +40,7 @@ import { manifest as ticTacToe } from '@duelbox/game-tic-tac-toe';
 import { manifest as ultimateTtt } from '@duelbox/game-ultimate-ttt';
 import { manifest as yazy } from '@duelbox/game-yazy';
 import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
+import { manifest as pingPong } from '@duelbox/game-ping-pong';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -61,8 +62,9 @@ export const MANIFESTS: readonly GameManifest[] = [
   miniSoccer,
   paintFight,
   penaltyKicks,
-  popIt,
+  pingPong,
   pool,
+  popIt,
   pullTheRope,
   reversi,
   roadDodge,

@@ -102,6 +102,9 @@
     },
     {
       "path": "./packages/games/road-dodge"
+    },
+    {
+      "path": "./packages/games/ping-pong"
     }
   ]
 }

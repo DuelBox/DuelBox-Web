@@ -106,6 +106,9 @@ importers:
       '@duelbox/game-penalty-kicks':
         specifier: workspace:*
         version: link:../../packages/games/penalty-kicks
+      '@duelbox/game-ping-pong':
+        specifier: workspace:*
+        version: link:../../packages/games/ping-pong
       '@duelbox/game-pool':
         specifier: workspace:*
         version: link:../../packages/games/pool
@@ -333,6 +336,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/penalty-kicks:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/ping-pong:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
