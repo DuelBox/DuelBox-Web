@@ -1,0 +1,15 @@
+# Every game depends on these three, so a change here is a change to a hundred games.
+# CI cannot tell the difference between a safe engine change and one that quietly alters
+# the fixed timestep for everybody; a human has to.
+/packages/engine/        @jatinsingh1603
+/packages/game-sdk/      @jatinsingh1603
+/apps/web/src/components/ @jatinsingh1603
+
+# The rules nothing merges against, and the guards that enforce them.
+/CLAUDE.md               @jatinsingh1603
+/scripts/                @jatinsingh1603
+/.github/                @jatinsingh1603
+/size-budget.json        @jatinsingh1603
+
+# A single game is self-contained: its own package, its own chunk, its own tests.
+# Deliberately not owned, so game work is not bottlenecked on one reviewer.

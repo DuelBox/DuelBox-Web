@@ -1,0 +1,35 @@
+name: Balance change
+description: A tuning change to an existing game, with the numbers behind it
+labels: ['type:chore', 'epic:game']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Balance changes are the easiest thing here to get wrong by feel. Bring a measurement:
+        the games in this repo have twice been fixed by a number that contradicted the
+        obvious reading.
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      placeholder: ping-pong
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong, and how do you know?
+      description: Win rates, round lengths, rally lengths — whatever you measured, and over how many matches.
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: The change you propose
+    validations:
+      required: true
+  - type: textarea
+    id: after
+    attributes:
+      label: The same measurement, after
+      description: Same seeds, same sample size, so the two are comparable.

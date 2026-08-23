@@ -1,0 +1,68 @@
+name: Bug
+description: Something behaves differently from how it should
+labels: ['type:bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two people share one device here, so *which seat* and *which device* are usually
+        the whole answer. Please fill both in even when they seem irrelevant.
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      description: The slug from the URL, or "shell" for the site itself.
+      placeholder: ping-pong
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open /play/ping-pong
+        2. Start a match against a bot on Normal
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: seat
+    attributes:
+      label: Which seat
+      options:
+        - Seat one (near / bottom)
+        - Seat two (far / top)
+        - Both
+        - Not seat-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: input
+    attributes:
+      label: Input family
+      options: [Touch, Mouse or trackpad, Keyboard, Mixed]
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device, OS and browser
+      placeholder: iPhone 14 Pro, iOS 18.2, Safari
+    validations:
+      required: true
+  - type: input
+    id: size
+    attributes:
+      label: Viewport size and orientation
+      placeholder: 393 × 852, portrait
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      render: text

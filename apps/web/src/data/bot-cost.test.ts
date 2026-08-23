@@ -41,7 +41,32 @@ import { LOADERS_FOR_TEST } from './registry';
  * | Hand Slap | 0 | 0 |
  *
  * Zero against four is a clean signal, so two is allowed.
+ *
+ * ## Under coverage it measures nothing, and says so
+ *
+ * `pnpm test` runs this file in about two seconds. **`pnpm test:coverage` did not run it
+ * at all**, and had not since the first searching bot landed: v8 instrumentation slows a
+ * search by several times over, and Drop Four, Reversi and Checkers each ran past Vitest's
+ * five-second default and failed as timeouts. The coverage gate issue #6 asks for was
+ * therefore unrunnable, and nothing failed on a normal run, so nobody looked.
+ *
+ * Two things were wrong and they need different answers. The timeout was simply too small
+ * for instrumented code — `vitest.config.ts` now raises it for the whole suite under
+ * coverage, because a dozen other tests here play thousands of simulated steps too.
+ *
+ * The *assertion* is worse than too tight — it is meaningless. The calibration times three
+ * million square roots, which v8 coverage barely instruments, while the game code it is
+ * calibrating for is instrumented heavily. The ceiling scaled by 3.5× and Reversi slowed by
+ * twelve. A number that moves for a reason unrelated to the code under test is not a
+ * measurement, and widening the band would only hide that.
+ *
+ * So under coverage the games are still driven — the lines are what coverage is counting —
+ * and the budget is not asserted. `pnpm test` is what checks the budget, on every run, on
+ * every machine. The env var follows `DUELBOX_ALL_ENGINES` in `playwright.config.ts`.
  */
+
+/** Set by `pnpm test:coverage`. See the note above. */
+const UNDER_COVERAGE = process.env.DUELBOX_COVERAGE === '1';
 
 const STEP = 1 / 60;
 const STEPS = 60 * 180;
@@ -75,37 +100,42 @@ describe('no bot stalls a frame', () => {
   const entries = Object.entries(LOADERS_FOR_TEST);
 
   it.each(entries)('%s thinks inside a frame, hardest tier', async (slug, load) => {
-    const loaded = await load();
-    const game = loaded.create();
-    const context: GameContext = {
-      manifest: loaded.manifest,
-      rng: new Rng(20260820),
-      presentation: 'shared-screen',
-      localSeat: 'p1',
-      botDifficulty: () => 'hard',
-    };
-    game.init(context);
-    const input = new InputManager(
-      { width: 1000, height: 1000 },
-      { split: 'horizontal', bottomSeat: 'p1' },
-    );
-    const view = new InputView();
+      const loaded = await load();
+      const game = loaded.create();
+      const context: GameContext = {
+        manifest: loaded.manifest,
+        rng: new Rng(20260820),
+        presentation: 'shared-screen',
+        localSeat: 'p1',
+        botDifficulty: () => 'hard',
+      };
+      game.init(context);
+      const input = new InputManager(
+        { width: 1000, height: 1000 },
+        { split: 'horizontal', bottomSeat: 'p1' },
+      );
+      const view = new InputView();
 
-    let worst = 0;
-    let over = 0;
-    try {
-      for (let i = 0; i < STEPS; i += 1) {
-        const state = view.sync(input.beginStep(STEP));
-        const started = performance.now();
-        game.update(STEP, state);
-        const spent = performance.now() - started;
-        worst = Math.max(worst, spent);
-        if (spent > CEILING_MS) over += 1;
-        if (game.getScore().winner !== null) break;
+      let worst = 0;
+      let over = 0;
+      try {
+        for (let i = 0; i < STEPS; i += 1) {
+          const state = view.sync(input.beginStep(STEP));
+          const started = performance.now();
+          game.update(STEP, state);
+          const spent = performance.now() - started;
+          worst = Math.max(worst, spent);
+          if (spent > CEILING_MS) over += 1;
+          if (game.getScore().winner !== null) break;
+        }
+      } finally {
+        game.destroy();
       }
-    } finally {
-      game.destroy();
-    }
+
+    // Always assert the game was actually driven, so a coverage run cannot pass this file
+    // by doing nothing at all.
+    expect(worst, `${slug} never ran a step`).toBeGreaterThan(0);
+    if (UNDER_COVERAGE) return;
 
     expect(
       over,

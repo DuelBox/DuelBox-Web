@@ -1,0 +1,58 @@
+name: New game
+description: Propose a game for the catalog
+labels: ['type:feat', 'epic:game']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Mechanics and rules are free to reimplement. Art, audio, code, UI layouts and names
+        are not — see rule 1 in `CLAUDE.md`. Describe how it *plays*, never where you saw it.
+  - type: input
+    id: id
+    attributes:
+      label: Proposed id
+      description: Lowercase kebab-case, and it becomes the package name and the URL.
+      placeholder: knife-thrower
+    validations:
+      required: true
+  - type: dropdown
+    id: archetype
+    attributes:
+      label: Archetype
+      description: If none of these fit, that is worth saying — it may be a sixth.
+      options: [turn-board, turn-aim, rt-split, rt-arena, rt-race]
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: The rules, as a player would be told them
+      description: Including how a round starts, how it is scored, and how it ends.
+    validations:
+      required: true
+  - type: textarea
+    id: termination
+    attributes:
+      label: How is it guaranteed to end?
+      description: |
+        A clock, a fixed number of turns, a target, a stalemate rule. `roundSeconds` in the
+        manifest ends nothing — every game has to guarantee its own termination, and
+        `termination.test.ts` will check it with two bots and no human input.
+    validations:
+      required: true
+  - type: textarea
+    id: controls
+    attributes:
+      label: Controls for both seats, on touch and on a keyboard
+      description: |
+        Two people sharing a laptop have one keyboard and no touchscreen, so the keyboard is
+        the whole desktop experience rather than a fallback.
+    validations:
+      required: true
+  - type: textarea
+    id: fairness
+    attributes:
+      label: Is it fair across input families and devices?
+      description: |
+        A thumb, a mouse and a trackpad are not equivalent instruments. A game that cannot be
+        made fair declares itself same-input-class-only rather than shipping unfair.

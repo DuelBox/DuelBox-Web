@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @duelbox/web dev",
-    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm check:zero-cost && pnpm check:secrets && pnpm check:assets && pnpm size",
+    "build": "pnpm -r --filter './packages/**' build && pnpm validate:manifests && pnpm --filter @duelbox/web build && pnpm emit:host-config && pnpm check:headers && pnpm check:zero-cost && pnpm check:secrets && pnpm check:assets && pnpm size",
     "typecheck": "tsc --build && tsc --noEmit -p tsconfig.lint.json && pnpm --filter @duelbox/web typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -16,7 +16,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "DUELBOX_COVERAGE=1 vitest run --coverage",
     "clean": "tsc --build --clean && rm -rf packages/*/dist apps/*/.next",
     "create-game": "node scripts/create-game.mjs",
     "catalogue": "python3 scripts/generate_catalog.py",
@@ -27,7 +27,9 @@
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "size": "node scripts/check-size.mjs",
     "check:assets": "node scripts/check-asset-licenses.mjs",
-    "check:source-secrets": "node scripts/check-source-secrets.mjs"
+    "check:source-secrets": "node scripts/check-source-secrets.mjs",
+    "emit:host-config": "node scripts/emit-host-config.mjs",
+    "check:headers": "node scripts/check-headers.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
