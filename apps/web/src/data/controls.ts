@@ -65,16 +65,31 @@ import { manifest as miniGolf } from '@duelbox/game-mini-golf';
 import { manifest as beachBall } from '@duelbox/game-beach-ball';
 import { manifest as wrestle } from '@duelbox/game-wrestle';
 import { manifest as racingCars } from '@duelbox/game-racing-cars';
+import { manifest as shipBattle } from '@duelbox/game-ship-battle';
+import { manifest as backgammon } from '@duelbox/game-backgammon';
+import { manifest as archery } from '@duelbox/game-archery';
+import { manifest as basketball } from '@duelbox/game-basketball';
+import { manifest as carrom } from '@duelbox/game-carrom';
+import { manifest as chickenJump } from '@duelbox/game-chicken-jump';
+import { manifest as lightFingers } from '@duelbox/game-light-fingers';
+import { manifest as spinWar } from '@duelbox/game-spin-war';
+import { manifest as taxiRace } from '@duelbox/game-taxi-race';
+import { manifest as trafficJam } from '@duelbox/game-traffic-jam';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
+  archery,
+  backgammon,
+  basketball,
   beachBall,
   bowling,
   brokenTiles,
   cannonDuel,
+  carrom,
   checkers,
+  chickenJump,
   colorWars,
   cornhole,
   crabbyVolley,
@@ -91,6 +106,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   hotPotato,
   kingOfTheYard,
   knifeThrower,
+  lightFingers,
   ludo,
   lumberJack,
   mancala,
@@ -111,16 +127,20 @@ export const MANIFESTS: readonly GameManifest[] = [
   robotArena,
   rockPaperScissors,
   seaBattle,
+  shipBattle,
   shutTheBox,
   slingPuck,
   slotCars,
   snakes,
   snakesLadders,
   spikeAttacks,
+  spinWar,
   starCatcher,
   sumo,
   tankBattle,
+  taxiRace,
   ticTacToe,
+  trafficJam,
   ultimateTtt,
   whackAMole,
   wheelie,

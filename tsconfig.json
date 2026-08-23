@@ -177,6 +177,36 @@
     },
     {
       "path": "./packages/games/racing-cars"
+    },
+    {
+      "path": "./packages/games/ship-battle"
+    },
+    {
+      "path": "./packages/games/backgammon"
+    },
+    {
+      "path": "./packages/games/archery"
+    },
+    {
+      "path": "./packages/games/basketball"
+    },
+    {
+      "path": "./packages/games/carrom"
+    },
+    {
+      "path": "./packages/games/chicken-jump"
+    },
+    {
+      "path": "./packages/games/light-fingers"
+    },
+    {
+      "path": "./packages/games/spin-war"
+    },
+    {
+      "path": "./packages/games/taxi-race"
+    },
+    {
+      "path": "./packages/games/traffic-jam"
     }
   ]
 }
