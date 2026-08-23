@@ -75,6 +75,11 @@ import { manifest as lightFingers } from '@duelbox/game-light-fingers';
 import { manifest as spinWar } from '@duelbox/game-spin-war';
 import { manifest as taxiRace } from '@duelbox/game-taxi-race';
 import { manifest as trafficJam } from '@duelbox/game-traffic-jam';
+import { manifest as shuriken } from '@duelbox/game-shuriken';
+import { manifest as soccerPool } from '@duelbox/game-soccer-pool';
+import { manifest as happyBirds } from '@duelbox/game-happy-birds';
+import { manifest as ratRace } from '@duelbox/game-rat-race';
+import { manifest as brickBlast } from '@duelbox/game-brick-blast';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -85,6 +90,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   basketball,
   beachBall,
   bowling,
+  brickBlast,
   brokenTiles,
   cannonDuel,
   carrom,
@@ -103,6 +109,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   gravityRun,
   hammerHit,
   handSlap,
+  happyBirds,
   hotPotato,
   kingOfTheYard,
   knifeThrower,
@@ -122,17 +129,20 @@ export const MANIFESTS: readonly GameManifest[] = [
   popIt,
   pullTheRope,
   racingCars,
+  ratRace,
   reversi,
   roadDodge,
   robotArena,
   rockPaperScissors,
   seaBattle,
   shipBattle,
+  shuriken,
   shutTheBox,
   slingPuck,
   slotCars,
   snakes,
   snakesLadders,
+  soccerPool,
   spikeAttacks,
   spinWar,
   starCatcher,

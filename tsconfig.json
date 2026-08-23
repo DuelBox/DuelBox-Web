@@ -207,6 +207,21 @@
     },
     {
       "path": "./packages/games/traffic-jam"
+    },
+    {
+      "path": "./packages/games/shuriken"
+    },
+    {
+      "path": "./packages/games/soccer-pool"
+    },
+    {
+      "path": "./packages/games/happy-birds"
+    },
+    {
+      "path": "./packages/games/rat-race"
+    },
+    {
+      "path": "./packages/games/brick-blast"
     }
   ]
 }

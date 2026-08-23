@@ -70,6 +70,9 @@ importers:
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
+      '@duelbox/game-brick-blast':
+        specifier: workspace:*
+        version: link:../../packages/games/brick-blast
       '@duelbox/game-broken-tiles':
         specifier: workspace:*
         version: link:../../packages/games/broken-tiles
@@ -124,6 +127,9 @@ importers:
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
+      '@duelbox/game-happy-birds':
+        specifier: workspace:*
+        version: link:../../packages/games/happy-birds
       '@duelbox/game-hot-potato':
         specifier: workspace:*
         version: link:../../packages/games/hot-potato
@@ -181,6 +187,9 @@ importers:
       '@duelbox/game-racing-cars':
         specifier: workspace:*
         version: link:../../packages/games/racing-cars
+      '@duelbox/game-rat-race':
+        specifier: workspace:*
+        version: link:../../packages/games/rat-race
       '@duelbox/game-reversi':
         specifier: workspace:*
         version: link:../../packages/games/reversi
@@ -202,6 +211,9 @@ importers:
       '@duelbox/game-ship-battle':
         specifier: workspace:*
         version: link:../../packages/games/ship-battle
+      '@duelbox/game-shuriken':
+        specifier: workspace:*
+        version: link:../../packages/games/shuriken
       '@duelbox/game-shut-the-box':
         specifier: workspace:*
         version: link:../../packages/games/shut-the-box
@@ -217,6 +229,9 @@ importers:
       '@duelbox/game-snakes-ladders':
         specifier: workspace:*
         version: link:../../packages/games/snakes-ladders
+      '@duelbox/game-soccer-pool':
+        specifier: workspace:*
+        version: link:../../packages/games/soccer-pool
       '@duelbox/game-spike-attacks':
         specifier: workspace:*
         version: link:../../packages/games/spike-attacks
@@ -330,6 +345,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/bowling:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/brick-blast:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -492,6 +516,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/hand-slap:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/happy-birds:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -671,6 +704,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/rat-race:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/reversi:
     dependencies:
       '@duelbox/engine':
@@ -725,6 +767,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/shuriken:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/shut-the-box:
     dependencies:
       '@duelbox/engine':
@@ -762,6 +813,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/snakes-ladders:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/soccer-pool:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

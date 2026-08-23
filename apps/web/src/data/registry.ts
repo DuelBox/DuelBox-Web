@@ -86,6 +86,11 @@ const LOADERS: Record<string, Loader> = {
   'spin-war': () => import('@duelbox/game-spin-war').then((m) => m.default),
   'taxi-race': () => import('@duelbox/game-taxi-race').then((m) => m.default),
   'traffic-jam': () => import('@duelbox/game-traffic-jam').then((m) => m.default),
+  shuriken: () => import('@duelbox/game-shuriken').then((m) => m.default),
+  'soccer-pool': () => import('@duelbox/game-soccer-pool').then((m) => m.default),
+  'happy-birds': () => import('@duelbox/game-happy-birds').then((m) => m.default),
+  'rat-race': () => import('@duelbox/game-rat-race').then((m) => m.default),
+  'brick-blast': () => import('@duelbox/game-brick-blast').then((m) => m.default),
 };
 
 /**
