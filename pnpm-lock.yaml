@@ -58,6 +58,9 @@ importers:
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
+      '@duelbox/game-cannon-duel':
+        specifier: workspace:*
+        version: link:../../packages/games/cannon-duel
       '@duelbox/game-checkers':
         specifier: workspace:*
         version: link:../../packages/games/checkers
@@ -210,6 +213,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/bowling:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/cannon-duel:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

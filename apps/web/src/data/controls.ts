@@ -47,11 +47,13 @@ import { manifest as fruitDuel } from '@duelbox/game-fruit-duel';
 import { manifest as lumberJack } from '@duelbox/game-lumber-jack';
 import { manifest as robotArena } from '@duelbox/game-robot-arena';
 import { manifest as flappyJump } from '@duelbox/game-flappy-jump';
+import { manifest as cannonDuel } from '@duelbox/game-cannon-duel';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
   bowling,
+  cannonDuel,
   checkers,
   colorWars,
   cornhole,

@@ -123,6 +123,9 @@
     },
     {
       "path": "./packages/games/flappy-jump"
+    },
+    {
+      "path": "./packages/games/cannon-duel"
     }
   ]
 }
