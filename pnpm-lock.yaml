@@ -58,6 +58,9 @@ importers:
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
+      '@duelbox/game-broken-tiles':
+        specifier: workspace:*
+        version: link:../../packages/games/broken-tiles
       '@duelbox/game-cannon-duel':
         specifier: workspace:*
         version: link:../../packages/games/cannon-duel
@@ -225,6 +228,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/bowling:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/broken-tiles:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

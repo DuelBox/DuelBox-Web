@@ -138,6 +138,9 @@
     },
     {
       "path": "./packages/games/frogs-fight"
+    },
+    {
+      "path": "./packages/games/broken-tiles"
     }
   ]
 }

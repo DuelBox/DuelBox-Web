@@ -63,6 +63,7 @@ const LOADERS: Record<string, Loader> = {
   'gravity-run': () => import('@duelbox/game-gravity-run').then((m) => m.default),
   match: () => import('@duelbox/game-match').then((m) => m.default),
   'frogs-fight': () => import('@duelbox/game-frogs-fight').then((m) => m.default),
+  'broken-tiles': () => import('@duelbox/game-broken-tiles').then((m) => m.default),
 };
 
 /**

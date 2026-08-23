@@ -13,6 +13,7 @@
     "@duelbox/engine": "workspace:*",
     "@duelbox/game-air-hockey": "workspace:*",
     "@duelbox/game-bowling": "workspace:*",
+    "@duelbox/game-broken-tiles": "workspace:*",
     "@duelbox/game-cannon-duel": "workspace:*",
     "@duelbox/game-checkers": "workspace:*",
     "@duelbox/game-color-wars": "workspace:*",

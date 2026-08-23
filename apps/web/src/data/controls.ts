@@ -52,12 +52,14 @@ import { manifest as slotCars } from '@duelbox/game-slot-cars';
 import { manifest as gravityRun } from '@duelbox/game-gravity-run';
 import { manifest as match } from '@duelbox/game-match';
 import { manifest as frogsFight } from '@duelbox/game-frogs-fight';
+import { manifest as brokenTiles } from '@duelbox/game-broken-tiles';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
   bowling,
+  brokenTiles,
   cannonDuel,
   checkers,
   colorWars,
