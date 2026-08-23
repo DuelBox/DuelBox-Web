@@ -85,6 +85,9 @@ importers:
       '@duelbox/game-four-in-a-row':
         specifier: workspace:*
         version: link:../../packages/games/four-in-a-row
+      '@duelbox/game-frogs-fight':
+        specifier: workspace:*
+        version: link:../../packages/games/frogs-fight
       '@duelbox/game-fruit-duel':
         specifier: workspace:*
         version: link:../../packages/games/fruit-duel
@@ -112,6 +115,9 @@ importers:
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
+      '@duelbox/game-match':
+        specifier: workspace:*
+        version: link:../../packages/games/match
       '@duelbox/game-math-quiz':
         specifier: workspace:*
         version: link:../../packages/games/math-quiz
@@ -308,6 +314,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/frogs-fight:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/fruit-duel:
     dependencies:
       '@duelbox/engine':
@@ -381,6 +396,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/mancala:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/match:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

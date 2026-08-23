@@ -52,6 +52,12 @@ try {
 // From the dynamic-import specifiers, not the object keys: five of the keys in the
 // registry are unquoted (`reversi:` rather than `'reversi':`), so reading keys with a
 // regex silently found eighteen of the twenty-three games and reported success.
+//
+// And a chunk *names* a game by carrying its manifest id, `id:"ping-pong"`, not by
+// containing the word anywhere. That distinction cost a build: the id `match` appears as a
+// bare substring in eleven chunks — `String.prototype.match` is in most bundles — so a
+// 38.5 KB shared chunk was attributed to a 3 KB game, failed the budget, and took 35 KB
+// off the shell's number at the same time. Exactly one chunk carries `id:"match"`.
 const registry = readFileSync(join(ROOT, 'apps/web/src/data/registry.ts'), 'utf8');
 const playable = [...registry.matchAll(/import\('@duelbox\/game-([a-z0-9-]+)'\)/g)]
   .map((match) => match[1])
@@ -65,7 +71,7 @@ for (const file of files) {
   if (file.includes(`${'app'}/`)) continue; // route shells, not game chunks
   const source = readFileSync(file, 'utf8');
   const named = playable.filter(
-    (slug) => source.includes(`"${slug}"`) || source.includes(`'${slug}'`),
+    (slug) => source.includes(`id:"${slug}"`) || source.includes(`id:'${slug}'`),
   );
   if (named.length === 1) gameChunks.set(named[0], file);
 }

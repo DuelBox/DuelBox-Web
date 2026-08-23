@@ -1,4 +1,5 @@
 import type { Game, GameManifest } from '@duelbox/game-sdk';
+import { CATALOGUE } from './catalogue.generated';
 
 /**
  * The playable-game registry.
@@ -60,24 +61,58 @@ const LOADERS: Record<string, Loader> = {
   'cannon-duel': () => import('@duelbox/game-cannon-duel').then((m) => m.default),
   'slot-cars': () => import('@duelbox/game-slot-cars').then((m) => m.default),
   'gravity-run': () => import('@duelbox/game-gravity-run').then((m) => m.default),
+  match: () => import('@duelbox/game-match').then((m) => m.default),
+  'frogs-fight': () => import('@duelbox/game-frogs-fight').then((m) => m.default),
 };
 
 /**
  * The loader table, for tests that must cover every playable game rather than a list
  * someone remembered to update. Exported for that purpose only — the shell loads games
  * through `loadGame`.
+ *
+ * Keyed by **package id**, which is what `create-game` and `register-game` write. The site
+ * routes by slug; the two are reconciled below.
  */
 export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
 
-/** Slugs that are actually playable today, for the catalogue to mark. */
-export const PLAYABLE: readonly string[] = Object.keys(LOADERS);
+/**
+ * A game has two names, and the site had been using both.
+ *
+ * The catalogue gives every game an `id` — the package it lives in — and a `slug` — the
+ * word in its URL. For most games they are the same word, and for eighteen of them they are
+ * not: Snake Clash is the package `snakes` at `/games/snake-clash/`.
+ *
+ * **Everything a player touches routes by slug**: the catalogue card's link, the per-game
+ * page, the controls lookup. This table was keyed by package id, so `isPlayable('snake-clash')`
+ * was false and the card linked to the information page with "still being built" on it.
+ * Eleven finished games were unreachable — Snake Clash, Drop Four, Colour Wars, Dice Yatzy,
+ * Ludo Dash, Lumberjack, Mancala Pits, Math Duel, Memory Match, Sumo Push and Ultimate Tic
+ * Tac Toe — with a `/play/<id>/` route generated that nothing linked to.
+ *
+ * The loaders stay keyed by package id, because that is what the scaffold writes and what a
+ * test failure should name. Everything the site asks is answered in slug terms, and both
+ * spellings are accepted so a stale link cannot 404.
+ */
+const ID_BY_SLUG: ReadonlyMap<string, string> = new Map(
+  CATALOGUE.map((entry) => [entry.slug, entry.id]),
+);
 
-export function isPlayable(slug: string): boolean {
-  return slug in LOADERS;
+/** The package id behind a slug, or the argument unchanged if it is already one. */
+function resolve(slugOrId: string): string {
+  return ID_BY_SLUG.get(slugOrId) ?? slugOrId;
 }
 
-export async function loadGame(slug: string): Promise<LoadedGame> {
-  const loader = LOADERS[slug];
-  if (!loader) throw new Error(`No playable build for "${slug}"`);
+/** Slugs that are actually playable today, for the catalogue to mark and the router to build. */
+export const PLAYABLE: readonly string[] = CATALOGUE.filter((entry) => entry.id in LOADERS).map(
+  (entry) => entry.slug,
+);
+
+export function isPlayable(slugOrId: string): boolean {
+  return resolve(slugOrId) in LOADERS;
+}
+
+export async function loadGame(slugOrId: string): Promise<LoadedGame> {
+  const loader = LOADERS[resolve(slugOrId)];
+  if (!loader) throw new Error(`No playable build for "${slugOrId}"`);
   return loader();
 }

@@ -50,7 +50,10 @@ import { manifest as flappyJump } from '@duelbox/game-flappy-jump';
 import { manifest as cannonDuel } from '@duelbox/game-cannon-duel';
 import { manifest as slotCars } from '@duelbox/game-slot-cars';
 import { manifest as gravityRun } from '@duelbox/game-gravity-run';
+import { manifest as match } from '@duelbox/game-match';
+import { manifest as frogsFight } from '@duelbox/game-frogs-fight';
 import type { GameManifest } from '@duelbox/game-sdk';
+import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
@@ -64,6 +67,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   dotsAndBoxes,
   flappyJump,
   fourInARow,
+  frogsFight,
   fruitDuel,
   gravityRun,
   handSlap,
@@ -73,6 +77,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   ludo,
   lumberJack,
   mancala,
+  match,
   mathQuiz,
   memory,
   miniSoccer,
@@ -102,7 +107,18 @@ export interface GameControls {
   readonly pointer: string;
 }
 
-/** Controls by slug, for every game that has a playable build. */
+/**
+ * Controls by **slug**, for every game that has a playable build.
+ *
+ * By slug rather than by package id because the page that reads this is `/games/[slug]/`
+ * and it looks its game up by slug. Keyed by id, `CONTROLS.get(game.slug)` returned nothing
+ * for the eighteen games whose two names differ, so their pages showed no controls at all —
+ * the same mismatch that made eleven of them unplayable. See the note in `registry.ts`.
+ */
+const SLUG_BY_ID: ReadonlyMap<string, string> = new Map(
+  CATALOGUE.map((entry) => [entry.id, entry.slug]),
+);
+
 export const CONTROLS: ReadonlyMap<string, GameControls> = new Map(
-  MANIFESTS.map((manifest) => [manifest.id, manifest.controls]),
+  MANIFESTS.map((manifest) => [SLUG_BY_ID.get(manifest.id) ?? manifest.id, manifest.controls]),
 );

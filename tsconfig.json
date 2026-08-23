@@ -132,6 +132,12 @@
     },
     {
       "path": "./packages/games/gravity-run"
+    },
+    {
+      "path": "./packages/games/match"
+    },
+    {
+      "path": "./packages/games/frogs-fight"
     }
   ]
 }
