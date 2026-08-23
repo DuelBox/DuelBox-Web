@@ -15,6 +15,7 @@ import { CATALOGUE } from '@/data/catalogue.generated';
 import { seatColour } from '@/styles/tokens';
 import { readLastMode, writeLastMode } from '@/lib/last-mode';
 import { GameHost } from './GameHost';
+import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
 import { Controls } from './Controls';
@@ -45,6 +46,20 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [create, setCreate] = useState<(() => Game) | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const [activeSeat, setActiveSeat] = useState<SeatId | null>(null);
+  /**
+   * Whether to record an input trace, read once from `?trace=1`.
+   *
+   * A query parameter rather than a build flag, because the report that matters is the one
+   * somebody makes about the deployed site, and a flag they cannot turn on is a flag that
+   * never records the bug. Read in an effect rather than during render: this page is
+   * statically exported, and reading `location` while rendering makes the server's HTML and
+   * the browser's first paint disagree.
+   */
+  const [recording, setRecording] = useState(false);
+  const [getTrace, setGetTrace] = useState<(() => string) | null>(null);
+  useEffect(() => {
+    setRecording(new URLSearchParams(globalThis.location.search).get('trace') === '1');
+  }, []);
   // The running head-to-head for this sitting. A pair that plays five in a row wants to
   // know the score across all five, not just the last one.
   const [record, setRecord] = useState({ p1: 0, p2: 0, draws: 0 });
@@ -249,7 +264,16 @@ export function PlaySurface({ slug }: { slug: string }) {
             onScore={handleScore}
             onActiveSeat={setActiveSeat}
             onRequestPause={handlePauseRequest}
+            recordTrace={recording}
+            // Wrapped, not passed. React treats a function handed to a state setter as an
+            // *updater* and calls it with the previous state — so `setGetTrace(get)` invoked
+            // the getter and stored the string it returned, and the panel then tried to call
+            // a string. The trace stayed empty and nothing threw where anyone would see it.
+            onTraceReady={(get) => {
+              setGetTrace(() => get);
+            }}
           />
+          <TracePanel getTrace={recording ? getTrace : null} />
           <MatchOverlay
             state={match}
             manifest={manifest}

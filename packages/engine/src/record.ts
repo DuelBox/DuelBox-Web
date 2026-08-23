@@ -111,6 +111,11 @@ export class InputRecorder {
     this.#input.setSplit(split);
   }
 
+  /** A query rather than a change, so it is delegated and not written down. */
+  isBound(code: string): boolean {
+    return this.#input.isBound(code);
+  }
+
   clear(): void {
     this.#pending.push({ kind: 'clear' });
     this.#input.clear();

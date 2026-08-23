@@ -59,6 +59,7 @@ import { manifest as spikeAttacks } from '@duelbox/game-spike-attacks';
 import { manifest as slingPuck } from '@duelbox/game-sling-puck';
 import { manifest as tankBattle } from '@duelbox/game-tanks';
 import { manifest as wheelie } from '@duelbox/game-wheelie';
+import { manifest as cupPong } from '@duelbox/game-cup-pong';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -71,6 +72,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   colorWars,
   cornhole,
   crabbyVolley,
+  cupPong,
   darts,
   dotsAndBoxes,
   flappyJump,

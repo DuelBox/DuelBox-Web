@@ -159,6 +159,9 @@
     },
     {
       "path": "./packages/games/wheelie"
+    },
+    {
+      "path": "./packages/games/cup-pong"
     }
   ]
 }

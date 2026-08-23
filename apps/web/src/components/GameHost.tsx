@@ -5,8 +5,10 @@ import {
   Canvas2DRenderer,
   FixedLoop,
   InputManager,
+  InputRecorder,
   InputView,
   Rng,
+  exportTrace,
   RunLoop,
   browserClock,
   clampDevicePixelRatio,
@@ -59,6 +61,21 @@ export interface GameHostProps {
   onActiveSeat?: (seat: SeatId | null) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
+  /**
+   * Record every input event, for export as a replayable trace.
+   *
+   * Off unless asked for. Recording costs an array push per event and nothing else, but a
+   * match nobody is debugging should not accumulate one — and a feature that is always on is
+   * a feature nobody can rule out when something goes wrong.
+   */
+  recordTrace?: boolean;
+  /**
+   * Handed a function that returns the trace so far, as JSON, whenever recording is on.
+   *
+   * A getter rather than the trace itself: the trace grows every frame, and passing the value
+   * up would either re-render the shell sixty times a second or hand it something stale.
+   */
+  onTraceReady?: (getTrace: () => string) => void;
 }
 
 export function GameHost({
@@ -73,6 +90,8 @@ export function GameHost({
   onScore,
   onActiveSeat,
   onRequestPause,
+  recordTrace = false,
+  onTraceReady,
 }: GameHostProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runnerRef = useRef<RunLoop | null>(null);
@@ -91,6 +110,8 @@ export function GameHost({
   onActiveSeatRef.current = onActiveSeat;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onTraceReadyRef = useRef(onTraceReady);
+  onTraceReadyRef.current = onTraceReady;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -134,10 +155,15 @@ export function GameHost({
     const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
 
     const initialSeat = game.getActiveSeat?.() ?? null;
-    const input = new InputManager(logical, {
+    const manager = new InputManager(logical, {
       split: splitFor(initialSeat),
       bottomSeat: initialSeat ?? localSeat,
     });
+    // The recorder has the same surface as the manager, so every call site below is unchanged
+    // whether or not anybody is recording — which is the only way a recording is worth having,
+    // since a separate code path would not be the path the bug was on.
+    const recorder = recordTrace ? new InputRecorder(manager) : null;
+    const input: InputManager | InputRecorder = recorder ?? manager;
 
     gameRef.current = game;
     const gameContext: GameContext = {
@@ -317,6 +343,12 @@ export function GameHost({
     });
     loopRef.current = loop;
 
+    if (recorder !== null) {
+      onTraceReadyRef.current?.(() =>
+        exportTrace(recorder.toTrace(manifest.id, seed, loop.stepSeconds)),
+      );
+    }
+
     const runner = new RunLoop(loop, browserClock());
     runnerRef.current = runner;
 
@@ -353,7 +385,14 @@ export function GameHost({
       globalThis.removeEventListener('blur', onBlur);
       game.destroy();
     };
-  }, [manifest, createGame, seed, localSeat, presentation, botDifficulty]);
+    // `recordTrace` is a real dependency rather than a ref, unlike every other prop here.
+    //
+    // A recorder can only be installed when the manager is built, so turning recording on has
+    // to rebuild the host — and reading it through a ref meant it was read once at mount, before
+    // the query parameter had been resolved in an effect, so the recorder was never made at all
+    // and the trace stayed empty. Rebuilding costs nothing where it actually happens: recording
+    // is decided on the lobby screen, before there is a match to lose.
+  }, [manifest, createGame, seed, localSeat, presentation, botDifficulty, recordTrace]);
 
   // Start and stop with the phase. Separate from setup so pausing never rebuilds the game.
   useEffect(() => {

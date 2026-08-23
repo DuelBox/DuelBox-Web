@@ -1,0 +1,39 @@
+/* Deliberately plain and deliberately in the corner: this is a debugging aid, and it must
+   never be mistaken for part of the game or cover any of it. */
+.panel {
+  position: absolute;
+  top: var(--db-space-2);
+  right: var(--db-space-2);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  padding: var(--db-space-1) var(--db-space-2);
+  border: 1px solid var(--db-border);
+  border-radius: 6px;
+  background: var(--db-paper);
+  font-size: var(--db-text-xs);
+  opacity: 0.85;
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--db-muted);
+}
+
+.size {
+  font-family: var(--db-font-mono);
+  color: var(--db-body);
+}
+
+.copy {
+  font: inherit;
+  padding: 2px 8px;
+  border: 1px solid var(--db-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--db-body);
+  cursor: pointer;
+}

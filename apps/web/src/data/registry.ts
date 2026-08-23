@@ -70,6 +70,7 @@ const LOADERS: Record<string, Loader> = {
   'sling-puck': () => import('@duelbox/game-sling-puck').then((m) => m.default),
   'tanks': () => import('@duelbox/game-tanks').then((m) => m.default),
   wheelie: () => import('@duelbox/game-wheelie').then((m) => m.default),
+  'cup-pong': () => import('@duelbox/game-cup-pong').then((m) => m.default),
 };
 
 /**

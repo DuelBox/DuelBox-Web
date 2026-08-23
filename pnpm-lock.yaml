@@ -76,6 +76,9 @@ importers:
       '@duelbox/game-crabby-volley':
         specifier: workspace:*
         version: link:../../packages/games/crabby-volley
+      '@duelbox/game-cup-pong':
+        specifier: workspace:*
+        version: link:../../packages/games/cup-pong
       '@duelbox/game-darts':
         specifier: workspace:*
         version: link:../../packages/games/darts
@@ -300,6 +303,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/crabby-volley:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/cup-pong:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
