@@ -90,6 +90,10 @@ async function main() {
     'the header policy names script-src; it would intersect with — and override — the ' +
       'hashed policy each page declares',
   );
+  must(
+    headers.includes('upgrade-insecure-requests'),
+    '_headers is missing upgrade-insecure-requests, which is where it belongs — see below',
+  );
 
   // 2. The same set in vercel.json, so the two hosts cannot drift apart.
   const vercel = await readFile(join(out, 'vercel.json'), 'utf8').catch(() => '');
@@ -115,6 +119,18 @@ async function main() {
     for (const directive of REQUIRED_DIRECTIVES) {
       must(policy.includes(directive), `${label} policy is missing: ${directive}`);
     }
+
+    // A meta policy travels with the file to every origin it is ever served from, and the
+    // export is served over plain HTTP by the local preview, the e2e suite and any phone
+    // pointed at a laptop. WebKit does not exempt 127.0.0.1 from the upgrade the way
+    // Chromium does, so this one directive in the page rewrote every chunk URL to https and
+    // took out the entire iPhone half of the e2e matrix — as sixty-second timeouts, which
+    // look like a busy machine rather than a policy. It belongs in the header.
+    must(
+      !policy.includes('upgrade-insecure-requests'),
+      `${label} declares upgrade-insecure-requests in the page; it breaks every plain-HTTP ` +
+        'origin on WebKit and belongs in the response header',
+    );
 
     const scriptSrc = /script-src ([^;]*)/.exec(policy)?.[1] ?? '';
     must(scriptSrc.length > 0, `${label} policy has no script-src`);

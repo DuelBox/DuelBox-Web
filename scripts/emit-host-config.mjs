@@ -138,13 +138,27 @@ function buildPageCsp(hashes) {
 }
 
 /**
- * The policy that goes in the header: only what a meta tag cannot express.
+ * The policy that goes in the header: what a meta tag cannot express, and what it must not.
  *
  * Emphatically not the whole policy. A header CSP and a meta CSP are both enforced and the
  * browser applies the intersection, so anything named here in a weaker form than the page
  * declares would quietly win.
+ *
+ * - `frame-ancestors` is here because a meta tag cannot express it at all.
+ * - `upgrade-insecure-requests` is here because a meta tag expresses it **too well**. Baked
+ *   into the HTML it travels with the file to every origin the file is ever served from, and
+ *   the exported site is served over plain HTTP in three of them: the local preview, the
+ *   end-to-end suite, and a phone pointed at a laptop on the same network. Chromium exempts
+ *   127.0.0.1 from the upgrade; **WebKit does not**, so on iOS Safari every chunk on the page
+ *   was rewritten to `https://127.0.0.1:4173` and died with a TLS error, leaving the shell
+ *   sitting on "Loading tic tac toe…" forever. The whole iPhone half of the e2e matrix
+ *   failed that way, and each spec failed on a sixty-second timeout, which reads like a slow
+ *   machine rather than a policy rewriting the URL.
+ *
+ *   As a *header* the directive still does its job — the host serving production over HTTPS
+ *   sets it, and the file no longer carries the instruction anywhere else.
  */
-const HEADER_ONLY_DIRECTIVES = new Set(['frame-ancestors']);
+const HEADER_ONLY_DIRECTIVES = new Set(['frame-ancestors', 'upgrade-insecure-requests']);
 
 function buildHeaderCsp() {
   return Object.entries(CSP_STATIC_DIRECTIVES)
