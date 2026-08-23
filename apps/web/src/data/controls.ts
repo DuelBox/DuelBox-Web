@@ -60,11 +60,17 @@ import { manifest as slingPuck } from '@duelbox/game-sling-puck';
 import { manifest as tankBattle } from '@duelbox/game-tanks';
 import { manifest as wheelie } from '@duelbox/game-wheelie';
 import { manifest as cupPong } from '@duelbox/game-cup-pong';
+import { manifest as snakesLadders } from '@duelbox/game-snakes-ladders';
+import { manifest as miniGolf } from '@duelbox/game-mini-golf';
+import { manifest as beachBall } from '@duelbox/game-beach-ball';
+import { manifest as wrestle } from '@duelbox/game-wrestle';
+import { manifest as racingCars } from '@duelbox/game-racing-cars';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
+  beachBall,
   bowling,
   brokenTiles,
   cannonDuel,
@@ -91,6 +97,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   match,
   mathQuiz,
   memory,
+  miniGolf,
   miniSoccer,
   paintFight,
   penaltyKicks,
@@ -98,6 +105,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   pool,
   popIt,
   pullTheRope,
+  racingCars,
   reversi,
   roadDodge,
   robotArena,
@@ -107,6 +115,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   slingPuck,
   slotCars,
   snakes,
+  snakesLadders,
   spikeAttacks,
   starCatcher,
   sumo,
@@ -115,6 +124,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   ultimateTtt,
   whackAMole,
   wheelie,
+  wrestle,
   yazy,
 ];
 

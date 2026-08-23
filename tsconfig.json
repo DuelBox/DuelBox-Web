@@ -162,6 +162,21 @@
     },
     {
       "path": "./packages/games/cup-pong"
+    },
+    {
+      "path": "./packages/games/snakes-ladders"
+    },
+    {
+      "path": "./packages/games/mini-golf"
+    },
+    {
+      "path": "./packages/games/beach-ball"
+    },
+    {
+      "path": "./packages/games/wrestle"
+    },
+    {
+      "path": "./packages/games/racing-cars"
     }
   ]
 }

@@ -71,6 +71,11 @@ const LOADERS: Record<string, Loader> = {
   'tanks': () => import('@duelbox/game-tanks').then((m) => m.default),
   wheelie: () => import('@duelbox/game-wheelie').then((m) => m.default),
   'cup-pong': () => import('@duelbox/game-cup-pong').then((m) => m.default),
+  'snakes-ladders': () => import('@duelbox/game-snakes-ladders').then((m) => m.default),
+  'mini-golf': () => import('@duelbox/game-mini-golf').then((m) => m.default),
+  'beach-ball': () => import('@duelbox/game-beach-ball').then((m) => m.default),
+  wrestle: () => import('@duelbox/game-wrestle').then((m) => m.default),
+  'racing-cars': () => import('@duelbox/game-racing-cars').then((m) => m.default),
 };
 
 /**

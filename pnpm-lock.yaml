@@ -55,6 +55,9 @@ importers:
       '@duelbox/game-air-hockey':
         specifier: workspace:*
         version: link:../../packages/games/air-hockey
+      '@duelbox/game-beach-ball':
+        specifier: workspace:*
+        version: link:../../packages/games/beach-ball
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
@@ -133,6 +136,9 @@ importers:
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
+      '@duelbox/game-mini-golf':
+        specifier: workspace:*
+        version: link:../../packages/games/mini-golf
       '@duelbox/game-mini-soccer':
         specifier: workspace:*
         version: link:../../packages/games/mini-soccer
@@ -154,6 +160,9 @@ importers:
       '@duelbox/game-pull-the-rope':
         specifier: workspace:*
         version: link:../../packages/games/pull-the-rope
+      '@duelbox/game-racing-cars':
+        specifier: workspace:*
+        version: link:../../packages/games/racing-cars
       '@duelbox/game-reversi':
         specifier: workspace:*
         version: link:../../packages/games/reversi
@@ -184,6 +193,9 @@ importers:
       '@duelbox/game-snakes':
         specifier: workspace:*
         version: link:../../packages/games/snakes
+      '@duelbox/game-snakes-ladders':
+        specifier: workspace:*
+        version: link:../../packages/games/snakes-ladders
       '@duelbox/game-spike-attacks':
         specifier: workspace:*
         version: link:../../packages/games/spike-attacks
@@ -208,6 +220,9 @@ importers:
       '@duelbox/game-wheelie':
         specifier: workspace:*
         version: link:../../packages/games/wheelie
+      '@duelbox/game-wrestle':
+        specifier: workspace:*
+        version: link:../../packages/games/wrestle
       '@duelbox/game-yazy':
         specifier: workspace:*
         version: link:../../packages/games/yazy
@@ -240,6 +255,15 @@ importers:
         version: 3.25.76
 
   packages/games/air-hockey:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/beach-ball:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -482,6 +506,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/mini-golf:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/mini-soccer:
     dependencies:
       '@duelbox/engine':
@@ -537,6 +570,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/pull-the-rope:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/racing-cars:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -626,6 +668,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/snakes-ladders:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/spike-attacks:
     dependencies:
       '@duelbox/engine':
@@ -690,6 +741,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/wheelie:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/wrestle:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
