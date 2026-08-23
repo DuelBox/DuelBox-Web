@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BINDINGS, InputManager, InputView, Rng, vec2 } from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
-import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
+import type { Game, GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
   AIM_SECONDS,
@@ -227,8 +227,8 @@ function trace(game: ShipBattleGame, steps: number, input: InputState = IDLE): s
     circle: record,
     strokeCircle: record,
     line: record,
-    text: (value: string, ...rest: number[]) => {
-      record(...rest);
+    text: (value: string, x: number, y: number, sizePx: number) => {
+      record(x, y, sizePx);
       hash ^= value.length;
       hash = Math.imul(hash, 16777619);
     },
@@ -239,7 +239,7 @@ function trace(game: ShipBattleGame, steps: number, input: InputState = IDLE): s
   const seen: string[] = [];
   for (let step = 0; step < steps; step += 1) {
     game.update(STEP, input);
-    game.render(renderer, 0);
+    game.render(renderer);
     if (step % 30 === 0) {
       const score = game.getScore();
       seen.push(`${String(score.p1)}:${String(score.p2)}:${String(hash >>> 0)}`);
@@ -536,7 +536,7 @@ describe('whose turn it is', () => {
     shared.position.attacker = 'p2';
     shared.update(STEP, IDLE);
     const rotated = new RecordingRenderer();
-    shared.render(rotated, 0);
+    shared.render(rotated);
     const angle = rotated.calls.find((call) => call.op === 'pushRotation')?.args[0];
     expect(typeof angle).toBe('number');
     expect(angle as number, 'the far seat reads its own turn upright').toBeGreaterThan(0);
@@ -546,7 +546,7 @@ describe('whose turn it is', () => {
     alone.position.attacker = 'p2';
     alone.update(STEP, IDLE);
     const upright = new RecordingRenderer();
-    alone.render(upright, 0);
+    alone.render(upright);
     expect(
       upright.calls.find((call) => call.op === 'pushRotation')?.args[0],
       'one player alone owns the whole viewport, always upright',
@@ -559,7 +559,7 @@ describe('whose turn it is', () => {
     for (const phase of ['aim', 'flight'] as const) {
       game.position.phase = phase;
       const renderer = new RecordingRenderer();
-      game.render(renderer, 0);
+      game.render(renderer);
       const headline = renderer.texts()[0];
       expect(headline, phase).toBeTruthy();
       phases.set(phase, headline ?? '');
@@ -886,10 +886,10 @@ describe('seat symmetry', () => {
     // by exactly the rib — nothing else about the two ships may.
     const game = started(151);
     const before = new RecordingRenderer();
-    game.render(before, 0);
+    game.render(before);
     game.position.attacker = 'p2';
     const after = new RecordingRenderer();
-    game.render(after, 0);
+    game.render(after);
     expect(after.calls.length).toBeGreaterThan(0);
     expect(after.ops.filter((op) => op === 'rect').length).toBe(
       before.ops.filter((op) => op === 'rect').length,
@@ -1071,7 +1071,7 @@ describe('what is drawn', () => {
       game.update(STEP, IDLE);
       if (step % 37 !== 0) continue;
       const renderer = new RecordingRenderer();
-      game.render(renderer, 0);
+      game.render(renderer);
       for (const call of renderer.calls) {
         if (call.op === 'text' || call.op === 'pushRotation') continue;
         for (const value of call.args) {
@@ -1088,8 +1088,9 @@ describe('what is drawn', () => {
     const game = started(709, 'hard', 'normal');
     for (let step = 0; step < 60 * 40; step += 1) game.update(STEP, IDLE);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer(), 0);
-    game.render(new RecordingRenderer(), 1);
+    const asContract: Game = game;
+    asContract.render(new RecordingRenderer(), 0);
+    asContract.render(new RecordingRenderer(), 1);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 
@@ -1098,7 +1099,7 @@ describe('what is drawn', () => {
     for (let step = 0; step < 400; step += 1) {
       game.update(STEP, IDLE);
       const renderer = new RecordingRenderer();
-      game.render(renderer, 0);
+      game.render(renderer);
       const pushes = renderer.ops.filter((op) => op === 'pushRotation').length;
       const pops = renderer.ops.filter((op) => op === 'popSeatRotation').length;
       expect(pops, `step ${String(step)}`).toBe(pushes);
@@ -1111,10 +1112,10 @@ describe('what is drawn', () => {
     const game = started(727);
     game.position.attacker = 'p1';
     const shotAtP2 = new RecordingRenderer();
-    game.render(shotAtP2, 0);
+    game.render(shotAtP2);
     game.position.attacker = 'p2';
     const shotAtP1 = new RecordingRenderer();
-    game.render(shotAtP1, 0);
+    game.render(shotAtP1);
     // Counted inside the hull under fire only. The whole frame draws both ships, so a
     // total over the frame is the same either way round and would prove nothing.
     const ribs = (renderer: RecordingRenderer): number =>
@@ -1137,11 +1138,11 @@ describe('what is drawn', () => {
   it('marks a spent plate differently from a live one', () => {
     const game = started(733);
     const live = new RecordingRenderer();
-    game.render(live, 0);
+    game.render(live);
     game.position.p2.charges = 0;
     game.position.p2.downTurns = RECHARGE_TURNS;
     const spent = new RecordingRenderer();
-    game.render(spent, 0);
+    game.render(spent);
     expect(spent.texts().join(' '), 'a spent plate says so in words').toMatch(/out/i);
     expect(live.texts().join(' ')).not.toMatch(/plate out/i);
   });
@@ -1154,7 +1155,7 @@ describe('what is drawn', () => {
     game.position.target = cellAt(4, 1);
     game.position.phase = 'flight';
     const renderer = new RecordingRenderer();
-    game.render(renderer, 0);
+    game.render(renderer);
     const [x, y] = pointOf(cellAt(4, 1));
     const marked = renderer.calls.some(
       (call) =>
@@ -1171,7 +1172,7 @@ describe('what is drawn', () => {
     const game = started(743);
     game.position.p1.breached[0] = true;
     const renderer = new RecordingRenderer();
-    game.render(renderer, 0);
+    game.render(renderer);
     const labels = renderer.texts().filter((value) => /hull/i.test(value));
     expect(labels.length, 'the hull under fire and the gunner own ship').toBe(2);
     expect(labels.some((value) => value.startsWith('P1'))).toBe(true);

@@ -69,6 +69,11 @@ class ScriptedInput implements InputState {
     target.actionHeld = pressed;
   }
 
+  /** Held without the rising edge — what a finger already down looks like on a later step. */
+  hold(seat: SeatId, held: boolean): void {
+    this.#mutable(seat).actionHeld = held;
+  }
+
   #mutable(seat: SeatId): MutableSeatInput {
     return seat === 'p1' ? this.#p1 : this.#p2;
   }
@@ -237,7 +242,7 @@ describe('the manifest', () => {
     // A real-time game that answered this would switch the shell into shared-board mode
     // and take one seat's pointer zone away.
     const game = new WrestleGame();
-    expect(game.getActiveSeat).toBeUndefined();
+    expect((game as { getActiveSeat?: unknown }).getActiveSeat).toBeUndefined();
   });
 });
 
@@ -450,7 +455,7 @@ describe('the controls', () => {
     const game = started(41);
     const input = new ScriptedInput();
     openRound(game, input);
-    input.seat('p1').actionHeld = true;
+    input.hold('p1', true);
     game.update(STEP, input);
 
     expect(game.wrestler('p1').stance).toBe('grounded');

@@ -182,7 +182,7 @@ class RecordingRenderer implements Renderer {
 
 function draw(game: RacingCarsGame): RecordingRenderer {
   const renderer = new RecordingRenderer();
-  game.render(renderer, 0);
+  game.render(renderer);
   return renderer;
 }
 
