@@ -88,6 +88,9 @@ importers:
       '@duelbox/game-king-of-the-yard':
         specifier: workspace:*
         version: link:../../packages/games/king-of-the-yard
+      '@duelbox/game-knife-thrower':
+        specifier: workspace:*
+        version: link:../../packages/games/knife-thrower
       '@duelbox/game-ludo':
         specifier: workspace:*
         version: link:../../packages/games/ludo
@@ -282,6 +285,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/king-of-the-yard:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/knife-thrower:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

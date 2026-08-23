@@ -105,6 +105,9 @@
     },
     {
       "path": "./packages/games/ping-pong"
+    },
+    {
+      "path": "./packages/games/knife-thrower"
     }
   ]
 }

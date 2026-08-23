@@ -23,6 +23,7 @@
     "@duelbox/game-hand-slap": "workspace:*",
     "@duelbox/game-hot-potato": "workspace:*",
     "@duelbox/game-king-of-the-yard": "workspace:*",
+    "@duelbox/game-knife-thrower": "workspace:*",
     "@duelbox/game-ludo": "workspace:*",
     "@duelbox/game-mancala": "workspace:*",
     "@duelbox/game-memory": "workspace:*",

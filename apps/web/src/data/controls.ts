@@ -41,6 +41,7 @@ import { manifest as ultimateTtt } from '@duelbox/game-ultimate-ttt';
 import { manifest as yazy } from '@duelbox/game-yazy';
 import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
 import { manifest as pingPong } from '@duelbox/game-ping-pong';
+import { manifest as knifeThrower } from '@duelbox/game-knife-thrower';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -56,6 +57,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   handSlap,
   hotPotato,
   kingOfTheYard,
+  knifeThrower,
   ludo,
   mancala,
   memory,
