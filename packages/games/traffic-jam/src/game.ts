@@ -5,12 +5,15 @@ import { createState, type State } from './rules.js';
 export class TrafficJamGame implements Game {
   #state: State = createState();
 
-  init(_context: GameContext): void {
+  init(context: GameContext): void {
+    void context;
     this.#state = createState();
   }
 
-  update(_dt: number, _input: InputState): void {
+  update(dt: number, input: InputState): void {
     // TODO: simulate. Runs on the fixed timestep; must not allocate.
+    void dt;
+    void input;
   }
 
   render(renderer: Renderer): void {

@@ -14,7 +14,8 @@ export function createState(): State {
   return { p1: 0, p2: 0 };
 }
 
-export function winnerOf(_state: State): SeatId | 'draw' | null {
+export function winnerOf(state: State): SeatId | 'draw' | null {
   // TODO: implement the win condition from SPEC.md using the SDK's resolve() helper.
+  void state;
   return null;
 }

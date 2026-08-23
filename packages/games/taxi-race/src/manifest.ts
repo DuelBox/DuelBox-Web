@@ -5,7 +5,7 @@ export const manifest = parseGameManifest({
   name: 'Taxi Race',
   category: 'Racing',
   archetype: 'rt-race',
-  modes: ["friend","bot"],
+  modes: ['friend', 'bot'],
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: 600, height: 1000 },
   orientation: 'portrait',
