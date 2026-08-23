@@ -5,18 +5,20 @@ export const manifest = parseGameManifest({
   name: 'Snakes and Ladders',
   category: 'Board',
   archetype: 'turn-board',
-  modes: ["friend","bot"],
+  modes: ['friend', 'bot'],
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: 900, height: 900 },
   orientation: 'any',
   zoneSplit: 'shared-board',
-  roundSeconds: 90,
+  // Sixty-four fields with two dice a turn is about thirty turns each, and a turn is quick.
+  roundSeconds: 150,
   // Required, and deliberately not optional: the shell shows this before the match and
   // again from the pause menu, so a game without it would advertise nothing to a player
   // holding a keyboard. Written for a player rather than as a spec.
   controls: {
-    keyboard: 'TODO: which keys do what, for both seats',
-    pointer: 'TODO: the pointer idiom, or empty if this archetype has none',
+    keyboard:
+      'Player one: A and D pick a die, Space rolls and moves. Player two: arrow keys and Enter',
+    pointer: 'Tap to roll, then tap the square you want to move to, or its die',
   },
-  tags: [],
+  tags: ['board', 'dice', 'race'],
 });
