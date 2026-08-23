@@ -79,6 +79,9 @@ importers:
       '@duelbox/game-four-in-a-row':
         specifier: workspace:*
         version: link:../../packages/games/four-in-a-row
+      '@duelbox/game-fruit-duel':
+        specifier: workspace:*
+        version: link:../../packages/games/fruit-duel
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
@@ -94,6 +97,9 @@ importers:
       '@duelbox/game-ludo':
         specifier: workspace:*
         version: link:../../packages/games/ludo
+      '@duelbox/game-lumber-jack':
+        specifier: workspace:*
+        version: link:../../packages/games/lumber-jack
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
@@ -269,6 +275,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/fruit-duel:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/hand-slap:
     dependencies:
       '@duelbox/engine':
@@ -306,6 +321,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/ludo:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/lumber-jack:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

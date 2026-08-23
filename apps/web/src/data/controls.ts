@@ -43,6 +43,8 @@ import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
 import { manifest as pingPong } from '@duelbox/game-ping-pong';
 import { manifest as knifeThrower } from '@duelbox/game-knife-thrower';
 import { manifest as mathQuiz } from '@duelbox/game-math-quiz';
+import { manifest as fruitDuel } from '@duelbox/game-fruit-duel';
+import { manifest as lumberJack } from '@duelbox/game-lumber-jack';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -55,11 +57,13 @@ export const MANIFESTS: readonly GameManifest[] = [
   darts,
   dotsAndBoxes,
   fourInARow,
+  fruitDuel,
   handSlap,
   hotPotato,
   kingOfTheYard,
   knifeThrower,
   ludo,
+  lumberJack,
   mancala,
   mathQuiz,
   memory,

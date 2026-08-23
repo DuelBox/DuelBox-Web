@@ -53,6 +53,8 @@ const LOADERS: Record<string, Loader> = {
   'ping-pong': () => import('@duelbox/game-ping-pong').then((m) => m.default),
   'knife-thrower': () => import('@duelbox/game-knife-thrower').then((m) => m.default),
   'math-quiz': () => import('@duelbox/game-math-quiz').then((m) => m.default),
+  'fruit-duel': () => import('@duelbox/game-fruit-duel').then((m) => m.default),
+  'lumber-jack': () => import('@duelbox/game-lumber-jack').then((m) => m.default),
 };
 
 /**

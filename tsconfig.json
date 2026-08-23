@@ -111,6 +111,12 @@
     },
     {
       "path": "./packages/games/math-quiz"
+    },
+    {
+      "path": "./packages/games/fruit-duel"
+    },
+    {
+      "path": "./packages/games/lumber-jack"
     }
   ]
 }
