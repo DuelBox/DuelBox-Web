@@ -117,6 +117,12 @@
     },
     {
       "path": "./packages/games/lumber-jack"
+    },
+    {
+      "path": "./packages/games/robot-arena"
+    },
+    {
+      "path": "./packages/games/flappy-jump"
     }
   ]
 }

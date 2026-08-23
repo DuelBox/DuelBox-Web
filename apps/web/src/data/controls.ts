@@ -45,6 +45,8 @@ import { manifest as knifeThrower } from '@duelbox/game-knife-thrower';
 import { manifest as mathQuiz } from '@duelbox/game-math-quiz';
 import { manifest as fruitDuel } from '@duelbox/game-fruit-duel';
 import { manifest as lumberJack } from '@duelbox/game-lumber-jack';
+import { manifest as robotArena } from '@duelbox/game-robot-arena';
+import { manifest as flappyJump } from '@duelbox/game-flappy-jump';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -56,6 +58,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   crabbyVolley,
   darts,
   dotsAndBoxes,
+  flappyJump,
   fourInARow,
   fruitDuel,
   handSlap,
@@ -76,6 +79,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   pullTheRope,
   reversi,
   roadDodge,
+  robotArena,
   rockPaperScissors,
   seaBattle,
   shutTheBox,

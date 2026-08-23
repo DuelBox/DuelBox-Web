@@ -76,6 +76,9 @@ importers:
       '@duelbox/game-dots-and-boxes':
         specifier: workspace:*
         version: link:../../packages/games/dots-and-boxes
+      '@duelbox/game-flappy-jump':
+        specifier: workspace:*
+        version: link:../../packages/games/flappy-jump
       '@duelbox/game-four-in-a-row':
         specifier: workspace:*
         version: link:../../packages/games/four-in-a-row
@@ -136,6 +139,9 @@ importers:
       '@duelbox/game-road-dodge':
         specifier: workspace:*
         version: link:../../packages/games/road-dodge
+      '@duelbox/game-robot-arena':
+        specifier: workspace:*
+        version: link:../../packages/games/robot-arena
       '@duelbox/game-rock-paper-scissors':
         specifier: workspace:*
         version: link:../../packages/games/rock-paper-scissors
@@ -258,6 +264,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/dots-and-boxes:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/flappy-jump:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -438,6 +453,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/road-dodge:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/robot-arena:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
