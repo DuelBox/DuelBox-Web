@@ -202,6 +202,9 @@ importers:
       '@duelbox/game-whack-a-mole':
         specifier: workspace:*
         version: link:../../packages/games/whack-a-mole
+      '@duelbox/game-wheelie':
+        specifier: workspace:*
+        version: link:../../packages/games/wheelie
       '@duelbox/game-yazy':
         specifier: workspace:*
         version: link:../../packages/games/yazy
@@ -666,6 +669,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/whack-a-mole:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/wheelie:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

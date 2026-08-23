@@ -156,6 +156,9 @@
     },
     {
       "path": "./packages/games/tanks"
+    },
+    {
+      "path": "./packages/games/wheelie"
     }
   ]
 }

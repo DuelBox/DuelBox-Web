@@ -58,6 +58,7 @@ import { manifest as hammerHit } from '@duelbox/game-hammer-hit';
 import { manifest as spikeAttacks } from '@duelbox/game-spike-attacks';
 import { manifest as slingPuck } from '@duelbox/game-sling-puck';
 import { manifest as tankBattle } from '@duelbox/game-tanks';
+import { manifest as wheelie } from '@duelbox/game-wheelie';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -111,6 +112,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   ticTacToe,
   ultimateTtt,
   whackAMole,
+  wheelie,
   yazy,
 ];
 

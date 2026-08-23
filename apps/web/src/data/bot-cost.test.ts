@@ -91,10 +91,13 @@ const REFERENCE_CEILING_MS = 22;
 /** Steps allowed to exceed it, so one hiccup is not a failure. */
 const ALLOWED_SPIKES = 2;
 
-// Timed once for the whole file. Floored at 1 so a suspiciously fast reading cannot make
-// the ceiling smaller than it was measured against.
-const machine = Math.max(1, calibrationMs() / REFERENCE_CALIBRATION_MS);
-const CEILING_MS = REFERENCE_CEILING_MS * machine;
+/**
+ * How much slower this machine is than the reference, floored at 1 so a suspiciously fast
+ * reading cannot make the ceiling tighter than the numbers it was measured against.
+ */
+function machineFactor(): number {
+  return Math.max(1, calibrationMs() / REFERENCE_CALIBRATION_MS);
+}
 
 describe('no bot stalls a frame', () => {
   const entries = Object.entries(LOADERS_FOR_TEST);
@@ -116,21 +119,40 @@ describe('no bot stalls a frame', () => {
       );
       const view = new InputView();
 
+      /**
+       * The machine is timed **around each game**, not once for the file, and the slower of
+       * the two readings is the one used.
+       *
+       * A single calibration at module load assumes the machine runs at one speed for the
+       * whole file, and it does not: this suite shares a laptop with whatever else is on it,
+       * and a run that starts quiet and gets busy is measured against a ceiling taken when
+       * it was quiet. Reversi and Drop Four failed exactly that way while several other
+       * processes were saturating the cores — a wall-clock reading reported as a defect in a
+       * search that had not changed. Bracketing each game means a load spike during its
+       * measurement widens its own ceiling, which is the only honest thing a clock can do.
+       */
+      const before = machineFactor();
       let worst = 0;
       let over = 0;
+      const spent: number[] = [];
       try {
         for (let i = 0; i < STEPS; i += 1) {
           const state = view.sync(input.beginStep(STEP));
           const started = performance.now();
           game.update(STEP, state);
-          const spent = performance.now() - started;
-          worst = Math.max(worst, spent);
-          if (spent > CEILING_MS) over += 1;
+          spent.push(performance.now() - started);
           if (game.getScore().winner !== null) break;
         }
       } finally {
         game.destroy();
       }
+
+    const machine = Math.max(before, machineFactor());
+    const ceiling = REFERENCE_CEILING_MS * machine;
+    for (const step of spent) {
+      worst = Math.max(worst, step);
+      if (step > ceiling) over += 1;
+    }
 
     // Always assert the game was actually driven, so a coverage run cannot pass this file
     // by doing nothing at all.
@@ -139,7 +161,7 @@ describe('no bot stalls a frame', () => {
 
     expect(
       over,
-      `${slug}'s hardest bot went over ${CEILING_MS.toFixed(0)}ms on ${String(over)} steps ` +
+      `${slug}'s hardest bot went over ${ceiling.toFixed(0)}ms on ${String(over)} steps ` +
         `(worst ${worst.toFixed(1)}ms) on a machine ${machine.toFixed(1)}× the reference — ` +
         'see the note at the top of this file',
     ).toBeLessThanOrEqual(ALLOWED_SPIKES);
@@ -150,7 +172,8 @@ describe('no bot stalls a frame', () => {
   });
 
   it('scales its ceiling to the machine it is running on', () => {
+    const machine = machineFactor();
     expect(machine, 'never tighter than the reference').toBeGreaterThanOrEqual(1);
-    expect(CEILING_MS).toBeGreaterThanOrEqual(REFERENCE_CEILING_MS);
+    expect(REFERENCE_CEILING_MS * machine).toBeGreaterThanOrEqual(REFERENCE_CEILING_MS);
   });
 });

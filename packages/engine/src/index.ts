@@ -87,6 +87,8 @@ export {
 } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 
+export { InputRecorder, TracePlayer, exportTrace, importTrace } from './record.js';
+export type { InputEvent, RecordedFrame, Trace } from './record.js';
 export { InputView } from './input-view.js';
 export type { InputStateView, SeatInputView } from './input-view.js';
 

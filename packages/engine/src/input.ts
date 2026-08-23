@@ -336,6 +336,11 @@ export class InputManager {
     this.#split = split;
   }
 
+  /** The logical box this manager was built for. A trace needs it to be replayable. */
+  get logical(): LogicalSize {
+    return this.#logical;
+  }
+
   get state(): Readonly<InputState> {
     return this.#state;
   }

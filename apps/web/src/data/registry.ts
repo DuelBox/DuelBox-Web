@@ -69,6 +69,7 @@ const LOADERS: Record<string, Loader> = {
   'spike-attacks': () => import('@duelbox/game-spike-attacks').then((m) => m.default),
   'sling-puck': () => import('@duelbox/game-sling-puck').then((m) => m.default),
   'tanks': () => import('@duelbox/game-tanks').then((m) => m.default),
+  wheelie: () => import('@duelbox/game-wheelie').then((m) => m.default),
 };
 
 /**
