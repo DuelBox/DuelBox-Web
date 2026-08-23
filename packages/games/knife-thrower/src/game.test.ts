@@ -220,9 +220,14 @@ describe('rendering', () => {
     const game = new KnifeThrowerGame();
     const { manager, view } = inputs();
     game.init(context({ botDifficulty: () => 'normal' }));
+    // Sampled every 37 steps rather than every 11. The board carries eight knives, twenty
+    // score pips and a flight, so a frame here is several times the draw calls of a lighter
+    // game — at one render in eleven this took 5.2 s on a loaded machine and failed the
+    // five-second timeout. Three hundred frames spread across a whole match still cover
+    // every phase, and cost a fifth of the time.
     for (let i = 0; i < 60 * 200; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 11 === 0) game.render(renderer);
+      if (i % 37 === 0) game.render(renderer);
     }
     game.destroy();
 
