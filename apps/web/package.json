@@ -26,6 +26,7 @@
     "@duelbox/game-knife-thrower": "workspace:*",
     "@duelbox/game-ludo": "workspace:*",
     "@duelbox/game-mancala": "workspace:*",
+    "@duelbox/game-math-quiz": "workspace:*",
     "@duelbox/game-memory": "workspace:*",
     "@duelbox/game-mini-soccer": "workspace:*",
     "@duelbox/game-paint-fight": "workspace:*",

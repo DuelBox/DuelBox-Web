@@ -97,6 +97,9 @@ importers:
       '@duelbox/game-mancala':
         specifier: workspace:*
         version: link:../../packages/games/mancala
+      '@duelbox/game-math-quiz':
+        specifier: workspace:*
+        version: link:../../packages/games/math-quiz
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
@@ -312,6 +315,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/mancala:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/math-quiz:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

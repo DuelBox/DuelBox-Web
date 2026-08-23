@@ -42,6 +42,7 @@ import { manifest as yazy } from '@duelbox/game-yazy';
 import { manifest as whackAMole } from '@duelbox/game-whack-a-mole';
 import { manifest as pingPong } from '@duelbox/game-ping-pong';
 import { manifest as knifeThrower } from '@duelbox/game-knife-thrower';
+import { manifest as mathQuiz } from '@duelbox/game-math-quiz';
 import type { GameManifest } from '@duelbox/game-sdk';
 
 export const MANIFESTS: readonly GameManifest[] = [
@@ -60,6 +61,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   knifeThrower,
   ludo,
   mancala,
+  mathQuiz,
   memory,
   miniSoccer,
   paintFight,

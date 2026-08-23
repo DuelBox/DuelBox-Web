@@ -108,6 +108,9 @@
     },
     {
       "path": "./packages/games/knife-thrower"
+    },
+    {
+      "path": "./packages/games/math-quiz"
     }
   ]
 }
