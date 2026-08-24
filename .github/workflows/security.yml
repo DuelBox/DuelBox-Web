@@ -27,16 +27,6 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          # CodeQL 3.27 runs diff-informed analysis on a pull request, which needs the
-          # merge-base — and a shallow clone has not got one. Without this it cannot build
-          # its own pr-diff-range extension pack: every row comes out
-          # `"undefined", "undefined", "undefined"`, validation stops at ten errors, and the
-          # job dies with `resolve extensions-by-pack` exit 2. That is why Static analysis
-          # has been red on every open pull request in this repository while passing on
-          # main, where the push event gives it a range it can compute — so the security
-          # scan the extended query suite was chosen for has never actually run on a PR.
-          fetch-depth: 0
       - uses: github/codeql-action/init@f09c1c0a94de965c15400f5634aa42fac8fb8f88 # v3.27.5
         with:
           languages: javascript-typescript
