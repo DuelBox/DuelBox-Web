@@ -22,8 +22,6 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const nextConfig: NextConfig = {
   output: 'export',
   basePath,
-  // Next only wants this set when there is one; an empty string breaks asset resolution.
-  assetPrefix: basePath === '' ? undefined : basePath,
   /**
    * `next build` and `next dev` share `.next` by default, so a build run while the dev
    * server is up deletes the manifests it is serving from and every route starts
