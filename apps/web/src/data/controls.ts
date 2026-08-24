@@ -60,21 +60,59 @@ import { manifest as slingPuck } from '@duelbox/game-sling-puck';
 import { manifest as tankBattle } from '@duelbox/game-tanks';
 import { manifest as wheelie } from '@duelbox/game-wheelie';
 import { manifest as cupPong } from '@duelbox/game-cup-pong';
+import { manifest as snakesLadders } from '@duelbox/game-snakes-ladders';
+import { manifest as miniGolf } from '@duelbox/game-mini-golf';
+import { manifest as beachBall } from '@duelbox/game-beach-ball';
+import { manifest as wrestle } from '@duelbox/game-wrestle';
+import { manifest as racingCars } from '@duelbox/game-racing-cars';
+import { manifest as shipBattle } from '@duelbox/game-ship-battle';
+import { manifest as backgammon } from '@duelbox/game-backgammon';
+import { manifest as archery } from '@duelbox/game-archery';
+import { manifest as basketball } from '@duelbox/game-basketball';
+import { manifest as carrom } from '@duelbox/game-carrom';
+import { manifest as chickenJump } from '@duelbox/game-chicken-jump';
+import { manifest as lightFingers } from '@duelbox/game-light-fingers';
+import { manifest as spinWar } from '@duelbox/game-spin-war';
+import { manifest as taxiRace } from '@duelbox/game-taxi-race';
+import { manifest as trafficJam } from '@duelbox/game-traffic-jam';
+import { manifest as shuriken } from '@duelbox/game-shuriken';
+import { manifest as soccerPool } from '@duelbox/game-soccer-pool';
+import { manifest as happyBirds } from '@duelbox/game-happy-birds';
+import { manifest as ratRace } from '@duelbox/game-rat-race';
+import { manifest as brickBlast } from '@duelbox/game-brick-blast';
+import { manifest as archeryMaster } from '@duelbox/game-archery-master';
+import { manifest as swordThrowing } from '@duelbox/game-sword-throwing';
+import { manifest as tennis } from '@duelbox/game-tennis';
+import { manifest as animalStack } from '@duelbox/game-animal-stack';
+import { manifest as pinball } from '@duelbox/game-pinball';
+import { manifest as dungBattle } from '@duelbox/game-dung-battle';
+import { manifest as crashIt } from '@duelbox/game-crash-it';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
+  animalStack,
+  archery,
+  archeryMaster,
+  backgammon,
+  basketball,
+  beachBall,
   bowling,
+  brickBlast,
   brokenTiles,
   cannonDuel,
+  carrom,
   checkers,
+  chickenJump,
   colorWars,
   cornhole,
   crabbyVolley,
+  crashIt,
   cupPong,
   darts,
   dotsAndBoxes,
+  dungBattle,
   flappyJump,
   fourInARow,
   frogsFight,
@@ -82,39 +120,55 @@ export const MANIFESTS: readonly GameManifest[] = [
   gravityRun,
   hammerHit,
   handSlap,
+  happyBirds,
   hotPotato,
   kingOfTheYard,
   knifeThrower,
+  lightFingers,
   ludo,
   lumberJack,
   mancala,
   match,
   mathQuiz,
   memory,
+  miniGolf,
   miniSoccer,
   paintFight,
   penaltyKicks,
+  pinball,
   pingPong,
   pool,
   popIt,
   pullTheRope,
+  racingCars,
+  ratRace,
   reversi,
   roadDodge,
   robotArena,
   rockPaperScissors,
   seaBattle,
+  shipBattle,
+  shuriken,
   shutTheBox,
   slingPuck,
   slotCars,
   snakes,
+  snakesLadders,
+  soccerPool,
   spikeAttacks,
+  spinWar,
   starCatcher,
   sumo,
+  swordThrowing,
   tankBattle,
+  taxiRace,
+  tennis,
   ticTacToe,
+  trafficJam,
   ultimateTtt,
   whackAMole,
   wheelie,
+  wrestle,
   yazy,
 ];
 

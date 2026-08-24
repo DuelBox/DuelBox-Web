@@ -55,18 +55,45 @@ importers:
       '@duelbox/game-air-hockey':
         specifier: workspace:*
         version: link:../../packages/games/air-hockey
+      '@duelbox/game-animal-stack':
+        specifier: workspace:*
+        version: link:../../packages/games/animal-stack
+      '@duelbox/game-archery':
+        specifier: workspace:*
+        version: link:../../packages/games/archery
+      '@duelbox/game-archery-master':
+        specifier: workspace:*
+        version: link:../../packages/games/archery-master
+      '@duelbox/game-backgammon':
+        specifier: workspace:*
+        version: link:../../packages/games/backgammon
+      '@duelbox/game-basketball':
+        specifier: workspace:*
+        version: link:../../packages/games/basketball
+      '@duelbox/game-beach-ball':
+        specifier: workspace:*
+        version: link:../../packages/games/beach-ball
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
+      '@duelbox/game-brick-blast':
+        specifier: workspace:*
+        version: link:../../packages/games/brick-blast
       '@duelbox/game-broken-tiles':
         specifier: workspace:*
         version: link:../../packages/games/broken-tiles
       '@duelbox/game-cannon-duel':
         specifier: workspace:*
         version: link:../../packages/games/cannon-duel
+      '@duelbox/game-carrom':
+        specifier: workspace:*
+        version: link:../../packages/games/carrom
       '@duelbox/game-checkers':
         specifier: workspace:*
         version: link:../../packages/games/checkers
+      '@duelbox/game-chicken-jump':
+        specifier: workspace:*
+        version: link:../../packages/games/chicken-jump
       '@duelbox/game-color-wars':
         specifier: workspace:*
         version: link:../../packages/games/color-wars
@@ -76,6 +103,9 @@ importers:
       '@duelbox/game-crabby-volley':
         specifier: workspace:*
         version: link:../../packages/games/crabby-volley
+      '@duelbox/game-crash-it':
+        specifier: workspace:*
+        version: link:../../packages/games/crash-it
       '@duelbox/game-cup-pong':
         specifier: workspace:*
         version: link:../../packages/games/cup-pong
@@ -85,6 +115,9 @@ importers:
       '@duelbox/game-dots-and-boxes':
         specifier: workspace:*
         version: link:../../packages/games/dots-and-boxes
+      '@duelbox/game-dung-battle':
+        specifier: workspace:*
+        version: link:../../packages/games/dung-battle
       '@duelbox/game-flappy-jump':
         specifier: workspace:*
         version: link:../../packages/games/flappy-jump
@@ -106,6 +139,9 @@ importers:
       '@duelbox/game-hand-slap':
         specifier: workspace:*
         version: link:../../packages/games/hand-slap
+      '@duelbox/game-happy-birds':
+        specifier: workspace:*
+        version: link:../../packages/games/happy-birds
       '@duelbox/game-hot-potato':
         specifier: workspace:*
         version: link:../../packages/games/hot-potato
@@ -115,6 +151,9 @@ importers:
       '@duelbox/game-knife-thrower':
         specifier: workspace:*
         version: link:../../packages/games/knife-thrower
+      '@duelbox/game-light-fingers':
+        specifier: workspace:*
+        version: link:../../packages/games/light-fingers
       '@duelbox/game-ludo':
         specifier: workspace:*
         version: link:../../packages/games/ludo
@@ -133,6 +172,9 @@ importers:
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
+      '@duelbox/game-mini-golf':
+        specifier: workspace:*
+        version: link:../../packages/games/mini-golf
       '@duelbox/game-mini-soccer':
         specifier: workspace:*
         version: link:../../packages/games/mini-soccer
@@ -142,6 +184,9 @@ importers:
       '@duelbox/game-penalty-kicks':
         specifier: workspace:*
         version: link:../../packages/games/penalty-kicks
+      '@duelbox/game-pinball':
+        specifier: workspace:*
+        version: link:../../packages/games/pinball
       '@duelbox/game-ping-pong':
         specifier: workspace:*
         version: link:../../packages/games/ping-pong
@@ -154,6 +199,12 @@ importers:
       '@duelbox/game-pull-the-rope':
         specifier: workspace:*
         version: link:../../packages/games/pull-the-rope
+      '@duelbox/game-racing-cars':
+        specifier: workspace:*
+        version: link:../../packages/games/racing-cars
+      '@duelbox/game-rat-race':
+        specifier: workspace:*
+        version: link:../../packages/games/rat-race
       '@duelbox/game-reversi':
         specifier: workspace:*
         version: link:../../packages/games/reversi
@@ -172,6 +223,12 @@ importers:
       '@duelbox/game-sea-battle':
         specifier: workspace:*
         version: link:../../packages/games/sea-battle
+      '@duelbox/game-ship-battle':
+        specifier: workspace:*
+        version: link:../../packages/games/ship-battle
+      '@duelbox/game-shuriken':
+        specifier: workspace:*
+        version: link:../../packages/games/shuriken
       '@duelbox/game-shut-the-box':
         specifier: workspace:*
         version: link:../../packages/games/shut-the-box
@@ -184,21 +241,42 @@ importers:
       '@duelbox/game-snakes':
         specifier: workspace:*
         version: link:../../packages/games/snakes
+      '@duelbox/game-snakes-ladders':
+        specifier: workspace:*
+        version: link:../../packages/games/snakes-ladders
+      '@duelbox/game-soccer-pool':
+        specifier: workspace:*
+        version: link:../../packages/games/soccer-pool
       '@duelbox/game-spike-attacks':
         specifier: workspace:*
         version: link:../../packages/games/spike-attacks
+      '@duelbox/game-spin-war':
+        specifier: workspace:*
+        version: link:../../packages/games/spin-war
       '@duelbox/game-star-catcher':
         specifier: workspace:*
         version: link:../../packages/games/star-catcher
       '@duelbox/game-sumo':
         specifier: workspace:*
         version: link:../../packages/games/sumo
+      '@duelbox/game-sword-throwing':
+        specifier: workspace:*
+        version: link:../../packages/games/sword-throwing
       '@duelbox/game-tanks':
         specifier: workspace:*
         version: link:../../packages/games/tanks
+      '@duelbox/game-taxi-race':
+        specifier: workspace:*
+        version: link:../../packages/games/taxi-race
+      '@duelbox/game-tennis':
+        specifier: workspace:*
+        version: link:../../packages/games/tennis
       '@duelbox/game-tic-tac-toe':
         specifier: workspace:*
         version: link:../../packages/games/tic-tac-toe
+      '@duelbox/game-traffic-jam':
+        specifier: workspace:*
+        version: link:../../packages/games/traffic-jam
       '@duelbox/game-ultimate-ttt':
         specifier: workspace:*
         version: link:../../packages/games/ultimate-ttt
@@ -208,6 +286,9 @@ importers:
       '@duelbox/game-wheelie':
         specifier: workspace:*
         version: link:../../packages/games/wheelie
+      '@duelbox/game-wrestle':
+        specifier: workspace:*
+        version: link:../../packages/games/wrestle
       '@duelbox/game-yazy':
         specifier: workspace:*
         version: link:../../packages/games/yazy
@@ -248,7 +329,70 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/animal-stack:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/archery:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/archery-master:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/backgammon:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/basketball:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/beach-ball:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/bowling:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/brick-blast:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -275,7 +419,25 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/carrom:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/checkers:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/chicken-jump:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -311,6 +473,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/crash-it:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/cup-pong:
     dependencies:
       '@duelbox/engine':
@@ -330,6 +501,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/dots-and-boxes:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/dung-battle:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -401,6 +581,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/happy-birds:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/hot-potato:
     dependencies:
       '@duelbox/engine':
@@ -420,6 +609,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/knife-thrower:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/light-fingers:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -482,6 +680,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/mini-golf:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/mini-soccer:
     dependencies:
       '@duelbox/engine':
@@ -501,6 +708,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/penalty-kicks:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/pinball:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -537,6 +753,24 @@ importers:
         version: link:../../game-sdk
 
   packages/games/pull-the-rope:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/racing-cars:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/rat-race:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -590,6 +824,24 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/ship-battle:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/shuriken:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/shut-the-box:
     dependencies:
       '@duelbox/engine':
@@ -626,7 +878,34 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/snakes-ladders:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/soccer-pool:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/spike-attacks:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/spin-war:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -653,6 +932,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/sword-throwing:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/tanks:
     dependencies:
       '@duelbox/engine':
@@ -662,7 +950,34 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/taxi-race:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/tennis:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/tic-tac-toe:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/traffic-jam:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -690,6 +1005,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/wheelie:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/wrestle:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

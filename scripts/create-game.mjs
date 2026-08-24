@@ -90,19 +90,30 @@ write(
   ) + '\n',
 );
 
+// Written out literally rather than via JSON.stringify, which expands `include` and
+// `exclude` onto three lines each where Prettier collapses them. That one difference made
+// every freshly scaffolded game fail `pnpm format:check` — the first step CI runs, and the
+// one this repository has already been caught by twice.
 write(
   'tsconfig.json',
-  JSON.stringify(
+  `{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [
     {
-      extends: '../../../tsconfig.base.json',
-      compilerOptions: { rootDir: './src', outDir: './dist' },
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts'],
-      references: [{ path: '../../engine' }, { path: '../../game-sdk' }],
+      "path": "../../engine"
     },
-    null,
-    2,
-  ) + '\n',
+    {
+      "path": "../../game-sdk"
+    }
+  ]
+}
+`,
 );
 
 write(
@@ -114,7 +125,7 @@ export const manifest = parseGameManifest({
   name: '${name}',
   category: '${category}',
   archetype: '${archetype}',
-  modes: ${JSON.stringify(modes)},
+  modes: [${modes.map((mode) => "'" + mode + "'").join(', ')}],
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: ${String(width)}, height: ${String(height)} },
   orientation: '${defaults.orientation}',
@@ -158,8 +169,9 @@ export function createState(): State {
   return { p1: 0, p2: 0${turnBased ? ", seat: 'p1'" : ''} };
 }
 
-export function winnerOf(_state: State): SeatId | 'draw' | null {
+export function winnerOf(state: State): SeatId | 'draw' | null {
   // TODO: implement the win condition from SPEC.md using the SDK's resolve() helper.
+  void state;
   return null;
 }
 `,
@@ -211,12 +223,15 @@ export class ${name.replace(/[^A-Za-z0-9]/g, '')}Game implements Game {
       : ''
   }
 
-  init(_context: GameContext): void {
+  init(context: GameContext): void {
+    void context;
     this.#state = createState();
   }
 
-  update(_dt: number, _input: InputState): void {
+  update(dt: number, input: InputState): void {
     // TODO: simulate. Runs on the fixed timestep; must not allocate.
+    void dt;
+    void input;
   }
 
   render(renderer: Renderer): void {

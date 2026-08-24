@@ -162,6 +162,87 @@
     },
     {
       "path": "./packages/games/cup-pong"
+    },
+    {
+      "path": "./packages/games/snakes-ladders"
+    },
+    {
+      "path": "./packages/games/mini-golf"
+    },
+    {
+      "path": "./packages/games/beach-ball"
+    },
+    {
+      "path": "./packages/games/wrestle"
+    },
+    {
+      "path": "./packages/games/racing-cars"
+    },
+    {
+      "path": "./packages/games/ship-battle"
+    },
+    {
+      "path": "./packages/games/backgammon"
+    },
+    {
+      "path": "./packages/games/archery"
+    },
+    {
+      "path": "./packages/games/basketball"
+    },
+    {
+      "path": "./packages/games/carrom"
+    },
+    {
+      "path": "./packages/games/chicken-jump"
+    },
+    {
+      "path": "./packages/games/light-fingers"
+    },
+    {
+      "path": "./packages/games/spin-war"
+    },
+    {
+      "path": "./packages/games/taxi-race"
+    },
+    {
+      "path": "./packages/games/traffic-jam"
+    },
+    {
+      "path": "./packages/games/shuriken"
+    },
+    {
+      "path": "./packages/games/soccer-pool"
+    },
+    {
+      "path": "./packages/games/happy-birds"
+    },
+    {
+      "path": "./packages/games/rat-race"
+    },
+    {
+      "path": "./packages/games/brick-blast"
+    },
+    {
+      "path": "./packages/games/archery-master"
+    },
+    {
+      "path": "./packages/games/sword-throwing"
+    },
+    {
+      "path": "./packages/games/tennis"
+    },
+    {
+      "path": "./packages/games/animal-stack"
+    },
+    {
+      "path": "./packages/games/pinball"
+    },
+    {
+      "path": "./packages/games/dung-battle"
+    },
+    {
+      "path": "./packages/games/crash-it"
     }
   ]
 }
