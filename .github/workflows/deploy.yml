@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6.0.10
         # Deliberately no `version:` — package.json pins `packageManager`, and passing both makes
         # the action treat it as a conflict and refuse to install. That mistake cost this
         # repository 45 consecutive red CI runs before 20 August.
