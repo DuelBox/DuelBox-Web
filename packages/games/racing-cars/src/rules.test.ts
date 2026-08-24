@@ -981,3 +981,47 @@ describe('determinism', () => {
     expect(otherOf('p2')).toBe('p1');
   });
 });
+
+describe('the finish line', () => {
+  // Both cars are pinned to RACE_DISTANCE the moment they cross, and the race ends on the
+  // step the FIRST car is home — so a step with both home is always the same step, and
+  // judging it on distance compares two numbers the clamp just made equal. At full speed a
+  // step covers about nine units, so any two cars within nine units of the line arrived in
+  // the same step and were all called dead heats. This is the regression for that.
+  const bothHomeIn = (p1Short: number, p2Short: number) => {
+    // A real seeded track, so the barrier check a car short of the line still runs.
+    const { match } = started(7);
+    match.p1.distance = RACE_DISTANCE - p1Short;
+    match.p2.distance = RACE_DISTANCE - p2Short;
+    const result = stepMatch(match, STEP, 0, 0);
+    return { match, result };
+  };
+
+  it('gives the race to the car that crossed first, not to the clamp', () => {
+    const { match, result } = bothHomeIn(1, 5);
+    expect(result.p1, 'both cars must reach home in the one step').toBe('home');
+    expect(result.p2).toBe('home');
+    expect(match.p1.distance, 'and the clamp still pins both to the line').toBe(RACE_DISTANCE);
+    expect(match.p2.distance).toBe(RACE_DISTANCE);
+    // p1 needed a fifth of what p2 needed, so it went by the post first by a clear margin.
+    expect(match.p1.finishOffset).toBeLessThan(match.p2.finishOffset);
+    expect(match.winner).toBe('p1');
+  });
+
+  it('gives it to the other seat just as readily', () => {
+    const { match } = bothHomeIn(5, 1);
+    expect(match.winner).toBe('p2');
+  });
+
+  it('still calls a genuine dead heat a draw', () => {
+    const { match } = bothHomeIn(3, 3);
+    expect(match.p1.finishOffset).toBe(match.p2.finishOffset);
+    expect(match.winner).toBe('draw');
+  });
+
+  it('leaves a race only one car finishes alone', () => {
+    const { match, result } = bothHomeIn(1, 400);
+    expect(result.p2, 'p2 is nowhere near the line').not.toBe('home');
+    expect(match.winner).toBe('p1');
+  });
+});

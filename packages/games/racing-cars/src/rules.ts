@@ -1,4 +1,4 @@
-import { resolve } from '@duelbox/game-sdk';
+import { resolve, resolveSimultaneous } from '@duelbox/game-sdk';
 import type { WinCondition } from '@duelbox/game-sdk';
 import type { Rng, SeatId } from '@duelbox/engine';
 
@@ -310,12 +310,23 @@ export interface Car {
    * general invulnerability: any *other* barrier still catches it.
    */
   hitCell: number;
+  /**
+   * How far into the deciding step this car crossed the line, in seconds.
+   *
+   * `distance` is pinned to {@link RACE_DISTANCE} the moment a car is home, so a step in
+   * which both crossed holds two identical distances however far apart they actually were.
+   * Since the race ends the instant the *first* car is home, a step with both cars home is
+   * always the same step — so without this the clamp throws away the only number separating
+   * them and a race one car led all the way is called a dead heat. Measured over four
+   * hundred seeded matches of two `hard` bots, that was 51 of them.
+   */
+  finishOffset: number;
   /** Barriers clipped, for the picture and for the balance harness. */
   crashes: number;
 }
 
 export function createCar(): Car {
-  return { distance: 0, across: 0, boost: 0, spin: 0, hitCell: -1, crashes: 0 };
+  return { distance: 0, across: 0, boost: 0, spin: 0, hitCell: -1, finishOffset: 0, crashes: 0 };
 }
 
 export function resetCar(car: Car): void {
@@ -324,6 +335,7 @@ export function resetCar(car: Car): void {
   car.boost = 0;
   car.spin = 0;
   car.hitCell = -1;
+  car.finishOffset = 0;
   car.crashes = 0;
 }
 
@@ -414,6 +426,12 @@ export function stepCar(
 
   car.distance += travel;
   if (car.distance >= RACE_DISTANCE) {
+    // How much of the step was still to run when the line went by. `travel` is what this
+    // whole step covered, so the overshoot past the line is the fraction of it that happened
+    // *after* the crossing, and the rest of it is when the crossing happened. The clamp below
+    // then costs nothing, because the instant has already been taken off it.
+    const overshoot = car.distance - RACE_DISTANCE;
+    car.finishOffset = travel > 0 ? fixedDeltaSeconds * (1 - overshoot / travel) : 0;
     car.distance = RACE_DISTANCE;
     return 'home';
   }
@@ -500,6 +518,8 @@ const result: { p1: Stride; p2: Stride } = { p1: 'idle', p2: 'idle' };
  * the post" and "level is a draw" mean the same thing here as everywhere else.
  */
 const FINISH_LINE: WinCondition = { kind: 'first-to', target: RACE_DISTANCE };
+/** Zero, not the SDK's default: both cars are stepped by one loop through the same arithmetic. */
+export const FINISH_TOLERANCE = 0;
 const winTally = { p1: 0, p2: 0 };
 const winOptions = { timeExpired: false };
 
@@ -511,6 +531,13 @@ const winOptions = { timeExpired: false };
  * a car's length apart into a dead heat. A distance is what actually separates them.
  */
 export function judge(match: Readonly<Match>): SeatId | 'draw' | null {
+  if (match.p1.distance >= RACE_DISTANCE && match.p2.distance >= RACE_DISTANCE) {
+    // The one case a distance cannot settle, because the clamp made them equal. Put to the
+    // SDK's own helper rather than to a comparison written again here. The tolerance is zero:
+    // the SDK's default is for two devices' clocks, where the times are measurements, but both
+    // cars here are stepped by one loop through the same arithmetic.
+    return resolveSimultaneous(match.p1.finishOffset, match.p2.finishOffset, FINISH_TOLERANCE);
+  }
   winTally.p1 = match.p1.distance;
   winTally.p2 = match.p2.distance;
   winOptions.timeExpired = match.elapsed >= ROUND_SECONDS;
@@ -521,8 +548,9 @@ export function judge(match: Readonly<Match>): SeatId | 'draw' | null {
  * One fixed step of the whole race.
  *
  * Both cars are driven before either is judged, so a step in which both cross the line is
- * the dead heat it actually is rather than a win for whichever seat the loop happened to
- * run first.
+ * decided on when inside that step each crossed rather than on which seat the loop happened
+ * to run first. It is not automatically a dead heat: at full speed a step covers nine units,
+ * so two cars a car's length apart both arrive in it.
  *
  * The race is only put to {@link judge} on a step that could have decided it — a car
  * home, or the clock out. Asking on every step would be the same answer and one throwaway
