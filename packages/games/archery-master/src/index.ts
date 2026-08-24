@@ -9,4 +9,5 @@ export const gameModule: GameModule = {
 
 export default gameModule;
 export { manifest };
+export { ArcheryMasterGame };
 export * from './rules.js';
