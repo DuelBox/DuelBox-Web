@@ -1,0 +1,76 @@
+# Publish the site, so that people can actually play the games.
+#
+# The app is `output: 'export'` — a directory of files with no server runtime — so any static
+# host serves it. This publishes to GitHub Pages because that needs no account the repository
+# does not already have.
+#
+# One thing Pages cannot do: custom response headers. `scripts/emit-host-config.mjs` generates a
+# full set — CSP, COEP, COOP, HSTS, Permissions-Policy — into `_headers` (Cloudflare Pages and
+# Netlify read that natively), into `vercel.json`, and into an nginx block. Pages ignores all
+# three and serves its own defaults instead. That is a real downgrade, and issue #2367's
+# iframe/postMessage hardening in particular assumes those headers are present. Moving to
+# Cloudflare Pages, Netlify or Vercel later restores them and needs nothing from this repository
+# except deleting this file — the build output is identical, which is the point of a static export.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deployment at a time, and never cancel one half-done: a partially uploaded site is worse
+# than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # Deliberately no `version:` — package.json pins `packageManager`, and passing both makes
+        # the action treat it as a conflict and refuse to install. That mistake cost this
+        # repository 45 consecutive red CI runs before 20 August.
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the static site
+        # A project page serves from /<repo>/, so the build needs that prefix baked in. Derived
+        # from the repository name rather than hard-coded, so a rename or a fork still works.
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+
+      - name: Stop Pages mangling the export
+        # Without this, Pages runs the output through Jekyll, which silently drops every path
+        # beginning with an underscore — including `_next`, which is all of the JavaScript.
+        run: touch apps/web/out/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
