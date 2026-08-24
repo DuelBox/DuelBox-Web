@@ -80,12 +80,21 @@ import { manifest as soccerPool } from '@duelbox/game-soccer-pool';
 import { manifest as happyBirds } from '@duelbox/game-happy-birds';
 import { manifest as ratRace } from '@duelbox/game-rat-race';
 import { manifest as brickBlast } from '@duelbox/game-brick-blast';
+import { manifest as archeryMaster } from '@duelbox/game-archery-master';
+import { manifest as swordThrowing } from '@duelbox/game-sword-throwing';
+import { manifest as tennis } from '@duelbox/game-tennis';
+import { manifest as animalStack } from '@duelbox/game-animal-stack';
+import { manifest as pinball } from '@duelbox/game-pinball';
+import { manifest as dungBattle } from '@duelbox/game-dung-battle';
+import { manifest as crashIt } from '@duelbox/game-crash-it';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
 export const MANIFESTS: readonly GameManifest[] = [
   airHockey,
+  animalStack,
   archery,
+  archeryMaster,
   backgammon,
   basketball,
   beachBall,
@@ -99,9 +108,11 @@ export const MANIFESTS: readonly GameManifest[] = [
   colorWars,
   cornhole,
   crabbyVolley,
+  crashIt,
   cupPong,
   darts,
   dotsAndBoxes,
+  dungBattle,
   flappyJump,
   fourInARow,
   frogsFight,
@@ -124,6 +135,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   miniSoccer,
   paintFight,
   penaltyKicks,
+  pinball,
   pingPong,
   pool,
   popIt,
@@ -147,8 +159,10 @@ export const MANIFESTS: readonly GameManifest[] = [
   spinWar,
   starCatcher,
   sumo,
+  swordThrowing,
   tankBattle,
   taxiRace,
+  tennis,
   ticTacToe,
   trafficJam,
   ultimateTtt,

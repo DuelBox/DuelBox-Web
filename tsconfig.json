@@ -222,6 +222,27 @@
     },
     {
       "path": "./packages/games/brick-blast"
+    },
+    {
+      "path": "./packages/games/archery-master"
+    },
+    {
+      "path": "./packages/games/sword-throwing"
+    },
+    {
+      "path": "./packages/games/tennis"
+    },
+    {
+      "path": "./packages/games/animal-stack"
+    },
+    {
+      "path": "./packages/games/pinball"
+    },
+    {
+      "path": "./packages/games/dung-battle"
+    },
+    {
+      "path": "./packages/games/crash-it"
     }
   ]
 }

@@ -30,6 +30,34 @@ jobs:
       - run: pnpm test
       # `pnpm build` runs the manifest validator and the zero-cost guard as its own steps.
       - run: pnpm build
+
+  # e2e is its own job because it is three quarters of the wall clock and depends on none
+  # of the checks above.
+  #
+  # It used to be the last step of `verify`, and that job was at 97% of its own timeout
+  # before this branch: 662s of e2e on top of 216s of everything else, against a 15 minute
+  # limit — 24 seconds of headroom. Twenty more games added 51s to `pnpm test` and it
+  # started being killed mid-e2e, which reads as a flake rather than as a budget that ran
+  # out. Splitting cuts wall clock from ~16 minutes to ~12 and gives both halves real room,
+  # which matters because 35 more games are still to come.
+  #
+  # This does not close #2459 — e2e itself is still ~11 minutes and that issue asks for 8
+  # overall. It stops the gate failing for the wrong reason while that is worked on.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The suite drives the real static artefact rather than a dev server, so it needs the
+      # build even though `verify` also produces one — the two jobs run in parallel and
+      # share nothing.
+      - run: pnpm build
       # Smoke-test the real static artefact, not a dev server, so a green run is
       # evidence the deployed site works.
       # WebKit is the engine iOS Safari ships, and two people sharing a phone is the

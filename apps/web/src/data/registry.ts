@@ -91,6 +91,13 @@ const LOADERS: Record<string, Loader> = {
   'happy-birds': () => import('@duelbox/game-happy-birds').then((m) => m.default),
   'rat-race': () => import('@duelbox/game-rat-race').then((m) => m.default),
   'brick-blast': () => import('@duelbox/game-brick-blast').then((m) => m.default),
+  'archery-master': () => import('@duelbox/game-archery-master').then((m) => m.default),
+  'sword-throwing': () => import('@duelbox/game-sword-throwing').then((m) => m.default),
+  tennis: () => import('@duelbox/game-tennis').then((m) => m.default),
+  'animal-stack': () => import('@duelbox/game-animal-stack').then((m) => m.default),
+  pinball: () => import('@duelbox/game-pinball').then((m) => m.default),
+  'dung-battle': () => import('@duelbox/game-dung-battle').then((m) => m.default),
+  'crash-it': () => import('@duelbox/game-crash-it').then((m) => m.default),
 };
 
 /**
