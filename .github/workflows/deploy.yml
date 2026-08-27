@@ -40,7 +40,7 @@ jobs:
         # the action treat it as a conflict and refuse to install. That mistake cost this
         # repository 45 consecutive red CI runs before 20 August.
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
