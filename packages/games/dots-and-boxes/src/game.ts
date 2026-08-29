@@ -50,6 +50,12 @@ const COLOUR_P2 = SEAT_PALETTE.p2.base;
 const COLOUR_P1_FILL = SEAT_PALETTE.p1.soft;
 const COLOUR_P2_FILL = SEAT_PALETTE.p2.soft;
 
+/** The owner mark stamped in a captured square. Small enough to leave the tint readable. */
+const CLAIM_MARK_RADIUS = 9;
+
+/** The owner mark at a claimed edge's midpoint — small, because an edge is thin. */
+const EDGE_MARK_RADIUS = 4;
+
 const DOT_RADIUS = 9;
 const EDGE_WIDTH = 12;
 const GHOST_WIDTH = 5;
@@ -357,13 +363,23 @@ export class DotsAndBoxesGame implements Game {
       if (owner === null || owner === undefined) continue;
       const column = box % BOX_COLUMNS;
       const row = Math.floor(box / BOX_COLUMNS);
-      renderer.rect(
-        GRID_ORIGIN + column * GRID_PITCH,
-        GRID_ORIGIN + row * GRID_PITCH,
-        GRID_PITCH,
-        GRID_PITCH,
-        owner === 'p1' ? COLOUR_P1_FILL : COLOUR_P2_FILL,
-      );
+      const x = GRID_ORIGIN + column * GRID_PITCH;
+      const y = GRID_ORIGIN + row * GRID_PITCH;
+      const mine = owner === 'p1';
+      renderer.rect(x, y, GRID_PITCH, GRID_PITCH, mine ? COLOUR_P1_FILL : COLOUR_P2_FILL);
+      // The tint alone was the only thing separating a captured square from the other
+      // seat's, which is rule 7 and left the board unreadable in greyscale (#2496). The
+      // owner is now stated as a shape too, and it is the same mark the shell uses for a
+      // seat: a disc for seat one, a square for seat two, at equal area so neither seat's
+      // territory reads as heavier ink.
+      const centreX = x + GRID_PITCH / 2;
+      const centreY = y + GRID_PITCH / 2;
+      if (mine) {
+        renderer.circle(centreX, centreY, CLAIM_MARK_RADIUS, COLOUR_P1);
+      } else {
+        const side = CLAIM_MARK_RADIUS * Math.sqrt(Math.PI);
+        renderer.rect(centreX - side / 2, centreY - side / 2, side, side, COLOUR_P2);
+      }
     }
   }
 
@@ -379,6 +395,25 @@ export class DotsAndBoxesGame implements Game {
       const y2 = horizontal ? this.#scratch.y : this.#scratch.y + half;
       // Undrawn edges are drawn faintly rather than not at all: a player needs to see
       // where the moves are, and an empty lattice of dots does not show that.
+      // A claimed edge also carries its owner's shape at its midpoint: a disc for seat one,
+      // a square for seat two, at equal area. A captured square gets the same mark, but a
+      // capture is rare and an edge is claimed every turn, so this is the one that makes
+      // the board readable in greyscale from the first move (#2496).
+      if (drawn) {
+        const owner = this.#board.edgeOwners[edge];
+        if (owner === 'p1') {
+          renderer.circle(this.#scratch.x, this.#scratch.y, EDGE_MARK_RADIUS, COLOUR_P1);
+        } else if (owner === 'p2') {
+          const side = EDGE_MARK_RADIUS * Math.sqrt(Math.PI);
+          renderer.rect(
+            this.#scratch.x - side / 2,
+            this.#scratch.y - side / 2,
+            side,
+            side,
+            COLOUR_P2,
+          );
+        }
+      }
       renderer.line(
         x1,
         y1,
