@@ -112,6 +112,20 @@ const LOADERS: Record<string, Loader> = {
   'the-last-sashimi': () => import('@duelbox/game-the-last-sashimi').then((m) => m.default),
   'golf-football': () => import('@duelbox/game-golf-football').then((m) => m.default),
   'frozen-beaks': () => import('@duelbox/game-frozen-beaks').then((m) => m.default),
+  chess: () => import('@duelbox/game-chess').then((m) => m.default),
+  'guess-the-person': () => import('@duelbox/game-guess-the-person').then((m) => m.default),
+  'fatal-siege': () => import('@duelbox/game-fatal-siege').then((m) => m.default),
+  'guard-and-thief': () => import('@duelbox/game-guard-and-thief').then((m) => m.default),
+  'disco-battle': () => import('@duelbox/game-disco-battle').then((m) => m.default),
+  stampede: () => import('@duelbox/game-stampede').then((m) => m.default),
+  'brainrot-stack': () => import('@duelbox/game-brainrot-stack').then((m) => m.default),
+  'water-game': () => import('@duelbox/game-water-game').then((m) => m.default),
+  'money-grabber': () => import('@duelbox/game-money-grabber').then((m) => m.default),
+  'unfair-fishing': () => import('@duelbox/game-unfair-fishing').then((m) => m.default),
+  'piranha-rush': () => import('@duelbox/game-piranha-rush').then((m) => m.default),
+  'sticky-tongues': () => import('@duelbox/game-sticky-tongues').then((m) => m.default),
+  'pizza-memory': () => import('@duelbox/game-pizza-memory').then((m) => m.default),
+  'ballgames-physics': () => import('@duelbox/game-ballgames-physics').then((m) => m.default),
 };
 
 /**
