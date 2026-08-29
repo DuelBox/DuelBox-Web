@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import type { SeatId } from '@duelbox/engine';
 import {
   canSend,
   initialMatchState,
   isBoardVisible,
   isSimulating,
   legalEvents,
+  openingSeatFor,
   reduce,
   roundsToWin,
   type MatchEvent,
@@ -371,5 +373,221 @@ describe('a game that decides its own round', () => {
     );
     expect(s.phase).toBe('match-over');
     expect(s.matchOutcome).toBe('draw');
+  });
+});
+
+/**
+ * Who opens each round.
+ *
+ * Seat one opened every round of every match until this existed, so first-mover advantage
+ * never washed out of a best-of — measured in Snakes & Ladders at 51.2% to seat one on
+ * `easy` and 55.0% on `hard`. The tests below are the three claims the fix rests on: round
+ * one is exactly as it was, the rounds after it alternate, and the surplus opening an odd
+ * round count forces on somebody is settled by a seeded coin rather than by seat order.
+ */
+describe('the opening seat', () => {
+  const SEEDS = Array.from({ length: 200 }, (_, i) => (i + 1) * 7919);
+
+  /** How many rounds of a match on `seed` each seat opened, over the first `rounds`. */
+  function opens(rounds: number, seed: number): { p1: number; p2: number } {
+    let p1 = 0;
+    let p2 = 0;
+    for (let round = 1; round <= rounds; round += 1) {
+      if (openingSeatFor(round, seed) === 'p1') p1 += 1;
+      else p2 += 1;
+    }
+    return { p1, p2 };
+  }
+
+  /** The first seed whose level rounds fall to `seat` — the coin's two faces, by example. */
+  function seedWhoseCoinFalls(seat: SeatId): number {
+    const found = SEEDS.find((seed) => openingSeatFor(3, seed) === (seat === 'p1' ? 'p1' : 'p2'));
+    expect(found, `no seed in the sample gives the coin to ${seat}`).toBeDefined();
+    return found ?? 0;
+  }
+
+  it('still opens round one with seat one, under every seed', () => {
+    // The pin that keeps this change from shifting anything that already worked: every
+    // game, screenshot and bot measurement in the catalogue was taken with seat one first.
+    for (const seed of SEEDS) expect(openingSeatFor(1, seed)).toBe('p1');
+    expect(initialMatchState().openingSeat).toBe('p1');
+    expect(
+      reduce(initialMatchState(), { kind: 'start', seed: 4242 }, BEST_OF_THREE).openingSeat,
+    ).toBe('p1');
+  });
+
+  it('hands round two to seat two, under every seed', () => {
+    for (const seed of SEEDS) expect(openingSeatFor(2, seed)).toBe('p2');
+  });
+
+  it('never lets one seat get more than one opening ahead', () => {
+    // The property that actually means "it alternates": at no point in a match of any
+    // length has either seat opened two more rounds than the other.
+    for (const seed of SEEDS) {
+      for (let rounds = 1; rounds <= 9; rounds += 1) {
+        const { p1, p2 } = opens(rounds, seed);
+        expect(
+          Math.abs(p1 - p2),
+          `seed ${String(seed)} after ${String(rounds)} rounds`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('never gives one seat three openings in a row', () => {
+    // The tails sequence repeats seat two once, across rounds two and three, and that is
+    // the only repeat there is. A third would be a different bug.
+    for (const seed of SEEDS) {
+      let run = 0;
+      let previous: SeatId | null = null;
+      for (let round = 1; round <= 9; round += 1) {
+        const seat = openingSeatFor(round, seed);
+        run = seat === previous ? run + 1 : 1;
+        previous = seat;
+        expect(run, `seed ${String(seed)} at round ${String(round)}`).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it('gives the surplus opening to whichever seat the coin named, for any odd count', () => {
+    // Not only for a best-of-five that reaches round five: a best-of-five that ends at
+    // round three has the same surplus, and it has to fall the same way.
+    const heads = seedWhoseCoinFalls('p1');
+    const tails = seedWhoseCoinFalls('p2');
+    expect([1, 2, 3, 4, 5, 6, 7].map((r) => openingSeatFor(r, heads))).toEqual([
+      'p1',
+      'p2',
+      'p1',
+      'p2',
+      'p1',
+      'p2',
+      'p1',
+    ]);
+    expect([1, 2, 3, 4, 5, 6, 7].map((r) => openingSeatFor(r, tails))).toEqual([
+      'p1',
+      'p2',
+      'p2',
+      'p1',
+      'p2',
+      'p1',
+      'p2',
+    ]);
+    for (const rounds of [3, 5, 7]) {
+      expect(
+        opens(rounds, heads).p1 - opens(rounds, heads).p2,
+        `heads over ${String(rounds)}`,
+      ).toBe(1);
+      expect(
+        opens(rounds, tails).p2 - opens(rounds, tails).p1,
+        `tails over ${String(rounds)}`,
+      ).toBe(1);
+    }
+    for (const rounds of [2, 4, 6]) {
+      expect(opens(rounds, heads)).toEqual(opens(rounds, tails));
+    }
+  });
+
+  it('is not always the same seat that takes the extra opening', () => {
+    // The whole point. A tiebreak that always lands on seat one is the original bug.
+    const surplus = SEEDS.map((seed) => openingSeatFor(3, seed));
+    const toSeatTwo = surplus.filter((seat) => seat === 'p2').length;
+    expect(new Set(surplus)).toEqual(new Set<SeatId>(['p1', 'p2']));
+    // A coin, not a pattern: within a wide band of half, over two hundred seeds.
+    expect(toSeatTwo).toBeGreaterThan(SEEDS.length * 0.35);
+    expect(toSeatTwo).toBeLessThan(SEEDS.length * 0.65);
+  });
+
+  it('is reproducible from the same seed and differs across seeds', () => {
+    for (const seed of SEEDS) {
+      for (let round = 1; round <= 7; round += 1) {
+        expect(openingSeatFor(round, seed)).toBe(openingSeatFor(round, seed));
+      }
+    }
+    const heads = seedWhoseCoinFalls('p1');
+    const tails = seedWhoseCoinFalls('p2');
+    expect(openingSeatFor(3, heads)).not.toBe(openingSeatFor(3, tails));
+  });
+
+  it('rejects a round that is not a positive integer, and a seed that is not finite', () => {
+    for (const round of [0, -1, 1.5, Number.NaN]) {
+      expect(() => openingSeatFor(round, 1)).toThrow(RangeError);
+    }
+    // Round one and two never consult the seed, so only a later round can catch this.
+    for (const seed of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => openingSeatFor(3, seed)).toThrow(RangeError);
+    }
+  });
+});
+
+describe('the opening seat across the rounds of a best-of', () => {
+  const rules: MatchRules = { win: { kind: 'first-to', target: 1 }, rounds: 3 };
+
+  /** Every round of a best-of-three driven to its end, collecting who opened each. */
+  function openersOf(seed: number): readonly SeatId[] {
+    let s = reduce(initialMatchState(), { kind: 'start', seed }, rules);
+    const seen: SeatId[] = [s.openingSeat];
+    for (let round = 1; round < 3; round += 1) {
+      s = reduce(s, { kind: 'tick', seconds: 3 }, rules);
+      // Alternating winners, so the match always goes the full three rounds.
+      const tally = round % 2 === 1 ? { p1: 1, p2: 0 } : { p1: 0, p2: 1 };
+      s = reduce(s, { kind: 'score', tally }, rules);
+      s = reduce(s, { kind: 'next-round' }, rules);
+      seen.push(s.openingSeat);
+    }
+    return seen;
+  }
+
+  it('rotates the opener as the machine advances rounds', () => {
+    // Against the old machine every one of these was ['p1', 'p1', 'p1'].
+    for (const seed of [1, 7919, 20260829, -5]) {
+      const seen = openersOf(seed);
+      expect(seen[0]).toBe('p1');
+      expect(seen[1]).toBe('p2');
+      expect(seen).toEqual([1, 2, 3].map((round) => openingSeatFor(round, seed)));
+    }
+  });
+
+  it('carries the seed through the whole match, so every round agrees', () => {
+    const s = reduce(initialMatchState(), { kind: 'start', seed: 20260829 }, rules);
+    const next = reduce(
+      reduce(
+        reduce(s, { kind: 'tick', seconds: 3 }, rules),
+        { kind: 'score', tally: { p1: 1, p2: 0 } },
+        rules,
+      ),
+      { kind: 'next-round' },
+      rules,
+    );
+    expect(next.seed).toBe(20260829);
+    expect(next.openingSeat).toBe(openingSeatFor(2, 20260829));
+  });
+
+  it('takes a fresh seed on a rematch, so five matches in a row are not five of the same', () => {
+    const over = reduce(
+      reduce(
+        reduce(initialMatchState(), { kind: 'start', seed: 1 }, FIRST_TO_ONE),
+        { kind: 'tick', seconds: 3 },
+        FIRST_TO_ONE,
+      ),
+      { kind: 'score', tally: { p1: 1, p2: 0 } },
+      FIRST_TO_ONE,
+    );
+    expect(reduce(over, { kind: 'rematch', seed: 99 }, FIRST_TO_ONE).seed).toBe(99);
+    // Omitted, the match keeps the seed it had rather than silently resetting to zero.
+    expect(reduce(over, { kind: 'rematch' }, FIRST_TO_ONE).seed).toBe(1);
+  });
+
+  it('leaves the seed behind on quit', () => {
+    const started = reduce(initialMatchState(), { kind: 'start', seed: 77 }, rules);
+    expect(started.seed).toBe(77);
+    expect(reduce(started, { kind: 'quit' }, rules).seed).toBe(0);
+  });
+
+  it('rejects a seed that is not finite, at the point the match starts', () => {
+    // Round one never consults the coin, so a lazy check would not fire until round three
+    // — two rounds after the shell handed over the broken seed.
+    for (const seed of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => reduce(initialMatchState(), { kind: 'start', seed }, rules)).toThrow(RangeError);
+    }
   });
 });

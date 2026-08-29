@@ -26,6 +26,7 @@ function context(seed: number, p1: BotDifficulty | null, p2: BotDifficulty | nul
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: (seat: SeatId) => (seat === 'p1' ? p1 : p2),
   };
 }

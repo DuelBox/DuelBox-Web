@@ -165,17 +165,26 @@ export function PlaySurface({ slug }: { slug: string }) {
       writeLastMode(slug, chosen);
       setMode(chosen);
       setActiveSeat(null);
-      setSeed((previous) => previous + 1);
-      send({ kind: 'start' });
+      const next = seed + 1;
+      setSeed(next);
+      // The seed goes with the event: it is what the match machine flips its opening-seat
+      // coin from, and that coin has to be reproducible from the match rather than drawn
+      // from entropy the replay cannot recover (#2466).
+      send({ kind: 'start', seed: next });
     },
-    [slug],
+    // `seed` is read, so it belongs here: without it the callback closes over the seed
+    // from the render that created it and every match after the first would open on a
+    // stale one. React's exhaustive-deps rule would say so, but it is not enabled in this
+    // repo yet (#2482).
+    [slug, seed],
   );
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
-    setSeed((previous) => previous + 1);
-    send({ kind: 'rematch' });
-  }, []);
+    const next = seed + 1;
+    setSeed(next);
+    send({ kind: 'rematch', seed: next });
+  }, [seed]);
 
   const quit = useCallback(() => {
     setMode(null);
@@ -259,6 +268,7 @@ export function PlaySurface({ slug }: { slug: string }) {
             phase={match.phase}
             presentation="shared-screen"
             localSeat="p1"
+            openingSeat={match.openingSeat}
             {...(mode === 'bot' ? { botDifficulty: BOT_OPPONENT } : {})}
             onTick={handleTick}
             onScore={handleScore}

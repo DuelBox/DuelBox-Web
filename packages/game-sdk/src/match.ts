@@ -1,4 +1,4 @@
-import type { SeatId } from '@duelbox/engine';
+import { Rng, otherSeat, type SeatId } from '@duelbox/engine';
 import { resolve, type Outcome, type Tally, type WinCondition } from './win-conditions.js';
 
 /**
@@ -13,6 +13,11 @@ import { resolve, type Outcome, type Tally, type WinCondition } from './win-cond
  * The machine is a pure reducer. It holds no timers, touches no DOM and never reads the
  * wall clock — the host feeds it `tick` from the same fixed loop that drives the
  * simulation, so a match steps identically on a phone and a laptop (CLAUDE.md rule 8).
+ *
+ * It also decides **who opens each round** — see {@link openingSeatFor}. That is here and
+ * not in a game for the same reason the countdown is: written per game it drifts, and
+ * written nowhere at all it means seat one opens forever and first-mover advantage never
+ * washes out of a best-of.
  */
 
 export type MatchPhase =
@@ -33,8 +38,16 @@ export type MatchEventKind =
   'start' | 'tick' | 'pause' | 'resume' | 'score' | 'next-round' | 'rematch' | 'quit';
 
 export type MatchEvent =
-  /** Leave `idle` and begin the first countdown. */
-  | { readonly kind: 'start' }
+  /**
+   * Leave `idle` and begin the first countdown.
+   *
+   * `seed` is the match seed — the same number the host hands the game's {@link Rng} — and
+   * the machine keeps it for the life of the match. It decides nothing about round one; it
+   * only settles the odd-round-count tiebreak described on {@link openingSeatFor}. Omitted,
+   * the seed already in state is kept, which is 0 for a fresh machine: a shell that never
+   * threads one still gets a deterministic match, just always the same coin.
+   */
+  | { readonly kind: 'start'; readonly seed?: number }
   /** Advance the countdown by one fixed step. Ignored outside `countdown`. */
   | { readonly kind: 'tick'; readonly seconds: number }
   | { readonly kind: 'pause' }
@@ -56,7 +69,14 @@ export type MatchEvent =
       readonly outcome?: Outcome;
     }
   | { readonly kind: 'next-round' }
-  | { readonly kind: 'rematch' }
+  /**
+   * Play the same rules again from round one.
+   *
+   * Carries a seed for the same reason `start` does, and the shell should pass a fresh one:
+   * a rematch is a new match, and a pair playing five in a row must not have the same seat
+   * take the surplus opening in all five.
+   */
+  | { readonly kind: 'rematch'; readonly seed?: number }
   | { readonly kind: 'quit' };
 
 export interface MatchRules {
@@ -85,6 +105,95 @@ export interface MatchState {
   readonly roundOutcome: Outcome;
   /** Who took the match; null until `match-over`. */
   readonly matchOutcome: Outcome;
+  /**
+   * Which seat moves first in the current round. See {@link openingSeatFor}.
+   *
+   * Meaningful to a turn-based game and inert to a real-time one, which has no first move
+   * to give away. The shell reads it and the game is told; a game deciding this for itself
+   * is the bug this field exists to remove.
+   */
+  readonly openingSeat: SeatId;
+  /**
+   * The match seed, as handed to `start` or `rematch`. 0 until one is.
+   *
+   * Held so the opener is reproducible from the state alone: the same seed replays the
+   * same sequence of openers, which is what makes a cross-device match agree about who
+   * moves first without either device being asked.
+   */
+  readonly seed: number;
+}
+
+/**
+ * Which seat opens round `round` of a match seeded with `seed`. 1-based, as `round` is.
+ *
+ * Seat one used to open every round of every match, so whatever first-mover advantage a
+ * game has never washed out. Measured in Snakes & Ladders, seat one took 51.2% of matches
+ * at `easy` and 55.0% at `hard` — the advantage *grows* with skill, because better play
+ * shortens the race and leaves the trailing seat fewer turns to recover in. That is a
+ * shell-level defect, not a per-game one: it applies to every turn-based game in the
+ * catalogue, so it is fixed once, here, and no game opts in.
+ *
+ * The rule is: **the seat that has opened fewer rounds so far opens the next one; when
+ * they are level the round goes to the seat the match's coin-flip named — except round
+ * one, which is always seat one.**
+ *
+ * Round one is pinned deliberately. Every game in the catalogue opens with seat one today
+ * and every test, screenshot and bot measurement was taken that way, so pinning it means
+ * this change shifts nothing that already worked; it only decides rounds two and beyond,
+ * which nobody was deciding at all.
+ *
+ * That pinning is also what forces the coin. Over an odd number of rounds one seat
+ * necessarily opens once more than the other, and with round one fixed to seat one a plain
+ * alternation — p1, p2, p1 — hands that surplus to seat one in every match ever played,
+ * which is the original bug wearing a different hat. So the level rounds go to a seat drawn
+ * from the match seed:
+ *
+ * - **heads** (level rounds to seat one): p1, p2, p1, p2, p1 … — seat one opens the extra.
+ * - **tails** (level rounds to seat two): p1, p2, p2, p1, p2 … — seat two opens the extra.
+ *
+ * Tails repeats seat two once, across the round-two/round-three boundary, and that single
+ * repeat is the whole cost of the fix. It has to fall somewhere: round one is pinned, so
+ * the only way seat two ever gets the surplus is to break strict alternation exactly once.
+ * Putting the repeat as early as possible is what makes the tiebreak work for a best-of-five
+ * that ends after three rounds as well as one that goes the distance — after **any** odd
+ * number of rounds the tails sequence has given seat two the extra opening, and after any
+ * even number the two seats are level. Deferring the repeat to the last round would only
+ * have been fair to a best-of-five that actually reached round five.
+ *
+ * The coin is drawn from a stream of its own rather than from the match seed directly,
+ * because the game's own {@link Rng} is constructed from that same seed and would hand out
+ * the identical first draw. Left unsalted, "seat two opens the extra round" would be the
+ * same event as "seat one's first die was low", which is not a coin flip at all.
+ *
+ * @throws RangeError if `round` is not a positive integer or `seed` is not finite.
+ */
+export function openingSeatFor(round: number, seed: number): SeatId {
+  if (!Number.isInteger(round) || round < 1) {
+    throw new RangeError(`round must be a positive integer, received ${String(round)}`);
+  }
+  const alternating: SeatId = round % 2 === 1 ? 'p1' : 'p2';
+  // Rounds one and two are the same under either coin — one seat each, nothing to break.
+  if (round <= 2) return alternating;
+  return levelRoundSeat(seed) === 'p1' ? alternating : otherSeat(alternating);
+}
+
+/**
+ * ASCII "Open". Any constant would do; the point is only that the opener's stream is not
+ * the game's stream, and a readable one says so at the call site.
+ */
+const OPENER_STREAM = 0x4f70_656e;
+
+/** The coin: which seat takes a round the two are level on. Pure in `seed`. */
+function levelRoundSeat(seed: number): SeatId {
+  // Allocated once a round at most, never on a simulation step, so rule 5 is untroubled.
+  return new Rng((seedOf(seed) | 0) ^ OPENER_STREAM).bool() ? 'p2' : 'p1';
+}
+
+function seedOf(seed: number): number {
+  if (!Number.isFinite(seed)) {
+    throw new RangeError(`match seed must be a finite number, received ${String(seed)}`);
+  }
+  return seed;
 }
 
 /**
@@ -121,6 +230,9 @@ export function initialMatchState(): MatchState {
     roundWins: ZERO,
     roundOutcome: null,
     matchOutcome: null,
+    // Round one belongs to seat one under every seed, so no seed is needed to say so.
+    openingSeat: 'p1',
+    seed: 0,
   };
 }
 
@@ -157,7 +269,7 @@ export function reduce(state: MatchState, event: MatchEvent, rules: MatchRules):
 
   switch (event.kind) {
     case 'start':
-      return beginRound(initialMatchState(), rules, 1, ZERO);
+      return beginRound(initialMatchState(), rules, 1, ZERO, event.seed ?? state.seed);
 
     case 'tick': {
       if (!Number.isFinite(event.seconds) || event.seconds < 0) {
@@ -220,12 +332,14 @@ export function reduce(state: MatchState, event: MatchEvent, rules: MatchRules):
     }
 
     case 'next-round':
-      return beginRound(state, rules, state.round + 1, state.roundWins);
+      return beginRound(state, rules, state.round + 1, state.roundWins, state.seed);
 
     case 'rematch':
-      return beginRound(initialMatchState(), rules, 1, ZERO);
+      return beginRound(initialMatchState(), rules, 1, ZERO, event.seed ?? state.seed);
 
     case 'quit':
+      // The seed goes with the match it belonged to. Quitting is not a rematch, and the
+      // next `start` brings its own.
       return initialMatchState();
   }
 }
@@ -235,8 +349,17 @@ function beginRound(
   rules: MatchRules,
   round: number,
   roundWins: Tally,
+  seed: number,
 ): MatchState {
   const countdown = countdownSecondsOf(rules);
+  // Checked here rather than where it is first consulted, which is round three: a shell
+  // that hands over a broken seed must hear about it as it starts the match, not two
+  // rounds in.
+  seedOf(seed);
+  // Resolved here rather than read off a counter, so the opener depends on the round
+  // number and the seed and on nothing that happened in between. A match rejoined
+  // mid-way, or replayed from a trace, agrees about who moves first.
+  const openingSeat = openingSeatFor(round, seed);
   return {
     ...base,
     // A zero-second countdown is legal and starts play immediately, which is what a
@@ -248,6 +371,8 @@ function beginRound(
     roundWins,
     roundOutcome: null,
     matchOutcome: null,
+    openingSeat,
+    seed,
   };
 }
 

@@ -37,6 +37,14 @@ export interface GameContext {
   readonly presentation: Presentation;
   /** In single-seat presentation, which seat this device is playing. */
   readonly localSeat: SeatId;
+  /**
+   * Which seat moves first this round. The SDK alternates it across the rounds of a
+   * best-of so first-mover advantage washes out, so a game must read it rather than
+   * assume `p1` — see issue #2466, where seat one took 55% at `hard` purely by opening.
+   *
+   * Real-time games have no opener and may ignore this.
+   */
+  readonly openingSeat: SeatId;
   /** Difficulty of the bot occupying a seat, or null when a human holds it. */
   botDifficulty(seat: SeatId): 'easy' | 'normal' | 'hard' | null;
 }

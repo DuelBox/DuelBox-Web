@@ -24,6 +24,7 @@ export {
   canSend,
   legalEvents,
   initialMatchState,
+  openingSeatFor,
   roundsToWin,
   isSimulating,
   isBoardVisible,

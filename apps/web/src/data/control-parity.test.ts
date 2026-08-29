@@ -144,6 +144,7 @@ function play(
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: (seat: SeatId) => (seat === 'p2' ? 'normal' : null),
   };
   game.init(context);

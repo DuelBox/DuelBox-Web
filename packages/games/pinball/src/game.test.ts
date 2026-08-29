@@ -39,6 +39,7 @@ function contextFor(seed: number, difficulty: (seat: SeatId) => BotDifficulty | 
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: difficulty,
   };
 }

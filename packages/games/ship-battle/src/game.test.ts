@@ -116,6 +116,7 @@ function makeContext(
     rng: new Rng(seed),
     presentation,
     localSeat,
+    openingSeat: 'p1',
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },

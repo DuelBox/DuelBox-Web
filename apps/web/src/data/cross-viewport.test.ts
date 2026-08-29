@@ -80,6 +80,7 @@ function driveOnce(
     rng: new Rng(20260820),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: () => null,
   };
   game.init(context);
@@ -178,6 +179,7 @@ describe('the declared logical size is the one the simulation uses', () => {
         rng: new Rng(1),
         presentation: 'shared-screen',
         localSeat: 'p1',
+        openingSeat: 'p1',
         botDifficulty: () => null,
       });
       const input = new InputManager(loaded.manifest.logical, {

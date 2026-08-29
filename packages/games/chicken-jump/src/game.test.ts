@@ -26,6 +26,7 @@ function context(overrides: Partial<GameContext> = {}): GameContext {
     rng: new Rng(20260824),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: () => null,
     ...overrides,
   };

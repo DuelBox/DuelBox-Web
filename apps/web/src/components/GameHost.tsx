@@ -50,6 +50,8 @@ export interface GameHostProps {
   /** Which seat this device plays. Only meaningful in single-seat presentation. */
   localSeat?: SeatId;
   presentation?: 'shared-screen' | 'single-seat';
+  /** Which seat moves first this round. The match machine decides it; the host relays it. */
+  openingSeat?: SeatId;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
   /**
    * One fixed simulation step elapsed. Fires in every running phase, including the
@@ -85,6 +87,7 @@ export function GameHost({
   phase,
   localSeat = 'p1',
   presentation = 'shared-screen',
+  openingSeat = 'p1',
   botDifficulty,
   onTick,
   onScore,
@@ -171,6 +174,7 @@ export function GameHost({
       rng: new Rng(seed),
       presentation,
       localSeat,
+      openingSeat,
       botDifficulty: (seat) => botDifficulty?.[seat] ?? null,
     };
     game.init(gameContext);
@@ -392,7 +396,16 @@ export function GameHost({
     // the query parameter had been resolved in an effect, so the recorder was never made at all
     // and the trace stayed empty. Rebuilding costs nothing where it actually happens: recording
     // is decided on the lobby screen, before there is a match to lose.
-  }, [manifest, createGame, seed, localSeat, presentation, botDifficulty, recordTrace]);
+  }, [
+    manifest,
+    createGame,
+    seed,
+    localSeat,
+    presentation,
+    openingSeat,
+    botDifficulty,
+    recordTrace,
+  ]);
 
   // Start and stop with the phase. Separate from setup so pausing never rebuilds the game.
   useEffect(() => {

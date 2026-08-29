@@ -135,6 +135,7 @@ function makeContext(options: ContextOptions = {}): GameContext {
     rng: new Rng(options.seed ?? 1),
     presentation: options.presentation ?? 'shared-screen',
     localSeat: options.localSeat ?? 'p1',
+    openingSeat: 'p1',
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },

@@ -189,6 +189,7 @@ function makeContext(manifest: GameManifest, seed: number): GameContext {
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     // Nobody is a bot: the storm drives both seats, so both seats are being mashed.
     botDifficulty: (): null => null,
   };

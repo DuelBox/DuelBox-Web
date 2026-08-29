@@ -110,6 +110,7 @@ describe('no bot stalls a frame', () => {
         rng: new Rng(20260820),
         presentation: 'shared-screen',
         localSeat: 'p1',
+        openingSeat: 'p1',
         botDifficulty: () => 'hard',
       };
       game.init(context);

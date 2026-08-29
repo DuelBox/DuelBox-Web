@@ -61,6 +61,7 @@ function contextFor(options?: {
     rng: new Rng(options?.seed ?? 4242),
     presentation: options?.presentation ?? 'shared-screen',
     localSeat: options?.localSeat ?? 'p1',
+    openingSeat: 'p1',
     botDifficulty: (seat) => (seat === 'p1' ? (options?.p1 ?? null) : (options?.p2 ?? null)),
   };
 }

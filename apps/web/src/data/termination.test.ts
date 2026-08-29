@@ -58,6 +58,7 @@ describe('every playable game', () => {
       rng: new Rng(20260820),
       presentation: 'shared-screen',
       localSeat: 'p1',
+      openingSeat: 'p1',
       // Both on `easy`, deliberately. The weakest play is the most likely to reach a
       // position nothing can resolve, and it is the pairing that exposed Pool: `hard`
       // against `easy` finished that frame by potting the black and would have passed

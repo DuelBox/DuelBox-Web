@@ -51,6 +51,7 @@ function contextFor(manifest: GameManifest, difficulty: (seat: SeatId) => 'easy'
     rng: new Rng(20260823),
     presentation: 'shared-screen',
     localSeat: 'p1',
+    openingSeat: 'p1',
     botDifficulty: difficulty,
   } satisfies GameContext;
 }

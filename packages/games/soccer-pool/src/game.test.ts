@@ -140,6 +140,7 @@ function contextFor(
     rng: new Rng(seed),
     presentation: options?.presentation ?? 'shared-screen',
     localSeat: options?.localSeat ?? 'p1',
+    openingSeat: 'p1',
     botDifficulty: (seat: SeatId) =>
       seat === 'p1' ? (options?.p1 ?? null) : (options?.p2 ?? null),
   };
