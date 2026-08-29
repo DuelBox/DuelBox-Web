@@ -1,0 +1,66 @@
+{
+  "_comment": "Rule 3: every asset shipped from this app says where it came from and under what terms. Checked by scripts/check-asset-licenses.mjs, which requires source, licence and author on every entry. Paths are relative to this file.",
+  "_fonts": "All three families are variable fonts. The files here were fetched from the Google Fonts CSS2 API with the weight axis clipped to the range this site actually sets (wght@500..700 and wght@400..700), which is why one file covers every weight of a family instead of one file per weight. Each family is split into the 'latin' and 'latin-ext' subsets Google publishes, so a browser downloads only the subset the page needs. The bytes are Google's own subsetted, hinted builds, redistributed unmodified under the OFL; the licence text is in src/styles/fonts/OFL.txt.",
+  "assets": [
+    {
+      "file": "src/styles/fonts/fredoka-latin.woff2",
+      "family": "Fredoka",
+      "subset": "latin",
+      "axes": "wght 500-700, wdth 100",
+      "source": "https://fonts.google.com/specimen/Fredoka — https://github.com/google/fonts/tree/main/ofl/fredoka",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Milena Brandão and Hafontia — The Fredoka Project Authors (Copyright 2016)"
+    },
+    {
+      "file": "src/styles/fonts/fredoka-latin-ext.woff2",
+      "family": "Fredoka",
+      "subset": "latin-ext",
+      "axes": "wght 500-700, wdth 100",
+      "source": "https://fonts.google.com/specimen/Fredoka — https://github.com/google/fonts/tree/main/ofl/fredoka",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Milena Brandão and Hafontia — The Fredoka Project Authors (Copyright 2016)"
+    },
+    {
+      "file": "src/styles/fonts/plus-jakarta-sans-latin.woff2",
+      "family": "Plus Jakarta Sans",
+      "subset": "latin",
+      "axes": "wght 400-700",
+      "source": "https://fonts.google.com/specimen/Plus+Jakarta+Sans — https://github.com/tokotype/PlusJakartaSans",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Tokotype — The Plus Jakarta Sans Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "src/styles/fonts/plus-jakarta-sans-latin-ext.woff2",
+      "family": "Plus Jakarta Sans",
+      "subset": "latin-ext",
+      "axes": "wght 400-700",
+      "source": "https://fonts.google.com/specimen/Plus+Jakarta+Sans — https://github.com/tokotype/PlusJakartaSans",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Tokotype — The Plus Jakarta Sans Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "src/styles/fonts/jetbrains-mono-latin.woff2",
+      "family": "JetBrains Mono",
+      "subset": "latin",
+      "axes": "wght 500-700",
+      "source": "https://fonts.google.com/specimen/JetBrains+Mono — https://github.com/JetBrains/JetBrainsMono",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "src/styles/fonts/jetbrains-mono-latin-ext.woff2",
+      "family": "JetBrains Mono",
+      "subset": "latin-ext",
+      "axes": "wght 500-700",
+      "source": "https://fonts.google.com/specimen/JetBrains+Mono — https://github.com/JetBrains/JetBrainsMono",
+      "licence": "OFL-1.1",
+      "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+      "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
+    }
+  ]
+}

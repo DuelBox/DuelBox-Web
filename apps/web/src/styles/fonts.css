@@ -1,0 +1,112 @@
+/**
+ * The three faces the site is drawn in, served from this origin.
+ *
+ * They used to come from `fonts.googleapis.com`, linked out of `layout.tsx` — and every
+ * visitor got system fonts instead, because the site's own Content-Security-Policy says
+ * `style-src 'self' 'unsafe-inline'` and `font-src 'self'`. Both halves were blocked: the
+ * stylesheet, because googleapis.com is not `'self'`; and the font files behind it, because
+ * gstatic.com is not either. Nothing errored visibly. The page rendered, in whatever the
+ * device happened to default to — which is not the same face on a phone as on a laptop, so
+ * two people sharing one screen were not even reading the same typography.
+ *
+ * The fix is to self-host rather than to widen the policy. It removes a third-party request
+ * from every page load, keeps the tight policy tight, and means a second visit costs no
+ * network at all. `csp-origins.test.ts` now fails the build if the built site ever
+ * references an origin the policy does not permit, so this cannot come back quietly.
+ *
+ * ## Why one file per family rather than one per weight
+ *
+ * All three are variable fonts. Asking Google for `wght@500;600;700` returns three separate
+ * static files; asking for `wght@500..700` returns one variable file covering the range, at
+ * roughly the size of a single static weight. Each family here is therefore one file per
+ * subset, with the weight axis clipped to the range this site actually sets.
+ *
+ * ## Why the subsets are split
+ *
+ * `unicode-range` is not decoration: the browser downloads a face only if the page contains
+ * a character it covers. The site is English, so in practice only the `latin` files are ever
+ * fetched — `latin-ext` sits in the build unread until a game name or a player's initials
+ * need it, and costs nothing on the wire until then.
+ *
+ * The URLs are relative on purpose: webpack rewrites them to the emitted, hashed
+ * `_next/static/media/` path, which carries `basePath` with it. An absolute `/fonts/…`
+ * would 404 on GitHub Pages, where the site is served from `/DuelBox-Web/`.
+ *
+ * Source, licence and author for each file are recorded in `apps/web/assets.license.json`,
+ * as rule 3 requires; the licence text itself is in `fonts/OFL.txt`.
+ */
+
+/* Fredoka — display. Weight axis clipped to 500–700, the range the headings use. */
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 500 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('./fonts/fredoka-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 500 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('./fonts/fredoka-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Plus Jakarta Sans — body. 400 is the page default; 500/600/700 are used for emphasis. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* JetBrains Mono — scores, timers, key caps. Tabular figures that do not jitter as they
+   count. Only 500 and 700 are ever asked for. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('./fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('./fonts/jetbrains-mono-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}

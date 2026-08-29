@@ -30,17 +30,25 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/**
+ * No `<head>` of our own, deliberately.
+ *
+ * It held a `preconnect` pair and a stylesheet link to `fonts.googleapis.com`, and every one
+ * of the three was dead on arrival: the site's own CSP is `style-src 'self' 'unsafe-inline'`
+ * and `font-src 'self'`, so the stylesheet was refused and the faces behind it would have
+ * been refused too. The site rendered in whatever each device defaults to, silently, which
+ * is a different face on a phone than on a laptop — for a product built around two people
+ * reading one screen, that is not cosmetic.
+ *
+ * The three families are now served from this origin and declared in `styles/fonts.css`,
+ * which `globals.css` imports, so Next emits them as ordinary same-origin assets and the
+ * policy needs no widening. Everything else that used to justify a hand-written head —
+ * title, description, theme colour, viewport — comes from the `metadata` and `viewport`
+ * exports above, and Next writes the `<head>` itself.
+ */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
-        />
-      </head>
       <body>
         <a className="db-skip" href="#main">
           Skip to content

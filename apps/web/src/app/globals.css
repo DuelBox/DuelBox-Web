@@ -1,3 +1,6 @@
+/* The faces the tokens below name. Self-hosted, because the site's own CSP allows fonts
+   and stylesheets from `'self'` and nothing else — see `../styles/fonts.css`. */
+@import '../styles/fonts.css';
 @import '../styles/tokens.css';
 
 *,
