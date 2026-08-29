@@ -50,6 +50,9 @@ const COLOUR_STONE = '#e8dcc6';
 const COLOUR_P1 = SEAT_PALETTE.p1.base;
 const COLOUR_P2 = SEAT_PALETTE.p2.base;
 
+/** Radius of the owner mark inside a store. Small enough not to crowd the seeds. */
+const OWNER_MARK_RADIUS = 7;
+
 const STONE_RADIUS = 9;
 const CURSOR_WIDTH = 5;
 /** Stones are drawn in a ring inside a pit; beyond this many, the ring just gets denser. */
@@ -312,15 +315,32 @@ export class MancalaGame implements Game {
         COLOUR_PIT,
       );
       if (isStore) {
-        // Each store is ringed in its owner's colour, so whose bank is whose needs no
-        // label — and the ring is a shape as well as a colour.
+        const mine = slot === P1_STORE;
+        // Ringed in the owner's colour — but a ring is drawn round *both* stores, so it
+        // separates a store from a pit and does not separate the two owners from each
+        // other. Under rule 7 that left the board unreadable in greyscale (#2496).
         renderer.strokeCircle(
           this.#scratch.x,
           this.#scratch.y,
           STORE_RADIUS - 3,
           5,
-          slot === P1_STORE ? COLOUR_P1 : COLOUR_P2,
+          mine ? COLOUR_P1 : COLOUR_P2,
         );
+        // So the owner is stated again as a shape: a disc for seat one, a square for seat
+        // two, matching the shell's own seat glyph. Sized to equal area
+        // (`side = radius * sqrt(pi)`) so neither bank reads as the larger mark.
+        if (mine) {
+          renderer.circle(this.#scratch.x, this.#scratch.y, OWNER_MARK_RADIUS, COLOUR_P1);
+        } else {
+          const side = OWNER_MARK_RADIUS * Math.sqrt(Math.PI);
+          renderer.rect(
+            this.#scratch.x - side / 2,
+            this.#scratch.y - side / 2,
+            side,
+            side,
+            COLOUR_P2,
+          );
+        }
       }
     }
   }

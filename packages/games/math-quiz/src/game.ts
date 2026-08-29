@@ -49,6 +49,9 @@ const COLOUR_TILE_INK = '#e8eefb';
 const COLOUR_RIGHT = '#3ec98a';
 const COLOUR_WRONG = '#e0554f';
 const COLOUR_MUTED = 'rgba(232, 238, 251, 0.45)';
+
+/** The seat mark beside a panel's score bar, where both panels are on screen at once. */
+const SEAT_MARK_RADIUS = 6;
 const COLOUR_RULE = 'rgba(232, 238, 251, 0.18)';
 
 /** Where each tile's centre sits, relative to the diamond, in ANSWER_DIRECTIONS order. */
@@ -307,7 +310,21 @@ export class MathQuizGame implements Game {
     );
     // A bar under your own number, in your own colour, so which of the two is yours is
     // not a matter of remembering which side you are sitting on.
-    renderer.rect(BOARD_WIDTH / 2 - 96, top + PANEL_HEIGHT * 0.91, 60, 5, palette.base);
+    //
+    // The bar alone was the same rect for both seats, and the question timer above it is
+    // the same rect too, so with the colour removed the two panels were identical — rule 7
+    // (#2496). The seat mark beside it is the shell's own: a disc for seat one, a square
+    // for seat two, at equal area so neither panel carries the heavier mark.
+    const barY = top + PANEL_HEIGHT * 0.91;
+    renderer.rect(BOARD_WIDTH / 2 - 96, barY, 60, 5, palette.base);
+    const markX = BOARD_WIDTH / 2 - 112;
+    const markY = barY + 2.5;
+    if (seat === 'p1') {
+      renderer.circle(markX, markY, SEAT_MARK_RADIUS, palette.base);
+    } else {
+      const side = SEAT_MARK_RADIUS * Math.sqrt(Math.PI);
+      renderer.rect(markX - side / 2, markY - side / 2, side, side, palette.base);
+    }
   }
 }
 

@@ -220,33 +220,6 @@ const MIN_SOLO_FRAMES = 20;
  * colour".
  */
 const COLOUR_ONLY_SEATS: ReadonlyMap<string, string> = new Map([
-  [
-    'dots-and-boxes',
-    'A captured square is a plain rect in the owner’s soft tint and a claimed edge is a ' +
-      'plain line in the owner’s base colour — identical geometry for both seats, on one ' +
-      'shared board. Needs a fill pattern (hatching one way for one seat) or an initial ' +
-      'in each captured square.',
-  ],
-  [
-    'mancala',
-    'Both stores are on screen the whole match and each is ringed with the same ' +
-      'strokeCircle at the same radius and width, differing only in colour. Needs a ' +
-      'second ring, a notch, or a label on one store.',
-  ],
-  [
-    'math-quiz',
-    'Both panels are on screen at once, and each seat’s only owned marks are two plain ' +
-      'bars — the question timer and the underline beneath its own score — identical in ' +
-      'size and shape. The tiles themselves are properly differentiated (carets and a ' +
-      'tick, per its own comments); the two seat-coloured bars are not.',
-  ],
-  [
-    'sea-battle',
-    'During placement both fleets are laid out side by side, and each half is drawn with ' +
-      'the identical strokeRect, the identical cell outlines and the identical “Ready” ' +
-      'label — only the colour differs. Needs the two halves marked by a shape or an ' +
-      'initial. (The firing board is fine: only the seat to move is ever drawn there.)',
-  ],
 ]);
 
 /**

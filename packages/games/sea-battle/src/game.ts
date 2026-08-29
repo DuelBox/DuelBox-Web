@@ -62,6 +62,9 @@ const COLOUR_HIT = '#ff8a3d';
 const COLOUR_SUNK = '#b6220f';
 const COLOUR_HULL = '#7f8c99';
 
+/** The seat mark above each half during placement, when both fleets share the screen. */
+const SEAT_MARK_RADIUS = 11;
+
 const THINK_SECONDS = 0.7;
 const REVEAL_SECONDS = 0.9;
 const SETTLE_SECONDS = 1.2;
@@ -345,6 +348,19 @@ export class SeaBattleGame implements Game {
       renderer.rect(originX, HALF_ORIGIN_Y, HALF_EXTENT, HALF_EXTENT, COLOUR_WATER);
       drawGrid(renderer, originX, HALF_ORIGIN_Y, HALF_CELL);
       renderer.strokeRect(originX, HALF_ORIGIN_Y, HALF_EXTENT, HALF_EXTENT, 5, palette.base);
+      // Both halves are on screen at once during placement, drawn from the identical
+      // strokeRect and the identical grid, so only the colour told them apart — rule 7,
+      // and the board was unreadable in greyscale (#2496). The seat mark is the shell's
+      // own: a disc for seat one, a square for seat two, at equal area so neither half
+      // reads as the heavier one.
+      const markX = originX + HALF_EXTENT / 2;
+      const markY = HALF_ORIGIN_Y - 26;
+      if (seat === 'p1') {
+        renderer.circle(markX, markY, SEAT_MARK_RADIUS, palette.base);
+      } else {
+        const side = SEAT_MARK_RADIUS * Math.sqrt(Math.PI);
+        renderer.rect(markX - side / 2, markY - side / 2, side, side, palette.base);
+      }
 
       // Your own fleet, in your own half, while you are laying it out. This is the only
       // moment either fleet is ever drawn.
