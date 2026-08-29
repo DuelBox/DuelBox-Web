@@ -16,11 +16,14 @@ constitution and its rules are non-negotiable.
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
 ```
 
-**8,995 unit tests, 282 browser tests** across four Playwright projects — Desktop Chrome,
+**11,389 unit tests, 282 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
 
-**85 games play end to end.** Twenty-two of the catalogue's 107 remain unbuilt; the ids are
-in `data/catalog.yaml` and each one still carries its 17–19 open issues.
+**All 107 games play end to end.** The catalogue is complete: every row in
+`data/catalog.yaml` has a package, a `SPEC.md` written from its implementation, its own
+chunk, and a bot ladder measured from both seat orders. The shell is 279.1 KB gzipped
+against a 280 KB budget, so **the next game to be added has about 0.9 KB of headroom** —
+that is the first thing a growth plan has to solve.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
 
@@ -181,10 +184,20 @@ one changed sign across the ladder.
 
 ## Start here
 
-1. **Build more games.** Still the highest-value work available, and now the
-   highest-throughput: each one closes about twelve issues with evidence. Twenty-two remain,
-   all in `data/catalog.yaml`. The pattern is scaffold, rules module with tests, game module,
-   spec, verify, close.
+1. **There are no games left to build.** All 107 are done, so the highest-throughput work
+   of the last two sessions is finished and the backlog's shape has changed. What remains is
+   the platform work the per-game issues are blocked on — art, audio, networking, and QA on
+   real devices — plus the defects the three harnesses found.
+
+   The single most valuable next item is probably **#2481**: every security header is
+   generated, CI-enforced, and then discarded by GitHub Pages, so no visitor gets any of
+   them, and #2367's iframe threat model rests on headers nobody serves. Moving the deploy
+   to a host that reads `_headers` fixes that, gives #64 its per-PR preview URLs, and
+   unblocks #184 and #2379 in the same change.
+
+   Then **#2485**: three bot difficulties are built, tuned and tested, and `BOT_OPPONENT` is
+   hardcoded to `normal`, so no player can pick one. `rounds: 1` is hardcoded beside it,
+   which makes `round-over` unreachable and the opening-seat rotation invisible.
 
    `pnpm create-game <id>` then `node scripts/register-game.mjs <id>` do the boilerplate.
    **Run them yourself before dispatching any parallel work** — both edit shared files
