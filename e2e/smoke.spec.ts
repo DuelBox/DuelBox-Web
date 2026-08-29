@@ -107,10 +107,26 @@ test.describe('a game landing page', () => {
     await expect(page.getByText('On a keyboard')).toBeVisible();
   });
 
-  test('tells the truth about a game that has no build yet', async ({ page }) => {
-    await page.goto('/games/chess/');
-    await expect(page.locator('a[href="/play/chess/"]')).toHaveCount(0);
-    await expect(page.getByText(/still being built/i)).toBeVisible();
+  /**
+   * This used to assert the other half — that Chess said "still being built" and offered no
+   * way to play. It does not any more, because Chess is built, and so is everything else:
+   * all 107 catalogue entries have a package, a chunk and a playable route.
+   *
+   * So the assertion is inverted rather than deleted. The unbuilt state is still reachable
+   * in the page (`games/[slug]/page.tsx` renders it whenever the registry has no loader),
+   * and it will be reached again the moment somebody adds a row to `data/catalog.yaml`
+   * before building it — which is exactly when this should fail. Asserting "no page claims
+   * to be unbuilt" is the stronger guard now, and it is the one that goes red on a
+   * half-added game.
+   */
+  test('offers every game in the catalogue a way to play it', async ({ page }) => {
+    // Route slugs, not package ids: `guess-the-person` is served at `/games/guess-who/`,
+    // and `apps/web/src/data/e2e-slugs.test.ts` exists because that gap has bitten before.
+    for (const slug of ['chess', 'sudoku', 'solitaire', 'guess-who', 'ball-games']) {
+      await page.goto(`/games/${slug}/`);
+      await expect(page.locator(`a[href="/play/${slug}/"]`)).toBeVisible();
+      await expect(page.getByText(/still being built/i)).toHaveCount(0);
+    }
   });
 
   test('names each game in its own title and description', async ({ page }) => {

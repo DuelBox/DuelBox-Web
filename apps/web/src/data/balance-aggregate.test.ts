@@ -685,15 +685,6 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
   },
   {
     id: 'reversi',
-    tier: 'normal',
-    share: 0.444,
-    seeds: 1000,
-    why:
-      'outside the band by 0.6 points against an allowance of 4.8. Recorded so it is watched, ' +
-      'not because it is proven: re-measure at 1000 seeds before touching the bot.',
-  },
-  {
-    id: 'reversi',
     tier: 'hard',
     share: 0.0,
     seeds: 50,
