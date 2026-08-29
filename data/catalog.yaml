@@ -919,3 +919,10 @@ games:
   refName: Snakes
   modes: friend,bot
   rule: Don't touch the other player's snake body! Move your finger to change direction and stay alive!
+- id: cricket
+  name: Cricket
+  category: Sports
+  archetype: rt-split
+  confidence: original
+  modes: friend,bot
+  rule: One bowls, one bats. Time the swing to find the boundary; miss and the stumps go down. Both bat an innings and the bigger score wins.

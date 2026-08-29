@@ -33,6 +33,7 @@
     "@duelbox/game-cornhole": "workspace:*",
     "@duelbox/game-crabby-volley": "workspace:*",
     "@duelbox/game-crash-it": "workspace:*",
+    "@duelbox/game-cricket": "workspace:*",
     "@duelbox/game-cup-pong": "workspace:*",
     "@duelbox/game-darts": "workspace:*",
     "@duelbox/game-disco-battle": "workspace:*",

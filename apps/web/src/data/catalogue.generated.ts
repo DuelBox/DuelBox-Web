@@ -354,6 +354,22 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "researched": true
   },
   {
+    "id": "cricket",
+    "slug": "cricket",
+    "name": "Cricket",
+    "category": "Sports",
+    "archetype": "rt-split",
+    "modes": [
+      "friend",
+      "bot"
+    ],
+    "roundSeconds": 150,
+    "tint": "p2Tint",
+    "mark": "split",
+    "rule": "One bowls, one bats. Time the swing to find the boundary; miss and the stumps go down. Both bat an innings and the bigger score wins.",
+    "researched": true
+  },
+  {
     "id": "cup-pong",
     "slug": "cup-pong",
     "name": "Cup Pong",

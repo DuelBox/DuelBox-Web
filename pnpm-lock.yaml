@@ -121,6 +121,9 @@ importers:
       '@duelbox/game-crash-it':
         specifier: workspace:*
         version: link:../../packages/games/crash-it
+      '@duelbox/game-cricket':
+        specifier: workspace:*
+        version: link:../../packages/games/cricket
       '@duelbox/game-cup-pong':
         specifier: workspace:*
         version: link:../../packages/games/cup-pong
@@ -597,6 +600,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/crash-it:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/cricket:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
