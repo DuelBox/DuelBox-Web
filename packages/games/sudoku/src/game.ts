@@ -3,7 +3,7 @@ import {
   Rng,
   SEAT_PALETTE,
   SeatFlip,
-  seatView,
+  seatRotated,
   set,
   toWorld,
   vec2,
@@ -370,7 +370,7 @@ export class SudokuGame implements Game {
 
   /** The orientation the grid should be in, which the flip tweens towards. */
   #shouldRotate(): boolean {
-    return seatView(this.#state.active, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#state.active, this.#presentation, this.#localSeat);
   }
 
   #stepsFor(seconds: number): number {

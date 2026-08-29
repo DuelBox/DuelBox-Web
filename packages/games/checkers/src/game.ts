@@ -3,7 +3,7 @@ import {
   Rng,
   SEAT_PALETTE,
   SeatFlip,
-  seatView,
+  seatRotated,
   set,
   toWorld,
   vec2,
@@ -251,7 +251,7 @@ export class CheckersGame implements Game {
   }
 
   #shouldRotate(): boolean {
-    return seatView(this.#position.toMove, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#position.toMove, this.#presentation, this.#localSeat);
   }
 
   /**

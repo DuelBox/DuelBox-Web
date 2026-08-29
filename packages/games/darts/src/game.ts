@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, seatView, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -303,7 +303,7 @@ export class DartsGame implements Game {
 
   /** The orientation the board should be in, which the flip tweens towards. */
   #shouldRotate(): boolean {
-    return seatView(this.#active, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#active, this.#presentation, this.#localSeat);
   }
 
   #stepsFor(seconds: number): number {

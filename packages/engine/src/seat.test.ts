@@ -7,6 +7,7 @@ import {
   seatView,
   toScreen,
   toWorld,
+  seatRotated,
 } from './seat.js';
 import type { LogicalSize, SeatId } from './seat.js';
 
@@ -232,5 +233,43 @@ describe('PointerOwnership', () => {
       expect(owners.seatOf(id)).toBeUndefined();
     }
     expect(owners.claim(0, 'p2')).toBe('p2');
+  });
+});
+
+describe('seatRotated', () => {
+  /**
+   * The same answer as `seatView().rotated`, as a primitive.
+   *
+   * This exists because every one of the thirty-one call sites in the catalogue wanted only
+   * the boolean and asked for it from `update()` — once per fixed step, per game — while
+   * `seatView` returns a fresh object. That is rule 5, and nothing was catching it; the
+   * doc comment on `seatView` even asserted it was "called on presentation changes, not per
+   * frame", which was true when it was written and false by the thirty-first game.
+   */
+  it('agrees with seatView for every seat and presentation', () => {
+    for (const seat of ['p1', 'p2'] as const) {
+      for (const localSeat of ['p1', 'p2'] as const) {
+        for (const presentation of ['shared-screen', 'single-seat'] as const) {
+          expect(seatRotated(seat, presentation, localSeat)).toBe(
+            seatView(seat, presentation, localSeat).rotated,
+          );
+        }
+      }
+    }
+  });
+
+  it('never rotates in single-seat, where the local player owns the whole viewport', () => {
+    for (const seat of ['p1', 'p2'] as const) {
+      for (const localSeat of ['p1', 'p2'] as const) {
+        expect(seatRotated(seat, 'single-seat', localSeat)).toBe(false);
+      }
+    }
+  });
+
+  it('rotates exactly the seat that is not the local one, in shared-screen', () => {
+    expect(seatRotated('p2', 'shared-screen', 'p1')).toBe(true);
+    expect(seatRotated('p1', 'shared-screen', 'p1')).toBe(false);
+    expect(seatRotated('p1', 'shared-screen', 'p2')).toBe(true);
+    expect(seatRotated('p2', 'shared-screen', 'p2')).toBe(false);
   });
 });

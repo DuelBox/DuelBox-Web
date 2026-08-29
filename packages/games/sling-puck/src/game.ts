@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, SeatFlip, seatView } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, seatRotated } from '@duelbox/engine';
 import type { Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
@@ -83,7 +83,7 @@ export class SlingPuckGame implements Game {
     // Stepped before the early return, so the board finishes turning to face the winner
     // rather than stopping half way round.
     this.#flip.retarget(
-      seatView(this.#position.active, this.#presentation, this.#localSeat).rotated,
+      seatRotated(this.#position.active, this.#presentation, this.#localSeat),
     );
     this.#flip.step(fixedDeltaSeconds);
     if (this.#winner !== null) return;

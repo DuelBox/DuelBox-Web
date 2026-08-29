@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, SeatFlip, seatView, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -213,7 +213,7 @@ export class ShurikenGame implements Game {
 
   #shouldRotate(): boolean {
     // `seatView` is the one definition of when a seat reads the board upside down.
-    return seatView(this.#state.active, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#state.active, this.#presentation, this.#localSeat);
   }
 
   getActiveSeat(): SeatId {

@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, SeatFlip, seatView, toWorld, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -220,7 +220,7 @@ export class CornholeGame implements Game {
   }
 
   #shouldRotate(): boolean {
-    return seatView(this.#position.toThrow, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#position.toThrow, this.#presentation, this.#localSeat);
   }
 
   #resetAim(): void {

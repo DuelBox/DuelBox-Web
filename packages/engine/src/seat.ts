@@ -28,10 +28,26 @@ export interface SeatView {
  * in single-seat play the local player owns the whole viewport and nothing is
  * ever rotated.
  *
- * Called on presentation changes, not per frame, so the returned object is fine.
+ * Allocates, so it is for presentation changes rather than for a step. Every caller in the
+ * catalogue wanted only the boolean and called this once a frame from `update()`, which is
+ * a rule-5 breach thirty-one times over — so {@link seatRotated} is the one to reach for,
+ * and this is kept for the case that genuinely wants the pair.
  */
 export function seatView(seat: SeatId, presentation: Presentation, localSeat: SeatId): SeatView {
-  return { seat, rotated: presentation === 'shared-screen' && seat !== localSeat };
+  return { seat, rotated: seatRotated(seat, presentation, localSeat) };
+}
+
+/**
+ * Whether this seat reads the device upside down.
+ *
+ * The same answer as {@link seatView}'s `rotated`, as a primitive. That is the whole point:
+ * a game asks this on every fixed step, and returning an object there allocates once a step
+ * per game, which rule 5 forbids and which nothing was catching.
+ *
+ * In single-seat play the local player owns the whole viewport, so no seat is ever rotated.
+ */
+export function seatRotated(seat: SeatId, presentation: Presentation, localSeat: SeatId): boolean {
+  return presentation === 'shared-screen' && seat !== localSeat;
 }
 
 /** Fixed logical play area. Units are logical, never pixels. */

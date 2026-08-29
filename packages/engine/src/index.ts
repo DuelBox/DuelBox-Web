@@ -33,6 +33,7 @@ export type { Clock, LoopCallbacks, LoopOptions } from './loop.js';
 export {
   SEATS,
   otherSeat,
+  seatRotated,
   seatView,
   toWorld,
   toScreen,

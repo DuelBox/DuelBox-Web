@@ -1,4 +1,4 @@
-import { Rng, SEAT_PALETTE, SeatFlip, seatView } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, SeatFlip, seatRotated } from '@duelbox/engine';
 import type { Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
@@ -141,7 +141,7 @@ export class BasketballGame implements Game {
 
   #shouldRotate(): boolean {
     // `seatView` is the one definition of when a seat reads the court upside down.
-    return seatView(this.#court.shooter, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#court.shooter, this.#presentation, this.#localSeat);
   }
 
   getActiveSeat(): SeatId {

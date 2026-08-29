@@ -4,7 +4,7 @@ import {
   SEAT_PALETTE,
   SeatFlip,
   otherSeat,
-  seatView,
+  seatRotated,
   set,
   toWorld,
   vec2,
@@ -350,7 +350,7 @@ export class MemoryMatchGame implements Game {
     // `seatView` is the one definition of when a seat reads the board upside down.
     // Three games had reimplemented the same expression, which is three chances to
     // disagree the day single-seat presentation gains a wrinkle.
-    return seatView(this.#active, this.#presentation, this.#localSeat).rotated;
+    return seatRotated(this.#active, this.#presentation, this.#localSeat);
   }
 
   #stepsFor(seconds: number): number {
