@@ -79,6 +79,14 @@ always the second shot, and crossings on shot two measured **0.20 against 0.96 e
 it**, at every tier. A shot nobody can reach the answer with is not a hard shot. `rules.test.ts`
 now checks the whole rack against the sweep rather than trusting the numbers.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`, which sets the lead as well as the active seat. Measured at 50 seeds x both
+opening seats on `normal`, equal tiers: seat one takes **34.1%** of 85 decided matches,
+against 36.6% with the lead fixed to seat one, so the seat-two lean here is not the opener —
+it survives both of them and is worth an issue of its own.
+
 ## The bot
 
 Three knobs, all monotone, each swept alone.

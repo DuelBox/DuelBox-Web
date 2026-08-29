@@ -102,7 +102,7 @@ export class ColorWarsGame implements Game {
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#matchWinner = null;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#thinkSteps = -1;
     this.#settleSteps = 0;
     this.#cursor.reset();

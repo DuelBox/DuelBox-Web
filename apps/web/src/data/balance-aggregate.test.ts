@@ -16,9 +16,11 @@ import type { LoadedGame } from './registry';
  * Those are not the same number, and this file used to open by stating only the first one.
  * The assertion is the flat band widened by {@link SIGMAS} standard errors of its own sample,
  * and at the fifty seeds a push runs that allowance is **21.2 points** - so what the push gate
- * forbids is a seat above 76.2% or below 23.8%, and nothing tighter. On a fully green run
- * **around half the catalogue measures outside the flat band**; the exact count is printed at
- * the top of every run, above the table, so nobody has to read this comment to find it out.
+ * forbids is a seat above 76.2% or below 23.8%, and nothing tighter. On a fully green run a
+ * large minority of the catalogue still **measures outside the flat band** - it was around
+ * half before #2487 taught 31 turn games to read the opening seat, and 31 of 107 after. The
+ * exact count is printed at the top of every run, above the table, so nobody has to read this
+ * comment to find it out, and nobody should quote the number in this sentence instead.
  *
  * The gap closes with sample size and only with sample size, and every run prints the number
  * it is actually enforcing:

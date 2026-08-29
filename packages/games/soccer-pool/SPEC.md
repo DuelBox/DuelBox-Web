@@ -340,6 +340,10 @@ colour, so the weight of a shot can be read, matched and repeated in greyscale.
   can end level. Anything that fixes it — a wider mouth, a shorter pitch, a keeper that does
   not stand dead centre — changes what the game *is*, and would need measuring against all
   three tiers rather than tuned against the one.
-- **Whether the first-move advantage should be paid for.** Seat one's opening kick-off is
-  worth about five points of win rate. Football alternates the kick-off by half; there is no
-  half here.
+- ~~**Whether the first-move advantage should be paid for.**~~ **Answered.** The opening
+  kick-off was worth about five points of win rate to whoever took it, and the balance
+  harness recorded this game at **57.5%** to seat one over a thousand seeds. It was seat one
+  taking it every time: `resetMatch` opened from a literal `p1`. It now opens from
+  `context.openingSeat` (#2466, #2487), which is football's alternate-by-half at the layer
+  that owns the half. Measured at 50 seeds x both opening seats on `normal`, equal tiers:
+  **50.0%** of 62 decided matches, and the game's line was deleted from `OUTSIDE_THE_BAND`.

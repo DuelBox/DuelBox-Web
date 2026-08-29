@@ -177,7 +177,10 @@ seeded matches a tier: **3.3% (easy), 2.4% (normal), 3.8% (hard)**. A card level
 
 ### Who shoots when
 
-`leaderFor(round)` alternates: p1 leads the even rounds, p2 the odd ones. Shooting *second*
+`leaderFor(round, opener)` alternates from `context.openingSeat`: the opener leads the even
+rounds and the other seat the odd ones. The opener is the shell's — the SDK alternates it
+across the rounds of a best-of (#2466), so a game that always started from a literal `p1`
+would leave that rotation reaching nothing. Shooting *second*
 is a small advantage and a real one — you have just watched an arrow fly through the rack
 you are about to shoot into, and you know what you have to beat — so over an even number of
 rounds each seat leads exactly half. This is insurance for human play rather than a bot

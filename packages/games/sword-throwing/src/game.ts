@@ -133,7 +133,7 @@ export class SwordThrowingGame implements Game {
     resetThrowPlan(this.#throwPlans.p2);
     resetParryPlan(this.#parryPlans.p1);
     resetParryPlan(this.#parryPlans.p2);
-    resetState(this.#state, this.#rng);
+    resetState(this.#state, this.#rng, context.openingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

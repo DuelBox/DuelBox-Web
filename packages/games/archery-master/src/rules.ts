@@ -462,14 +462,19 @@ export const SHOTS_PER_ROUND = 2;
  * It alternates, because shooting *second* is a small advantage and a real one: you have
  * just watched an arrow fly through the rack you are about to shoot into, and you know
  * what you have to beat. Over an even number of rounds each seat leads exactly half.
+ *
+ * The alternation starts from `opener`, which is the shell's `context.openingSeat` rather
+ * than a literal `p1` — the SDK alternates that across the rounds of a best-of (#2466), and
+ * a game that always opened with seat one would leave that rotation reaching nothing. The
+ * default is only so the rules tests can name a concrete order.
  */
-export function leaderFor(roundIndex: number): SeatId {
-  return roundIndex % 2 === 0 ? 'p1' : 'p2';
+export function leaderFor(roundIndex: number, opener: SeatId = 'p1'): SeatId {
+  return roundIndex % 2 === 0 ? opener : otherSeat(opener);
 }
 
 /** Whose shot this is, given the round and which of its two shots is up. */
-export function shooterFor(roundIndex: number, shotInRound: number): SeatId {
-  const leader = leaderFor(roundIndex);
+export function shooterFor(roundIndex: number, shotInRound: number, opener: SeatId = 'p1'): SeatId {
+  const leader = leaderFor(roundIndex, opener);
   return shotInRound % 2 === 0 ? leader : otherSeat(leader);
 }
 

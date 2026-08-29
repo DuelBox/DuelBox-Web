@@ -352,7 +352,13 @@ export function activeOf(state: Readonly<State>): SeatId {
  * that **both** fighters take. Identical numbers in two mirrored local frames are a
  * mirrored arena, so neither seat starts closer to anything than the other.
  */
-export function resetState(state: State, rng: Rng): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetState(state: State, rng: Rng, opener: SeatId = 'p1'): void {
   for (let i = 0; i < TARGETS_PER_SEAT; i += 1) {
     const slot = TARGET_SLOTS[i] ?? 0;
     state.slots[i] = slot + (rng.float() * 2 - 1) * SLOT_JITTER;
@@ -364,7 +370,7 @@ export function resetState(state: State, rng: Rng): void {
     state.p2.struck[i] = 0;
   }
   state.phase = 'aiming';
-  state.thrower = 'p1';
+  state.thrower = opener;
   state.aim = 0;
   restShot(state);
   state.throws = 0;

@@ -52,6 +52,13 @@ No wall clock, no `Math.random`, one `Rng` from the context. Only the dice that 
 being kept are re-rolled, and the same seed replays to the same hands, asserted by tracing
 two runs.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **50.0%** of 98 decided matches, and 49 of the 50 seed pairs end differently when only
+the opening seat changes.
+
 ## The bot
 
 | | Keeps dice | Chases the upper bonus | Drops a low pair |

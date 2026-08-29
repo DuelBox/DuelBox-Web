@@ -289,7 +289,13 @@ export function ownSide(seat: SeatId, y: number): boolean {
  * middle and mirrored — so the position a seat faces at the start is exactly the position the
  * other seat faces, turned round. It cannot drift out of that by being edited.
  */
-export function resetGame(game: Game): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK alternates
+ * it across the rounds of a best-of so first-mover advantage washes out (#2466), and a game
+ * that assumed seat one would leave that rotation reaching nothing. The default exists only
+ * so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   /**
    * Every puck here can be pointed at the gap, and that is a constraint, not a layout.
    *
@@ -322,8 +328,8 @@ export function resetGame(game: Game): void {
       }
     }
   }
-  game.active = 'p1';
-  game.lead = 'p1';
+  game.active = opener;
+  game.lead = opener;
   game.phase = 'aim';
   game.sweep = 0;
   game.sweepUp = true;
@@ -332,7 +338,7 @@ export function resetGame(game: Game): void {
   game.p2Shots = 0;
   game.p1Through = 0;
   game.p2Through = 0;
-  game.loaded = pickLoaded(game, 'p1');
+  game.loaded = pickLoaded(game, opener);
   game.ready = READY_SECONDS;
 }
 

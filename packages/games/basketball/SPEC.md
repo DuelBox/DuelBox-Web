@@ -228,7 +228,9 @@ three shots so an endless string of offensive rebounds is impossible.
 Structural, and it needs two facts.
 
 1. **A match is at most 42 shots.** `POSSESSIONS` = 14 strictly alternating, `shooterOf` is a
-   parity of the possession number, and `SHOTS_PER_POSSESSION` = 3 is checked by
+   parity of the possession number counted from `context.openingSeat` (#2466 — the shell's
+   opener, never a literal `p1`; with an even possession count and a generator per seat it
+   reorders a bot match without changing its result), and `SHOTS_PER_POSSESSION` = 3 is checked by
    `retainsPossession` before any rebound can extend a possession. Nothing a player does adds
    a possession or a shot.
 2. **Every shot terminates.** The freeze, the flight, the roll and the settle are all finite

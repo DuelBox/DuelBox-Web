@@ -131,6 +131,12 @@ export type Phase = 'ready' | 'winding' | 'striking' | 'settling' | 'over';
 export interface Game {
   phase: Phase;
   active: SeatId;
+  /**
+   * Who swings first in round one. The shell's `context.openingSeat`, never a literal
+   * `p1` — the SDK alternates it across the rounds of a best-of (#2466), and a game that
+   * always opened with seat one would leave that rotation reaching nothing.
+   */
+  opener: SeatId;
   /** Seconds left of the ready pause. */
   ready: number;
   /** Where the needle is, in radians either side of the mark. */
@@ -162,6 +168,7 @@ export function createGame(): Game {
   const game: Game = {
     phase: 'ready',
     active: 'p1',
+    opener: 'p1',
     ready: READY_SECONDS,
     needle: -SWEEP,
     needleRising: true,
@@ -221,8 +228,8 @@ export function towerTopYOf(seat: SeatId): number {
  * that is worth something. Alternating hands each seat the informed swing exactly as
  * often; the match ending only on an even round keeps it that way to the last. **[ours]**
  */
-export function leaderOf(round: number): SeatId {
-  return round % 2 === 1 ? 'p1' : 'p2';
+export function leaderOf(round: number, opener: SeatId = 'p1'): SeatId {
+  return round % 2 === 1 ? opener : otherOf(opener);
 }
 
 export function windFactor(wind: number): number {
@@ -248,13 +255,14 @@ export function bandsFor(power: number, wind: number): number {
   return Math.min(BANDS, Math.floor(climbFor(power, wind) * BANDS));
 }
 
-export function resetGame(game: Game): void {
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
+  game.opener = opener;
   game.p1Score = 0;
   game.p2Score = 0;
   game.p1Swings = 0;
   game.p2Swings = 0;
   game.rounds = 1;
-  game.active = 'p1';
+  game.active = leaderOf(1, opener);
   game.winner = null;
   game.lastBands = 0;
   game.lastBell = false;
@@ -419,7 +427,7 @@ function handOver(game: Game): void {
   }
 
   game.rounds += 1;
-  game.active = leaderOf(game.rounds);
+  game.active = leaderOf(game.rounds, game.opener);
   beginTurn(game);
 
   const played = game.rounds - 1;

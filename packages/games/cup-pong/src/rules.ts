@@ -169,6 +169,12 @@ export interface Game {
   readonly ball: Ball;
   phase: Phase;
   active: SeatId;
+  /**
+   * Who opens round one. The shell's `context.openingSeat`, never a literal `p1` — the SDK
+   * alternates it across the rounds of a best-of (#2466), and a game that always opened
+   * with seat one would leave that rotation reaching nothing.
+   */
+  opener: SeatId;
   /** Seconds left in the ready freeze or the settle, whichever phase is running. */
   hold: number;
   /** Where the aim needle is, in radians either side of straight down the table. */
@@ -240,6 +246,7 @@ export function createGame(): Game {
     ball: { x: CENTRE_X, y: P1_THROW_Y },
     phase: 'ready',
     active: 'p1',
+    opener: 'p1',
     hold: READY_SECONDS,
     aim: -AIM_SWEEP,
     aimRising: true,
@@ -279,11 +286,12 @@ export function cleanBy(game: Readonly<Game>, seat: SeatId): number {
 }
 
 /** Who opens a round. Alternates, so neither seat always throws into a fresh rack first. */
-export function leadOf(round: number): SeatId {
-  return round % 2 === 1 ? 'p1' : 'p2';
+export function leadOf(round: number, opener: SeatId = 'p1'): SeatId {
+  return round % 2 === 1 ? opener : otherOf(opener);
 }
 
-export function resetGame(game: Game): void {
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
+  game.opener = opener;
   for (const cup of game.p1Rack) cup.standing = true;
   for (const cup of game.p2Rack) cup.standing = true;
   game.round = 1;
@@ -296,7 +304,7 @@ export function resetGame(game: Game): void {
   game.p2Clean = 0;
   game.lastOutcome = 'miss';
   game.winner = null;
-  game.active = leadOf(1);
+  game.active = leadOf(1, opener);
   beginTurn(game);
 }
 
@@ -513,7 +521,7 @@ function handOver(game: Game): void {
     return;
   }
   game.round += 1;
-  game.active = leadOf(game.round);
+  game.active = leadOf(game.round, game.opener);
   beginTurn(game);
 }
 

@@ -201,7 +201,7 @@ export class SnakesandLaddersGame implements Game {
     this.#thinkSteps = -1;
     this.#resolveSteps = -1;
     this.#settleSteps = 0;
-    resetPosition(this.#position);
+    resetPosition(this.#position, context.openingSeat);
     this.#cursor.reset();
     this.#flip.snap(this.#shouldRotate());
   }

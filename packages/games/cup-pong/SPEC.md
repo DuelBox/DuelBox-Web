@@ -52,7 +52,11 @@ and compares.
 
 ## A match ends only on a completed round — and the lead alternation is honest insurance
 
-Nine rounds, one throw each. The lead alternates: p1 opens round 1, p2 round 2, and so on.
+Nine rounds, one throw each. The lead alternates: `context.openingSeat` opens round 1, the
+other seat round 2, and so on. The opener is the shell's rather than a literal `p1` (#2466),
+though it changes no bot-versus-bot match — see the bit-identical row in the table below and
+the note under it: each seat has its own generator and an even lead count, so reversing the
+opener only reorders the same two sequences of throws.
 Clearing a rack does **not** end the match on the spot — the other seat still gets the throw
 it is owed, and may clear their own.
 

@@ -249,9 +249,15 @@ export function centreBall(match: Match): void {
   ball.vy = 0;
 }
 
-export function resetMatch(match: Match): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetMatch(match: Match, opener: SeatId = 'p1'): void {
   kickOff(match);
-  match.seat = 'p1';
+  match.seat = opener;
   match.phase = 'aiming';
   match.p1 = 0;
   match.p2 = 0;

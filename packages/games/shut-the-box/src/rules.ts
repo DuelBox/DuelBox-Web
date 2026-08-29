@@ -38,6 +38,8 @@ export interface Game {
   /** Tiles the player has picked so far this roll, as tile numbers. */
   readonly picked: number[];
   seat: SeatId;
+  /** Who took the first turn, so {@link endTurn} knows which handover is the last one. */
+  opener: SeatId;
   phase: Phase;
   /** Final scores; -1 until that seat has finished its turn. */
   scoreP1: number;
@@ -50,17 +52,25 @@ export function createGame(): Game {
     dice: [],
     picked: [],
     seat: 'p1',
+    opener: 'p1',
     phase: 'rolling',
     scoreP1: -1,
     scoreP2: -1,
   };
 }
 
-export function resetGame(game: Game): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   game.open.fill(true);
   game.dice.length = 0;
   game.picked.length = 0;
-  game.seat = 'p1';
+  game.seat = opener;
+  game.opener = opener;
   game.phase = 'rolling';
   game.scoreP1 = -1;
   game.scoreP2 = -1;
@@ -210,11 +220,14 @@ export function endTurn(game: Game): void {
   game.dice.length = 0;
   game.picked.length = 0;
 
-  if (game.seat === 'p2') {
+  // The *second* turn is the last one, whichever seat takes it. Written as `=== 'p2'` this
+  // ended the match after seat two's turn even when seat two had opened, so seat one never
+  // played at all and won on its unset score. Both turns are always taken.
+  if (game.seat !== game.opener) {
     game.phase = 'over';
     return;
   }
-  game.seat = 'p2';
+  game.seat = otherOf(game.opener);
   game.open.fill(true);
   game.phase = 'rolling';
 }

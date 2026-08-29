@@ -118,7 +118,7 @@ export class MiniGolfGame implements Game {
     this.#holeSteps = 0;
     this.#settleSteps = 0;
     this.#event = '';
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#beginStroke();
     this.#flip.snap(this.#shouldRotate());
   }

@@ -79,6 +79,13 @@ So: **twenty consecutive shots with nothing potted ends the frame**, decided on 
 potted, drawn if level. Ten visits each without a pot is a dead frame in any real sense,
 and calling one is a real tournament rule rather than an invention.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **50.0%** of the 58 matches that are decided at all, and all 50 seed pairs end
+differently when only the opening seat changes.
+
 ## The bot
 
 | | Angular error | Power |

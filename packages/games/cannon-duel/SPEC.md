@@ -80,6 +80,13 @@ part-way through its half-turn, because the needle a player is reading is moving
 and a tap would name a moment they did not mean — asserted by a test that presses on the
 exact step the turn passes.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **46.0%** of 100 decided matches, in from 40.0% with the break fixed to seat one, and
+49 of the 50 seed pairs end differently when only the opening seat changes.
+
 ## The bot
 
 Three tiers, expressed only as how accurately a tier hits the moment it meant to, which is

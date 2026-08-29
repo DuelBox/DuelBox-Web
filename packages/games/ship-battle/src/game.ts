@@ -31,7 +31,6 @@ import {
   resetGame,
   resolveShot,
   rowOf,
-  openingAttacker,
   shieldLive,
   shipOf,
   steerShield,
@@ -129,8 +128,10 @@ export class ShipBattleGame implements Game {
     this.#reactElapsed = 0;
     this.#interceptErrX = 0;
     this.#interceptErrY = 0;
-    resetGame(this.#position);
-    this.#position.attacker = openingAttacker(this.#rng);
+    // The shell's opener, not a coin of our own. `openingAttacker(rng)` used to toss here;
+    // the SDK already alternates `openingSeat` across the rounds of a best-of (#2466), and
+    // two independent compensations for the same advantage cancel each other at random.
+    resetGame(this.#position, context.openingSeat);
     this.#sight.reset();
     aimAt(this.#position, this.#sight.index);
     this.#flip.snap(this.#shouldRotate());

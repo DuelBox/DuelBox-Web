@@ -9,6 +9,14 @@ Nine numbered tiles stand open. Roll two dice, then shut any set of open tiles a
 to the roll. Keep going until no set adds up; what you failed to shut is your score. Both
 players take a full turn, and the **lower** score wins.
 
+`context.openingSeat` takes the first turn, not a literal `p1`: the SDK alternates the
+opener across the rounds of a best-of so first-mover advantage washes out (#2466), and here
+the second seat has a real edge — it knows the number it has to beat. `endTurn` reads the
+opener too. It used to end the match after seat two's turn whichever seat had opened, so
+with a `p2` opener seat one never played at all and won on its unset score: 100 matches of
+100, found the moment the game started reading the opener (#2487). Measured at 50 seeds ×
+both opening seats on `normal`, equal tiers: seat one takes **50.0%** of 92 decided matches.
+
 Two things make this the odd game in the collection. It is the first where **randomness
 drives play** rather than decorating it, and it is the first where **scoring down is the
 goal** — which the shell's HUD had to be told about rather than left to infer.

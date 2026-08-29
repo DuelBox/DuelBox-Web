@@ -153,7 +153,10 @@ export class DotsAndBoxesGame implements Game {
     this.#presentation = context.presentation;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
-    this.#startingSeat = 'p1';
+    // The shell's opener, never a literal `p1` — the SDK alternates it across the rounds of
+    // a best-of (#2466) so first-mover advantage washes out, and a game that assumed `p1`
+    // would leave that rotation reaching nothing.
+    this.#startingSeat = context.openingSeat;
     this.#matchWinner = null;
     this.#resetRound(this.#startingSeat);
     this.#flip.snap(this.#shouldRotate());

@@ -29,7 +29,12 @@ throws are not identical. It is small enough that skill still decides.
 
 **Only the difference counts.** Eight against seven scores one, not eight. That stops a
 runaway and means a throw that merely *matches* the opponent is worth as much as one that
-beats them. Whoever did not throw first last round throws first next.
+beats them. Whoever did not throw first last round throws first next, and round zero's
+thrower is `context.openingSeat` rather than a literal `p1` — the SDK alternates that across
+the rounds of a best-of (#2466), and a game that always opened with seat one would leave
+that rotation reaching nothing. Measured at 50 seeds x both opening seats on `normal`, equal
+tiers: seat one takes **50.0%** of 92 decided matches, and 46 of the 50 seed pairs now play
+out differently when only the opening seat changes.
 
 ## Shoving
 

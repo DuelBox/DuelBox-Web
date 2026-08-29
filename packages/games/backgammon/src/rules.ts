@@ -106,7 +106,13 @@ export function createPosition(): Position {
   return position;
 }
 
-export function resetPosition(position: Position): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetPosition(position: Position, opener: SeatId = 'p1'): void {
   position.points.fill(0);
   for (const [travel, count] of START_LAYOUT) {
     position.points[travel] = (position.points[travel] ?? 0) + count;
@@ -117,7 +123,7 @@ export function resetPosition(position: Position): void {
   position.barP2 = 0;
   position.offP1 = 0;
   position.offP2 = 0;
-  position.seat = 'p1';
+  position.seat = opener;
   position.phase = 'rolling';
   position.dice.length = 0;
   position.rolled[0] = 0;

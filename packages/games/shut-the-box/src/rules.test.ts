@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
+import type { SeatId } from '@duelbox/engine';
 import {
   BOT_PROFILES,
   DIE_FACES,
@@ -16,6 +17,7 @@ import {
   legalSets,
   oneDieAllowed,
   openTotal,
+  otherOf,
   pickComplete,
   pickedTotal,
   resetGame,
@@ -235,6 +237,28 @@ describe('the two turns', () => {
     endTurn(game);
     endTurn(game);
     expect(game.phase).toBe('over');
+  });
+
+  it('gives both seats a turn whichever of them opened', () => {
+    // The regression this game shipped with. `endTurn` read `game.seat === 'p2'` to decide
+    // the match was over, so with a `p2` opener the very first turn ended it: seat one
+    // never played, its score stayed at the -1 sentinel, and -1 is lower than anything.
+    // It won 100 matches of 100 the moment the game started reading `context.openingSeat`.
+    for (const opener of ['p1', 'p2'] as SeatId[]) {
+      const game = createGame();
+      resetGame(game, opener);
+      expect(game.seat).toBe(opener);
+
+      endTurn(game);
+      expect(game.phase, 'the opener is not the whole match').toBe('rolling');
+      expect(game.seat, 'the other seat gets the box, reopened').toBe(otherOf(opener));
+      expect(game.open.filter(Boolean).length).toBe(TILE_COUNT);
+
+      endTurn(game);
+      expect(game.phase).toBe('over');
+      expect(game.scoreP1, 'seat one played').toBeGreaterThanOrEqual(0);
+      expect(game.scoreP2, 'seat two played').toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('gives the match to the lower score', () => {

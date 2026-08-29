@@ -97,6 +97,13 @@ simulation steps. The stones in a pit are drawn on a deterministic spiral rather
 scattered randomly, so the same board always draws the same way — which matters because a
 game may be replayed from a seed.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and this game is
+where ignoring it showed worst: on `hard` a solved opening played perfectly is one match
+rather than a sample, and it went to seat two all 100 matches of 100. Measured at 50 seeds x
+both opening seats, equal tiers: seat one takes **50.0%** on both `normal` and `hard`. Its
+`hard` line was deleted from the balance harness's `OUTSIDE_THE_BAND` (#2487).
+
 ## The bot
 
 Negamax with an alpha-beta window over the store difference, with stones still in your own

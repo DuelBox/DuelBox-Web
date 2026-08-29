@@ -114,7 +114,7 @@ export class SeaBattleGame implements Game {
     this.#thinkSteps = -1;
     this.#revealSteps = 0;
     this.#settleSteps = 0;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     resetBotMemory(this.#botMemoryP1);
     resetBotMemory(this.#botMemoryP2);
     this.#cursor.reset();

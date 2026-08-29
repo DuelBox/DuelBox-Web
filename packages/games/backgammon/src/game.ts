@@ -221,7 +221,7 @@ export class BackgammonGame implements Game {
     this.#thinkSteps = -1;
     this.#passSteps = 0;
     this.#settleSteps = 0;
-    resetPosition(this.#position);
+    resetPosition(this.#position, context.openingSeat);
     this.#cursor.reset();
     this.#selected = 0;
     this.#refresh();

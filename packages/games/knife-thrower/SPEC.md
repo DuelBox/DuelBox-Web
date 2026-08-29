@@ -106,6 +106,13 @@ Only on your own turn. Input is refused while the board is part-way through its 
 because the log a player is reading is moving under them and a tap would name a moment they
 did not mean.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **50.0%** of 100 decided matches, and all 50 seed pairs end differently when only the
+opening seat changes.
+
 ## The bot
 
 Three tiers, expressed only as how much room a tier insists on and how accurately it hits

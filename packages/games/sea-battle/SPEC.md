@@ -71,6 +71,15 @@ rejection sampling with a bounded attempt count and a deterministic sweep as a f
 a fleet is always complete — a short fleet would make a match unwinnable. Two runs from one
 seed produce identical layouts and identical bot play, both asserted.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`, and it is carried on the game rather than applied at reset because firing
+starts long after both fleets are laid out. Measured at 50 seeds x both opening seats on
+`normal`, equal tiers: seat one takes **53.0%** of 100 decided matches, in from 58.0% with
+the first shot fixed to seat one, and all 50 seed pairs end differently when only the
+opening seat changes.
+
 ## The bot
 
 | | Hunts a hit | Parity sweep | Clears a wreck's ring |

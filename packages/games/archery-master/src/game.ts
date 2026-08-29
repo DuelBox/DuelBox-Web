@@ -167,6 +167,8 @@ export class ArcheryMasterGame implements Game {
   #roundIndex = 0;
   #shotInRound = 0;
   #active: SeatId = 'p1';
+  /** Who leads round one. The shell's, never assumed — see `GameContext.openingSeat`. */
+  #opener: SeatId = 'p1';
   #localSeat: SeatId = 'p1';
   #presentation: Presentation = 'shared-screen';
   #botP1: BotDifficulty | null = null;
@@ -206,6 +208,7 @@ export class ArcheryMasterGame implements Game {
 
   init(context: GameContext): void {
     this.#rng = context.rng;
+    this.#opener = context.openingSeat;
     this.#localSeat = context.localSeat;
     this.#presentation = context.presentation;
     this.#botP1 = context.botDifficulty('p1');
@@ -216,7 +219,7 @@ export class ArcheryMasterGame implements Game {
     for (const rack of this.#racks) rollRack(rack, this.#rng);
     this.#roundIndex = 0;
     this.#shotInRound = 0;
-    this.#active = shooterFor(0, 0);
+    this.#active = shooterFor(0, 0, this.#opener);
     this.#flightSteps = 0;
     this.#settleSteps = 0;
     this.#beginTurn();
@@ -555,7 +558,7 @@ export class ArcheryMasterGame implements Game {
   #advanceTurn(): void {
     if (this.#shotInRound === 0) {
       this.#shotInRound = 1;
-      this.#active = shooterFor(this.#roundIndex, 1);
+      this.#active = shooterFor(this.#roundIndex, 1, this.#opener);
       this.#beginTurn();
       return;
     }
@@ -567,7 +570,7 @@ export class ArcheryMasterGame implements Game {
     }
     this.#roundIndex = nextRound;
     this.#shotInRound = 0;
-    this.#active = shooterFor(nextRound, 0);
+    this.#active = shooterFor(nextRound, 0, this.#opener);
     this.#beginTurn();
   }
 

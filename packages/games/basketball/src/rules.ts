@@ -209,6 +209,12 @@ export interface Court {
   readonly ball: Point;
   phase: Phase;
   shooter: SeatId;
+  /**
+   * Who takes possession one. The shell's `context.openingSeat`, never a literal `p1` — the
+   * SDK alternates it across the rounds of a best-of (#2466) and a game that ignored it
+   * would leave that rotation reaching nothing.
+   */
+  opener: SeatId;
   possession: number;
   shotsThisPossession: number;
   /** Seconds left in the ready freeze or the settle, whichever phase is running. */
@@ -260,9 +266,9 @@ export function halfSign(seat: SeatId): number {
   return seat === 'p1' ? 1 : -1;
 }
 
-/** Who shoots in a possession. Alternates, starting with seat one. */
-export function shooterOf(possession: number): SeatId {
-  return possession % 2 === 1 ? 'p1' : 'p2';
+/** Who shoots in a possession. Alternates, starting with `opener`. */
+export function shooterOf(possession: number, opener: SeatId = 'p1'): SeatId {
+  return possession % 2 === 1 ? opener : otherOf(opener);
 }
 
 /**
@@ -394,6 +400,7 @@ export function createCourt(): Court {
     ball: { x: HOOP_X, y: topOfKeyY('p1') },
     phase: 'ready',
     shooter: 'p1',
+    opener: 'p1',
     possession: 1,
     shotsThisPossession: 0,
     hold: READY_SECONDS,
@@ -432,9 +439,10 @@ export function createCourt(): Court {
   return court;
 }
 
-export function resetCourt(court: Court): void {
+export function resetCourt(court: Court, opener: SeatId = 'p1'): void {
+  court.opener = opener;
   court.possession = 1;
-  court.shooter = shooterOf(1);
+  court.shooter = shooterOf(1, opener);
   court.shotsThisPossession = 0;
   court.p1Points = 0;
   court.p2Points = 0;
@@ -795,7 +803,7 @@ function advance(court: Court): boolean {
     return false;
   }
   court.possession += 1;
-  court.shooter = shooterOf(court.possession);
+  court.shooter = shooterOf(court.possession, court.opener);
   court.shotsThisPossession = 0;
   // A change of possession always restarts at the top of the key. Leaving the ball where
   // it stopped would let a seat aim a *miss* to strand the other one somewhere awkward,

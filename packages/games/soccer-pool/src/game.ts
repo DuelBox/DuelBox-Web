@@ -150,7 +150,7 @@ export class SoccerPoolGame implements Game {
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#matchWinner = null;
-    resetMatch(this.#match);
+    resetMatch(this.#match, context.openingSeat);
     this.#aimSteps = 0;
     this.#rollSteps = 0;
     this.#thinkSteps = -1;
