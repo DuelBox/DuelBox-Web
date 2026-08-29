@@ -27,6 +27,11 @@ test.describe('the match flow', () => {
     // changes neither, so Road Dodge ran to its end and then sat frozen behind a live
     // pause button, with no result screen, for as long as anyone cared to watch.
     await page.goto('/play/road-dodge/');
+    // One round, so that the end of the round is the end of the match. The shell now
+    // defaults to best-of-three (#2485) and a round result is a different screen — which
+    // is a thing worth testing, and is tested in `bot-difficulty.spec.ts`; what this test
+    // is about is a match that ends when nothing scores, so it asks for the shorter one.
+    await page.getByRole('radio', { name: '1 round' }).check();
     await page.getByRole('button', { name: /Play against/ }).click();
 
     // Nobody touches the controls, so the human seat crashes and the bot outlives it.

@@ -1,5 +1,5 @@
 import type { Game, GameManifest } from '@duelbox/game-sdk';
-import { CATALOGUE } from './catalogue.generated';
+import { GAME_IDS } from './game-names.generated';
 
 /**
  * The playable-game registry.
@@ -156,9 +156,7 @@ export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
  * test failure should name. Everything the site asks is answered in slug terms, and both
  * spellings are accepted so a stale link cannot 404.
  */
-const ID_BY_SLUG: ReadonlyMap<string, string> = new Map(
-  CATALOGUE.map((entry) => [entry.slug, entry.id]),
-);
+const ID_BY_SLUG: ReadonlyMap<string, string> = new Map(Object.entries(GAME_IDS));
 
 /** The package id behind a slug, or the argument unchanged if it is already one. */
 function resolve(slugOrId: string): string {
@@ -166,9 +164,9 @@ function resolve(slugOrId: string): string {
 }
 
 /** Slugs that are actually playable today, for the catalogue to mark and the router to build. */
-export const PLAYABLE: readonly string[] = CATALOGUE.filter((entry) => entry.id in LOADERS).map(
-  (entry) => entry.slug,
-);
+export const PLAYABLE: readonly string[] = Object.entries(GAME_IDS)
+  .filter(([, id]) => id in LOADERS)
+  .map(([slug]) => slug);
 
 export function isPlayable(slugOrId: string): boolean {
   return resolve(slugOrId) in LOADERS;

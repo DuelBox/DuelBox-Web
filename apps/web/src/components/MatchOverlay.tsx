@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
@@ -142,6 +143,46 @@ function Countdown({ remaining }: { remaining: number }) {
   );
 }
 
+/**
+ * Everything inside the panel that is a stop on the Tab order.
+ *
+ * `[tabindex="-1"]` is excluded on purpose: those are programmatic focus targets, and
+ * tabbing to one is exactly what a keyboard user did not ask for.
+ */
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+function focusableWithin(root: ParentNode): HTMLElement[] {
+  const stops: HTMLElement[] = [];
+  for (const node of root.querySelectorAll<HTMLElement>(FOCUSABLE)) {
+    // A control with no boxes is hidden — `display: none`, or an ancestor that is — and a
+    // hidden control is not somewhere Tab can land.
+    if (node.getClientRects().length === 0) continue;
+    stops.push(node);
+  }
+  return stops;
+}
+
+/**
+ * A place focus can be *put*, as opposed to a place it can be tabbed to.
+ *
+ * A text field is neither: focusing one raises the on-screen keyboard over half the phone,
+ * and nobody asked for it by quitting a match. Radios, checkboxes and buttons are fine.
+ */
+function acceptsHandedBackFocus(el: HTMLElement): boolean {
+  if (el instanceof HTMLTextAreaElement) return false;
+  if (!(el instanceof HTMLInputElement)) return true;
+  return ['button', 'checkbox', 'radio', 'reset', 'submit', 'range', 'color', 'file'].includes(
+    el.type,
+  );
+}
+
 function Panel({
   heading,
   role,
@@ -151,8 +192,96 @@ function Panel({
   role: 'dialog' | 'status';
   children: React.ReactNode;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const modal = role === 'dialog';
+
+  /**
+   * The focus trap `aria-modal` has been promising all along.
+   *
+   * `aria-modal="true"` tells assistive technology that everything outside this panel is
+   * inert. With nothing holding focus in, Tab walked out of the pause menu and into the
+   * site header — a screen reader announcing links on a page it had just said did not
+   * exist, which is worse than never claiming `aria-modal` at all (#2483). And this is
+   * the product's only modal, raised mid-match on a device two people are sharing.
+   *
+   * Only the pause menu is a dialog. The round and match results are `role="status"`:
+   * they are announcements, they interrupt nobody, and trapping focus in one would be a
+   * bug rather than a fix.
+   */
+  useEffect(() => {
+    if (!modal) return;
+    const panel = dialogRef.current;
+    // Narrowed into a binding of its own: the handler below closes over it, and the
+    // compiler will not carry a `!== null` check across that boundary.
+    if (panel === null) return;
+    const trapped: HTMLDivElement = panel;
+
+    /**
+     * Whatever had focus when the menu opened, and where focus goes when it closes.
+     *
+     * Usually the HUD's pause button — which the HUD stops rendering the moment the match
+     * pauses, so by the time this is needed the node is often already out of the document.
+     * That is what `region` is for.
+     */
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    /**
+     * The region the panel covers, captured now rather than on close: by then the panel is
+     * out of the document and can no longer be asked what it was inside.
+     */
+    const region: ParentNode = trapped.closest('main') ?? document.body;
+
+    /**
+     * Every Tab is answered here, not only the one that would have left the panel.
+     *
+     * Wrapping at the edges alone is the usual shape of a trap, and it leaks on Safari:
+     * with macOS full keyboard access off — the default — Tab visits text fields and
+     * nothing else, so from the Resume button of a two-button panel it walks to no stop at
+     * all and focus lands on `<body>`, outside a panel that has declared the page inert.
+     * Moving focus by hand costs one line and behaves the same on every engine, which for
+     * a product played on an iPad with a keyboard is the point.
+     */
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'Tab') return;
+      // A panel with nothing focusable in it still may not leak focus to a page it has
+      // declared inert.
+      event.preventDefault();
+      const stops = focusableWithin(trapped);
+      if (stops.length === 0) return;
+      const active = document.activeElement;
+      const here = active instanceof HTMLElement ? stops.indexOf(active) : -1;
+      const step = event.shiftKey ? -1 : 1;
+      // From outside the panel, forwards lands on the first stop and backwards on the last.
+      const next = here === -1 ? (event.shiftKey ? stops.length - 1 : 0) : here + step;
+      const wrapped = (next + stops.length) % stops.length;
+      stops[wrapped]?.focus({ preventScroll: true });
+    }
+
+    // Capture, so the trap decides what Tab means before anything else on the page does.
+    document.addEventListener('keydown', onKeyDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      /**
+       * Focus restore. Dismissing a dialog used to drop focus on `<body>`, which costs a
+       * keyboard user their place entirely — on Quit they landed at the top of the
+       * document with the lobby they had just opened somewhere below them.
+       *
+       * The opener first, if it survived; otherwise the first control of whatever replaced
+       * it. On Resume that is the board, which is where focus belongs mid-match and which
+       * the host then claims for itself a moment later (`GameHost`, on the phase change).
+       * On Quit it is the first control of the lobby underneath. Never `<body>`.
+       */
+      const back =
+        opener !== null && opener.isConnected
+          ? opener
+          : focusableWithin(region).find(acceptsHandedBackFocus);
+      back?.focus({ preventScroll: true });
+    };
+  }, [modal]);
+
   return (
     <div
+      ref={dialogRef}
       className={styles.overlay}
       role={role}
       {...(role === 'dialog' ? { 'aria-modal': true } : { 'aria-live': 'polite' as const })}

@@ -170,3 +170,93 @@ test.describe('a running match keeps clear of the cutout', () => {
     expect(box.y + box.height, 'and ends above the indicator').toBeLessThanOrEqual(viewport.height);
   });
 });
+
+/**
+ * The header on the narrowest phone the product supports.
+ *
+ * This suite already walks the interactive elements of every route at phone widths, which
+ * is the reason it is the right home for this: the header's navigation used to be
+ * `display: none` below 40rem with nothing put in its place, so "Games" and "How to play"
+ * were simply gone on the product's primary device — and a walk over what is *present*
+ * cannot see something that is absent (#2484).
+ */
+test.describe('the header keeps its navigation on a phone', () => {
+  /** Every destination the header offers. Neither may disappear at a breakpoint. */
+  const DESTINATIONS = [
+    { href: '/games/', name: 'Games' },
+    { href: '/how-to-play/', name: 'How to play' },
+  ];
+
+  test('every navigation destination is reachable from the header at 320px', async ({ page }) => {
+    // 320 rather than 360: the definition of done says 320px to 4K, and a layout that only
+    // holds at the widths current phones happen to use is a layout nobody has checked.
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/');
+
+    const header = page.locator('header');
+    const target = await page.evaluate(() =>
+      Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--db-touch-target'),
+      ),
+    );
+    expect(target, 'the touch-target token is readable').toBeGreaterThan(0);
+
+    for (const destination of DESTINATIONS) {
+      const link = header.locator(`a[href="${destination.href}"]`).first();
+      await expect(link, `${destination.name} is in the header`).toBeVisible();
+      const box = await link.boundingBox();
+      expect(box, `${destination.name} has a box`).not.toBeNull();
+      if (!box) continue;
+      // A thumb, not a mouse pointer. #178: the header's links carried no target at all.
+      expect(box.height, `${destination.name} is a real touch target`).toBeGreaterThanOrEqual(
+        target,
+      );
+      // And it is on the screen, not merely in the document.
+      expect(box.x, `${destination.name} starts on screen`).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, `${destination.name} ends on screen`).toBeLessThanOrEqual(320);
+    }
+
+    // Nothing was bought by pushing the page sideways.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, 'the header fits without widening the page').toBeLessThanOrEqual(0);
+  });
+
+  test('the header navigation is keyboard reachable at 320px', async ({ page, browserName }) => {
+    // Safari puts only text fields on the Tab order unless macOS full keyboard access is
+    // switched on, so pressing Tab there measures a system preference rather than the page.
+    // The two tests either side of this one cover WebKit; this one asks the question that
+    // only a browser which tabs to links can answer.
+    test.skip(browserName === 'webkit', 'Tab does not visit links in Safari by default');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/');
+
+    // Tab from the top of the document — a fresh load leaves focus on the body, so the
+    // first press is the skip link. Ten presses is far more than the header holds.
+    const reached = new Set<string>();
+    for (let press = 0; press < 10; press += 1) {
+      await page.keyboard.press('Tab');
+      const href = await page.evaluate(() => {
+        const active = document.activeElement;
+        if (!(active instanceof HTMLAnchorElement)) return '';
+        return active.closest('header') === null ? '' : new URL(active.href).pathname;
+      });
+      if (href !== '') reached.add(href);
+    }
+    for (const destination of DESTINATIONS) {
+      expect(reached, `${destination.name} is on the Tab order`).toContain(destination.href);
+    }
+  });
+
+  test('the phone header actually navigates', async ({ page }) => {
+    // Visible and focusable is not the same as working: a link that goes nowhere passes
+    // every check above.
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/');
+    await page.locator('header').getByRole('link', { name: 'How to play' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('How to play');
+    await page.locator('header').getByRole('link', { name: 'Games' }).click();
+    await expect(page).toHaveURL(/\/games\/$/);
+  });
+});
