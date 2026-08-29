@@ -126,6 +126,7 @@ const LOADERS: Record<string, Loader> = {
   'sticky-tongues': () => import('@duelbox/game-sticky-tongues').then((m) => m.default),
   'pizza-memory': () => import('@duelbox/game-pizza-memory').then((m) => m.default),
   'ballgames-physics': () => import('@duelbox/game-ballgames-physics').then((m) => m.default),
+  cricket: () => import('@duelbox/game-cricket').then((m) => m.default),
 };
 
 /**
