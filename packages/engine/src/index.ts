@@ -94,3 +94,18 @@ export type { InputStateView, SeatInputView } from './input-view.js';
 
 export { Canvas2DRenderer } from './renderer.js';
 export type { Renderer, Canvas2DLike, TextAlign } from './renderer.js';
+
+export { AudioSystem, browserAudioContext, GESTURE_EVENTS } from './audio.js';
+export type {
+  AudioSystemOptions,
+  AudioState,
+  AudioTarget,
+  AudioEventListener,
+  AudioListenerOptions,
+  AudioContextLike,
+  AudioNodeLike,
+  AudioParamLike,
+  AudioBufferLike,
+  AudioBufferSourceNodeLike,
+  GainNodeLike,
+} from './audio.js';
