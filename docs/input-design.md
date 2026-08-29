@@ -4,6 +4,9 @@ The highest-risk piece of the project: two humans, one browser tab, several inpu
 families, and no operating-system player separation. Every touch game is subtly broken if
 this is wrong, so the design is settled here before the implementations land.
 
+What a gesture *means* once it has a seat — press, drag, release, tap and cancel, per
+archetype — is `docs/input-idiom.md`. This document stops at the seat.
+
 ## The problem in one sentence
 
 A game must read **one shape** of input for each seat, no matter whether that seat is a
