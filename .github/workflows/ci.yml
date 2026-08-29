@@ -27,6 +27,10 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
+      # `pnpm test`, not `pnpm test:coverage`. The coverage thresholds are real and they are
+      # enforced in `nightly.yml`, not here — see the header of that file for why. A reader
+      # looking for the coverage gate in this job will not find it, which is the point of
+      # this comment (#56).
       - run: pnpm test
       # `pnpm build` runs the manifest validator and the zero-cost guard as its own steps.
       - run: pnpm build

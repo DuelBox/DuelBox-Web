@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default tseslint.config(
@@ -95,6 +96,29 @@ export default tseslint.config(
     // The one legitimate reader of wall time: the clock the host injects into the loop.
     files: ['packages/engine/src/loop.ts'],
     rules: { 'no-restricted-globals': 'off' },
+  },
+  {
+    // The Rules of Hooks, enforced. `apps/web` is the only React in the repo — the engine,
+    // the SDK and the games are all framework-free — so the plugin is scoped to it rather
+    // than run over 108 packages that contain no components.
+    //
+    // It lives in the *root* config on purpose. `apps/web/eslint.config.js` is empty so that
+    // `next build` does not open a second, differently-configured pass over these files, and
+    // that arrangement is worth keeping. But "the root already covers them" was only true of
+    // type-aware TypeScript rules, and type-awareness is not what catches a hook bug: a
+    // dependency array missing a value it closes over type-checks perfectly (#2482). A
+    // stale-closure bug in PlaySurface.tsx was caught by hand before this rule existed, and
+    // the comment left behind at the time said the rule would have caught it.
+    //
+    // Both are errors. `exhaustive-deps` ships as a warning, and a warning here is a rule
+    // that does not run: `pnpm lint` exits 0 with warnings on screen, so CI stays green and
+    // the finding scrolls past.
+    files: ['apps/web/**/*.ts', 'apps/web/**/*.tsx'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+    },
   },
   {
     files: ['**/*.js', '**/*.mjs'],
