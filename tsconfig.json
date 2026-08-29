@@ -261,6 +261,30 @@
     },
     {
       "path": "./packages/games/throw"
+    },
+    {
+      "path": "./packages/games/blocks"
+    },
+    {
+      "path": "./packages/games/tap-match"
+    },
+    {
+      "path": "./packages/games/nuts-and-bolts"
+    },
+    {
+      "path": "./packages/games/maze-paint"
+    },
+    {
+      "path": "./packages/games/solitaire"
+    },
+    {
+      "path": "./packages/games/the-last-sashimi"
+    },
+    {
+      "path": "./packages/games/golf-football"
+    },
+    {
+      "path": "./packages/games/frozen-beaks"
     }
   ]
 }

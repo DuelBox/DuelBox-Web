@@ -1,4 +1,12 @@
-import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, seatRotated, toWorld, vec2 } from '@duelbox/engine';
+import {
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  otherSeat,
+  seatRotated,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {

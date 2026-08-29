@@ -93,6 +93,14 @@ import { manifest as happyHippos } from '@duelbox/game-happy-hippos';
 import { manifest as explosiveFestival } from '@duelbox/game-explosive-festival';
 import { manifest as slidingPuzzle } from '@duelbox/game-sliding-puzzle';
 import { manifest as throwGame } from '@duelbox/game-throw';
+import { manifest as blocks } from '@duelbox/game-blocks';
+import { manifest as tapMatch } from '@duelbox/game-tap-match';
+import { manifest as nutsAndBolts } from '@duelbox/game-nuts-and-bolts';
+import { manifest as mazePaint } from '@duelbox/game-maze-paint';
+import { manifest as solitaire } from '@duelbox/game-solitaire';
+import { manifest as theLastSashimi } from '@duelbox/game-the-last-sashimi';
+import { manifest as golfFootball } from '@duelbox/game-golf-football';
+import { manifest as frozenBeaks } from '@duelbox/game-frozen-beaks';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -104,6 +112,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   backgammon,
   basketball,
   beachBall,
+  blocks,
   bowling,
   brickBlast,
   brokenTiles,
@@ -123,7 +132,9 @@ export const MANIFESTS: readonly GameManifest[] = [
   flappyJump,
   fourInARow,
   frogsFight,
+  frozenBeaks,
   fruitDuel,
+  golfFootball,
   gravityRun,
   hammerHit,
   handSlap,
@@ -138,9 +149,11 @@ export const MANIFESTS: readonly GameManifest[] = [
   mancala,
   match,
   mathQuiz,
+  mazePaint,
   memory,
   miniGolf,
   miniSoccer,
+  nutsAndBolts,
   paintFight,
   penaltyKicks,
   pinball,
@@ -164,6 +177,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   snakes,
   snakesLadders,
   soccerPool,
+  solitaire,
   spikeAttacks,
   spinWar,
   starCatcher,
@@ -171,9 +185,11 @@ export const MANIFESTS: readonly GameManifest[] = [
   sumo,
   swordThrowing,
   tankBattle,
+  tapMatch,
   targetPractice,
   taxiRace,
   tennis,
+  theLastSashimi,
   throwGame,
   ticTacToe,
   trafficJam,

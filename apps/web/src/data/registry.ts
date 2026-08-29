@@ -104,6 +104,14 @@ const LOADERS: Record<string, Loader> = {
   'explosive-festival': () => import('@duelbox/game-explosive-festival').then((m) => m.default),
   'sliding-puzzle': () => import('@duelbox/game-sliding-puzzle').then((m) => m.default),
   throw: () => import('@duelbox/game-throw').then((m) => m.default),
+  blocks: () => import('@duelbox/game-blocks').then((m) => m.default),
+  'tap-match': () => import('@duelbox/game-tap-match').then((m) => m.default),
+  'nuts-and-bolts': () => import('@duelbox/game-nuts-and-bolts').then((m) => m.default),
+  'maze-paint': () => import('@duelbox/game-maze-paint').then((m) => m.default),
+  solitaire: () => import('@duelbox/game-solitaire').then((m) => m.default),
+  'the-last-sashimi': () => import('@duelbox/game-the-last-sashimi').then((m) => m.default),
+  'golf-football': () => import('@duelbox/game-golf-football').then((m) => m.default),
+  'frozen-beaks': () => import('@duelbox/game-frozen-beaks').then((m) => m.default),
 };
 
 /**

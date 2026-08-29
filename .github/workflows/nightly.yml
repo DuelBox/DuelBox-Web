@@ -2,10 +2,19 @@ name: Nightly
 
 # Everything that is too slow to pay for on every push.
 #
-# Today that is one thing: the third browser engine. The whole suite passes on Firefox and
-# has done since it was first tried, so running it per-push would spend install and run time
-# to re-confirm a clean result — while the verify job already takes 14 minutes against a
-# stated budget of 8. Once a night is the right price for finding out if that changes.
+# Two things now. The third browser engine: the whole suite passes on Firefox and has done
+# since it was first tried, so running it per-push would spend install and run time to
+# re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
+#
+#   - Depth. `balance-aggregate.test.ts` runs fifty seeds a game on every push, which enforces
+#     a 23.8-76.2% band and nothing finer — enough to catch a game that has become grossly
+#     one-sided. Two hundred and fifty seeds enforces 35.5-64.5%.
+#   - Tier. Nothing ever set `DUELBOX_BALANCE_TIER`, so `normal` was the only tier the harness
+#     had ever measured and two thirds of the bot ladder was unguarded. The first `hard` run
+#     found four turn-board games that collapse to a single deterministic match, `tic-tac-toe`
+#     drawing all hundred, and `checkers` no longer finishing at all; the first `easy` run
+#     found `hand-slap` handing seat one 100% of the matches it hands seat two 65% of on
+#     `normal`. `hard` costs three times `normal`, which is why it is here and not on a push.
 on:
   schedule:
     # 03:15 UTC, which is a quiet hour for the free-tier runners.
@@ -36,3 +45,48 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  seat-balance:
+    name: seat balance, ${{ matrix.tier }} v ${{ matrix.tier }} x ${{ matrix.seeds }} seeds
+    runs-on: ubuntu-latest
+    # 250 seeds on `normal` is ~10 minutes on a development machine and CI runs this work four
+    # to five times slower, so the run itself can be most of an hour. The rest is install and
+    # the build. `hard` at 50 seeds is ~6 minutes locally, for the same reason: its bots search.
+    timeout-minutes: 75
+    strategy:
+      # Each tier is a separate finding. One tier going red must not cancel the evidence from
+      # the other two.
+      fail-fast: false
+      matrix:
+        include:
+          # `normal` is the depth run: the sample that can resolve a two-thirds split, and the
+          # tier every 1000-seed number in OUTSIDE_THE_BAND was measured on.
+          - tier: normal
+            seeds: 250
+          # `easy` and `hard` are the breadth run. They exist because until August 2026 nothing
+          # ever set DUELBOX_BALANCE_TIER at all, so a deliberate break measuring 92% for seat
+          # one at `hard` read as a flat 50.0% at `normal` and the push gate stayed green. They
+          # run the push sample rather than a deep one, because the numbers recorded for them
+          # were measured at fifty seeds and a gate must be run at the sample its record was
+          # taken at. Deepening a tier means re-recording it first — that is an issue, not a
+          # config change. `hard` at 250 seeds would also be an hour of runner on its own.
+          - tier: easy
+            seeds: 50
+          - tier: hard
+            seeds: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The registry loads every game from its `dist`, and `tsc --build` is what emits it.
+      # `verify` gets this for free by running `pnpm typecheck` before `pnpm test`; a job
+      # that runs the suite on its own has to ask for it.
+      - run: pnpm typecheck
+      - run: pnpm balance:sweep
+        env:
+          DUELBOX_BALANCE_TIER: ${{ matrix.tier }}
+          DUELBOX_BALANCE_SEEDS: ${{ matrix.seeds }}

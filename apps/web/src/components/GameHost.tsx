@@ -27,7 +27,6 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import styles from './GameHost.module.css';
-import { audio } from '@/lib/audio';
 
 /**
  * Runs one game on a canvas.
@@ -343,9 +342,6 @@ export function GameHost({
       render(alpha) {
         renderer.beginFrame();
         game.render(renderer, alpha);
-        // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
-        // sound during `update()` stays allocation-free (rule 5).
-        audio().flush();
         renderer.endFrame();
       },
     });

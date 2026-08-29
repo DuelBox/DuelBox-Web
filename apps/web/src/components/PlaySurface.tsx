@@ -14,7 +14,6 @@ import { PLAYABLE, loadGame } from '@/data/registry';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { seatColour } from '@/styles/tokens';
 import { readLastMode, writeLastMode } from '@/lib/last-mode';
-import { armAudio } from '@/lib/audio';
 import { GameHost } from './GameHost';
 import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
@@ -66,14 +65,6 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [record, setRecord] = useState({ p1: 0, p2: 0, draws: 0 });
   // A new seed per match keeps a rematch from replaying the previous one exactly.
   const [seed, setSeed] = useState(1);
-
-  // Armed here rather than in `GameHost`, which mounts only after Start is pressed — by
-  // then the press that should have unlocked audio has already happened. Arming on the
-  // play page means the Start tap itself is the gesture, so the first match has sound
-  // with no extra tap, which is the whole acceptance criterion of #167.
-  useEffect(() => {
-    armAudio();
-  }, []);
 
   /**
    * The seven games built so far settle their own rounds and report a winner, so the

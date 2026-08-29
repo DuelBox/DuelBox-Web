@@ -73,6 +73,9 @@ importers:
       '@duelbox/game-beach-ball':
         specifier: workspace:*
         version: link:../../packages/games/beach-ball
+      '@duelbox/game-blocks':
+        specifier: workspace:*
+        version: link:../../packages/games/blocks
       '@duelbox/game-bowling':
         specifier: workspace:*
         version: link:../../packages/games/bowling
@@ -130,9 +133,15 @@ importers:
       '@duelbox/game-frogs-fight':
         specifier: workspace:*
         version: link:../../packages/games/frogs-fight
+      '@duelbox/game-frozen-beaks':
+        specifier: workspace:*
+        version: link:../../packages/games/frozen-beaks
       '@duelbox/game-fruit-duel':
         specifier: workspace:*
         version: link:../../packages/games/fruit-duel
+      '@duelbox/game-golf-football':
+        specifier: workspace:*
+        version: link:../../packages/games/golf-football
       '@duelbox/game-gravity-run':
         specifier: workspace:*
         version: link:../../packages/games/gravity-run
@@ -175,6 +184,9 @@ importers:
       '@duelbox/game-math-quiz':
         specifier: workspace:*
         version: link:../../packages/games/math-quiz
+      '@duelbox/game-maze-paint':
+        specifier: workspace:*
+        version: link:../../packages/games/maze-paint
       '@duelbox/game-memory':
         specifier: workspace:*
         version: link:../../packages/games/memory
@@ -184,6 +196,9 @@ importers:
       '@duelbox/game-mini-soccer':
         specifier: workspace:*
         version: link:../../packages/games/mini-soccer
+      '@duelbox/game-nuts-and-bolts':
+        specifier: workspace:*
+        version: link:../../packages/games/nuts-and-bolts
       '@duelbox/game-paint-fight':
         specifier: workspace:*
         version: link:../../packages/games/paint-fight
@@ -256,6 +271,9 @@ importers:
       '@duelbox/game-soccer-pool':
         specifier: workspace:*
         version: link:../../packages/games/soccer-pool
+      '@duelbox/game-solitaire':
+        specifier: workspace:*
+        version: link:../../packages/games/solitaire
       '@duelbox/game-spike-attacks':
         specifier: workspace:*
         version: link:../../packages/games/spike-attacks
@@ -277,6 +295,9 @@ importers:
       '@duelbox/game-tanks':
         specifier: workspace:*
         version: link:../../packages/games/tanks
+      '@duelbox/game-tap-match':
+        specifier: workspace:*
+        version: link:../../packages/games/tap-match
       '@duelbox/game-target-practice':
         specifier: workspace:*
         version: link:../../packages/games/target-practice
@@ -286,6 +307,9 @@ importers:
       '@duelbox/game-tennis':
         specifier: workspace:*
         version: link:../../packages/games/tennis
+      '@duelbox/game-the-last-sashimi':
+        specifier: workspace:*
+        version: link:../../packages/games/the-last-sashimi
       '@duelbox/game-throw':
         specifier: workspace:*
         version: link:../../packages/games/throw
@@ -393,6 +417,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/beach-ball:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/blocks:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -572,7 +605,25 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/frozen-beaks:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/fruit-duel:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/golf-football:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -707,6 +758,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/maze-paint:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/memory:
     dependencies:
       '@duelbox/engine':
@@ -726,6 +786,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/mini-soccer:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/nuts-and-bolts:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -941,6 +1010,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/solitaire:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/spike-attacks:
     dependencies:
       '@duelbox/engine':
@@ -1004,6 +1082,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/tap-match:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/target-practice:
     dependencies:
       '@duelbox/engine':
@@ -1023,6 +1110,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/tennis:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/the-last-sashimi:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*

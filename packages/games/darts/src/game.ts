@@ -1,4 +1,12 @@
-import { Rng, SEAT_PALETTE, SeatFlip, otherSeat, seatRotated, toWorld, vec2 } from '@duelbox/engine';
+import {
+  Rng,
+  SEAT_PALETTE,
+  SeatFlip,
+  otherSeat,
+  seatRotated,
+  toWorld,
+  vec2,
+} from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';

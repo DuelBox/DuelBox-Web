@@ -82,9 +82,7 @@ export class SlingPuckGame implements Game {
   update(fixedDeltaSeconds: number, input: InputState): void {
     // Stepped before the early return, so the board finishes turning to face the winner
     // rather than stopping half way round.
-    this.#flip.retarget(
-      seatRotated(this.#position.active, this.#presentation, this.#localSeat),
-    );
+    this.#flip.retarget(seatRotated(this.#position.active, this.#presentation, this.#localSeat));
     this.#flip.step(fixedDeltaSeconds);
     if (this.#winner !== null) return;
 
