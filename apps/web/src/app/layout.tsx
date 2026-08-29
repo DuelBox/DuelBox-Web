@@ -6,7 +6,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'DuelBox — 107 games for two players',
+    default: 'DuelBox — 108 games for two players',
     template: '%s — DuelBox',
   },
   description:
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'DuelBox',
-    title: 'DuelBox — 107 games for two players',
+    title: 'DuelBox — 108 games for two players',
     description: 'Share one screen, play across two devices, or take on a bot.',
   },
 };

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test.describe('the static build', () => {
   test('lands, shows the catalogue, and reaches a game page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('107 games');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('108 games');
 
     await page.getByRole('link', { name: 'Start playing' }).click();
     await expect(page).toHaveURL(/\/games\/?$/);
@@ -110,7 +110,7 @@ test.describe('a game landing page', () => {
   /**
    * This used to assert the other half — that Chess said "still being built" and offered no
    * way to play. It does not any more, because Chess is built, and so is everything else:
-   * all 107 catalogue entries have a package, a chunk and a playable route.
+   * all 108 catalogue entries have a package, a chunk and a playable route.
    *
    * So the assertion is inverted rather than deleted. The unbuilt state is still reachable
    * in the page (`games/[slug]/page.tsx` renders it whenever the registry has no loader),
