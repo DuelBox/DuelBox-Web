@@ -220,18 +220,27 @@ const STEP = 1 / 60;
 /**
  * How many measurable games in the registry ignore the opening seat completely.
  *
- * A ratchet, not a target. It may only ever go down, so a new game cannot quietly join them -
- * and every game that starts reading `openingSeat` tightens it.
+ * A ratchet, not a target. It may only ever go down, so a new turn game cannot quietly join
+ * them - and every turn game that starts reading `openingSeat` tightens it.
  *
- * The previous value, 79, was arrived at by counting blind games over a sweep that an
- * allowlist had already narrowed, and the comment above it read "seventy-nine of
- * seventy-nine, not one built game reads it". Both halves were wrong: five of the nine
- * excluded games read the opening seat. Measured over the whole registry instead, the count
- * is **81 blind of 93**, and the twelve that read it are the twelve newest games in the
- * catalogue. Counting a property over a list rather than over the registry is how a harness
- * ends up certain of a false thing.
+ * **Counted over `turn-*` games only.** The contract says outright that "real-time games
+ * have no opener and may ignore this", and about half the games that ignore it are
+ * real-time - so counting those made the guard fail four games in one afternoon for doing
+ * exactly what the SDK permits. A guard that punishes correct behaviour gets disabled,
+ * which is worse than no guard.
+ *
+ * 33 of the 46 turn games ignore it. The thirteen that read it are the newest, and #2487
+ * tracks bringing the rest across in three groups - the ones that already rotate an opener
+ * one level down and need only their starting value, the two running a bespoke rotation the
+ * SDK should own, and `ship-battle`, which tosses its own coin and will otherwise toss on
+ * top of the shell's.
+ *
+ * An earlier value of 79 was counted over a sweep an allowlist had already narrowed, under
+ * a comment reading "seventy-nine of seventy-nine, not one built game reads it". Both
+ * halves were wrong. Counting a property over a list rather than over the registry is how a
+ * harness ends up certain of a false thing.
  */
-const OPENER_BLIND = 81;
+const OPENER_BLIND = 33;
 
 /**
  * How many games must reach a conclusion under at least one driver, per tier.
@@ -676,15 +685,6 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
   },
   {
     id: 'reversi',
-    tier: 'normal',
-    share: 0.444,
-    seeds: 1000,
-    why:
-      'outside the band by 0.6 points against an allowance of 4.8. Recorded so it is watched, ' +
-      'not because it is proven: re-measure at 1000 seeds before touching the bot.',
-  },
-  {
-    id: 'reversi',
     tier: 'hard',
     share: 0.0,
     seeds: 50,
@@ -1023,17 +1023,27 @@ describe('the balance harness', () => {
     }
   });
 
-  it('does not let another game ignore the opening seat', () => {
-    // A ratchet. Eighty of the ninety measurable games ignore `context.openingSeat`, so the
-    // SDK alternates an opener that reaches almost nothing. This cannot be asserted away in
-    // one commit, but it can be stopped from growing - and the newest games all read it.
+  it('does not let another turn-based game ignore the opening seat', () => {
+    // A ratchet: it may only ever go down, so a new turn game cannot quietly join the ones
+    // that ignore `context.openingSeat` and leave the SDK alternating an opener that
+    // reaches nothing.
+    //
+    // Scoped to `turn-*`, because the contract says outright that "real-time games have no
+    // opener and may ignore this" — and roughly half the blind list is real-time. Counting
+    // those failed four games in one afternoon for doing exactly what the SDK permits,
+    // which is a guard punishing correct behaviour rather than catching a defect.
+    //
+    // Several real-time games this session did find an honest use anyway — handing bot
+    // streams out by opener makes a seed's two rounds exact mirrors, which turns a 50%
+    // *measurement* into a symmetry *proof*. That is worth doing and is not worth failing
+    // a build over.
     const blind = measuredTallies()
-      .filter((tally) => tally.openerSwung === 0)
+      .filter((tally) => tally.openerSwung === 0 && tally.archetype.startsWith('turn'))
       .map((t) => t.id);
     expect(
       blind.length,
-      `${String(blind.length)} games ignore context.openingSeat and the ratchet is set at ` +
-        `${String(OPENER_BLIND)}. A new game must read it: ${blind.join(', ')}`,
+      `${String(blind.length)} turn-based games ignore context.openingSeat and the ratchet ` +
+        `is set at ${String(OPENER_BLIND)}. A new turn game must read it: ${blind.join(', ')}`,
     ).toBeLessThanOrEqual(OPENER_BLIND);
   });
 });

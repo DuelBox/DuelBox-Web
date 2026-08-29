@@ -285,6 +285,48 @@
     },
     {
       "path": "./packages/games/frozen-beaks"
+    },
+    {
+      "path": "./packages/games/chess"
+    },
+    {
+      "path": "./packages/games/guess-the-person"
+    },
+    {
+      "path": "./packages/games/fatal-siege"
+    },
+    {
+      "path": "./packages/games/guard-and-thief"
+    },
+    {
+      "path": "./packages/games/disco-battle"
+    },
+    {
+      "path": "./packages/games/stampede"
+    },
+    {
+      "path": "./packages/games/brainrot-stack"
+    },
+    {
+      "path": "./packages/games/water-game"
+    },
+    {
+      "path": "./packages/games/money-grabber"
+    },
+    {
+      "path": "./packages/games/unfair-fishing"
+    },
+    {
+      "path": "./packages/games/piranha-rush"
+    },
+    {
+      "path": "./packages/games/sticky-tongues"
+    },
+    {
+      "path": "./packages/games/pizza-memory"
+    },
+    {
+      "path": "./packages/games/ballgames-physics"
     }
   ]
 }

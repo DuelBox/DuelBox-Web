@@ -101,6 +101,20 @@ import { manifest as solitaire } from '@duelbox/game-solitaire';
 import { manifest as theLastSashimi } from '@duelbox/game-the-last-sashimi';
 import { manifest as golfFootball } from '@duelbox/game-golf-football';
 import { manifest as frozenBeaks } from '@duelbox/game-frozen-beaks';
+import { manifest as chess } from '@duelbox/game-chess';
+import { manifest as guessThePerson } from '@duelbox/game-guess-the-person';
+import { manifest as fatalSiege } from '@duelbox/game-fatal-siege';
+import { manifest as guardAndThief } from '@duelbox/game-guard-and-thief';
+import { manifest as discoBattle } from '@duelbox/game-disco-battle';
+import { manifest as stampede } from '@duelbox/game-stampede';
+import { manifest as brainrotStack } from '@duelbox/game-brainrot-stack';
+import { manifest as waterGame } from '@duelbox/game-water-game';
+import { manifest as moneyGrabber } from '@duelbox/game-money-grabber';
+import { manifest as unfairFishing } from '@duelbox/game-unfair-fishing';
+import { manifest as piranhaRush } from '@duelbox/game-piranha-rush';
+import { manifest as stickyTongues } from '@duelbox/game-sticky-tongues';
+import { manifest as pizzaMemory } from '@duelbox/game-pizza-memory';
+import { manifest as ballgamesPhysics } from '@duelbox/game-ballgames-physics';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -110,15 +124,18 @@ export const MANIFESTS: readonly GameManifest[] = [
   archery,
   archeryMaster,
   backgammon,
+  ballgamesPhysics,
   basketball,
   beachBall,
   blocks,
   bowling,
+  brainrotStack,
   brickBlast,
   brokenTiles,
   cannonDuel,
   carrom,
   checkers,
+  chess,
   chickenJump,
   colorWars,
   cornhole,
@@ -126,9 +143,11 @@ export const MANIFESTS: readonly GameManifest[] = [
   crashIt,
   cupPong,
   darts,
+  discoBattle,
   dotsAndBoxes,
   dungBattle,
   explosiveFestival,
+  fatalSiege,
   flappyJump,
   fourInARow,
   frogsFight,
@@ -136,6 +155,8 @@ export const MANIFESTS: readonly GameManifest[] = [
   fruitDuel,
   golfFootball,
   gravityRun,
+  guardAndThief,
+  guessThePerson,
   hammerHit,
   handSlap,
   happyBirds,
@@ -153,11 +174,14 @@ export const MANIFESTS: readonly GameManifest[] = [
   memory,
   miniGolf,
   miniSoccer,
+  moneyGrabber,
   nutsAndBolts,
   paintFight,
   penaltyKicks,
   pinball,
   pingPong,
+  piranhaRush,
+  pizzaMemory,
   pool,
   popIt,
   pullTheRope,
@@ -180,7 +204,9 @@ export const MANIFESTS: readonly GameManifest[] = [
   solitaire,
   spikeAttacks,
   spinWar,
+  stampede,
   starCatcher,
+  stickyTongues,
   sudoku,
   sumo,
   swordThrowing,
@@ -194,6 +220,8 @@ export const MANIFESTS: readonly GameManifest[] = [
   ticTacToe,
   trafficJam,
   ultimateTtt,
+  unfairFishing,
+  waterGame,
   whackAMole,
   wheelie,
   wrestle,
