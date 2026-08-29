@@ -257,13 +257,31 @@ export function step(game: Game, fixedDeltaSeconds: number, rng: Rng): StepResul
   }
 
   // Flying.
+  //
+  // **The travel carries its `½·a·dt²` term, and that is what makes {@link predictLanding}
+  // true.** Both accelerations are constant for the whole flight — the wind is rolled at
+  // the handover, not during it — so `x += v·dt + a·dt²/2` is the exact integral, not an
+  // improvement on an approximation of one.
+  //
+  // Written as `v += a·dt` and then `x += v·dt`, as it was, the step lands a whole `a·dt²`
+  // rather than half of one, and the shortfall accumulates down the board: measured across
+  // seats, angles, powers and winds, the stepped shot crossed the far cannon's line up to
+  // **7.6 units** from where the closed form said it would, against a `HIT_RADIUS` of 52.
+  // The bot aims by sweeping 441 pairs of that closed form and taking the nearest miss
+  // (see {@link planShot}), so every tier was aiming at a board the game was not playing —
+  // a systematic bias, not noise, and one no amount of tuning its timing error could reach.
+  // That is CLAUDE.md rule 6 read backwards: the bot was handicapped by physics it did not
+  // share. Crash It and Beach Ball already carry the term for the same reason.
   const shot = game.shot;
-  shot.vx += game.wind * fixedDeltaSeconds;
+  const ax = game.wind;
   // Gravity pulls a shot back toward the seat that fired it, so an arc is an arc for both
   // players — down the board is "down" for whoever is shooting.
-  shot.vy -= firingSign(game.active) * GRAVITY * fixedDeltaSeconds;
-  shot.x += shot.vx * fixedDeltaSeconds;
-  shot.y += shot.vy * fixedDeltaSeconds;
+  const ay = -firingSign(game.active) * GRAVITY;
+  const halfStepSq = 0.5 * fixedDeltaSeconds * fixedDeltaSeconds;
+  shot.x += shot.vx * fixedDeltaSeconds + ax * halfStepSq;
+  shot.y += shot.vy * fixedDeltaSeconds + ay * halfStepSq;
+  shot.vx += ax * fixedDeltaSeconds;
+  shot.vy += ay * fixedDeltaSeconds;
 
   const target = otherOf(game.active);
   const targetY = cannonYOf(target);

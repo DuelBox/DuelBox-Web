@@ -381,7 +381,7 @@ describe('rendering', () => {
     const game = new PoolGame();
     game.init(makeContext(73));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const circles = renderer.calls.filter((call) => call.op === 'circle').length;
     // Six pockets plus sixteen balls, and no ball is potted yet.
     expect(circles).toBeGreaterThanOrEqual(6 + 16);
@@ -391,14 +391,14 @@ describe('rendering', () => {
     const game = new PoolGame();
     game.init(makeContext(79));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const circlesBefore = before.calls.filter((call) => call.op === 'circle').length;
 
     const first = game.position.balls.find((b) => b.kind === 'p1');
     if (first === undefined) throw new Error('no fixture');
     first.potted = true;
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(after.calls.filter((call) => call.op === 'circle').length).toBeLessThan(circlesBefore);
   });
 
@@ -407,7 +407,7 @@ describe('rendering', () => {
     const game = new PoolGame();
     game.init(makeContext(83));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[4] === SEAT_PALETTE.p1.deep,
     ).length;
@@ -428,13 +428,13 @@ describe('rendering', () => {
     input.point('p1', cue.x - 40, cue.y);
     game.update(STEP, input);
     const soft = new RecordingRenderer();
-    game.render(soft);
+    game.render(soft, 0);
     const softLine = soft.calls.find((call) => call.op === 'line' && call.args[4] === 7);
 
     input.point('p1', cue.x - PULL_FOR_FULL_POWER, cue.y);
     game.update(STEP, input);
     const hard = new RecordingRenderer();
-    game.render(hard);
+    game.render(hard, 0);
     const hardLine = hard.calls.find((call) => call.op === 'line' && call.args[4] === 7);
 
     const softX = typeof softLine?.args[0] === 'number' ? softLine.args[0] : 0;
@@ -446,12 +446,12 @@ describe('rendering', () => {
     const game = new PoolGame();
     game.init(makeContext(97));
     const aiming = new RecordingRenderer();
-    game.render(aiming);
+    game.render(aiming, 0);
     const linesAiming = aiming.calls.filter((call) => call.op === 'line').length;
 
     game.position.phase = 'rolling';
     const rolling = new RecordingRenderer();
-    game.render(rolling);
+    game.render(rolling, 0);
     expect(rolling.calls.filter((call) => call.op === 'line').length).toBeLessThan(linesAiming);
   });
 
@@ -459,7 +459,7 @@ describe('rendering', () => {
     const game = new PoolGame();
     game.init(makeContext(101));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -469,7 +469,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 3000; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -487,8 +487,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

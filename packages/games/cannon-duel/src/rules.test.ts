@@ -9,6 +9,7 @@ import {
   BOT_PROFILES,
   CENTRE_X,
   CENTRE_Y,
+  GRAVITY,
   HIT_RADIUS,
   MAX_POWER,
   MAX_VOLLEYS,
@@ -139,27 +140,98 @@ describe('a shot', () => {
   it('lands where the prediction says it will', () => {
     // The bot uses the closed form; if the two disagreed the bot would be aiming at a
     // different game from the one being played.
+    //
+    // **They did disagree, and this test used to say so in the only way a 40-unit tolerance
+    // can.** `HIT_RADIUS` is 52, so the band this asserted was three quarters of the disc
+    // the bot is trying to hit — wide enough to pass a shot that misses. Two things were
+    // hiding in it. The first was real: the step integrated `v += a·dt` and then
+    // `x += v·dt`, banking a whole `a·dt²` instead of half of one, and the stepped shot
+    // crossed the far line up to 7.6 units from the closed form. That is fixed in `step`.
+    // The second was this test's own doing — it read `shot.x` after the shot was spent,
+    // which is up to a full step past the line, and charged the sampling grid to the model.
+    //
+    // Interpolating to the crossing measures the model instead, and what is left is 0.02
+    // units: the curvature of the arc between two 60 Hz samples, which no integrator can
+    // remove. A twentieth of a unit against a 52-unit disc is agreement.
     for (const seat of ['p1', 'p2'] as SeatId[]) {
-      for (const angle of [-0.4, 0, 0.5]) {
-        for (const power of [0.3, 0.7, 1]) {
-          const { game, rng } = started(3);
-          game.wind = 90;
-          game.active = seat;
-          const predicted = predictLanding(seat, angle, power, game.wind);
-          // A shot that would land off the board never gets there — it leaves sideways
-          // first, and comparing where it happened to exit against where it would have
-          // landed compares two different things. That mistake is what this line prevents.
-          if (!Number.isFinite(predicted)) continue;
-          if (predicted < 60 || predicted > BOARD_WIDTH - 60) continue;
+      for (const angle of [-0.4, -0.2, 0, 0.25, 0.5]) {
+        for (const power of [0.3, 0.5, 0.7, 1]) {
+          for (const wind of [0, 90, -140]) {
+            const { game, rng } = started(3);
+            game.wind = wind;
+            game.active = seat;
+            const predicted = predictLanding(seat, angle, power, game.wind);
+            // A shot that would land off the board never gets there — it leaves sideways
+            // first, and comparing where it happened to exit against where it would have
+            // landed compares two different things. That mistake is what this line prevents.
+            if (!Number.isFinite(predicted)) continue;
+            if (predicted < 60 || predicted > BOARD_WIDTH - 60) continue;
 
-          shoot(game, rng, angle, power);
-          const actual = game.shot.x;
-          const arrivedAtTheLine = Math.abs(game.shot.y - cannonYOf(otherOf(seat))) < 120;
-          if (!arrivedAtTheLine) continue;
+            game.aim = angle;
+            press(game, game.active);
+            game.power = power;
+            press(game, game.active);
+
+            // Step to the far cannon's line and interpolate across the step that crosses it,
+            // so the step grid is not charged to the trajectory.
+            const line = cannonYOf(otherOf(seat));
+            let crossing = Number.NaN;
+            for (let i = 0; i < 6000 && game.phase === 'flying'; i += 1) {
+              const fromX = game.shot.x;
+              const fromY = game.shot.y;
+              step(game, STEP, rng);
+              const before = fromY - line;
+              const after = game.shot.y - line;
+              if (before !== 0 && before < 0 === after < 0) continue;
+              const t = before / (before - after);
+              crossing = fromX + (game.shot.x - fromX) * t;
+              break;
+            }
+            if (!Number.isFinite(crossing)) continue;
+            expect(
+              Math.abs(crossing - predicted),
+              `${seat} at ${String(angle)}/${String(power)} in wind ${String(wind)}`,
+            ).toBeLessThan(0.05);
+          }
+        }
+      }
+    }
+  });
+
+  it('steps the exact parabola, not a first-order approximation of it', () => {
+    // The defect issue #2465 names, in its constant-acceleration form. Both accelerations
+    // are constant for the whole flight — the wind is rolled at the handover, not during it
+    // — so `x = x₀ + v₀·t + a·t²/2` is not an approximation to check against, it is the
+    // answer the step is obliged to produce. Asserting it directly leaves no sampling error
+    // to hide in: this is the trajectory, not where a grid happened to catch it.
+    for (const seat of ['p1', 'p2'] as SeatId[]) {
+      for (const wind of [0, 120, -90]) {
+        const { game, rng } = started(3);
+        game.wind = wind;
+        game.active = seat;
+        game.aim = 0.3;
+        press(game, game.active);
+        game.power = 0.6;
+        press(game, game.active);
+
+        const x0 = game.shot.x;
+        const y0 = game.shot.y;
+        const vx0 = game.shot.vx;
+        const vy0 = game.shot.vy;
+        const ax = wind;
+        const ay = -firingSign(seat) * GRAVITY;
+        for (let i = 1; i <= 20; i += 1) {
+          step(game, STEP, rng);
+          if (game.phase !== 'flying') break;
+          const t = i * STEP;
           expect(
-            Math.abs(actual - predicted),
-            `${seat} at ${String(angle)}/${String(power)}`,
-          ).toBeLessThan(40);
+            game.shot.x,
+            `${seat} x after ${String(i)} steps in wind ${String(wind)}`,
+          ).toBeCloseTo(x0 + vx0 * t + 0.5 * ax * t * t, 9);
+          expect(
+            game.shot.y,
+            `${seat} y after ${String(i)} steps in wind ${String(wind)}`,
+          ).toBeCloseTo(y0 + vy0 * t + 0.5 * ay * t * t, 9);
         }
       }
     }

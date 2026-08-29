@@ -336,7 +336,7 @@ describe('rendering', () => {
     const game = new BowlingGame();
     game.init(makeContext(59));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const discs = renderer.calls.filter((call) => call.op === 'circle').length;
     expect(discs, 'ten pins and a ball').toBeGreaterThanOrEqual(PINS + 1);
   });
@@ -346,14 +346,14 @@ describe('rendering', () => {
     const game = new BowlingGame();
     game.init(makeContext(61));
     const standing = new RecordingRenderer();
-    game.render(standing);
+    game.render(standing, 0);
     const filledBefore = standing.calls.filter((call) => call.op === 'circle').length;
 
     const pin = game.position.pins[0];
     if (pin === undefined) throw new Error('no fixture');
     pin.down = true;
     const fallen = new RecordingRenderer();
-    game.render(fallen);
+    game.render(fallen, 0);
     expect(fallen.calls.filter((call) => call.op === 'circle').length).toBeLessThan(filledBefore);
   });
 
@@ -361,12 +361,12 @@ describe('rendering', () => {
     const game = new BowlingGame();
     game.init(makeContext(67));
     const p1 = new RecordingRenderer();
-    game.render(p1);
+    game.render(p1, 0);
     expect(p1.args).toContain(SEAT_PALETTE.p1.base);
 
     game.position.seat = 'p2';
     const p2 = new RecordingRenderer();
-    game.render(p2);
+    game.render(p2, 0);
     expect(p2.args).toContain(SEAT_PALETTE.p2.base);
   });
 
@@ -377,7 +377,7 @@ describe('rendering', () => {
     game.init(makeContext(71));
     game.position.rollsP1.push(10, 3, 4);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args, 'a strike reads as an X').toContain('X');
     expect(renderer.args, 'and an unbowled frame as a dash').toContain('–');
   });
@@ -387,7 +387,7 @@ describe('rendering', () => {
     game.init(makeContext(73));
     game.position.rollsP1.push(7, 3);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args).toContain('7 /');
   });
 
@@ -395,11 +395,11 @@ describe('rendering', () => {
     const game = new BowlingGame();
     game.init(makeContext(79));
     const aiming = new RecordingRenderer();
-    game.render(aiming);
+    game.render(aiming, 0);
     const before = aiming.calls.filter((call) => call.op === 'line').length;
     game.position.phase = 'rolling';
     const rolling = new RecordingRenderer();
-    game.render(rolling);
+    game.render(rolling, 0);
     expect(rolling.calls.filter((call) => call.op === 'line').length).toBeLessThan(before);
   });
 
@@ -407,7 +407,7 @@ describe('rendering', () => {
     const game = new BowlingGame();
     game.init(makeContext(83));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -417,7 +417,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 3000; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -435,8 +435,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 

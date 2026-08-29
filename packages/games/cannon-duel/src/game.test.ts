@@ -231,7 +231,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 120; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 37 === 0) game.render(renderer);
+      if (i % 37 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -265,7 +265,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 600; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(depth).toBe(0);
     }
     game.destroy();
@@ -294,7 +294,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 60; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 17 === 0) game.render(renderer);
+      if (i % 17 === 0) game.render(renderer, 0);
     }
     game.destroy();
     expect(texts).toBe(0);
@@ -319,7 +319,7 @@ describe('rendering', () => {
     drive(game, view, manager, 200);
     const aim = game.position.aim;
     const wind = game.position.wind;
-    for (let i = 0; i < 40; i += 1) game.render(renderer);
+    for (let i = 0; i < 40; i += 1) game.render(renderer, 0);
     expect(game.position.aim).toBe(aim);
     expect(game.position.wind).toBe(wind);
     game.destroy();

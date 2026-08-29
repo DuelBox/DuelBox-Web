@@ -5,6 +5,7 @@ import {
   BALL_RADIUS,
   BOT_PROFILES,
   CUSHION,
+  DRAG_RATE,
   POCKETS,
   STALEMATE_SHOTS,
   STOP_SPEED,
@@ -248,9 +249,18 @@ describe('the table', () => {
     expect(trace()).toBe(trace());
   });
 
-  it('agrees at two step sizes', () => {
+  it('agrees at every step size', () => {
     // Rule 8: a phone and a laptop must step the identical match, so the drag has to be a
     // per-second decay rather than a per-step multiply.
+    //
+    // **To nine decimals, not to one per cent.** This used to compare 60 Hz against 120 Hz
+    // inside a one per cent band, and passed on code that was 1.27% long at 60 Hz and 0.64%
+    // at 120 — it named the right property and then set a band wide enough to hide the
+    // thing it was watching for. The decay was never the problem: it is a per-second power
+    // and was always exact. The *travel* was `v · dt`, a rectangle rule under a falling
+    // curve, and it overshoots by `dt · DRAG_RATE / 2`. Integrated as
+    // `(v_before - v_after) / DRAG_RATE` the terms telescope and the four rates agree to
+    // floating point, so the tolerance that hid the defect is gone with it.
     const restingX = (dt: number): number => {
       const game = bare(0);
       game.phase = 'rolling';
@@ -262,9 +272,37 @@ describe('the table', () => {
       for (let i = 0; i < Math.round(4 / dt); i += 1) step(game, dt);
       return cue.x;
     };
-    const a = restingX(1 / 60);
-    const b = restingX(1 / 120);
-    expect(Math.abs(a - b) / Math.abs(a), 'within one per cent').toBeLessThan(0.01);
+    const reference = restingX(1 / 60);
+    for (const hz of [90, 120, 240]) {
+      expect(restingX(1 / hz), `${hz} Hz agrees with 60 Hz`).toBeCloseTo(reference, 9);
+    }
+  });
+
+  it('rolls exactly the distance the closed-form law predicts', () => {
+    // The defect issue #2465 is about, in the form that bites: the velocity decay was
+    // already step-size exact, but the *position* was a rectangle rule under a falling
+    // curve, so the table disagreed with its own distance law by `dt · DRAG_RATE / 2` —
+    // 1.26% at 60 Hz, which is the number the issue quotes.
+    //
+    // No tier of this game's bot reads that law — every tier strikes at a flat power and
+    // differs only in the ghost-ball line it aims down — so nothing here was handicapped by
+    // the gap the way Soccer Pool's bot was. This test is what stops that changing quietly:
+    // anyone who later teaches the bot how far the cue ball runs gets a law that is true.
+    for (const speed of [200, 400, 600, 800]) {
+      const game = bare(0);
+      game.phase = 'rolling';
+      const cue = cueBall(game);
+      cue.x = CUSHION + BALL_RADIUS + 10;
+      cue.y = TABLE_HEIGHT / 2;
+      cue.vx = speed;
+      cue.vy = 0;
+      const start = cue.x;
+      for (let i = 0; i < 60 * 20; i += 1) if (step(game, STEP).settled) break;
+      expect(cue.x - start, `a ball at ${speed} runs (v - STOP_SPEED) / DRAG_RATE`).toBeCloseTo(
+        (speed - STOP_SPEED) / DRAG_RATE,
+        9,
+      );
+    }
   });
 
   it('does nothing while nobody has struck', () => {

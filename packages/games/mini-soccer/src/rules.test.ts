@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
 import {
   BALL_DRAG,
+  BALL_DRAG_RATE,
   BALL_RADIUS,
   BOT_PROFILES,
   CELEBRATE_SECONDS,
@@ -148,16 +149,65 @@ describe('the ball', () => {
       for (let i = 0; i < steps; i += 1) step(game, dt, rng);
       return game.ball.x - start;
     };
-    const fine = roll(1 / 120);
-    const coarse = roll(1 / 60);
-    // Within a percent, not within half a unit. A first-order integrator cannot agree
-    // exactly across step sizes, and demanding that it does tests the arithmetic rather
-    // than the property — which is that halving the step does not change how far a ball
-    // rolls in any way a player could notice.
-    expect(
-      Math.abs(fine - coarse) / coarse,
-      `${fine.toFixed(1)} vs ${coarse.toFixed(1)}`,
-    ).toBeLessThan(0.01);
+    // **To nine decimals, not to one per cent.** The note that used to stand here said a
+    // first-order integrator cannot agree exactly across step sizes and that demanding it
+    // does tests the arithmetic rather than the property. That was wrong, and the one per
+    // cent band it justified was hiding a real 0.72% disagreement at 60 Hz. The decay was
+    // never first-order — it is a per-second power and is exact at any step size. Only the
+    // *travel* was: `v · dt` is a rectangle rule under a falling curve. Move the ball by
+    // `(v_before - v_after) / BALL_DRAG_RATE` instead and the terms telescope, so the four
+    // rates agree to floating point and there is nothing left for a tolerance to excuse.
+    const reference = roll(1 / 60);
+    for (const hz of [90, 120, 240]) {
+      expect(roll(1 / hz), `${hz} Hz agrees with 60 Hz`).toBeCloseTo(reference, 9);
+    }
+  });
+
+  it('rolls exactly as far as the closed-form law says', () => {
+    // The defect issue #2465 is about, in the form that bites: the decay was already
+    // step-size exact, but the position was a rectangle rule, so the pitch disagreed with
+    // its own distance law by `dt · BALL_DRAG_RATE / 2` — 0.72% at 60 Hz, and *short*
+    // rather than long, because the decay here is applied before the move rather than
+    // after.
+    //
+    // Nothing stops this ball outright, so the law is the limit: a loose ball rolls
+    // `v₀ / BALL_DRAG_RATE` in total. Forty seconds of it, because the tail is what is
+    // being measured — at ten seconds the ball is still carrying 0.034 units a second and
+    // still has 0.039 units to run, which is eight orders of magnitude above the tolerance
+    // and would fail this as though the integrator were wrong. By forty the remainder is
+    // 2e-13.
+    //
+    // This game's bot does not read the law — it leads the ball by a flat number of seconds
+    // (`profile.lead`), a deliberately human guess that is 13% away from the exact integral
+    // at `hard` and would still be after any change here. So no tier was handicapped the
+    // way Soccer Pool's was. The test is what keeps the law honest for whoever reads it
+    // next.
+    for (const speed of [200, 400, 600]) {
+      const rng = new Rng(1);
+      const game = createGame(rng);
+      goLive(game, rng);
+      game.p1.x = 40;
+      game.p1.y = 600;
+      game.p2.x = 960;
+      game.p2.y = 600;
+      game.ball.x = 100;
+      game.ball.y = WALL + BALL_RADIUS + 4;
+      game.ball.vx = speed;
+      game.ball.vy = 0;
+      const start = game.ball.x;
+      for (let i = 0; i < 60 * 40; i += 1) {
+        // Held off the ball, so nothing kicks it and the roll stays free.
+        game.p1.x = 40;
+        game.p1.y = 600;
+        game.p2.x = 960;
+        game.p2.y = 600;
+        step(game, STEP, rng);
+      }
+      expect(game.ball.x - start, `a ball at ${speed} rolls v / BALL_DRAG_RATE`).toBeCloseTo(
+        speed / BALL_DRAG_RATE,
+        9,
+      );
+    }
   });
 
   it('bounces off the side rails but not off the goal mouth', () => {

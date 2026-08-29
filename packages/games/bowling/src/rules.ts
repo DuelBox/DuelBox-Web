@@ -40,6 +40,27 @@ export const POCKET_OFFSET = 22;
 export const THROW_SPEED = 1500;
 export const ROLL_DRAG = 0.6;
 export const PIN_DRAG = 0.08;
+/**
+ * How fast speed bleeds off, as the exponents behind the two drags.
+ *
+ * `v(t) = v₀ · DRAG^t` is the same statement as `v(t) = v₀ · e^(-RATE·t)`, and having the
+ * rates as numbers is what lets {@link step} move a body by the *integral* of its decay
+ * rather than by `v · dt`. A body running free covers exactly
+ * `(v₀ - STOP_SPEED) / RATE` before it stops.
+ *
+ * A pin's rate is five times a ball's — it is felt-footed and stops quickly — which is why
+ * the pins, not the ball, were the worse offender when the travel was a rectangle rule:
+ * 2.10% long a step against the ball's 0.43%.
+ */
+export const ROLL_DRAG_RATE = -Math.log(ROLL_DRAG);
+export const PIN_DRAG_RATE = -Math.log(PIN_DRAG);
+/**
+ * Below this a body is stopped, so the lane settles instead of creeping.
+ *
+ * Part of the distance law rather than a fudge on the end of one: a body covers
+ * `(v₀ - STOP_SPEED) / RATE` and then stops dead on the stop line, whatever step size
+ * happens to carry it across.
+ */
 export const STOP_SPEED = 14;
 /** A pin knocked more than this from where it stood is down. */
 export const FALL_DISTANCE = 26;
@@ -212,7 +233,54 @@ export interface StepResult {
   readonly settled: boolean;
 }
 
-/** One fixed step of the lane. */
+/**
+ * Roll one body by the analytic integral of its own decay, rather than by `v · dt`.
+ *
+ * `v · dt` is the rectangle rule under a curve that is falling all the way across the step,
+ * so it overshoots by `dt · rate / 2` — measured, 0.43% a step for the ball and **2.10% for
+ * a pin**, whose drag is five times heavier. The decay itself was already step-size exact;
+ * only the travel was not. Under `v(t) = v₀ · DRAG^t` a body covers
+ * `(v_before - v_after) / rate` in a step, and those terms telescope, so a free run totals
+ * `(v₀ - STOP_SPEED) / rate` however finely it is sliced.
+ *
+ * The last step is coasted to the stop line rather than truncated at it, so where a body
+ * finishes does not depend on which step happened to cross it. Soccer Pool's `step` is the
+ * same three branches for the same reason; Mini Golf reaches the same place from constant
+ * deceleration.
+ *
+ * Allocation-free (CLAUDE.md rule 5): scalars only, and the body is written in place.
+ */
+function roll(body: Body, keep: number, rate: number): void {
+  const speed = Math.hypot(body.vx, body.vy);
+  if (speed === 0) return;
+  if (speed <= STOP_SPEED) {
+    body.vx = 0;
+    body.vy = 0;
+    return;
+  }
+  const ux = body.vx / speed;
+  const uy = body.vy / speed;
+  const next = speed * keep;
+  if (next <= STOP_SPEED) {
+    const travel = (speed - STOP_SPEED) / rate;
+    body.x += ux * travel;
+    body.y += uy * travel;
+    body.vx = 0;
+    body.vy = 0;
+    return;
+  }
+  const travel = (speed - next) / rate;
+  body.x += ux * travel;
+  body.y += uy * travel;
+  body.vx = ux * next;
+  body.vy = uy * next;
+}
+
+/**
+ * One fixed step of the lane.
+ *
+ * The moves are {@link roll} — the integral of the drag, not `v · dt`. See its note.
+ */
 export function step(game: Game, fixedDeltaSeconds: number): StepResult {
   if (game.phase !== 'rolling') return { settled: true };
 
@@ -220,14 +288,7 @@ export function step(game: Game, fixedDeltaSeconds: number): StepResult {
   const ballKeep = Math.pow(ROLL_DRAG, fixedDeltaSeconds);
   const pinKeep = Math.pow(PIN_DRAG, fixedDeltaSeconds);
 
-  ball.x += ball.vx * fixedDeltaSeconds;
-  ball.y += ball.vy * fixedDeltaSeconds;
-  ball.vx *= ballKeep;
-  ball.vy *= ballKeep;
-  if (Math.hypot(ball.vx, ball.vy) < STOP_SPEED) {
-    ball.vx = 0;
-    ball.vy = 0;
-  }
+  roll(ball, ballKeep, ROLL_DRAG_RATE);
   // A ball in the gutter is gone: the channel walls straighten it and it runs on past the
   // rack. Zeroing the sideways velocity is the whole of the rule — a second guard skipping
   // the pin collision was redundant, since a ball held at x < 96 cannot reach a pin at
@@ -257,14 +318,7 @@ export function step(game: Game, fixedDeltaSeconds: number): StepResult {
   // `resetRack`, which is when a real lane clears them too.
   for (const pin of game.pins) {
     if (pin.swept) continue;
-    pin.x += pin.vx * fixedDeltaSeconds;
-    pin.y += pin.vy * fixedDeltaSeconds;
-    pin.vx *= pinKeep;
-    pin.vy *= pinKeep;
-    if (Math.hypot(pin.vx, pin.vy) < STOP_SPEED) {
-      pin.vx = 0;
-      pin.vy = 0;
-    }
+    roll(pin, pinKeep, PIN_DRAG_RATE);
     if (Math.hypot(pin.x - pin.homeX, pin.y - pin.homeY) > FALL_DISTANCE) pin.down = true;
 
     // The pit. A real deck has walls either side and a well behind it; without them a

@@ -14,7 +14,9 @@ import {
   PUCKS_PER_SEAT,
   PUCK_RADIUS,
   READY_SECONDS,
+  REST_SPEED,
   SHOTS_PER_SEAT,
+  SLIDE_RATE,
   angleOf,
   botPress,
   createBotState,
@@ -119,6 +121,80 @@ describe('the board', () => {
         const theirs = seat === 'p1' ? MID_Y - other.y : other.y - MID_Y;
         expect(depth).toBeLessThanOrEqual(theirs);
       }
+    }
+  });
+
+  /** One puck sliding straight along the board, with everything else racked out of the way. */
+  function lone(speed: number): Game {
+    const game = createGame();
+    for (let i = 1; i < game.pucks.length; i += 1) {
+      const other = game.pucks[i];
+      if (other !== undefined) other.through = true;
+    }
+    const puck = game.pucks[0];
+    if (puck === undefined) throw new Error('no fixture');
+    // Across the board rather than up it: p1's own half, well clear of the middle wall, so
+    // what is measured is the slide and not a bounce or a crossing.
+    puck.x = 60;
+    puck.y = 300;
+    puck.vx = speed;
+    puck.vy = 0;
+    game.phase = 'sliding';
+    return game;
+  }
+
+  it('slides the same distance whatever the step size', () => {
+    // Rule 8: one match, stepped identically on every device. The retention is a
+    // per-second power and was always exact; the *travel* was `v · dt`, a rectangle rule
+    // under a falling curve, which runs long by `dt · SLIDE_RATE / 2` — 0.59% a frame here,
+    // held down that far only by the four substeps. Integrated as
+    // `(v_before - v_after) / SLIDE_RATE` the terms telescope and every rate agrees to
+    // floating point.
+    //
+    // This game had no such test at all before, which is why the drift went unrecorded
+    // while Bowling's, Pool's and Mini Soccer's were merely tolerated.
+    const restingX = (dt: number): number => {
+      const game = lone(900);
+      const puck = game.pucks[0];
+      if (puck === undefined) throw new Error('no fixture');
+      for (let i = 0; i < Math.round(20 / dt); i += 1) {
+        step(game, dt, null);
+        if (game.phase !== 'sliding') break;
+      }
+      return puck.x;
+    };
+    const reference = restingX(1 / 60);
+    for (const hz of [90, 120, 240]) {
+      expect(restingX(1 / hz), `${hz} Hz agrees with 60 Hz`).toBeCloseTo(reference, 9);
+    }
+  });
+
+  it('slides exactly the distance the closed-form law predicts', () => {
+    // The defect issue #2465 is about. `sweepForPower` is the one bot in the four games the
+    // issue names that touches the decay constant at all — but it asks for
+    // `sqrt(2 · run · SLIDE_RATE · meanPower)`, a constant-deceleration shape, not this
+    // model's inverse, and it is 6–45% away from the exact law across the range it is
+    // actually used over. So the 0.59% was never what was making it miss. The law is worth
+    // being true regardless, and this is what holds it.
+    //
+    // It also pins the substep count out of the distance law. `SUBSTEPS` is there to stop
+    // two pucks passing through one another, not to set how far one travels — but with the
+    // travel as `v · dt` it did both, and the 0.59% above is the 2.3% a single pass would
+    // have carried, divided by four. Since this asserts the closed form rather than one
+    // measured number, changing `SUBSTEPS` cannot move it.
+    for (const speed of [400, 600, 800, 1010]) {
+      const game = lone(speed);
+      const puck = game.pucks[0];
+      if (puck === undefined) throw new Error('no fixture');
+      const start = puck.x;
+      for (let i = 0; i < 60 * 20; i += 1) {
+        step(game, STEP, null);
+        if (puck.vx === 0 && puck.vy === 0) break;
+      }
+      expect(puck.x - start, `a puck at ${speed} runs (v - REST_SPEED) / SLIDE_RATE`).toBeCloseTo(
+        (speed - REST_SPEED) / SLIDE_RATE,
+        9,
+      );
     }
   });
 });

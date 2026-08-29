@@ -28,6 +28,15 @@ export const BALL_RADIUS = 22;
 export const PLAYER_SPEED = 420;
 /** How much of its speed the ball keeps each second. Below one, so a loose ball settles. */
 export const BALL_DRAG = 0.42;
+/**
+ * How fast speed bleeds off, as the exponent behind {@link BALL_DRAG}.
+ *
+ * `v(t) = v₀ · BALL_DRAG^t` is the same statement as `v(t) = v₀ · e^(-BALL_DRAG_RATE·t)`,
+ * and having the rate as a number is what lets {@link step} move the ball by the *integral*
+ * of that decay rather than by `v · dt`. Nothing here stops the ball outright, so a loose
+ * ball rolls a total of exactly `v₀ / BALL_DRAG_RATE` before it is asleep.
+ */
+export const BALL_DRAG_RATE = -Math.log(BALL_DRAG);
 /** How hard a player kicks a ball they run into. */
 export const KICK_SPEED = 620;
 /** How much of the striker's own motion the ball takes on top. */
@@ -232,12 +241,25 @@ export function step(game: Game, fixedDeltaSeconds: number, rng: Rng): StepResul
   }
 
   const ball = game.ball;
-  // Drag as a per-second decay, so the step rate cannot change how far a ball rolls.
+  // Drag as a per-second decay, so the step rate cannot change how far a ball rolls — and
+  // the travel as the *integral* of that decay, which is what makes the sentence true.
+  //
+  // `v · dt` is the rectangle rule under a curve that is falling all the way across the
+  // step. Applied after the decay, as it was here, it undershoots by `dt · rate / 2`:
+  // measured, 0.72% at 60 Hz and 0.18% at 240 Hz, so the same pass rolled a different
+  // distance at every step size while the comment above claimed it could not. Under
+  // `v(t) = v₀ · BALL_DRAG^t` the ball covers `(v_before - v_after) / BALL_DRAG_RATE`, and
+  // those terms telescope: the total is the same number however finely it is sliced.
+  // Per component rather than along a heading, because each component decays by the same
+  // factor and the ball has no stop line to round to. Soccer Pool and Mini Golf are the
+  // same lesson from the other two drag models.
   const keep = Math.pow(BALL_DRAG, fixedDeltaSeconds);
-  ball.vx *= keep;
-  ball.vy *= keep;
-  ball.x += ball.vx * fixedDeltaSeconds;
-  ball.y += ball.vy * fixedDeltaSeconds;
+  const nextVx = ball.vx * keep;
+  const nextVy = ball.vy * keep;
+  ball.x += (ball.vx - nextVx) / BALL_DRAG_RATE;
+  ball.y += (ball.vy - nextVy) / BALL_DRAG_RATE;
+  ball.vx = nextVx;
+  ball.vy = nextVy;
 
   // Top and bottom walls. The ends are handled by the goal check and the side rails.
   if (ball.y < WALL + BALL_RADIUS) {

@@ -98,6 +98,15 @@ export const REST_SPEED = 14;
  * than ice, which is what the board is meant to be.
  */
 export const SLIDE_RETENTION = 0.06;
+/**
+ * How fast speed bleeds off, as the exponent behind {@link SLIDE_RETENTION}.
+ *
+ * `v(t) = v₀ · SLIDE_RETENTION^t` is the same statement as `v(t) = v₀ · e^(-SLIDE_RATE·t)`,
+ * and having the rate as a number is what lets {@link slide} move a puck by the *integral*
+ * of that decay rather than by `v · dt`. A puck slung at `v` covers exactly
+ * `(v - REST_SPEED) / SLIDE_RATE` before it stops.
+ */
+export const SLIDE_RATE = -Math.log(SLIDE_RETENTION);
 /** What is kept in a bounce off a rail or the wall. */
 export const RAIL_BOUNCE = 0.72;
 /** What is kept when two pucks meet. */
@@ -518,7 +527,54 @@ export function winnerOf(game: Readonly<Game>): SeatId | 'draw' | null {
   return 'draw';
 }
 
-/** One frame of sliding, in `SUBSTEPS` passes. */
+/**
+ * Move one puck by the analytic integral of its own decay, rather than by `v · dt`.
+ *
+ * `v · dt` is the rectangle rule under a curve that is falling all the way across the pass,
+ * so it overshoots by `dt · SLIDE_RATE / 2` — 0.59% a frame here, measured, held down that
+ * far only by the four substeps. The decay itself was already step-size exact; only the
+ * travel was not. Under `v(t) = v₀ · SLIDE_RETENTION^t` a puck covers
+ * `(v_before - v_after) / SLIDE_RATE` in a pass, and those terms telescope, so a free slide
+ * totals `(v₀ - REST_SPEED) / SLIDE_RATE` however finely it is sliced — which also means
+ * the substep count no longer changes where a puck ends up.
+ *
+ * The last pass is coasted to the rest line rather than truncated at it, so where a puck
+ * finishes does not depend on which pass happened to cross it. Soccer Pool's `step` is the
+ * same three branches for the same reason.
+ *
+ * Allocation-free (CLAUDE.md rule 5): scalars only, and the puck is written in place.
+ */
+function coast(puck: Puck, keep: number): void {
+  const speed = Math.hypot(puck.vx, puck.vy);
+  if (speed === 0) return;
+  if (speed <= REST_SPEED) {
+    puck.vx = 0;
+    puck.vy = 0;
+    return;
+  }
+  const ux = puck.vx / speed;
+  const uy = puck.vy / speed;
+  const next = speed * keep;
+  if (next <= REST_SPEED) {
+    const travel = (speed - REST_SPEED) / SLIDE_RATE;
+    puck.x += ux * travel;
+    puck.y += uy * travel;
+    puck.vx = 0;
+    puck.vy = 0;
+    return;
+  }
+  const travel = (speed - next) / SLIDE_RATE;
+  puck.x += ux * travel;
+  puck.y += uy * travel;
+  puck.vx = ux * next;
+  puck.vy = uy * next;
+}
+
+/**
+ * One frame of sliding, in `SUBSTEPS` passes.
+ *
+ * The move is {@link coast} — the integral of the drag, not `v · dt`. See its note.
+ */
 function slide(game: Game, fixedDeltaSeconds: number): void {
   const dt = fixedDeltaSeconds / SUBSTEPS;
   const keep = Math.pow(SLIDE_RETENTION, dt);
@@ -527,14 +583,7 @@ function slide(game: Game, fixedDeltaSeconds: number): void {
       // A puck that is through is racked and out of the way; nothing may disturb it, and it
       // may not disturb anything, or the two races would touch after all.
       if (puck.through) continue;
-      puck.x += puck.vx * dt;
-      puck.y += puck.vy * dt;
-      puck.vx *= keep;
-      puck.vy *= keep;
-      if (Math.hypot(puck.vx, puck.vy) < REST_SPEED) {
-        puck.vx = 0;
-        puck.vy = 0;
-      }
+      coast(puck, keep);
       bounceRails(puck);
       bounceWall(puck);
       if (!ownSide(puck.owner, puck.y)) cross(game, puck);
@@ -754,7 +803,7 @@ function sweepForPower(game: Readonly<Game>, difficulty: BotDifficulty): number 
   const puck = game.pucks[game.loaded];
   if (puck === undefined) return 0.6;
   const run = Math.abs(MID_Y - puck.y) + 210;
-  const wanted = Math.sqrt(run * 2 * -Math.log(SLIDE_RETENTION) * (MIN_POWER + MAX_POWER) * 0.5);
+  const wanted = Math.sqrt(run * 2 * SLIDE_RATE * (MIN_POWER + MAX_POWER) * 0.5);
   const sweep = (wanted - MIN_POWER) / (MAX_POWER - MIN_POWER);
   return clamp01(0.6 + (clamp01(sweep) - 0.6) * reads);
 }

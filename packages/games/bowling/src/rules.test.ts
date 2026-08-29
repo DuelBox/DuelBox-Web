@@ -9,8 +9,11 @@ import {
   GUTTER,
   LANE_WIDTH,
   PINS,
+  PIN_DRAG_RATE,
   PIN_SPOTS,
+  ROLL_DRAG_RATE,
   STOP_SPEED,
+  THROW_SPEED,
   botAim,
   bowl,
   createGame,
@@ -238,18 +241,84 @@ describe('bowling a ball', () => {
     // count — so comparing racks across step sizes would be testing the weather. The
     // engine's timestep is fixed for every device anyway; what this guards is the shape of
     // the drag, and the seeded replay above guards the rest.
+    //
+    // **To nine decimals, not to one per cent.** This assertion used to allow a whole per
+    // cent of the lane and passed on code that was 0.44% long at 60 Hz and 0.11% at 240 —
+    // it named the right property and then set a band wide enough to hide the thing it was
+    // watching for. A per-second decay integrated by `v · dt` cannot agree across step
+    // sizes; integrated by `(v_before - v_after) / rate` it agrees to floating point,
+    // because the terms telescope. The tolerance is what turned a real defect into a
+    // passing test, so the tolerance is what had to go.
+    //
+    // Bowled at 0.3 rather than the 0.4 this used to use, and that matters. At 0.4 the ball
+    // runs 1147 units up an 880-unit lane, so it never comes to rest at all — it sails off
+    // the deck and is zeroed by the pit rule, which is a discrete boundary test and so
+    // lands wherever the step happened to put it. The old figure was measuring the pit, not
+    // the roll, and only the one per cent band let it look like the roll. 0.3 stops the
+    // ball on the lane with 26 units to spare.
     const restingY = (dt: number): number => {
       const game = createGame();
       for (const pin of game.pins) pin.swept = true;
-      bowl(game, 0, 0.4);
+      bowl(game, 0, 0.3);
       for (let i = 0; i < Math.round(20 / dt); i += 1) {
         if (step(game, dt).settled) break;
       }
       return game.ball.y;
     };
-    const a = restingY(1 / 60);
-    const b = restingY(1 / 120);
-    expect(Math.abs(a - b) / FOUL_LINE_Y, 'within one per cent of the lane').toBeLessThan(0.01);
+    const reference = restingY(1 / 60);
+    for (const hz of [90, 120, 240]) {
+      expect(restingY(1 / hz), `${hz} Hz agrees with 60 Hz`).toBeCloseTo(reference, 9);
+    }
+  });
+
+  it('rolls exactly the distance the closed-form law predicts', () => {
+    // The defect issue #2465 is about, in the form that bites: the velocity decay was
+    // already step-size exact, but the *position* was a rectangle rule under a falling
+    // curve, so the lane disagreed with its own distance law by `dt · rate / 2` — 0.43% a
+    // step for the ball and 2.10% for a pin, whose drag is five times heavier.
+    //
+    // No tier of this game's bot reads the law: it aims at the centroid of what is standing
+    // and bowls at a flat power per tier, so nothing here was ever handicapped by the gap
+    // the way Soccer Pool's bot was. This test is what stops that changing quietly — anyone
+    // who later teaches the bot how far a ball runs gets a law that is true.
+    // Powers that stop the ball short of the pit; past the deck it is zeroed on purpose and
+    // there is no free roll left to measure.
+    for (const power of [0.15, 0.2, 0.25, 0.3]) {
+      const game = createGame();
+      for (const pin of game.pins) pin.swept = true;
+      bowl(game, 0, power);
+      const start = game.ball.y;
+      for (let i = 0; i < 60 * 20; i += 1) if (step(game, STEP).settled) break;
+      const speed = THROW_SPEED * power;
+      expect(
+        start - game.ball.y,
+        `a ball at power ${power} runs (v - STOP_SPEED) / rate`,
+      ).toBeCloseTo((speed - STOP_SPEED) / ROLL_DRAG_RATE, 9);
+    }
+  });
+
+  it('runs a pin exactly the distance the closed-form law predicts', () => {
+    // The pins carry the heavier drag and so carried the larger error: 2.10% a step.
+    for (const speed of [200, 400, 700]) {
+      const game = createGame();
+      for (const pin of game.pins) pin.swept = true;
+      const pin = game.pins[0];
+      if (pin === undefined) throw new Error('no fixture');
+      pin.swept = false;
+      pin.x = LANE_WIDTH / 2;
+      pin.y = 500;
+      pin.vy = speed;
+      game.phase = 'rolling';
+      const start = pin.y;
+      for (let i = 0; i < 60 * 20; i += 1) {
+        step(game, STEP);
+        if (pin.vy === 0) break;
+      }
+      expect(pin.y - start, `a pin at ${speed} runs (v - STOP_SPEED) / rate`).toBeCloseTo(
+        (speed - STOP_SPEED) / PIN_DRAG_RATE,
+        9,
+      );
+    }
   });
 
   it('stops a body below the crawl speed', () => {

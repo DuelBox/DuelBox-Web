@@ -280,7 +280,7 @@ describe('rendering', () => {
     const game = new MiniSoccerGame();
     game.init(makeContext(41));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.base);
@@ -292,7 +292,7 @@ describe('rendering', () => {
     const game = new MiniSoccerGame();
     game.init(makeContext(43));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args).toContain(SEAT_PALETTE.p1.deep);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.deep);
   });
@@ -306,7 +306,7 @@ describe('rendering', () => {
     goLive(game, input);
     const widthOfClock = (): number => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       let widest = 0;
       for (const call of renderer.calls) {
         if (call.op !== 'rect') continue;
@@ -329,7 +329,7 @@ describe('rendering', () => {
     const game = new MiniSoccerGame();
     game.init(makeContext(46));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const p1 = game.position.p1;
     const p2 = game.position.p2;
     const discAtP1 = renderer.calls.some(
@@ -354,7 +354,7 @@ describe('rendering', () => {
     const game = new MiniSoccerGame();
     game.init(makeContext(47));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops.filter((op) => op === 'pushRotation').length).toBe(0);
   });
 
@@ -364,7 +364,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -379,8 +379,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = `${String(game.position.ball.x)}:${String(game.position.clock)}`;
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(`${String(game.position.ball.x)}:${String(game.position.clock)}`).toBe(before);
   });
 

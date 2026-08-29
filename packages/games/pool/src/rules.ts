@@ -25,7 +25,22 @@ export const POCKET_RADIUS = 26;
 export const CUE_MAX_SPEED = 1500;
 /** Per second, applied as a power. */
 export const ROLL_DRAG = 0.22;
-/** Below this a ball is stopped, so a table settles instead of creeping for ever. */
+/**
+ * How fast speed bleeds off, as the exponent behind {@link ROLL_DRAG}.
+ *
+ * `v(t) = v₀ · ROLL_DRAG^t` is the same statement as `v(t) = v₀ · e^(-DRAG_RATE·t)`, and
+ * having the rate as a number is what lets {@link step} move a ball by the *integral* of
+ * that decay instead of by `v · dt`. A ball rolling free covers exactly
+ * `(v₀ - STOP_SPEED) / DRAG_RATE` before it stops.
+ */
+export const DRAG_RATE = -Math.log(ROLL_DRAG);
+/**
+ * Below this a ball is stopped, so a table settles instead of creeping for ever.
+ *
+ * Part of the distance law rather than a fudge on the end of one: a ball covers
+ * `(v₀ - STOP_SPEED) / DRAG_RATE` and then stops dead on the stop line, whatever step size
+ * happens to carry it across.
+ */
 export const STOP_SPEED = 12;
 export const CUSHION_BOUNCE = 0.86;
 /** How much of the impact survives a ball-on-ball hit. */
@@ -221,11 +236,56 @@ export interface StepResult {
 const pottedScratch: number[] = [];
 
 /**
+ * Roll one ball by the analytic integral of its own decay, rather than by `v · dt`.
+ *
+ * `v · dt` is the rectangle rule under a curve that is falling all the way across the step,
+ * so it overshoots by `dt · DRAG_RATE / 2` — 1.26% at 60 Hz on this cloth, measured. The
+ * decay itself is already step-size exact; only the travel was not. Under
+ * `v(t) = v₀ · ROLL_DRAG^t` a ball covers `(v_before - v_after) / DRAG_RATE` in a step, and
+ * those terms telescope, so a free roll totals `(v₀ - STOP_SPEED) / DRAG_RATE` however
+ * finely it is sliced.
+ *
+ * The last step is coasted to the stop line rather than truncated at it, so where a ball
+ * finishes does not depend on which step happened to cross it. Soccer Pool's `step` is the
+ * same three branches for the same reason; Mini Golf reaches the same place from constant
+ * deceleration.
+ *
+ * Allocation-free (CLAUDE.md rule 5): scalars only, and the ball is written in place.
+ */
+function roll(b: Ball, keep: number): void {
+  const speed = Math.hypot(b.vx, b.vy);
+  if (speed === 0) return;
+  if (speed <= STOP_SPEED) {
+    b.vx = 0;
+    b.vy = 0;
+    return;
+  }
+  const ux = b.vx / speed;
+  const uy = b.vy / speed;
+  const next = speed * keep;
+  if (next <= STOP_SPEED) {
+    const travel = (speed - STOP_SPEED) / DRAG_RATE;
+    b.x += ux * travel;
+    b.y += uy * travel;
+    b.vx = 0;
+    b.vy = 0;
+    return;
+  }
+  const travel = (speed - next) / DRAG_RATE;
+  b.x += ux * travel;
+  b.y += uy * travel;
+  b.vx = ux * next;
+  b.vy = uy * next;
+}
+
+/**
  * One fixed step of the table.
  *
  * Order matters and is deliberate: move, then cushions, then ball-on-ball, then pockets.
  * Resolving pockets before collisions let a ball be potted and then struck by another in
  * the same step, which put a potted ball back on the table.
+ *
+ * The move is {@link roll} — the integral of the drag, not `v · dt`. See its note.
  */
 export function step(game: Game, fixedDeltaSeconds: number): StepResult {
   pottedScratch.length = 0;
@@ -235,14 +295,9 @@ export function step(game: Game, fixedDeltaSeconds: number): StepResult {
 
   for (const b of game.balls) {
     if (b.potted) continue;
-    b.x += b.vx * fixedDeltaSeconds;
-    b.y += b.vy * fixedDeltaSeconds;
-    b.vx *= keep;
-    b.vy *= keep;
-    if (Math.hypot(b.vx, b.vy) < STOP_SPEED) {
-      b.vx = 0;
-      b.vy = 0;
-    }
+    roll(b, keep);
+    // Unconditional, so a ball left resting inside a cushion is pushed clear even on a step
+    // where it did not move.
     bounceOffCushions(b);
   }
 
