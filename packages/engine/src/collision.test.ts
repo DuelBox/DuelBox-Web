@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { vec2 } from './vec2.js';
+import { Rng } from './rng.js';
 import type { Aabb, Circle, Contact, Obb, Segment } from './collision.js';
 import {
   createContact,
@@ -8,13 +9,17 @@ import {
   circleObb,
   circleSegment,
   aabbAabb,
+  aabbObb,
+  aabbSegment,
   segmentSegment,
   obbObb,
+  obbSegment,
   closestPointOnSegment,
   pointInAabb,
   pointInCircle,
   sweptCircleSegment,
   sweptCircleCircle,
+  sweptCircleAabb,
 } from './collision.js';
 
 function expectNormal(out: Contact, x: number, y: number, precision = 12): void {
@@ -551,6 +556,69 @@ describe('obbObb', () => {
   });
 });
 
+describe('aabbObb', () => {
+  const out = createContact();
+  const other = createContact();
+
+  it('matches aabbAabb for an unrotated box', () => {
+    expect(aabbObb(out, aabb(0, 0, 4, 2), obb(5, 1, 2, 1, 0))).toBe(true);
+    expect(out.depth).toBeCloseTo(1, 12);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 3.5, 1);
+
+    expect(aabbAabb(other, aabb(0, 0, 4, 2), aabb(3, 0, 7, 2))).toBe(true);
+    expect(other.depth).toBeCloseTo(out.depth, 12);
+    expect(other.normalX).toBeCloseTo(out.normalX, 12);
+    expect(other.normalY).toBeCloseTo(out.normalY, 12);
+  });
+
+  it('is obbObb with a zero-rotation A, to the last bit', () => {
+    const box = aabb(-3, -1, 1, 5);
+    const rotated = obb(0.5, 4, 2, 0.75, 0.9);
+    expect(aabbObb(out, box, rotated)).toBe(obbObb(other, obb(-1, 2, 2, 3, 0), rotated));
+    expect(out.depth).toBe(other.depth);
+    expect(out.normalX).toBe(other.normalX);
+    expect(out.normalY).toBe(other.normalY);
+    expect(out.pointX).toBe(other.pointX);
+    expect(out.pointY).toBe(other.pointY);
+  });
+
+  it('only overlaps once the box is rotated', () => {
+    const box = aabb(-1, -1, 1, 1);
+    // Upright the thin box stands clear to the right; on its side it reaches in.
+    expect(aabbObb(out, box, obb(2, 0.3, 0.2, 1.5, 0))).toBe(false);
+    expectCleared(out);
+    expect(aabbObb(out, box, obb(2, 0.3, 0.2, 1.5, 1.2))).toBe(true);
+  });
+
+  it('counts an exact touch as a hit with depth 0', () => {
+    // A unit square rotated 45 degrees reaches sqrt(2)/2 along x from its centre.
+    const reach = Math.SQRT2 / 2;
+    expect(aabbObb(out, aabb(-1, -1, 1, 1), obb(1 + reach, 0, 0.5, 0.5, Math.PI / 4))).toBe(true);
+    expect(out.depth).toBeCloseTo(0, 12);
+    expectNormal(out, -1, 0, 9);
+  });
+
+  it('reports clear separation and clears the record', () => {
+    expect(aabbObb(out, aabb(-1, -1, 1, 1), obb(5, 5, 1, 1, 0.4))).toBe(false);
+    expectCleared(out);
+  });
+
+  it('moving the box along +normal by depth clears the overlap', () => {
+    const box = aabb(-2, -1, 2, 1);
+    const rotated = obb(2.5, 0.4, 1.5, 0.6, -0.7);
+    expect(aabbObb(out, box, rotated)).toBe(true);
+    const moved = aabb(
+      box.minX + out.normalX * out.depth,
+      box.minY + out.normalY * out.depth,
+      box.maxX + out.normalX * out.depth,
+      box.maxY + out.normalY * out.depth,
+    );
+    expect(aabbObb(other, moved, rotated)).toBe(true);
+    expect(other.depth).toBeLessThan(1e-12);
+  });
+});
+
 describe('segmentSegment', () => {
   const out = createContact();
   const wall = segment(0, 0, 10, 0);
@@ -633,6 +701,119 @@ describe('segmentSegment', () => {
 
     expect(segmentSegment(out, segment(2, 2, 2, 2), segment(3, 3, 3, 3))).toBe(false);
     expectCleared(out);
+  });
+});
+
+describe('obbSegment', () => {
+  const out = createContact();
+  const other = createContact();
+
+  it('resolves a segment through the middle on the shallower box axis', () => {
+    // A 4 by 2 box with a tall wire straight down its centre: the shortest way
+    // out is sideways, half the box's width.
+    expect(obbSegment(out, obb(0, 0, 2, 1, 0), segment(0, -5, 0, 5))).toBe(true);
+    expect(out.depth).toBeCloseTo(2, 12);
+    expectNormal(out, 1, 0);
+    expectPoint(out, -1, 0);
+  });
+
+  it('reports no hit when the segment stops short of the box it points at', () => {
+    // The line through the segment crosses the box; the segment itself does not.
+    expect(obbSegment(out, obb(0, 0, 2, 1, 0), segment(0, 3, 0, 10))).toBe(false);
+    expectCleared(out);
+  });
+
+  it('counts an endpoint resting exactly on a face as a hit with depth 0', () => {
+    expect(obbSegment(out, obb(0, 0, 2, 1, 0), segment(0, 1, 0, 5))).toBe(true);
+    expect(out.depth).toBe(0);
+    expectNormal(out, 0, -1);
+    expectPoint(out, 0, 1);
+  });
+
+  it('takes the segment own perpendicular when that is the shallow way out', () => {
+    // A unit square turned 45 degrees reaches sqrt(2) along x, so a vertical
+    // wire at 1.3 clips the corner and the shortest escape is across the wire.
+    expect(obbSegment(out, obb(0, 0, 1, 1, Math.PI / 4), segment(1.3, -5, 1.3, 5))).toBe(true);
+    expect(out.depth).toBeCloseTo(Math.SQRT2 - 1.3, 12);
+    expectNormal(out, -1, 0, 12);
+    expectPoint(out, Math.SQRT2 - (Math.SQRT2 - 1.3) / 2, 0, 12);
+  });
+
+  it('only clips the rotated box once the box turns into the segment', () => {
+    const wire = segment(1.3, -5, 1.3, 5);
+    expect(obbSegment(out, obb(0, 0, 1, 1, 0), wire)).toBe(false);
+    expectCleared(out);
+    expect(obbSegment(out, obb(0, 0, 1, 1, Math.PI / 4), wire)).toBe(true);
+  });
+
+  it('handles a zero-length segment as a point', () => {
+    const box = obb(0, 0, 2, 1, 0);
+    // The point sits inside, half a unit from the right face, so the box is
+    // pushed the other way: the normal points out of the point towards the box.
+    expect(obbSegment(out, box, segment(1.5, 0, 1.5, 0))).toBe(true);
+    expect(out.depth).toBeCloseTo(0.5, 12);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 1.75, 0);
+    expect(obbSegment(out, box, segment(2.5, 0, 2.5, 0))).toBe(false);
+    expectCleared(out);
+  });
+
+  it('moving the box along +normal by depth leaves it just touching the segment', () => {
+    const wire = segment(-4, -2, 3, 6);
+    const box = obb(0.5, 1.5, 1.25, 0.75, 2.1);
+    expect(obbSegment(out, box, wire)).toBe(true);
+    const moved = obb(
+      box.x + out.normalX * out.depth,
+      box.y + out.normalY * out.depth,
+      box.halfWidth,
+      box.halfHeight,
+      box.rotation,
+    );
+    expect(obbSegment(other, moved, wire)).toBe(true);
+    expect(other.depth).toBeLessThan(1e-12);
+  });
+});
+
+describe('aabbSegment', () => {
+  const out = createContact();
+  const other = createContact();
+
+  it('resolves a segment through the middle on the shallower axis', () => {
+    expect(aabbSegment(out, aabb(-2, -1, 2, 1), segment(0, -5, 0, 5))).toBe(true);
+    expect(out.depth).toBeCloseTo(2, 12);
+    expectNormal(out, 1, 0);
+    expectPoint(out, -1, 0);
+  });
+
+  it('is obbSegment with a zero-rotation box, to the last bit', () => {
+    const wire = segment(-3, -1, 4, 2.5);
+    const box = aabb(-1, -0.5, 2, 3);
+    expect(aabbSegment(out, box, wire)).toBe(obbSegment(other, obb(0.5, 1.25, 1.5, 1.75, 0), wire));
+    expect(out.depth).toBe(other.depth);
+    expect(out.normalX).toBe(other.normalX);
+    expect(out.normalY).toBe(other.normalY);
+    expect(out.pointX).toBe(other.pointX);
+    expect(out.pointY).toBe(other.pointY);
+  });
+
+  it('counts a segment lying along an edge as a hit with depth 0', () => {
+    expect(aabbSegment(out, aabb(0, 0, 4, 2), segment(1, 2, 3, 2))).toBe(true);
+    expect(out.depth).toBe(0);
+    expectNormal(out, 0, -1);
+  });
+
+  it('reports clear separation and clears the record', () => {
+    expect(aabbSegment(out, aabb(0, 0, 4, 2), segment(5, -5, 5, 5))).toBe(false);
+    expectCleared(out);
+    // Past the end of a segment whose line would cross the box.
+    expect(aabbSegment(out, aabb(0, 0, 4, 2), segment(2, 3, 2, 9))).toBe(false);
+    expectCleared(out);
+  });
+
+  it('finds a diagonal wire that crosses a corner', () => {
+    expect(aabbSegment(out, aabb(0, 0, 4, 2), segment(-1, 3, 5, -1))).toBe(true);
+    expect(out.depth).toBeGreaterThan(0);
+    expect(Math.hypot(out.normalX, out.normalY)).toBeCloseTo(1, 12);
   });
 });
 
@@ -835,5 +1016,516 @@ describe('tunnelling regression', () => {
     expectNormal(out, 1, 0);
     expect(sweptCircleSegment(out, start, 10, 0, wall)).toBe(false);
     expectCleared(out);
+  });
+});
+
+describe('sweptCircleAabb', () => {
+  const out = createContact();
+  const box = aabb(5, -10, 9, 10);
+
+  it('reports the time of impact against a face', () => {
+    expect(sweptCircleAabb(out, circle(0, 0, 1), 10, 0, box)).toBe(true);
+    expect(out.depth).toBeCloseTo(0.4, 12);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 5, 0);
+  });
+
+  it('returns false when the motion stops short of the box', () => {
+    expect(sweptCircleAabb(out, circle(0, 0, 1), 3, 0, box)).toBe(false);
+    expectCleared(out);
+  });
+
+  it('returns false when the motion is away from the box or absent', () => {
+    expect(sweptCircleAabb(out, circle(0, 0, 1), -10, 0, box)).toBe(false);
+    expect(sweptCircleAabb(out, circle(0, 0, 1), 0, 0, box)).toBe(false);
+    expectCleared(out);
+  });
+
+  it('reports impact time 0 for a circle already resting on a face', () => {
+    expect(sweptCircleAabb(out, circle(4, 0, 1), 50, 0, box)).toBe(true);
+    expect(out.depth).toBe(0);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 5, 0);
+  });
+
+  it('rounds a corner when the face plane is crossed beyond the face', () => {
+    // Level with the top of the box but past its end: only the corner can be hit.
+    const corner = aabb(0, 0, 10, 10);
+    expect(sweptCircleAabb(out, circle(15, 10.5, 1), -10, 0, corner)).toBe(true);
+    expect(out.depth).toBeCloseTo(0.4133974596215561, 9);
+    expectPoint(out, 10, 10);
+    expectNormal(out, Math.sqrt(3) / 2, 0.5, 9);
+    const hx = 15 - 10 * out.depth;
+    expect(Math.hypot(hx - 10, 0.5)).toBeCloseTo(1, 9);
+  });
+
+  it('returns false when it crosses a face plane wide of the box', () => {
+    expect(sweptCircleAabb(out, circle(20, -20, 1), 0, 40, aabb(0, 0, 10, 10))).toBe(false);
+    expectCleared(out);
+  });
+
+  it('picks the earlier of the two faces a diagonal approach could reach', () => {
+    // Coming in below and left of the corner, aimed across it.
+    const target = aabb(0, 0, 10, 10);
+    expect(sweptCircleAabb(out, circle(-6, -3, 1), 12, 9, target)).toBe(true);
+    const hx = -6 + 12 * out.depth;
+    const hy = -3 + 9 * out.depth;
+    const qx = hx < 0 ? 0 : hx > 10 ? 10 : hx;
+    const qy = hy < 0 ? 0 : hy > 10 ? 10 : hy;
+    // Whatever feature was hit, the circle is exactly one radius from the box.
+    expect(Math.hypot(hx - qx, hy - qy)).toBeCloseTo(1, 9);
+  });
+
+  it('catches a circle that would tunnel clean through a thin box', () => {
+    // 5000 logical units per second at 60 Hz, the same speed the regression
+    // below uses against a segment.
+    const wall = aabb(100, -50, 102, 50);
+    const dx = 5000 / 60;
+    const fast = circle(50, 0, 0.5);
+    expect(circleAabb(out, fast, wall)).toBe(false);
+    expect(circleAabb(out, circle(fast.x + dx, 0, fast.radius), wall)).toBe(false);
+    expect(sweptCircleAabb(out, fast, dx, 0, wall)).toBe(true);
+    expect(out.depth).toBeCloseTo((100 - 0.5 - 50) / dx, 12);
+    expectNormal(out, -1, 0);
+    expectPoint(out, 100, 0);
+  });
+});
+
+describe('a swept hit near time zero is not a static overlap (#2499)', () => {
+  const out = createContact();
+  // 1.0000000000000002 is two ULPs past 1, and squaring it rounds up again, so
+  // a circle of radius 1 at the origin really is clear of it — by 2e-16, which
+  // no solver can act on. The static tests call that apart, which it is; the
+  // swept tests find an impact inside the step, which there also is. Both are
+  // right about different questions, and a pass that detects with one and
+  // resolves with the other never moves the pair at all.
+  const gap = 1.0000000000000002;
+  const a = circle(0, 0, 0.7);
+  const b = circle(gap, 0, 0.3);
+
+  it('circleCircle sees no touch where sweptCircleCircle sees an impact', () => {
+    expect(a.radius + b.radius).toBe(1);
+    expect(circleCircle(out, a, b)).toBe(false);
+    expect(sweptCircleCircle(out, a, 1, 0, b)).toBe(true);
+    expect(out.depth).toBeGreaterThan(0);
+    expect(out.depth).toBeLessThan(1e-15);
+    expectNormal(out, -1, 0);
+  });
+
+  it('circleSegment sees no touch where sweptCircleSegment sees an impact', () => {
+    const c = circle(0, 0, 1);
+    const wall = segment(gap, 0, gap, 5);
+    expect(circleSegment(out, c, wall)).toBe(false);
+    expect(sweptCircleSegment(out, c, 1, 0, wall)).toBe(true);
+    expect(out.depth).toBeGreaterThan(0);
+    expect(out.depth).toBeLessThan(1e-15);
+  });
+
+  it('circleAabb sees no touch where sweptCircleAabb sees an impact', () => {
+    const c = circle(0, 0, 1);
+    const wall = aabb(gap, -1, 3, 1);
+    expect(circleAabb(out, c, wall)).toBe(false);
+    expect(sweptCircleAabb(out, c, 1, 0, wall)).toBe(true);
+    expect(out.depth).toBeGreaterThan(0);
+    expect(out.depth).toBeLessThan(1e-15);
+  });
+
+  it('advancing to the impact time is what breaks the stall', () => {
+    // The step a solver should take: move to the reported time and resolve with
+    // the reported normal. Done that way the pass converges — the static test
+    // now agrees, at depth 0 — where re-asking it first would have vetoed the
+    // impact, left the pair where it was, and bound the pass at its guard, which
+    // is what happened to Ball Games at its full 24 passes.
+    expect(sweptCircleCircle(out, a, 1, 0, b)).toBe(true);
+    const at = circle(a.x + out.depth, a.y, a.radius);
+    expect(circleCircle(out, at, b)).toBe(true);
+    expect(out.depth).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property tests.
+//
+// Everything above picks its examples, and an example test picks the examples
+// that work. Touching distance is exactly where floating point decides the
+// answer, so a handful of hand-placed touches proves very little about it.
+// These run the pair tests over a few hundred randomised shapes each and assert
+// only what must hold for every one of them.
+//
+// Shapes come from the seeded Rng, never Math.random: a failure has to be
+// reproducible from the seed, and lint forbids Math.random in this package.
+// ---------------------------------------------------------------------------
+
+const PROPERTY_SEED = 0x5eed;
+const PROPERTY_CASES = 400;
+/** Wide enough to swamp rounding at these magnitudes, narrow enough to be a touch. */
+const GAP = 1e-6;
+
+function coord(rng: Rng): number {
+  return (rng.float() - 0.5) * 10;
+}
+
+function extent(rng: Rng): number {
+  return 0.5 + rng.float() * 2.5;
+}
+
+function spin(rng: Rng): number {
+  return (rng.float() - 0.5) * 2 * Math.PI;
+}
+
+function randomCircle(rng: Rng): Circle {
+  return circle(coord(rng), coord(rng), extent(rng));
+}
+
+function randomAabb(rng: Rng): Aabb {
+  const x = coord(rng);
+  const y = coord(rng);
+  const hw = extent(rng);
+  const hh = extent(rng);
+  return aabb(x - hw, y - hh, x + hw, y + hh);
+}
+
+function randomObb(rng: Rng): Obb {
+  return obb(coord(rng), coord(rng), extent(rng), extent(rng), spin(rng));
+}
+
+function randomSegment(rng: Rng): Segment {
+  const x = coord(rng);
+  const y = coord(rng);
+  const a = spin(rng);
+  const len = extent(rng) * 2;
+  return segment(x, y, x + Math.cos(a) * len, y + Math.sin(a) * len);
+}
+
+function movedCircle(c: Circle, dx: number, dy: number): Circle {
+  return circle(c.x + dx, c.y + dy, c.radius);
+}
+
+function movedAabb(b: Aabb, dx: number, dy: number): Aabb {
+  return aabb(b.minX + dx, b.minY + dy, b.maxX + dx, b.maxY + dy);
+}
+
+function movedObb(b: Obb, dx: number, dy: number): Obb {
+  return obb(b.x + dx, b.y + dy, b.halfWidth, b.halfHeight, b.rotation);
+}
+
+/** A drawn pair, ready to be re-tested with A translated by `(dx, dy)`. */
+type Probe = (out: Contact, dx: number, dy: number) => boolean;
+
+interface PairCase {
+  readonly name: string;
+  draw(rng: Rng): Probe;
+}
+
+/**
+ * Every pair test that reports a penetration depth. `segmentSegment` is absent
+ * on purpose: segments have no thickness, so its depth is always 0 and there is
+ * no separating distance for it to be wrong about.
+ */
+const DEPTH_PAIRS: readonly PairCase[] = [
+  {
+    name: 'circleCircle',
+    draw: (rng) => {
+      const a = randomCircle(rng);
+      const b = randomCircle(rng);
+      return (out, dx, dy) => circleCircle(out, movedCircle(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'circleAabb',
+    draw: (rng) => {
+      const a = randomCircle(rng);
+      const b = randomAabb(rng);
+      return (out, dx, dy) => circleAabb(out, movedCircle(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'circleObb',
+    draw: (rng) => {
+      const a = randomCircle(rng);
+      const b = randomObb(rng);
+      return (out, dx, dy) => circleObb(out, movedCircle(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'circleSegment',
+    draw: (rng) => {
+      const a = randomCircle(rng);
+      const b = randomSegment(rng);
+      return (out, dx, dy) => circleSegment(out, movedCircle(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'aabbAabb',
+    draw: (rng) => {
+      const a = randomAabb(rng);
+      const b = randomAabb(rng);
+      return (out, dx, dy) => aabbAabb(out, movedAabb(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'aabbObb',
+    draw: (rng) => {
+      const a = randomAabb(rng);
+      const b = randomObb(rng);
+      return (out, dx, dy) => aabbObb(out, movedAabb(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'aabbSegment',
+    draw: (rng) => {
+      const a = randomAabb(rng);
+      const b = randomSegment(rng);
+      return (out, dx, dy) => aabbSegment(out, movedAabb(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'obbObb',
+    draw: (rng) => {
+      const a = randomObb(rng);
+      const b = randomObb(rng);
+      return (out, dx, dy) => obbObb(out, movedObb(a, dx, dy), b);
+    },
+  },
+  {
+    name: 'obbSegment',
+    draw: (rng) => {
+      const a = randomObb(rng);
+      const b = randomSegment(rng);
+      return (out, dx, dy) => obbSegment(out, movedObb(a, dx, dy), b);
+    },
+  },
+];
+
+describe('property: depth is the distance that separates the pair', () => {
+  // For any hit, moving A along the normal by the reported depth must leave the
+  // two exactly touching. That single statement pins three things at once: the
+  // normal points the right way, the depth is a real distance rather than an
+  // overlap width, and a pair placed at touching distance is still a hit. The
+  // last is the one an example test cannot honestly claim, so it is probed from
+  // both sides: a hair inside must hit, a hair outside must miss, and exactly at
+  // it either answer is allowed as long as a hit carries essentially no depth.
+  const out = createContact();
+
+  for (const pair of DEPTH_PAIRS) {
+    it(`holds for ${pair.name} over ${PROPERTY_CASES} random pairs`, () => {
+      const rng = new Rng(PROPERTY_SEED);
+      let hits = 0;
+      for (let i = 0; i < PROPERTY_CASES; i += 1) {
+        const probe = pair.draw(rng);
+        if (!probe(out, 0, 0)) {
+          expectCleared(out);
+          continue;
+        }
+        hits += 1;
+        const depth = out.depth;
+        const nx = out.normalX;
+        const ny = out.normalY;
+        expect(depth).toBeGreaterThanOrEqual(0);
+        expect(Math.hypot(nx, ny)).toBeCloseTo(1, 12);
+
+        if (depth > GAP) {
+          const inside = depth - GAP;
+          expect(probe(out, nx * inside, ny * inside)).toBe(true);
+          expect(out.depth).toBeLessThanOrEqual(GAP + 1e-9);
+        }
+        if (probe(out, nx * depth, ny * depth)) {
+          expect(out.depth).toBeLessThan(1e-9);
+        }
+        const outside = depth + GAP;
+        expect(probe(out, nx * outside, ny * outside)).toBe(false);
+        expectCleared(out);
+      }
+      // Guards against a draw that quietly stops overlapping and asserts nothing.
+      expect(hits).toBeGreaterThan(PROPERTY_CASES / 10);
+    });
+  }
+});
+
+describe('property: symmetry', () => {
+  const out = createContact();
+  const other = createContact();
+
+  /** Swapping the arguments must keep the answer and turn the normal around. */
+  function expectMirrored(hit: boolean, mirrored: boolean): void {
+    expect(mirrored).toBe(hit);
+    if (!hit) return;
+    expect(other.depth).toBeCloseTo(out.depth, 12);
+    expect(other.normalX).toBeCloseTo(-out.normalX, 12);
+    expect(other.normalY).toBeCloseTo(-out.normalY, 12);
+  }
+
+  it('circleCircle answers the same both ways round', () => {
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomCircle(rng);
+      const b = randomCircle(rng);
+      expectMirrored(circleCircle(out, a, b), circleCircle(other, b, a));
+    }
+  });
+
+  it('aabbAabb answers the same both ways round', () => {
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomAabb(rng);
+      const b = randomAabb(rng);
+      expectMirrored(aabbAabb(out, a, b), aabbAabb(other, b, a));
+    }
+  });
+
+  it('obbObb answers the same both ways round', () => {
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomObb(rng);
+      const b = randomObb(rng);
+      expectMirrored(obbObb(out, a, b), obbObb(other, b, a));
+    }
+  });
+
+  it('segmentSegment agrees on the hit both ways round', () => {
+    // Only on the hit: each side reports the other segment's perpendicular, and
+    // two crossing segments do not share one, so the normals are unrelated.
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomSegment(rng);
+      const b = randomSegment(rng);
+      expect(segmentSegment(other, b, a)).toBe(segmentSegment(out, a, b));
+    }
+  });
+
+  it('aabbObb is obbObb with a zero-rotation A, bit for bit', () => {
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomAabb(rng);
+      const b = randomObb(rng);
+      const asObb = obb(
+        (a.minX + a.maxX) / 2,
+        (a.minY + a.maxY) / 2,
+        (a.maxX - a.minX) / 2,
+        (a.maxY - a.minY) / 2,
+        0,
+      );
+      expect(aabbObb(out, a, b)).toBe(obbObb(other, asObb, b));
+      expect(out.depth).toBe(other.depth);
+      expect(out.normalX).toBe(other.normalX);
+      expect(out.normalY).toBe(other.normalY);
+      expect(out.pointX).toBe(other.pointX);
+      expect(out.pointY).toBe(other.pointY);
+    }
+  });
+
+  it('aabbSegment is obbSegment with a zero-rotation box, bit for bit', () => {
+    const rng = new Rng(PROPERTY_SEED);
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const a = randomAabb(rng);
+      const b = randomSegment(rng);
+      const asObb = obb(
+        (a.minX + a.maxX) / 2,
+        (a.minY + a.maxY) / 2,
+        (a.maxX - a.minX) / 2,
+        (a.maxY - a.minY) / 2,
+        0,
+      );
+      expect(aabbSegment(out, a, b)).toBe(obbSegment(other, asObb, b));
+      expect(out.depth).toBe(other.depth);
+      expect(out.normalX).toBe(other.normalX);
+      expect(out.normalY).toBe(other.normalY);
+      expect(out.pointX).toBe(other.pointX);
+      expect(out.pointY).toBe(other.pointY);
+    }
+  });
+
+  it('obbSegment agrees with obbObb against the segment as a flat box', () => {
+    // The independent check on the three-axis reduction: obbObb tests four axes,
+    // including the segment's own direction, which boxSegment leaves out as
+    // redundant. If it is not redundant the two must eventually disagree.
+    const rng = new Rng(PROPERTY_SEED);
+    let hits = 0;
+    let marginal = 0;
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const box = randomObb(rng);
+      const seg = randomSegment(rng);
+      const sx = seg.x2 - seg.x1;
+      const sy = seg.y2 - seg.y1;
+      const flat = obb(
+        (seg.x1 + seg.x2) / 2,
+        (seg.y1 + seg.y2) / 2,
+        Math.hypot(sx, sy) / 2,
+        0,
+        Math.atan2(sy, sx),
+      );
+      const hit = obbSegment(out, box, seg);
+      const same = obbObb(other, box, flat);
+      if (hit !== same) {
+        // The flat box is rebuilt through atan2 and back through cos and sin, so
+        // the two disagree only inside a band far narrower than any contact.
+        marginal += 1;
+        expect(hit ? out.depth : other.depth).toBeLessThan(1e-9);
+        continue;
+      }
+      if (hit) {
+        hits += 1;
+        expect(out.depth).toBeCloseTo(other.depth, 9);
+      }
+    }
+    expect(hits).toBeGreaterThan(PROPERTY_CASES / 10);
+    expect(marginal).toBeLessThan(PROPERTY_CASES / 50);
+  });
+});
+
+describe('property: sweptCircleAabb against a substepped reference', () => {
+  // Walking the step with the static test is the definition of what a sweep is
+  // for, just too slow to ship: whatever the samples see, the sweep must see,
+  // and no later than they do.
+  const SAMPLES = 2000;
+
+  it('never misses a contact the samples find, and never reports a later one', () => {
+    const rng = new Rng(0xfa57);
+    const out = createContact();
+    const probe = createContact();
+    let contacts = 0;
+    for (let i = 0; i < PROPERTY_CASES; i += 1) {
+      const box = randomAabb(rng);
+      const c = randomCircle(rng);
+      const dx = coord(rng) * 2;
+      const dy = coord(rng) * 2;
+      // A circle that starts in contact reports time 0 by construction; the
+      // example tests cover that case and it tells the sampling nothing.
+      if (circleAabb(probe, c, box)) continue;
+
+      const swept = sweptCircleAabb(out, c, dx, dy, box);
+      let firstSample = -1;
+      for (let s = 1; s <= SAMPLES; s += 1) {
+        const t = s / SAMPLES;
+        if (circleAabb(probe, circle(c.x + dx * t, c.y + dy * t, c.radius), box)) {
+          firstSample = t;
+          break;
+        }
+      }
+
+      if (firstSample >= 0) {
+        expect(swept).toBe(true);
+        expect(out.depth).toBeLessThanOrEqual(firstSample);
+      }
+      if (!swept) {
+        expectCleared(out);
+        continue;
+      }
+      contacts += 1;
+      // The reported time is a real contact: the circle is exactly one radius
+      // from the box, and the contact point is that point on the box.
+      const hx = c.x + dx * out.depth;
+      const hy = c.y + dy * out.depth;
+      const qx = hx < box.minX ? box.minX : hx > box.maxX ? box.maxX : hx;
+      const qy = hy < box.minY ? box.minY : hy > box.maxY ? box.maxY : hy;
+      expect(Math.hypot(hx - qx, hy - qy)).toBeCloseTo(c.radius, 9);
+      expect(out.pointX).toBeCloseTo(qx, 9);
+      expect(out.pointY).toBeCloseTo(qy, 9);
+      expect(pointInAabb(out.pointX, out.pointY, box)).toBe(true);
+      expect(Math.hypot(out.normalX, out.normalY)).toBeCloseTo(1, 12);
+      // The normal points from the box back at the circle.
+      expect(out.normalX * (hx - qx) + out.normalY * (hy - qy)).toBeCloseTo(c.radius, 9);
+    }
+    expect(contacts).toBeGreaterThan(PROPERTY_CASES / 10);
   });
 });

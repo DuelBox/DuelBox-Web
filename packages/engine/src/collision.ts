@@ -18,7 +18,9 @@ import { set } from './vec2.js';
  *   alternate between colliding and free from step to step and visibly jitter;
  *   a depth-0 contact resolves to a zero correction and leaves it still.
  * - `pointX`/`pointY` is the contact point: the point on B's boundary nearest A
- *   for the circle tests, and the centre of the overlap region for box-box.
+ *   for the circle tests, the centre of the intersection rectangle for
+ *   `aabbAabb`, and a representative point on the mid-plane of the overlap for
+ *   the oriented-box tests, which have no intersection rectangle to centre.
  * - A miss zeroes the whole record, so a stale contact from an earlier test can
  *   never be read back as a live one.
  *
@@ -346,9 +348,16 @@ export function aabbAabb(out: Contact, a: Aabb, b: Aabb): boolean {
 }
 
 /**
- * Separating-axis theorem over the four box axes. Two rectangles overlap exactly
- * when none of their four face normals separates them, so four projections
- * settle it and the shallowest overlap is the contact normal.
+ * Separating-axis theorem over the four box axes, in whatever frame the caller
+ * is working in; `out` comes back in that same frame. Each box arrives as a
+ * centre, half extents, and the cosine and sine of its rotation, so an
+ * axis-aligned box passes (1, 0) and pays no trigonometry at all. Shared by
+ * `obbObb` and `aabbObb`, exactly as `circleBox` is shared by `circleAabb` and
+ * `circleObb`.
+ *
+ * Two rectangles overlap exactly when none of their four face normals separates
+ * them, so four projections settle it and the shallowest overlap is the contact
+ * normal.
  *
  * Each box projects onto its own axes as exactly its half extents, so only the
  * cross terms need computing, and those reduce to |cos| and |sin| of the angle
@@ -356,20 +365,26 @@ export function aabbAabb(out: Contact, a: Aabb, b: Aabb): boolean {
  * keeps an axis-aligned pair exact: rounding in `cos^2 + sin^2` must never turn
  * an exact touch into a miss.
  */
-export function obbObb(out: Contact, a: Obb, b: Obb): boolean {
-  const ca = Math.cos(a.rotation);
-  const sa = Math.sin(a.rotation);
-  const cb = Math.cos(b.rotation);
-  const sb = Math.sin(b.rotation);
+function boxBox(
+  out: Contact,
+  ax: number,
+  ay: number,
+  ahw: number,
+  ahh: number,
+  ca: number,
+  sa: number,
+  bx: number,
+  by: number,
+  bhw: number,
+  bhh: number,
+  cb: number,
+  sb: number,
+): boolean {
   const cr = Math.abs(ca * cb + sa * sb);
   const sr = Math.abs(sa * cb - ca * sb);
 
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const ahw = a.halfWidth;
-  const ahh = a.halfHeight;
-  const bhw = b.halfWidth;
-  const bhh = b.halfHeight;
+  const dx = ax - bx;
+  const dy = ay - by;
 
   // A's x axis.
   const p0 = dx * ca + dy * sa;
@@ -433,9 +448,60 @@ export function obbObb(out: Contact, a: Obb, b: Obb): boolean {
   // from A's centre. This is a representative point, not a clipped manifold:
   // face-face contact really has two corners, and a single point cannot say so.
   const k = depth / 2 - radiusA;
-  out.pointX = a.x + nx * k;
-  out.pointY = a.y + ny * k;
+  out.pointX = ax + nx * k;
+  out.pointY = ay + ny * k;
   return true;
+}
+
+/** Box against box, both oriented. See {@link boxBox} for how the axes are chosen. */
+export function obbObb(out: Contact, a: Obb, b: Obb): boolean {
+  return boxBox(
+    out,
+    a.x,
+    a.y,
+    a.halfWidth,
+    a.halfHeight,
+    Math.cos(a.rotation),
+    Math.sin(a.rotation),
+    b.x,
+    b.y,
+    b.halfWidth,
+    b.halfHeight,
+    Math.cos(b.rotation),
+    Math.sin(b.rotation),
+  );
+}
+
+/**
+ * Axis-aligned box against oriented box. An AABB is an OBB at zero rotation, so
+ * this is `obbObb` with (cos, sin) = (1, 0) for A and no trigonometry spent on
+ * it, the same delegation `circleAabb` makes into `circleBox`.
+ *
+ * The contact point follows `obbObb`'s convention — a representative point on
+ * the mid-plane of the overlap slab — and so is not the centre of the
+ * intersection rectangle that `aabbAabb` reports. Two boxes at a general angle
+ * do not intersect in a rectangle, so there is no centre of one to report.
+ *
+ * Working in centres and half extents also means the min/max form is halved and
+ * differenced first: unlike `aabbAabb`, a touch that is exact in min/max
+ * arithmetic can round to a hair either side of zero here.
+ */
+export function aabbObb(out: Contact, a: Aabb, b: Obb): boolean {
+  return boxBox(
+    out,
+    (a.minX + a.maxX) / 2,
+    (a.minY + a.maxY) / 2,
+    (a.maxX - a.minX) / 2,
+    (a.maxY - a.minY) / 2,
+    1,
+    0,
+    b.x,
+    b.y,
+    b.halfWidth,
+    b.halfHeight,
+    Math.cos(b.rotation),
+    Math.sin(b.rotation),
+  );
 }
 
 /**
@@ -572,6 +638,193 @@ export function segmentSegment(out: Contact, a: Segment, b: Segment): boolean {
 }
 
 /**
+ * Box against segment, in whatever frame the caller is working in; `out` comes
+ * back in that same frame. The box arrives in the same centre/half-extent/
+ * cos/sin form `boxBox` takes, so `aabbSegment` passes (1, 0) and pays no
+ * trigonometry. Shared by `obbSegment` and `aabbSegment`.
+ *
+ * A segment is a box with no thickness. It is symmetric about its midpoint, so
+ * its extent along any axis is |h . axis| for the half vector h, and the same
+ * separating-axis test `boxBox` runs applies here with one axis fewer.
+ *
+ * Three axes are the complete set: the box's two face normals and the segment's
+ * own perpendicular. The Minkowski difference of a box and a segment is a
+ * hexagon whose edges are the box's four and the segment's two, and a separating
+ * axis is always normal to one of those edges. The segment's own direction is
+ * not in the set and does not need to be: an extra axis can never separate a
+ * pair the complete set does not, and can never report a shallower overlap
+ * either, because the shallowest over a complete set is already the smallest
+ * escape in any direction at all.
+ *
+ * Ties keep the earlier axis, so the box's own axes win over the segment's, the
+ * same preference `boxBox` gives A.
+ */
+function boxSegment(
+  out: Contact,
+  bx: number,
+  by: number,
+  hw: number,
+  hh: number,
+  cb: number,
+  sb: number,
+  seg: Segment,
+): boolean {
+  const sx = seg.x2 - seg.x1;
+  const sy = seg.y2 - seg.y1;
+  // The segment as a centre and a half vector, which is the form projection wants.
+  const hx = sx / 2;
+  const hy = sy / 2;
+  const dx = bx - (seg.x1 + hx);
+  const dy = by - (seg.y1 + hy);
+
+  // The box's x axis.
+  const p0 = dx * cb + dy * sb;
+  const o0 = hw + Math.abs(hx * cb + hy * sb) - Math.abs(p0);
+  if (o0 < 0) return miss(out);
+  // The box's y axis.
+  const p1 = dy * cb - dx * sb;
+  const o1 = hh + Math.abs(hy * cb - hx * sb) - Math.abs(p1);
+  if (o1 < 0) return miss(out);
+
+  // The segment's perpendicular, the left one. Every term below is scaled by the
+  // segment's length, so a separation is ruled out without a square root and only
+  // a winning axis pays for one. A zero-length segment is a point and has no
+  // perpendicular at all; the two box axes have already settled that case.
+  const ss = sx * sx + sy * sy;
+  let o2 = Infinity;
+  let p2 = 0;
+  let r2 = 0;
+  let n2x = 0;
+  let n2y = 0;
+  if (ss > 0) {
+    // The box's extent along the perpendicular, and the centre offset along it.
+    const e = hw * Math.abs(sx * sb - sy * cb) + hh * Math.abs(sx * cb + sy * sb);
+    const q = dy * sx - dx * sy;
+    const scaled = e - Math.abs(q);
+    if (scaled < 0) return miss(out);
+    const inv = 1 / Math.sqrt(ss);
+    o2 = scaled * inv;
+    p2 = q * inv;
+    r2 = e * inv;
+    n2x = -sy * inv;
+    n2y = sx * inv;
+  }
+
+  let depth = o0;
+  let proj = p0;
+  let radius = hw;
+  let nx = cb;
+  let ny = sb;
+  if (o1 < depth) {
+    depth = o1;
+    proj = p1;
+    radius = hh;
+    nx = -sb;
+    ny = cb;
+  }
+  if (o2 < depth) {
+    depth = o2;
+    proj = p2;
+    radius = r2;
+    nx = n2x;
+    ny = n2y;
+  }
+  // Point the axis from the segment towards the box. A zero projection means the
+  // two centres agree on this axis; the axis then stands as it is, arbitrary but
+  // stable, as in `boxBox`.
+  if (proj < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+
+  out.hit = true;
+  out.depth = depth;
+  out.normalX = nx;
+  out.normalY = ny;
+  // Mid-plane of the overlap slab, along the normal from the box's centre, which
+  // is the same representative point `boxBox` reports.
+  const k = depth / 2 - radius;
+  out.pointX = bx + nx * k;
+  out.pointY = by + ny * k;
+  return true;
+}
+
+/**
+ * Oriented box against segment. The normal points out of the segment towards the
+ * box, so moving the box along it by `depth` clears the segment.
+ *
+ * A segment has no thickness, so a box resting a hair on either side of one is a
+ * depth-0 hit rather than a miss, exactly as `circleSegment` and `segmentSegment`
+ * treat a touch.
+ */
+export function obbSegment(out: Contact, a: Obb, b: Segment): boolean {
+  return boxSegment(
+    out,
+    a.x,
+    a.y,
+    a.halfWidth,
+    a.halfHeight,
+    Math.cos(a.rotation),
+    Math.sin(a.rotation),
+    b,
+  );
+}
+
+/**
+ * Axis-aligned box against segment: `obbSegment` at zero rotation, with (1, 0)
+ * standing in for the trigonometry.
+ *
+ * As with `aabbObb`, the box is halved into a centre and half extents first, so
+ * a touch that min/max arithmetic would call exact can round to a hair either
+ * side of zero here.
+ */
+export function aabbSegment(out: Contact, a: Aabb, b: Segment): boolean {
+  return boxSegment(
+    out,
+    (a.minX + a.maxX) / 2,
+    (a.minY + a.maxY) / 2,
+    (a.maxX - a.minX) / 2,
+    (a.maxY - a.minY) / 2,
+    1,
+    0,
+    b,
+  );
+}
+
+/**
+ * The swept tests below answer a different question from the static tests above,
+ * and the two disagree on purpose near zero. Read this before writing a solver
+ * that uses both.
+ *
+ * A swept test asks when, during this step's motion, the shapes first touch. Its
+ * entry time comes from a quadratic whose constant term is `distance^2 - r^2`.
+ * When that term is a hair positive — a pair a few ULPs apart, which is what a
+ * body resting against a wall usually is after a step of rounding — the entry
+ * root lands somewhere around 1e-18 rather than at 0, and the swept test
+ * correctly reports an impact within the step. The static test on those same two
+ * shapes correctly reports no touch. Neither is wrong; they are answering
+ * different questions.
+ *
+ * So: **an impact time near zero does not mean the shapes overlap now, and a
+ * caller must not re-test with a static predicate before resolving.** That loop
+ * — detect with the sweep, resolve from the static overlap — is the obvious way
+ * to write a collision pass and it stalls. The sweep keeps naming an impact the
+ * overlap-based resolver then declines, nothing moves, and the pass burns its
+ * whole iteration guard on one pair: Ball Games bound at its full 24 passes and
+ * ate a step of ball motion this way. Advance the body to the reported time and
+ * resolve with the normal the sweep already returned.
+ *
+ * The record deliberately does not distinguish "touching now" from "touching at
+ * the very start of this step", and adding a field for it would not help. The
+ * boundary between the two cases is those same few ULPs, so the distinction is
+ * not reliably computable: a hair-positive constant term can still round its
+ * root to exactly 0 once the motion is fast enough. `depth === 0` is therefore
+ * not a signal to branch on. The swept result is the authority for a swept
+ * query, and a caller that genuinely wants the static answer should ask the
+ * static test and use it for something other than vetoing the sweep.
+ */
+
+/**
  * Earliest time in [0, 1] at which a circle of radius `r` starting at `(cx, cy)`
  * and moving by `(dx, dy)` over the step reaches distance `r` from `(px, py)`.
  * Returns -1 when it never does, and 0 when it starts already within reach.
@@ -612,6 +865,10 @@ function sweptPointTime(
  *
  * Returns false, leaving the record cleared, when no impact happens within the
  * motion.
+ *
+ * A time near zero does not imply that {@link circleCircle} on the same two
+ * shapes reports a touch, and the caller must not check. See the note above
+ * `sweptPointTime`.
  */
 export function sweptCircleCircle(
   out: Contact,
@@ -654,6 +911,10 @@ export function sweptCircleCircle(
  *
  * The segment is treated as a capsule of the circle's radius: the flat side and
  * the two end caps are solved separately and the earliest contact wins.
+ *
+ * A cap contact carries the same near-zero caveat as {@link sweptCircleCircle}:
+ * it can report a time around 1e-18 for a circle {@link circleSegment} calls
+ * clear. See the note above `sweptPointTime`.
  */
 export function sweptCircleSegment(
   out: Contact,
@@ -740,6 +1001,141 @@ export function sweptCircleSegment(
   } else {
     // Only reachable for a zero-radius circle passing exactly through an end
     // point; there is no direction to report, so match the concentric case.
+    bestNx = 1;
+    bestNy = 0;
+  }
+
+  out.hit = true;
+  out.depth = bestT;
+  out.normalX = bestNx;
+  out.normalY = bestNy;
+  out.pointX = bestPx;
+  out.pointY = bestPy;
+  return true;
+}
+
+/**
+ * Time in [0, 1] at which a circle crosses one face plane of a box, or -1 when
+ * it does not. `p`/`dp` are the position and motion across the face, `q`/`dq`
+ * the ones along it, and `[qMin, qMax]` the face's extent.
+ *
+ * The circle must start clear of the face's expanded plane. One that starts
+ * inside that band is either already touching the box, or off past a corner,
+ * where a corner sweep owns the contact and finds it earlier: to reach a face
+ * from inside the band the circle would have to pass through the box first.
+ */
+function faceTime(
+  p: number,
+  dp: number,
+  min: number,
+  max: number,
+  r: number,
+  q: number,
+  dq: number,
+  qMin: number,
+  qMax: number,
+): number {
+  let plane: number;
+  if (p < min - r) plane = min - r;
+  else if (p > max + r) plane = max + r;
+  else return -1;
+  if (dp === 0) return -1;
+  const t = (plane - p) / dp;
+  if (t < 0 || t > 1) return -1;
+  const at = q + dq * t;
+  return at >= qMin && at <= qMax ? t : -1;
+}
+
+/**
+ * Circle swept by `(dx, dy)` over one step against a stationary axis-aligned
+ * box. The box counterpart of {@link sweptCircleSegment}, and the same shape of
+ * answer: `out.depth` is the time of impact in [0, 1], `pointX`/`pointY` the
+ * point on the box touched at impact, and a circle already touching the box at
+ * the start of the step reports time 0 with the static normal.
+ *
+ * The swept region is the box grown by the radius, with the corners rounded: the
+ * four faces and the four corner caps are solved separately and the earliest
+ * contact wins, exactly as the flat side and the two end caps are for a segment.
+ * Every candidate is a real point of first touch, so the earliest of them is the
+ * first touch.
+ *
+ * No fast-body flag guards this. Issue #111 asked for one — sweep only bodies
+ * marked fast — and a flag is the wrong instrument. It is set by hand, so it is
+ * wrong on exactly the body nobody thought would be fast, and a missed sweep is
+ * a ball through a wall rather than a slow frame. The test itself is a handful
+ * of multiplies against static geometry, cheaper than the broadphase that found
+ * the pair. If a caller must skip work, the honest condition is measured, not
+ * declared: compare the distance the body travels this step against its radius,
+ * and sweep when the step could carry it past its own width. That reads the
+ * simulation rather than trusting a boolean somebody forgot to set.
+ */
+export function sweptCircleAabb(
+  out: Contact,
+  c: Circle,
+  dx: number,
+  dy: number,
+  box: Aabb,
+): boolean {
+  // Already in contact at the start of the step: impact time 0, with the static
+  // normal. A resting body must report this rather than sweeping past it.
+  if (circleAabb(out, c, box)) {
+    out.depth = 0;
+    return true;
+  }
+
+  const r = c.radius;
+  let bestT = Infinity;
+  let bestNx = 0;
+  let bestNy = 0;
+  let bestPx = 0;
+  let bestPy = 0;
+
+  // The left or right face; the circle cannot start clear of both.
+  const tx = faceTime(c.x, dx, box.minX, box.maxX, r, c.y, dy, box.minY, box.maxY);
+  if (tx >= 0) {
+    const left = c.x < box.minX - r;
+    bestT = tx;
+    bestNx = left ? -1 : 1;
+    bestNy = 0;
+    bestPx = left ? box.minX : box.maxX;
+    bestPy = c.y + dy * tx;
+  }
+  // The bottom or top face. Both axes can offer a crossing; the earlier is the
+  // one the circle reaches.
+  const ty = faceTime(c.y, dy, box.minY, box.maxY, r, c.x, dx, box.minX, box.maxX);
+  if (ty >= 0 && ty < bestT) {
+    const below = c.y < box.minY - r;
+    bestT = ty;
+    bestNx = 0;
+    bestNy = below ? -1 : 1;
+    bestPx = c.x + dx * ty;
+    bestPy = below ? box.minY : box.maxY;
+  }
+
+  // The four corners, each rounded exactly like a capsule's end cap. The pair of
+  // ternaries walks (min, min), (min, max), (max, min), (max, max).
+  for (let i = 0; i < 4; i += 1) {
+    const px = i < 2 ? box.minX : box.maxX;
+    const py = (i & 1) === 1 ? box.maxY : box.minY;
+    const t = sweptPointTime(c.x, c.y, r, dx, dy, px, py);
+    if (t >= 0 && t < bestT) {
+      bestT = t;
+      bestPx = px;
+      bestPy = py;
+      bestNx = c.x + dx * t - px;
+      bestNy = c.y + dy * t - py;
+    }
+  }
+  if (bestT === Infinity) return miss(out);
+
+  const nLenSq = bestNx * bestNx + bestNy * bestNy;
+  if (nLenSq > 0) {
+    const inv = 1 / Math.sqrt(nLenSq);
+    bestNx *= inv;
+    bestNy *= inv;
+  } else {
+    // Only reachable for a zero-radius circle passing exactly through a corner;
+    // there is no direction to report, so match the concentric case.
     bestNx = 1;
     bestNy = 0;
   }
