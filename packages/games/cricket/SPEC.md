@@ -1,5 +1,14 @@
 # Cricket — specification
 
+**Archetype:** `rt-split` · **Category:** Sports · **Logical box:** 700 × 1000 ·
+**Zone split:** horizontal · **Round length:** ~150 s
+
+> **Written from the implementation, not before it.** Every number below was read out of
+> `src/rules.ts` or measured against the shipped code, and each measurement names the
+> sample that produced it. The ladder, the outcome mix and the seat symmetry are all
+> re-checked by `src/rules.test.ts` and `src/game.test.ts` on every run, so a tuning change
+> fails a test rather than quietly ageing this document.
+
 A two-player cricket duel. One seat bowls, the other bats, and after two overs they swap.
 The bigger total wins.
 
