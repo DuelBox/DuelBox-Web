@@ -45,6 +45,23 @@ def slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
+def round_seconds_for(gid, archetype):
+    """The game's own declared round length, falling back to the archetype default.
+
+    The catalogue card and the play page were reading two different numbers for 51 of the
+    107 games — the card an archetype default from ROUND_SECONDS, the game its manifest.
+    A player saw "about 5 min" on the card and a 20-second match. The manifest is the
+    game's own declaration and is what the shell actually uses, so it wins wherever a
+    package exists; the table is only a placeholder for a row that has not been built yet.
+    """
+    manifest = ROOT / "packages" / "games" / gid / "src" / "manifest.ts"
+    if manifest.exists():
+        found = re.search(r"roundSeconds:\s*(\d+)", manifest.read_text())
+        if found:
+            return int(found.group(1))
+    return ROUND_SECONDS.get(archetype, 60)
+
+
 def main() -> None:
     catalogue = yaml.safe_load((ROOT / "data" / "catalog.yaml").read_text())
     games = catalogue["games"]
@@ -69,7 +86,7 @@ def main() -> None:
                 "category": game.get("category", "Party"),
                 "archetype": archetype,
                 "modes": modes,
-                "roundSeconds": ROUND_SECONDS.get(archetype, 60),
+                "roundSeconds": round_seconds_for(gid, archetype),
                 "tint": tint,
                 "mark": mark,
                 "rule": game.get("rule", ""),

@@ -27,7 +27,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Score in the opposing goal! Use your finger to move your paddle and get 3 goals!",
@@ -44,7 +44,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "bot",
       "solo"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Take turns dropping animals. First player to drop an animal off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
@@ -108,7 +108,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Shoot and score with every part of your body",
@@ -171,7 +171,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 180,
     "tint": "grassTint",
     "mark": "target",
     "rule": "Classic 10 pin bowling. Swipe to shoot your ball and knock down the pins. Highest score after 4 rounds wins!",
@@ -251,7 +251,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Capture all your opponent's pieces!",
@@ -267,7 +267,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Chess! Capture your opponent's king and keep yours alive!",
@@ -299,7 +299,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Try to fill the entire field with your color. Click on your circles to enlarge the dots by one. Take 4 new squares when you reach 4 white dots in a circle.",
@@ -315,7 +315,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 240,
     "tint": "grassTint",
     "mark": "target",
     "rule": "Throw your bags into the hole and try to push the other players' bags off the board.",
@@ -331,7 +331,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 120,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Drop the ball into your opponent's field! Five points to win!",
@@ -347,7 +347,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 75,
+    "roundSeconds": 20,
     "tint": "brandTint",
     "mark": "chevron",
     "rule": "Drive, jump and flip your car by tapping the buttons. Hit your opponent on the head with your car to score points and watch your own head so that nothing touches it!",
@@ -395,7 +395,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 420,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Take turns rolling the dice and try to score as many points as possible based on the combinations on the sheet.",
@@ -411,7 +411,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Go wild at the disco! Press at the right moment when the notes hit your platform! Each mistake will lower your score, the one with more points at the end of the song wins!",
@@ -459,7 +459,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 60,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Move your beetle and bring the precious brown ball to your base! Don't get too close to ladybugs!",
@@ -475,7 +475,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 30,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Hit your opponent's side of the screen! Press to fire your rocket!",
@@ -491,7 +491,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 34,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Don't let the enemy soldiers get close, smash them first! Press at the right moment and hold to shoot farther!",
@@ -539,7 +539,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Collect 30 fish! Move your finger to walk and release it to slide on the ice! Don't fall in the hole!",
@@ -571,7 +571,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 60,
     "tint": "grassTint",
     "mark": "target",
     "rule": "Score points by shooting the ball into the hole. Find the right angle and the right power. The longer you press, the stronger the shot.",
@@ -619,7 +619,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Ask yes/no questions to narrow down which character the other player chose and guess it before they do.",
@@ -651,7 +651,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Slap to score. Dodge to avoid. Dodging without a slap gives the attacker a point. First to 5 points wins!",
@@ -683,7 +683,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins!",
@@ -699,7 +699,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Tap at the right moment to make the potato fly into your opponent's arms.",
@@ -715,7 +715,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Take the crown and keep it on your head until the time is expired! Don't let your opponent touch you!",
@@ -763,7 +763,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space.",
@@ -779,7 +779,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches!",
@@ -842,7 +842,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "modes": [
       "solo"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 45,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Swipe to paint all squares to complete each level!",
@@ -874,7 +874,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 150,
     "tint": "grassTint",
     "mark": "target",
     "rule": "Hole in one! The player with 2 points more than the other wins!",
@@ -890,7 +890,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Move your finger to control your team! Who has scored more after 90 seconds wins!",
@@ -906,7 +906,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 35,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Drag the money to your safe box using all the fingers of your hand!",
@@ -937,7 +937,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Paint the screen with your color! The winner is the one who painted the most after 45 seconds!",
@@ -953,7 +953,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 150,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Swipe your finger to dive or to kick the ball! First to 5 win!",
@@ -969,7 +969,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 55,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Tap left and right to fire the ball right in your opponent goal!",
@@ -1017,7 +1017,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 75,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell!",
@@ -1033,7 +1033,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 300,
     "tint": "grassTint",
     "mark": "target",
     "rule": "A classic! Throw the balls of your color into the holes and finally the black ball!",
@@ -1049,7 +1049,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game.",
@@ -1081,7 +1081,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 75,
+    "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
     "rule": "Compete against your opponent and finish first! Move your finger to drive the car.",
@@ -1129,7 +1129,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 75,
+    "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
     "rule": "Tap to steer left and right to dodge obstacles on the road",
@@ -1177,7 +1177,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Place your ships without showing your opponent and take turns guessing your opponent's ship locations",
@@ -1193,7 +1193,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Protect your ship from your opponent's cannon shots! Move your finger to move the shield!",
@@ -1225,7 +1225,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Roll the dice, then flip one or more numbered tiles that add up to your roll. Keep playing until no move is possible.",
@@ -1288,7 +1288,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 40,
+    "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
     "rule": "Don't touch the other player's snake body! Move your finger to change direction and stay alive!",
@@ -1304,7 +1304,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Roll a die to move across the board. Land on a ladder to climb higher, or a snake to slide down. First to reach or pass the last field wins!",
@@ -1320,7 +1320,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Snowball fight! Pull back to aim. Release to throw. Hit your opponent. First to reduce their opponent's health to zero wins!",
@@ -1399,7 +1399,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 38,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Look for dangers coming from the left or right and jump to avoid them",
@@ -1431,7 +1431,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 100,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Use your tongue to catch the dragonfly, and use the joystick to escape from your opponent's blows! Don't miss too many shots or you'll lose the match!",
@@ -1541,7 +1541,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 75,
+    "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
     "rule": "Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up.",
@@ -1557,7 +1557,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast.",
@@ -1589,7 +1589,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 90,
+    "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
     "rule": "Red is cross, blue is circle!",
@@ -1605,7 +1605,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 75,
+    "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
     "rule": "Crash your opponent and be careful not to fall into the water! Use the joystick to steer.",
@@ -1637,7 +1637,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 180,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Throw the bait and rewind the reel! First to catch 25 fishes wins!",
@@ -1653,7 +1653,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "friend",
       "bot"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 165,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "The balls swim in water. Give the balls speed by pressing the buttons. Let the ball fly through the basket. First to 15 wins.",
@@ -1703,7 +1703,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
       "bot",
       "solo"
     ],
-    "roundSeconds": 60,
+    "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
     "rule": "Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
