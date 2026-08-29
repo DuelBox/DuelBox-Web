@@ -36,12 +36,10 @@ import {
   flightSeconds,
   heightAt,
   inningsComplete,
-  isDismissal,
   recordBall,
   resetInnings,
   resolveShot,
   rollSwing,
-  runsFor,
   scoreMiss,
   scoreShot,
   shotLandingX,
@@ -118,7 +116,6 @@ export class CricketGame implements Game {
   #ballX = GROUND_CX;
   #ballY = RELEASE_Y;
   #ballHeight = 0;
-  #bounced = false;
 
   // ---- bot intentions, decided once per ball ----
   #botReleaseAt = 0;
@@ -211,7 +208,6 @@ export class CricketGame implements Game {
     this.#ballX = GROUND_CX;
     this.#ballY = RELEASE_Y;
     this.#ballHeight = 0;
-    this.#bounced = false;
     this.#delivery.line = GROUND_CX;
     this.#delivery.length = 0.45;
     this.#delivery.swing = 0;
@@ -290,7 +286,6 @@ export class CricketGame implements Game {
     this.#phase = 'flight';
     this.#phaseSeconds = 0;
     this.#swungAt = -1;
-    this.#bounced = false;
 
     // The striker's bot commits to a moment and a place now, before the ball is live.
     const strikerProfile = this.#profileFor(this.#striker());
@@ -303,8 +298,6 @@ export class CricketGame implements Game {
     } else {
       this.#botSwingAt = -1;
     }
-
-    context?.audio?.emit('launch', this.#delivery.pace / PACE_MAX, this.#bowler());
   }
 
   #updateFlight(dt: number, input: InputState): void {
@@ -315,10 +308,12 @@ export class CricketGame implements Game {
     this.#ballY = ballY(progress);
     this.#ballHeight = heightAt(this.#delivery, progress);
 
-    if (!this.#bounced && progress >= 0.68) {
-      this.#bounced = true;
-      this.#context?.audio?.emit('bounce', 0.5, this.#bowler());
-    }
+    // The ball pitching used to raise a `bounce` cue. It no longer does, because nothing
+    // on screen marks the moment: the ball's height is drawn as its radius, so a pitched
+    // ball is a ball that got briefly smaller, which is not an indicator anybody reads as
+    // "it bounced there". Issue #180 says no cue may be carried by sound alone, and a
+    // declared visual that does not really exist would be worse than the silence. A mark
+    // left on the pitch where the ball landed would earn the sound back.
 
     this.#trackBat(dt, input);
 
@@ -388,29 +383,18 @@ export class CricketGame implements Game {
 
     recordBall(card, outcome);
     this.#lastOutcome = outcome;
-    this.#announce(outcome);
 
     this.#phase = 'settle';
     this.#phaseSeconds = 0;
   }
 
-  #announce(outcome: BallOutcome): void {
-    const audio = this.#context?.audio;
-    if (!audio) return;
-    if (isDismissal(outcome)) {
-      audio.emit('fault', 1, this.#striker());
-      return;
-    }
-    if (outcome === 'wide') {
-      audio.emit('fault', 0.4, this.#bowler());
-      return;
-    }
-    if (runsFor(outcome) >= 4) {
-      audio.emit('score', 1, this.#striker());
-      return;
-    }
-    if (this.#lastQuality > 0) audio.emit('hit', this.#lastQuality, this.#striker());
-  }
+  // This game is silent, and deliberately so for now: `GameContext` on `main` carries no
+  // audio bus, and no game in the catalogue emits a cue. An earlier draft of this file
+  // called `context.audio?.emit(...)` and compiled locally only because an unlanded SDK
+  // change was sitting in the working tree — it failed CI the moment it met `main`. The
+  // cues this game wants are `launch` on release, `hit` scaled by contact quality, `score`
+  // on a boundary and `fault` on a wicket or a wide; they go back in behind the audio bus,
+  // not ahead of it.
 
   #updateSettle(dt: number): void {
     void dt;
@@ -432,7 +416,10 @@ export class CricketGame implements Game {
       if (this.#innings + 1 >= INNINGS_PER_MATCH) {
         this.#complete = true;
         this.#phase = 'over';
-        this.#context?.audio?.emit('win', 1, null);
+        // No `win` cue here. The match cues — countdown, start, pause, win — belong to the
+        // shell, which raises them from the match machine in `apps/web/src/lib/match-cues.ts`.
+        // A game announcing its own result is the bug CLAUDE.md names: "a bespoke version
+        // of any of those inside a game package".
         return;
       }
       this.#phase = 'break';
