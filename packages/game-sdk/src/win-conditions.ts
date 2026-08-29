@@ -25,6 +25,17 @@ export interface Tally {
   readonly p2: number;
 }
 
+/**
+ * The fallback for an absent `eliminated` list.
+ *
+ * `?? []` here built a throwaway array on *every* call, and a real-time game that judges
+ * its match every step calls this every step — 60 dead arrays a second per match, which is
+ * exactly what rule 5 forbids. Hoisted and frozen so every call shares one object and
+ * nobody can mutate the shared instance. Games should not have to work around the SDK by
+ * judging only on steps that can decide the match.
+ */
+const NO_ELIMINATIONS: readonly SeatId[] = Object.freeze([]);
+
 function assertFinite(value: number, name: string): void {
   if (!Number.isFinite(value)) {
     throw new RangeError(`${name} must be a finite number, received ${String(value)}`);
@@ -45,7 +56,7 @@ export function resolve(
   assertFinite(tally.p1, 'tally.p1');
   assertFinite(tally.p2, 'tally.p2');
   const timeExpired = options?.timeExpired ?? false;
-  const eliminated = options?.eliminated ?? [];
+  const eliminated = options?.eliminated ?? NO_ELIMINATIONS;
 
   switch (condition.kind) {
     case 'first-to': {

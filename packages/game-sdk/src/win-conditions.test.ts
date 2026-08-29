@@ -139,3 +139,46 @@ describe('resolveSimultaneous', () => {
     expect(() => resolveSimultaneous(NaN, 0.2)).toThrow(RangeError);
   });
 });
+
+/**
+ * Rule 5: nothing in a game's `update()` may allocate per frame, and a real-time game
+ * judges its match from `update()`. `resolve` used to build a fresh `[]` whenever the
+ * caller omitted `eliminated`, so the SDK itself was the allocator.
+ *
+ * This is a *reference-identity* test rather than a heap probe. The array never escapes
+ * `resolve`, so the only way to see which object it used is to watch the method it calls
+ * on it — `Array.prototype.includes`, whose receiver is the fallback itself. That is
+ * exact: it fails on the old code for precisely the right reason (two calls, two distinct
+ * arrays) and cannot pass by accident. A heap-delta probe over N calls would be the weaker
+ * choice: GC timing, vitest's own allocations and the JIT eliding a dead array all make it
+ * flaky in both directions, and a flaky guard on a rule this load-bearing is worse than
+ * none. The receiver count is asserted too, so if a refactor stops using `includes` the
+ * test fails loudly instead of quietly guarding nothing.
+ */
+describe('resolve — allocation', () => {
+  it('reuses one frozen empty list instead of allocating a fallback per call', () => {
+    const c = { kind: 'last-standing' } as const;
+    const receivers: unknown[] = [];
+    const original = Array.prototype.includes;
+    Array.prototype.includes = function (this: unknown[], ...args) {
+      receivers.push(this);
+      return original.apply(this, args);
+    };
+    try {
+      resolve(c, { p1: 0, p2: 0 });
+      resolve(c, { p1: 0, p2: 0 });
+    } finally {
+      Array.prototype.includes = original;
+    }
+
+    expect(receivers.length, 'resolve no longer reads the list with includes').toBe(4);
+    expect(new Set(receivers).size, 'a fresh array was allocated per call').toBe(1);
+    expect(Object.isFrozen(receivers[0]), 'the shared fallback must not be mutable').toBe(true);
+  });
+
+  it('still honours an eliminated list the caller does pass', () => {
+    const c = { kind: 'last-standing' } as const;
+    expect(resolve(c, { p1: 0, p2: 0 }, { eliminated: ['p1'] })).toBe('p2');
+    expect(resolve(c, { p1: 0, p2: 0 })).toBeNull();
+  });
+});

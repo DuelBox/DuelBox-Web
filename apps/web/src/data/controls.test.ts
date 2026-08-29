@@ -43,7 +43,38 @@ describe('the controls map', () => {
  * disproved: holding the right arrow in Tic Tac Toe on seat one's turn moves nothing.
  */
 describe('keyboard controls', () => {
-  const NAMES_A_SEAT = /player one|player two|seat|left|right|near|far/i;
+  /**
+   * What it means to name a seat.
+   *
+   * The guard below exists to catch a manifest that never says whose half a key belongs
+   * to. It used to accept the bare word `left` or `right`, and those two words appear in
+   * almost every steering line in the catalog — "steer left and right", "the left and
+   * right arrows", "change lane on the left road". So the check passed on a word that was
+   * describing *movement*, and a manifest reading "arrow keys and A/D steer left and
+   * right" — which names no seat at all — satisfied the very guard written to catch it.
+   *
+   * A direction word now only counts when it qualifies something a seat *owns*: "the left
+   * player", "the near paddle", "the player on the right". The words a direction may not
+   * qualify are listed below — they are the ones that turn it back into a movement or a
+   * key ("left and right", "left arrow", "near key") rather than an owner. "seat" and
+   * "player one/two" still stand alone, because neither can mean anything but a seat.
+   */
+  const DIRECTION = 'left|right|near|far|top|bottom';
+  const NOT_AN_OWNER = 'and|or|arrow|arrows|key|keys|then|to|of|for';
+  const NAMES_A_SEAT = new RegExp(
+    [
+      // Named outright: "Player one", "player 2".
+      String.raw`\bplayers?\s+(?:one|two|1|2)\b`,
+      // "seat" needs no qualifier: "seat two", "the near seat", "for the far seat".
+      String.raw`\bseats?\b`,
+      // A direction on something a seat owns: "the left roller", "your near paddle",
+      // "the far one". The lookahead is what rejects "the left and right arrows".
+      String.raw`\b(?:the|your|their)\s+(?:${DIRECTION})[-\s]+(?!(?:${NOT_AN_OWNER})\b)[a-z]+\b`,
+      // The other word order: "the player on the left", "the half on the far side".
+      String.raw`\b(?:player|side|half)\b[^.;]{0,24}?\bon\s+the\s+(?:${DIRECTION})\b`,
+    ].join('|'),
+    'i',
+  );
 
   it("never offers the two key halves as one player's choice", () => {
     for (const manifest of MANIFESTS) {

@@ -14,7 +14,11 @@ export const manifest: GameManifest = parseGameManifest({
   zoneSplit: 'vertical',
   roundSeconds: 120,
   controls: {
-    keyboard: 'A and D then W to move and jump on the left, arrow keys on the right',
+    // Jumping is the action button, not W and not Up: the game reads `move.x` and
+    // `actionHeld`, and nothing anywhere reads `move.y`. Offering W as the jump key sent
+    // the left player pressing a key the game never looks at, and never told the right
+    // player that Enter is the one that jumps at all.
+    keyboard: 'A and D walk the left crab and Space jumps; arrow keys and Enter for the right crab',
     pointer: 'Drag on your half to move, tap to jump',
   },
   tags: ['sports', 'reflex'],
