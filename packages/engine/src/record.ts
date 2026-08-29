@@ -23,6 +23,7 @@ export type InputEvent =
   | { readonly kind: 'pointerDown'; readonly id: number; readonly x: number; readonly y: number }
   | { readonly kind: 'pointerMove'; readonly id: number; readonly x: number; readonly y: number }
   | { readonly kind: 'pointerUp'; readonly id: number }
+  | { readonly kind: 'pointerCancel'; readonly id: number }
   | { readonly kind: 'boardSeat'; readonly seat: SeatId }
   | { readonly kind: 'split'; readonly split: ZoneSplit }
   | { readonly kind: 'clear' };
@@ -99,6 +100,11 @@ export class InputRecorder {
   pointerUp(id: number): void {
     this.#pending.push({ kind: 'pointerUp', id });
     this.#input.pointerUp(id);
+  }
+
+  pointerCancel(id: number): void {
+    this.#pending.push({ kind: 'pointerCancel', id });
+    this.#input.pointerCancel(id);
   }
 
   setBoardSeat(seat: SeatId): void {
@@ -204,6 +210,9 @@ function applyEvent(input: InputManager, event: InputEvent): void {
     case 'pointerUp':
       input.pointerUp(event.id);
       return;
+    case 'pointerCancel':
+      input.pointerCancel(event.id);
+      return;
     case 'boardSeat':
       input.setBoardSeat(event.seat);
       return;
@@ -272,6 +281,7 @@ const KINDS = new Set([
   'pointerDown',
   'pointerMove',
   'pointerUp',
+  'pointerCancel',
   'boardSeat',
   'split',
   'clear',

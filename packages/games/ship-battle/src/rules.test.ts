@@ -38,7 +38,6 @@ import {
   isBreached,
   nearestIntact,
   nudgeShield,
-  openingAttacker,
   otherOf,
   parkX,
   parkY,
@@ -479,11 +478,18 @@ describe('the turn', () => {
     expect(seen).toEqual(['p1', 'p2', 'p1', 'p2', 'p1', 'p2']);
   });
 
-  it('tosses for who fires first, from the seeded stream', () => {
-    expect(openingAttacker(new Rng(4))).toBe(openingAttacker(new Rng(4)));
-    const seats = new Set<SeatId>();
-    for (let seed = 0; seed < 40; seed += 1) seats.add(openingAttacker(new Rng(seed)));
-    expect(seats.size, 'both seats must be able to win the toss').toBe(2);
+  it('takes who fires first from the caller, and alternates from there', () => {
+    // The opener is the shell's `context.openingSeat` — this game no longer tosses for it.
+    for (const opener of ['p1', 'p2'] as SeatId[]) {
+      const game = createGame();
+      resetGame(game, opener);
+      const seen: SeatId[] = [];
+      for (let turn = 0; turn < 4; turn += 1) {
+        seen.push(game.attacker);
+        passTurn(game);
+      }
+      expect(seen).toEqual([opener, otherOf(opener), opener, otherOf(opener)]);
+    }
   });
 });
 
@@ -1007,25 +1013,26 @@ describe('the shell at the boundary', () => {
   });
 });
 
-describe('the toss', () => {
-  it('falls close to even over many matches', () => {
-    let p1 = 0;
-    const matches = 600;
-    for (let seed = 0; seed < matches; seed += 1) {
-      if (openingAttacker(new Rng(seed * 31 + 7)) === 'p1') p1 += 1;
+describe('the weather gauge', () => {
+  /**
+   * There used to be a coin here.
+   *
+   * `openingAttacker(rng)` tossed for the opening shot from the match's own seeded stream,
+   * and it was tested for being even over six hundred matches and for reading the same on
+   * both devices. It was a good answer at the wrong layer: the shell decides the opener and
+   * alternates it across the rounds of a best-of precisely so a symmetric race does not
+   * become a lottery (#2466). Two compensations for one advantage do not add up — they
+   * cancel at random — so the coin is gone and these tests assert the replacement instead.
+   */
+  it('opens with the seat it is given, and neither seat is baked in', () => {
+    const opened = new Set<SeatId>();
+    for (const opener of ['p1', 'p2'] as SeatId[]) {
+      const game = createGame();
+      resetGame(game, opener);
+      expect(game.attacker).toBe(opener);
+      expect(defenderOf(game)).toBe(otherOf(opener));
+      opened.add(game.attacker);
     }
-    const share = p1 / matches;
-    expect(share, `p1 won the toss ${String(p1)} times in ${String(matches)}`).toBeGreaterThan(
-      0.42,
-    );
-    expect(share).toBeLessThan(0.58);
-  });
-
-  it('does not depend on which seat asks', () => {
-    // Both devices toss the same coin: the seat is read out of the stream, never out of
-    // who happens to be calling.
-    for (let seed = 0; seed < 20; seed += 1) {
-      expect(openingAttacker(new Rng(seed))).toBe(openingAttacker(new Rng(seed)));
-    }
+    expect(opened.size, 'both seats must be able to hold the gauge').toBe(2);
   });
 });

@@ -54,6 +54,25 @@ export interface SeatInputState {
    * tap and not a hold.
    */
   holdSecondsAtRelease: number;
+  /**
+   * True for exactly one step: the step on which a pointer gesture was taken away rather
+   * than let go.
+   *
+   * A `pointercancel` is the browser saying *this gesture did not happen* — a system
+   * edge-swipe, palm rejection, an incoming call — and {@link InputManager.clear} says the
+   * same thing for a pause or a lost focus. Wired to `pointerUp`, as it was until #2480,
+   * every one of those produced an ordinary {@link actionReleased} and so **fired the
+   * shot** in every drag-and-release aim game: a player who started to aim and got a
+   * system gesture did not get their aim cancelled, they got a shot they never took, at
+   * whatever the aim happened to be. On a phone, where an edge swipe is how you leave an
+   * app, that is not an edge case.
+   *
+   * The two are mutually exclusive by construction: a cancel suppresses the release, so
+   * `actionReleased` means "the player let go" and nothing else. Per
+   * `docs/input-idiom.md` a cancel **abandons** the gesture and commits nothing, so a game
+   * reads this to drop the aim it was carrying — it must never treat it as a release.
+   */
+  pointerCancelled: boolean;
 }
 
 function createSeatInputState(): SeatInputState {
@@ -68,6 +87,7 @@ function createSeatInputState(): SeatInputState {
     actionReleased: false,
     holdSeconds: 0,
     holdSecondsAtRelease: 0,
+    pointerCancelled: false,
   };
 }
 
@@ -82,6 +102,7 @@ function resetSeatInputState(state: SeatInputState): void {
   state.actionReleased = false;
   state.holdSeconds = 0;
   state.holdSecondsAtRelease = 0;
+  state.pointerCancelled = false;
 }
 
 /**
@@ -218,6 +239,14 @@ interface SeatSources {
    * given nowhere to put it.
    */
   pointerLatched: boolean;
+  /**
+   * Whether a pointer owned by this seat was cancelled since the last step.
+   *
+   * Latched like the others so a cancel that lands between two steps is still reported —
+   * losing it would put the gesture back exactly where it was before #2480, with the game
+   * still holding an aim nothing will ever tell it to drop.
+   */
+  cancelLatched: boolean;
 }
 
 function createSeatSources(): SeatSources {
@@ -230,6 +259,7 @@ function createSeatSources(): SeatSources {
     wasActionHeld: false,
     actionLatched: false,
     pointerLatched: false,
+    cancelLatched: false,
   };
 }
 
@@ -258,6 +288,7 @@ function releaseSources(sources: SeatSources): void {
   sources.wasActionHeld = false;
   sources.actionLatched = false;
   sources.pointerLatched = false;
+  sources.cancelLatched = false;
 }
 
 /** Where a key code writes to. Built on construction and on rebind, never per step. */
@@ -438,6 +469,38 @@ export class InputManager {
   }
 
   /**
+   * The gesture was taken away rather than let go: `pointercancel`, or a pause.
+   *
+   * Deliberately not `pointerUp`. The host wired `pointercancel` straight to it until
+   * #2480, and the result was that a system edge-swipe, palm rejection or an incoming
+   * call *fired the player's shot* in every drag-and-release aim game, aimed wherever the
+   * drag had got to. A release and a cancellation are opposite events and the engine now
+   * says so: this raises `pointerCancelled` for the seat and suppresses the release the
+   * lift would otherwise have produced.
+   *
+   * The bit is raised for any cancelled pointer, not only the last one down. The engine
+   * cannot know which finger was driving the aim, and of the two ways to be wrong —
+   * abandoning a gesture that was still live, or committing one the browser disowned —
+   * only the first is recoverable by the player.
+   */
+  pointerCancel(pointerId: number): void {
+    const seat = this.#ownership.seatOf(pointerId);
+    if (seat === undefined) return;
+    this.#ownership.release(pointerId);
+    const sources = this.#sourcesFor(seat);
+    if (sources.pointerCount > 0) sources.pointerCount -= 1;
+    sources.cancelLatched = true;
+    // Nothing of the gesture survives, the un-consumed press included: a touch that went
+    // down and was cancelled before the next step must not be reported as a tap, or a
+    // tap-to-commit game plays the move the browser just said did not happen. The action
+    // key is left alone — it is a different instrument and it was not cancelled.
+    if (sources.pointerCount === 0) {
+      sources.pointerLatched = false;
+      if (!sources.keys.action) sources.actionLatched = false;
+    }
+  }
+
+  /**
    * Replace one seat's keys. Validated against the other seat's current binding
    * before anything is written, so a rejected binding leaves the manager untouched.
    *
@@ -463,11 +526,19 @@ export class InputManager {
    * since the browser does not reliably deliver the key-up that happened elsewhere.
    */
   clear(): void {
+    // Read before the wipe: a seat holding a pointer when the world is taken away has had
+    // its gesture cancelled in exactly the sense `pointerCancel` means, and must be told
+    // so on the next step. Without it a paused aim stays armed in the game, waiting for a
+    // release that can never come.
+    const p1Live = this.#p1Sources.pointerCount > 0;
+    const p2Live = this.#p2Sources.pointerCount > 0;
     this.#ownership.releaseAll();
     releaseSources(this.#p1Sources);
     releaseSources(this.#p2Sources);
     resetSeatInputState(this.#p1State);
     resetSeatInputState(this.#p2State);
+    this.#p1Sources.cancelLatched = p1Live;
+    this.#p2Sources.cancelLatched = p2Live;
   }
 
   /**
@@ -521,9 +592,15 @@ export class InputManager {
     // A tap that began and ended between two steps is still a press. Without the latch
     // it is invisible: by the time the step runs the finger is already gone.
     const latched = sources.actionLatched;
+    // A cancelled gesture is not a release, and this is the line that makes that true for
+    // all 107 games at once: `actionReleased` now means "the player let go" and nothing
+    // else, so every game that commits on it stops committing on a system gesture without
+    // one line of game code changing.
+    const cancelled = sources.cancelLatched;
+    out.pointerCancelled = cancelled;
     out.actionHeld = held;
     out.actionPressed = (held || latched) && !was;
-    out.actionReleased = !held && (was || latched);
+    out.actionReleased = !cancelled && !held && (was || latched);
     // Read before the reset: the release step is the one that needs the total, and it is
     // also the step on which `holdSeconds` goes to zero.
     const heldFor = out.holdSeconds;
@@ -532,6 +609,7 @@ export class InputManager {
     sources.wasActionHeld = held;
     sources.actionLatched = false;
     sources.pointerLatched = false;
+    sources.cancelLatched = false;
   }
 
   #sourcesFor(seat: SeatId): SeatSources {

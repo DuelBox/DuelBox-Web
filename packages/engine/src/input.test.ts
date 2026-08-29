@@ -49,6 +49,8 @@ function expectNeutral(state: Readonly<SeatInputState>): void {
   expect(state.actionHeld).toBe(false);
   expect(state.actionReleased).toBe(false);
   expect(state.holdSeconds).toBe(0);
+  expect(state.holdSecondsAtRelease).toBe(0);
+  expect(state.pointerCancelled).toBe(false);
 }
 
 describe('DEFAULT_BINDINGS', () => {
@@ -516,6 +518,139 @@ describe('InputManager pointers', () => {
   });
 });
 
+describe('a cancelled pointer', () => {
+  /**
+   * `pointercancel` is the browser saying *this gesture did not happen*.
+   *
+   * It was wired straight to `pointerUp` in `GameHost.tsx`, so a system edge-swipe, palm
+   * rejection or an incoming call arrived as an ordinary `actionReleased` — and every
+   * drag-and-release aim game commits on `actionReleased`. A player who started to aim
+   * and got a system gesture did not get their aim cancelled; they got a shot they never
+   * took, at whatever the aim happened to be (#2480). On a phone, where an edge swipe is
+   * how you leave an app, that is not an edge case.
+   */
+  it('raises pointerCancelled and never actionReleased', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    expect(manager.beginStep(DT).seat('p1').actionHeld).toBe(true);
+    manager.pointerMove(1, 360, P1_ZONE_Y);
+    manager.beginStep(DT);
+
+    manager.pointerCancel(1);
+    const cancelled = manager.beginStep(DT).seat('p1');
+    expect(cancelled.pointerCancelled).toBe(true);
+    expect(cancelled.actionReleased, 'a cancel must not read as a release').toBe(false);
+    expect(cancelled.actionHeld).toBe(false);
+    expect(cancelled.holdSecondsAtRelease).toBe(0);
+  });
+
+  it('is the opposite of a lift: a real release raises the release and no cancel', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.beginStep(DT);
+    manager.beginStep(DT);
+
+    manager.pointerUp(1);
+    const released = manager.beginStep(DT).seat('p1');
+    expect(released.actionReleased).toBe(true);
+    expect(released.pointerCancelled, 'a deliberate lift is not a cancellation').toBe(false);
+  });
+
+  it('clears the pointer', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    expect(manager.beginStep(DT).seat('p1').pointerActive).toBe(true);
+
+    manager.pointerCancel(1);
+    expect(manager.beginStep(DT).seat('p1').pointerActive).toBe(false);
+
+    // And the id is forgotten, so nothing that arrives late for it can revive the seat.
+    manager.pointerMove(1, 700, P1_ZONE_Y);
+    manager.pointerUp(1);
+    const after = manager.beginStep(DT).seat('p1');
+    expect(after.pointerActive).toBe(false);
+    expect(after.actionReleased).toBe(false);
+    expect(after.pointerCancelled).toBe(false);
+  });
+
+  it('is true for exactly one step', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.beginStep(DT);
+    manager.pointerCancel(1);
+    expect(manager.beginStep(DT).seat('p1').pointerCancelled).toBe(true);
+    for (let step = 0; step < 4; step += 1) {
+      expect(manager.beginStep(DT).seat('p1').pointerCancelled).toBe(false);
+    }
+  });
+
+  it('never fires a release later either, however long the seat is watched', () => {
+    // The whole point of the fix: the shot must not arrive one step late instead.
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.beginStep(DT);
+    manager.pointerCancel(1);
+    for (let step = 0; step < 30; step += 1) {
+      expect(manager.beginStep(DT).seat('p1').actionReleased).toBe(false);
+    }
+  });
+
+  it('abandons a press that has not been read yet, so no tap is committed', () => {
+    // Down and cancelled between two steps. A tap-to-commit game reading `actionPressed`
+    // would otherwise play the move the browser has just disowned.
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.pointerCancel(1);
+    const step = manager.beginStep(DT).seat('p1');
+    expect(step.actionPressed).toBe(false);
+    expect(step.actionReleased).toBe(false);
+    expect(step.pointerActive).toBe(false);
+    expect(step.pointerCancelled).toBe(true);
+  });
+
+  it('leaves the action key alone, because the key was not cancelled', () => {
+    // Two instruments raise one action. The browser cancelled a finger, not a keyboard.
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.beginStep(DT);
+
+    manager.pointerCancel(1);
+    const cancelled = manager.beginStep(DT).seat('p1');
+    expect(cancelled.pointerCancelled).toBe(true);
+    expect(cancelled.actionHeld, 'the key is still down').toBe(true);
+    expect(cancelled.actionReleased).toBe(false);
+
+    manager.keyUp('Space');
+    expect(manager.beginStep(DT).seat('p1').actionReleased).toBe(true);
+  });
+
+  it('touches only the seat that owned the pointer', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 300, P1_ZONE_Y);
+    manager.pointerDown(2, 300, P2_ZONE_Y);
+    manager.beginStep(DT);
+
+    manager.pointerCancel(1);
+    const state = manager.beginStep(DT);
+    expect(state.seat('p1').pointerCancelled).toBe(true);
+    expect(state.seat('p2').pointerCancelled).toBe(false);
+    expect(state.seat('p2').actionHeld).toBe(true);
+
+    manager.pointerUp(2);
+    const lifted = manager.beginStep(DT);
+    expect(lifted.seat('p2').actionReleased, 'the other seat still lifts normally').toBe(true);
+    expect(lifted.seat('p1').actionReleased).toBe(false);
+  });
+
+  it('ignores a cancel for a pointer that never went down', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerCancel(99);
+    expectNeutral(manager.beginStep(DT).seat('p1'));
+    expectNeutral(manager.beginStep(DT).seat('p2'));
+  });
+});
+
 describe('InputManager setBinding', () => {
   it('rejects a binding that collides with the other seat, naming the key', () => {
     const manager = new InputManager(SIZE);
@@ -663,9 +798,25 @@ describe('InputManager clear', () => {
     expectNeutral(manager.state.seat('p1'));
     expectNeutral(manager.state.seat('p2'));
 
+    // The one edge a clear does raise, and it is not a phantom: both seats had a finger
+    // down, and a gesture taken away by a pause is cancelled in exactly the sense
+    // `pointercancel` means (#2480). A release is what must never appear here — that is
+    // the edge that fires the shot.
     const state = manager.beginStep(DT);
-    expectNeutral(state.seat('p1'));
-    expectNeutral(state.seat('p2'));
+    for (const seat of SEATS) {
+      const cleared = state.seat(seat);
+      expect(cleared.pointerCancelled).toBe(true);
+      expect(cleared.actionReleased).toBe(false);
+      expect(cleared.actionPressed).toBe(false);
+      expect(cleared.actionHeld).toBe(false);
+      expect(cleared.pointerActive).toBe(false);
+      expect(cleared.moveX).toBe(0);
+      expect(cleared.moveY).toBe(0);
+    }
+
+    // And for one step only: the step after a clear is an ordinary idle step.
+    expectNeutral(manager.beginStep(DT).seat('p1'));
+    expectNeutral(manager.beginStep(DT).seat('p2'));
 
     // The released pointers are forgotten: their later events own no seat.
     manager.pointerMove(1, 700, P1_ZONE_Y);

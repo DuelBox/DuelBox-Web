@@ -26,6 +26,15 @@ export interface SeatInputView {
   readonly holdSeconds: number;
   /** How long the action had been held when released; valid on the release step only. */
   readonly holdSecondsAtRelease: number;
+  /**
+   * True for the one step on which a pointer gesture was taken away rather than let go —
+   * a `pointercancel`, a pause, a lost focus.
+   *
+   * Never true on the same step as `actionReleased`: the two are opposite events. Per
+   * `docs/input-idiom.md` a cancel **abandons** the gesture, so a game drops the aim,
+   * charge or drag it was carrying and commits nothing.
+   */
+  readonly pointerCancelled: boolean;
 }
 
 export interface InputStateView {
@@ -41,6 +50,7 @@ class SeatView implements SeatInputView {
   actionReleased = false;
   holdSeconds = 0;
   holdSecondsAtRelease = 0;
+  pointerCancelled = false;
 
   get pointer(): Readonly<Vec2> | null {
     return this.#pointerActive ? this.#pointer : null;
@@ -57,6 +67,7 @@ class SeatView implements SeatInputView {
     this.actionReleased = source.actionReleased;
     this.holdSeconds = source.holdSeconds;
     this.holdSecondsAtRelease = source.holdSecondsAtRelease;
+    this.pointerCancelled = source.pointerCancelled;
   }
 }
 

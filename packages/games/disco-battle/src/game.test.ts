@@ -148,6 +148,7 @@ class FakeSeat implements SeatInput {
   actionReleased = false;
   holdSeconds = 0;
   holdSecondsAtRelease = 0;
+  pointerCancelled = false;
 
   get pointer(): { readonly x: number; readonly y: number } | null {
     return this.pointerAt;
