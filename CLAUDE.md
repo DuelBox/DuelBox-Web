@@ -110,9 +110,17 @@ than it saves.
 
 Those thresholds were correct and **unexecuted from the day they were written**
 until 29 August 2026: nothing under `.github/` contained the word "coverage", so
-nothing could fail. That is the fourth guard in this repository found claiming
-something nothing ran, after `pnpm size`, the asset-licence check, and a balance
-harness whose headline promised a band it did not enforce.
+nothing could fail. Counting honestly, that makes it the **fifth** guard in this
+repository found claiming something nothing ran — after `pnpm size` falling
+through to the system `size(1)`, the asset-licence check this file said CI
+enforced, CI itself being red on every commit behind another workflow's green
+tick, and a balance harness whose headline promised a band it did not enforce.
+The React hook rules, enforced by nothing at all, were the sixth.
+
+Five of the six were found in a single day, by looking. The habit that finds
+them is cheap: when a rule matters, **run the thing that is supposed to execute
+it and watch it fail on purpose.** A guard nobody has seen fail is a guard
+nobody has seen.
 
 **CI was over its own budget** — 14 minutes against the 8 that issue #2459 names —
 for two reasons, both now addressed: Playwright defaults to a **single worker on CI**,
