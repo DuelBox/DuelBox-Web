@@ -308,7 +308,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 25; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 11 === 0) game.render(renderer);
+      if (i % 11 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -331,7 +331,7 @@ describe('rendering', () => {
     const { manager, view } = inputs();
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 600; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     // The whole field is drawn, which means points on both sides of the middle.
     expect(drawn.some((v) => v > FIELD_HEIGHT - LANE_HEIGHT)).toBe(true);
@@ -347,7 +347,7 @@ describe('rendering', () => {
     const before = { ...game.match.p1 };
     // The interpolation alpha the contract passes is deliberately not read: nothing here
     // is drawn between two simulation states, so a frame is the state as it stands.
-    for (let i = 0; i < 50; i += 1) game.render(renderer);
+    for (let i = 0; i < 50; i += 1) game.render(renderer, 0);
     expect({ ...game.match.p1 }).toEqual(before);
     game.destroy();
   });

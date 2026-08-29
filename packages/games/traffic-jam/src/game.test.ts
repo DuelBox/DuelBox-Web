@@ -99,7 +99,7 @@ function rig(options?: Parameters<typeof contextFor>[0]): Rig {
 function waveLines(): readonly Call[] {
   const { game } = rig();
   const { calls, renderer } = recorder();
-  game.render(renderer);
+  game.render(renderer, 0);
   const firstRect = calls.findIndex((call) => call.kind === 'rect');
   expect(firstRect).toBeGreaterThan(0);
   return calls.slice(0, firstRect).filter((call) => call.kind === 'line');
@@ -190,7 +190,7 @@ describe('the contract', () => {
     const game = new TrafficJamGame();
     const { calls, renderer } = recorder();
     expect(() => {
-      game.render(renderer);
+      game.render(renderer, 0);
     }).not.toThrow();
     expect(calls.length).toBeGreaterThan(0);
   });
@@ -199,7 +199,7 @@ describe('the contract', () => {
     const { game } = rig();
     game.destroy();
     const { calls, renderer } = recorder();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(calls.length).toBeGreaterThan(0);
   });
 
@@ -551,7 +551,7 @@ describe('the pointer', () => {
     expect(Number.isFinite(game.match.p1.x)).toBe(true);
     const { renderer } = recorder();
     expect(() => {
-      game.render(renderer);
+      game.render(renderer, 0);
     }).not.toThrow();
   });
 });
@@ -585,7 +585,7 @@ describe('the picture', () => {
     const { calls, renderer } = recorder();
     for (let i = 0; i < 400; i += 1) {
       step();
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     const limit = Math.max(ARENA_WIDTH, ARENA_HEIGHT) * 2;
     for (const call of calls) {
@@ -608,7 +608,7 @@ describe('the picture', () => {
     for (let step = 0; step <= 10; step += 1) {
       game.match.flood = step / 10;
       const { calls, renderer } = recorder();
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(calls.length).toBeGreaterThan(0);
     }
     expect(boxX(-ARM_X)).toBeGreaterThanOrEqual(0);
@@ -629,7 +629,7 @@ describe('the picture', () => {
     game.match.p2.heading = 0;
     for (const lorry of game.match.traffic) lorry.active = false;
     const { calls, renderer } = recorder();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     function marksFor(seat: SeatId, cx: number, cy: number): number[][] {
       const base = SEAT_PALETTE[seat].base;
@@ -670,11 +670,11 @@ describe('the picture', () => {
   it('shows a car in the water differently from a car on the road', () => {
     const { game } = rig();
     const dry = recorder();
-    game.render(dry.renderer);
+    game.render(dry.renderer, 0);
     game.match.p1.inWater = true;
     game.match.p1.sink = 0.5;
     const wet = recorder();
-    game.render(wet.renderer);
+    game.render(wet.renderer, 0);
     expect(wet.calls.length).toBeGreaterThan(dry.calls.length);
     // Ripples and a strike-through, rather than the same shape in another colour.
     expect(wet.calls.filter((call) => call.kind === 'strokeCircle').length).toBeGreaterThan(
@@ -685,22 +685,22 @@ describe('the picture', () => {
   it('draws a stick only while a thumb is on the glass', () => {
     const { game, input, step } = rig();
     const before = recorder();
-    game.render(before.renderer);
+    game.render(before.renderer, 0);
     input.pointerDown(1, 300, 800);
     step();
     const during = recorder();
-    game.render(during.renderer);
+    game.render(during.renderer, 0);
     expect(during.calls.length).toBeGreaterThan(before.calls.length);
   });
 
   it('shows how much road the flood has already taken', () => {
     const { game } = rig();
     const dry = recorder();
-    game.render(dry.renderer);
+    game.render(dry.renderer, 0);
     const dryGhosts = dry.calls.filter((call) => call.kind === 'strokeRect').length;
     game.match.flood = 0.5;
     const wet = recorder();
-    game.render(wet.renderer);
+    game.render(wet.renderer, 0);
     expect(wet.calls.filter((call) => call.kind === 'strokeRect').length).toBeGreaterThan(
       dryGhosts,
     );
@@ -739,7 +739,7 @@ describe('the picture', () => {
       for (let i = 0; i < 300; i += 1) {
         game.update(STEP, view.sync(input.beginStep(STEP)));
       }
-      game.render(renderer);
+      game.render(renderer, 0);
       return calls.map((call) => `${call.kind}:${call.args.join(',')}`).join('|');
     }
     expect(frame('single-seat', 'p2')).toBe(frame('shared-screen', 'p1'));
@@ -751,7 +751,7 @@ describe('the picture', () => {
     const { game, step } = rig({ p1: 'normal', p2: 'normal' });
     const { calls, renderer } = recorder();
     step(120);
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(calls.some((call) => call.kind === 'pushSeatRotation')).toBe(false);
     expect(calls.some((call) => call.kind === 'pushRotation')).toBe(false);
   });
@@ -762,7 +762,7 @@ describe('the picture', () => {
     const { calls, renderer } = recorder();
     for (let i = 0; i < 300; i += 1) {
       step();
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(calls.some((call) => call.kind === 'text')).toBe(false);
   });
@@ -909,7 +909,7 @@ describe('the whole game, driven the way a person drives it', () => {
     expect(Number.isFinite(game.match.p2.y)).toBe(true);
     const { renderer } = recorder();
     expect(() => {
-      game.render(renderer);
+      game.render(renderer, 0);
     }).not.toThrow();
   });
 

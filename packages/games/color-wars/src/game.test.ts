@@ -411,7 +411,7 @@ describe('rendering', () => {
     b.dots = 1;
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.base);
@@ -443,7 +443,7 @@ describe('rendering', () => {
     quiet.owner = 'p1';
     quiet.dots = 1;
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const ringsBefore = before.ops.filter((op) => op === 'strokeCircle').length;
 
     quiet.owner = null;
@@ -453,7 +453,7 @@ describe('rendering', () => {
     primed.owner = 'p1';
     primed.dots = 1;
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     const ringsAfter = after.ops.filter((op) => op === 'strokeCircle').length;
 
     expect(ringsAfter, 'a primed cell draws a ring the quiet one does not').toBe(ringsBefore + 1);
@@ -468,12 +468,12 @@ describe('rendering', () => {
     p1Cell.owner = 'p1';
     p1Cell.dots = 1;
     const p1Render = new RecordingRenderer();
-    game.render(p1Render);
+    game.render(p1Render, 0);
     const p1Circles = p1Render.ops.filter((op) => op === 'circle').length;
 
     p1Cell.owner = 'p2';
     const p2Render = new RecordingRenderer();
-    game.render(p2Render);
+    game.render(p2Render, 0);
     const p2Circles = p2Render.ops.filter((op) => op === 'circle').length;
 
     expect(p1Circles, "p1's dots are round").toBeGreaterThan(p2Circles);
@@ -490,7 +490,7 @@ describe('rendering', () => {
 
     const dotsDrawn = (): number => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       let cursor = 0;
       let count = 0;
       for (const op of renderer.ops) {
@@ -515,7 +515,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -530,8 +530,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = game.position.cells.map((c) => `${c.owner ?? '.'}${String(c.dots)}`).join('');
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(game.position.cells.map((c) => `${c.owner ?? '.'}${String(c.dots)}`).join('')).toBe(
       before,
     );

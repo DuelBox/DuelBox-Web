@@ -502,7 +502,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(24));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const cells = renderer.calls.filter((call) => call.op === 'rect').length;
     expect(cells, 'sixty-four squares and a bar for seat two').toBeGreaterThanOrEqual(FIELDS + 1);
     const numbers = renderer.calls.filter(
@@ -515,7 +515,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(25));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const ladderLines = renderer.calls.filter(
       (call) => call.op === 'line' && call.args[5] === '#2f7d4f',
     ).length;
@@ -535,7 +535,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(26));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const jump of [...LADDERS, ...SNAKES]) {
       expect(renderer.args, `where ${String(jump.from)} goes`).toContain(String(jump.to));
     }
@@ -546,7 +546,7 @@ describe('rendering', () => {
     game.init(makeContext(27));
     choosing(game, 'p1', 10, [1, 5]);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const ghosts = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[2] === TOKEN_RADIUS + 6,
     );
@@ -562,7 +562,7 @@ describe('rendering', () => {
     game.init(makeContext(28));
     choosing(game, 'p1', (ladder?.from ?? 3) - 1, [1, 1]);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const arrival = tokenCentre('p1', ladder?.to ?? 19);
     const marked = renderer.calls.some(
       (call) =>
@@ -576,7 +576,7 @@ describe('rendering', () => {
     game.init(makeContext(29));
     choosing(game, 'p1', 10, [1, 5]);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const chosen = renderer.calls.filter(
       (call) => call.op === 'strokeRect' && call.args[5] === SEAT_PALETTE.p1.base,
     );
@@ -588,12 +588,12 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(30));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     expect(before.args, 'a prompt while there is nothing to show').toContain('?');
 
     choosing(game, 'p1', 10, [5, 2]);
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     const pipsOn = (index: number): number =>
       after.calls.filter(
         (call) =>
@@ -611,7 +611,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(31));
     const first = new RecordingRenderer();
-    game.render(first);
+    game.render(first, 0);
     const ringed = (renderer: RecordingRenderer): DrawArg[] =>
       renderer.calls
         .filter((call) => call.op === 'strokeCircle' && call.args[2] === TOKEN_RADIUS + 7)
@@ -620,7 +620,7 @@ describe('rendering', () => {
 
     game.position.seat = 'p2';
     const second = new RecordingRenderer();
-    game.render(second);
+    game.render(second, 0);
     expect(ringed(second)).toEqual([tokenCentre('p2', START).x]);
   });
 
@@ -628,7 +628,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(32));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[4] === SEAT_PALETTE.p1.deep,
     ).length;
@@ -643,7 +643,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(33));
     const clean = new RecordingRenderer();
-    game.render(clean);
+    game.render(clean, 0);
     const spentRings = (renderer: RecordingRenderer): number =>
       renderer.calls.filter((call) => call.op === 'strokeCircle' && call.args[2] === 9).length;
     const spentBars = (renderer: RecordingRenderer): number =>
@@ -656,7 +656,7 @@ describe('rendering', () => {
     game.position.p1Bitten = 1 << snakeAt(SNAKES[0]?.from ?? 21);
     game.position.p2Bitten = 1 << snakeAt(SNAKES[1]?.from ?? 30);
     const marked = new RecordingRenderer();
-    game.render(marked);
+    game.render(marked, 0);
     expect(spentRings(marked), 'seat one has been down one snake').toBe(1);
     expect(spentBars(marked), 'seat two has been down another').toBe(1);
   });
@@ -667,19 +667,19 @@ describe('rendering', () => {
     const input = new ScriptedInput();
 
     const idle = new RecordingRenderer();
-    game.render(idle);
+    game.render(idle, 0);
     expect(idle.args).toContain('Roll two dice');
 
     choosing(game, 'p1', 10, [1, 5]);
     const picking = new RecordingRenderer();
-    game.render(picking);
+    game.render(picking, 0);
     expect(picking.args).toContain('Pick a die');
 
     choosing(game, 'p1', 19, [2, 2]);
     input.press('p1');
     game.update(STEP, input);
     const bitten = new RecordingRenderer();
-    game.render(bitten);
+    game.render(bitten, 0);
     expect(bitten.args).toContain('Snake down to 6');
   });
 
@@ -687,7 +687,7 @@ describe('rendering', () => {
     const game = new SnakesandLaddersGame();
     game.init(makeContext(35));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
     expect(renderer.ops).toContain('popSeatRotation');
   });
@@ -697,7 +697,7 @@ describe('rendering', () => {
     game.init(makeContext(36, 'normal', 'normal'));
     playOut(game, 900);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -714,8 +714,8 @@ describe('rendering', () => {
     game.init(makeContext(37, 'normal', 'normal'));
     playOut(game, 900);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

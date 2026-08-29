@@ -164,6 +164,10 @@ export class ColorWarsGame implements Game {
     applyMove(this.#position, cell, active);
   }
 
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_BACKGROUND);
     renderer.pushRotation(this.#flip.angle);

@@ -378,7 +378,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 90; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 17 === 0) game.render(renderer);
+      if (i % 17 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -408,7 +408,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 900; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(depth).toBe(0);
     }
     game.destroy();
@@ -429,7 +429,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 60; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 11 === 0) game.render(renderer);
+      if (i % 11 === 0) game.render(renderer, 0);
     }
     game.destroy();
     expect(texts).toBe(0);
@@ -458,7 +458,7 @@ describe('rendering', () => {
     const { manager, view } = inputs();
     game.init(context({ botDifficulty: () => 'normal' }));
     drive(game, view, manager, 60);
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     expect(shapes.circles).toBeGreaterThan(6);
     expect(shapes.rects).toBeGreaterThan(6);
@@ -473,7 +473,7 @@ describe('rendering', () => {
     const aim = game.court.aim;
     const power = game.court.power;
     const x = game.court.ball.x;
-    for (let i = 0; i < 40; i += 1) game.render(renderer);
+    for (let i = 0; i < 40; i += 1) game.render(renderer, 0);
     expect(game.court.aim).toBe(aim);
     expect(game.court.power).toBe(power);
     expect(game.court.ball.x).toBe(x);

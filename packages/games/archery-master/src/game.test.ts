@@ -1008,13 +1008,13 @@ describe('drawing', () => {
   });
 
   it('balances every rotation it pushes', () => {
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
   });
 
   it('draws something', () => {
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.calls).toBeGreaterThan(40);
     expect(renderer.texts).toBeGreaterThan(3);
   });
@@ -1023,7 +1023,7 @@ describe('drawing', () => {
     const input = new FakeInput();
     for (let i = 0; i < 400; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     for (const value of renderer.numbers) {
       expect(Number.isFinite(value)).toBe(true);
@@ -1032,12 +1032,12 @@ describe('drawing', () => {
   });
 
   it('says what the race is', () => {
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.labels.join(' ')).toContain(String(TARGET_GOAL));
   });
 
   it('draws twenty standing targets and no more', () => {
-    game.render(renderer);
+    game.render(renderer, 0);
     const rack = game.rackFor(0);
     const faces = renderer.discs.filter((disc) => Math.abs(disc.radius - 29) < 1e-9);
     expect(faces).toHaveLength(rack.length);
@@ -1046,7 +1046,7 @@ describe('drawing', () => {
   it('draws the targets where the rules put them', () => {
     const input = new FakeInput();
     step(game, input, 37);
-    game.render(renderer);
+    game.render(renderer, 0);
     const rack = game.rackFor(0);
     for (const target of rack) {
       const x = targetXAt(target, game.turnSeconds);
@@ -1061,7 +1061,7 @@ describe('drawing', () => {
     const input = new FakeInput();
     touch(input, 'p1', 0.3, 0.5);
     step(game, input, 2);
-    game.render(renderer);
+    game.render(renderer, 0);
     const handX = padXFor(game.aimAngle);
     const handY = padYFor(game.aimPower);
     expect(
@@ -1078,7 +1078,7 @@ describe('drawing', () => {
     touch(input, 'p2', -0.2, 0.4);
     step(game, input, 2);
     const second = new RecordingRenderer();
-    game.render(second);
+    game.render(second, 0);
     const twoX = padXFor(game.aimAngle);
     const twoY = padYFor(game.aimPower);
     expect(
@@ -1101,13 +1101,13 @@ describe('drawing', () => {
     shared.init(makeContext(null, null, 'shared-screen', 'p1'));
     const input = new FakeInput();
     const upright = new RecordingRenderer();
-    shared.render(upright);
+    shared.render(upright, 0);
     expect(upright.angles[0]).toBe(0);
     shoot(shared, input, 'p1', 0, 0.5);
     // The turn is handed on and the board only then begins to swing; give it the 0.36 s.
     step(shared, input, 30);
     const turned = new RecordingRenderer();
-    shared.render(turned);
+    shared.render(turned, 0);
     expect(turned.angles[0]).toBeCloseTo(Math.PI, 6);
   });
 
@@ -1116,7 +1116,7 @@ describe('drawing', () => {
     for (let i = 0; i < 4; i += 1) {
       shoot(game, input, game.activeSeat, 0, 0.4);
       const check = new RecordingRenderer();
-      game.render(check);
+      game.render(check, 0);
       expect(check.angles[0]).toBe(0);
     }
   });
@@ -1130,7 +1130,7 @@ describe('drawing', () => {
       if (finished.getScore().winner !== null) break;
     }
     const after = new RecordingRenderer();
-    finished.render(after);
+    finished.render(after, 0);
     expect(after.calls).toBeGreaterThan(20);
     expect(after.depth).toBe(0);
   });
@@ -1142,7 +1142,7 @@ describe('drawing', () => {
     lift(input, 'p1');
     step(game, input, 6);
     expect(game.arrowInFlight).toBe(true);
-    game.render(renderer);
+    game.render(renderer, 0);
     const heads = renderer.discs.filter((disc) => Math.abs(disc.radius - 5) < 1e-9);
     expect(heads.length).toBeGreaterThan(0);
     for (const head of heads) {

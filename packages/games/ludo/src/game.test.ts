@@ -332,7 +332,7 @@ describe('rendering', () => {
     const game = new LudoGame();
     game.init(makeContext(41));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const discs = renderer.calls.filter((call) => call.op === 'circle').length;
     expect(discs, 'thirty-two squares and six tokens at least').toBeGreaterThanOrEqual(TRACK + 6);
   });
@@ -342,7 +342,7 @@ describe('rendering', () => {
     const game = new LudoGame();
     game.init(makeContext(43));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const entry = squareCentre(loopSquare('p1', 0));
     const marked = renderer.calls.some(
       (call) =>
@@ -355,12 +355,12 @@ describe('rendering', () => {
     const game = new LudoGame();
     game.init(makeContext(47));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     expect(before.args, 'a prompt while there is nothing to show').toContain('Roll');
 
     game.position.die = 5;
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     const pips = after.calls.filter(
       (call) =>
         call.op === 'circle' &&
@@ -392,12 +392,12 @@ describe('rendering', () => {
       ).length;
 
     const none = new RecordingRenderer();
-    game.render(none);
+    game.render(none, 0);
     expect(playableRings(none), 'a three moves nothing off the start').toBe(0);
 
     game.position.p1[0] = 4;
     const one = new RecordingRenderer();
-    game.render(one);
+    game.render(one, 0);
     expect(playableRings(one), 'and now exactly one token is ringed').toBe(1);
   });
 
@@ -405,7 +405,7 @@ describe('rendering', () => {
     const game = new LudoGame();
     game.init(makeContext(59));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[4] === SEAT_PALETTE.p1.deep,
     ).length;
@@ -420,7 +420,7 @@ describe('rendering', () => {
     const game = new LudoGame();
     game.init(makeContext(61));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -430,7 +430,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 2400; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -448,8 +448,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

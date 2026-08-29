@@ -288,7 +288,7 @@ describe('rendering', () => {
     const game = new HotPotatoGame();
     game.init(makeContext(51));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.ops.filter((op) => op === 'rect').length).toBeGreaterThan(2);
@@ -301,7 +301,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     const widthOfFuse = (): number => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       let cursor = 0;
       let widest = 0;
       for (const op of renderer.ops) {
@@ -338,14 +338,14 @@ describe('rendering', () => {
     game.init(makeContext(55));
     const input = new ScriptedInput();
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const linesBefore = before.ops.filter((op) => op === 'line').length;
 
     fixture(game).marker = (game.position.bandCentre + 0.4) % 1;
     input.press('p1');
     game.update(STEP, input);
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(after.ops.filter((op) => op === 'line').length).toBeGreaterThan(linesBefore);
   });
 
@@ -353,7 +353,7 @@ describe('rendering', () => {
     const game = new HotPotatoGame();
     game.init(makeContext(57));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops.filter((op) => op === 'pushRotation').length).toBe(0);
     expect(renderer.ops.filter((op) => op === 'pushSeatRotation').length).toBe(0);
   });
@@ -370,7 +370,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -385,8 +385,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = `${game.position.holder}${String(game.position.fuse)}`;
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(`${game.position.holder}${String(game.position.fuse)}`).toBe(before);
   });
 });

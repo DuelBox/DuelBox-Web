@@ -312,7 +312,7 @@ describe('lifecycle and render', () => {
     step(game, input, 5);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.circles).toBeGreaterThan(0);
@@ -329,7 +329,7 @@ describe('lifecycle and render', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 40; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.every((a) => a === 0)).toBe(true);
   });
@@ -344,7 +344,7 @@ describe('lifecycle and render', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 40; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.some((a) => a > 0.01)).toBe(true);
   });

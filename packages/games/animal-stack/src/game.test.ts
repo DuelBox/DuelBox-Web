@@ -766,7 +766,7 @@ describe('what is drawn', () => {
   it('draws something at all', () => {
     const { game, manager, view } = carrying();
     const { renderer, drawn } = recorder();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(drawn.length).toBeGreaterThan(50);
     game.destroy();
     void view;
@@ -784,7 +784,7 @@ describe('what is drawn', () => {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
       if (i % 5 !== 0) continue;
       drawn.length = 0;
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const value of drawn) {
         expect(Number.isFinite(value)).toBe(true);
         expect(Math.abs(value)).toBeLessThanOrEqual(Math.max(FIELD_WIDTH, FIELD_HEIGHT) + 40);
@@ -816,7 +816,7 @@ describe('what is drawn', () => {
     for (let i = 0; i < GUARD_STEPS && game.getScore().winner === null; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
       if (i % 7 !== 0) continue;
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(seen.length).toBeGreaterThan(100);
     // A tower is taller than the yard it stands in, so the renderer scrolls and clips it;
@@ -838,7 +838,7 @@ describe('what is drawn', () => {
     for (let i = 0; i < 60 * 12; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
     }
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(colours).toContain(SEAT_PALETTE.p1.base);
     expect(colours).toContain(SEAT_PALETTE.p2.base);
     expect(colours.filter((colour) => colour === '#050d13').length).toBeGreaterThan(4);
@@ -851,7 +851,7 @@ describe('what is drawn', () => {
     const { renderer } = recorder();
     for (let i = 0; i < 400; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
     const before = JSON.stringify(game.match);
-    for (let i = 0; i < 20; i += 1) game.render(renderer);
+    for (let i = 0; i < 20; i += 1) game.render(renderer, 0);
     expect(JSON.stringify(game.match)).toBe(before);
     game.destroy();
   });
@@ -860,16 +860,16 @@ describe('what is drawn', () => {
     const game = botGame('easy', 'easy', 5);
     const { manager, view } = inputs();
     const { renderer, drawn } = recorder();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(drawn.length).toBeGreaterThan(10);
     for (let i = 0; i < GUARD_STEPS && game.getScore().winner === null; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(game.match.p1.stance === 'fallen' || game.match.p2.stance === 'fallen').toBe(true);
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
-    game.render(renderer);
+    game.render(renderer, 0);
   });
 
   it('draws every animal in the list, so no species is invisible', () => {
@@ -878,7 +878,7 @@ describe('what is drawn', () => {
     for (let index = 0; index < 6; index += 1) {
       game.match.p1.held.species = index;
       drawn.length = 0;
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(drawn.length, speciesAt(index).name).toBeGreaterThan(50);
     }
     game.destroy();

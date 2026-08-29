@@ -388,7 +388,7 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(43));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (let tile = 1; tile <= TILE_COUNT; tile += 1) {
       const rect = tileRect(tile);
       const drawn = renderer.calls.some(
@@ -402,7 +402,7 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(45));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (let tile = 1; tile <= TILE_COUNT; tile += 1) {
       const labelled = renderer.calls.some(
         (call) => call.op === 'text' && call.args[0] === String(tile),
@@ -417,12 +417,12 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(47));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const linesBefore = before.calls.filter((call) => call.op === 'line').length;
 
     game.position.open[3] = false;
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     const linesAfter = after.calls.filter((call) => call.op === 'line').length;
     expect(linesAfter, 'shutting a tile added a stroke through it').toBeGreaterThan(linesBefore);
   });
@@ -434,7 +434,7 @@ describe('rendering', () => {
     game.position.dice.push(5, 3);
     game.position.phase = 'choosing';
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const pips = renderer.calls.filter((call) => call.op === 'circle').length;
     expect(pips, 'five pips and three').toBe(8);
   });
@@ -443,12 +443,12 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(51));
     const rolling = new RecordingRenderer();
-    game.render(rolling);
+    game.render(rolling, 0);
     expect(rolling.args).toContain('Roll two');
 
     game.position.phase = 'choosing';
     const choosing = new RecordingRenderer();
-    game.render(choosing);
+    game.render(choosing, 0);
     expect(choosing.args, 'the button goes once the dice are down').not.toContain('Roll two');
   });
 
@@ -456,14 +456,14 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(53));
     const full = new RecordingRenderer();
-    game.render(full);
+    game.render(full, 0);
     expect(full.args, 'the 9 is standing').not.toContain('Roll one');
 
     game.position.open.fill(false);
     game.position.open[0] = true;
     game.position.open[2] = true;
     const low = new RecordingRenderer();
-    game.render(low);
+    game.render(low, 0);
     expect(low.args).toContain('Roll one');
   });
 
@@ -471,12 +471,12 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(55));
     const p1 = new RecordingRenderer();
-    game.render(p1);
+    game.render(p1, 0);
     expect(p1.args).toContain(SEAT_PALETTE.p1.base);
 
     game.position.seat = 'p2';
     const p2 = new RecordingRenderer();
-    game.render(p2);
+    game.render(p2, 0);
     expect(p2.args).toContain(SEAT_PALETTE.p2.base);
   });
 
@@ -484,7 +484,7 @@ describe('rendering', () => {
     const game = new ShutTheBoxGame();
     game.init(makeContext(57));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops, 'a turn-based board rotates').toContain('pushRotation');
   });
 
@@ -494,8 +494,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

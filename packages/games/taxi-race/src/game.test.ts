@@ -164,7 +164,7 @@ class RecordingRenderer implements Renderer {
 
 function draw(game: TaxiRaceGame): RecordingRenderer {
   const renderer = new RecordingRenderer();
-  game.render(renderer);
+  game.render(renderer, 0);
   return renderer;
 }
 

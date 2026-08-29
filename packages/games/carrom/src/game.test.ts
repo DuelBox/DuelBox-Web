@@ -641,14 +641,14 @@ describe('the seats', () => {
   it('turns the board to face whoever is to play, sharing one device', () => {
     const { game, input } = fresh({ localSeat: 'p1', presentation: 'shared-screen' });
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const upright = renderer.calls.find((call) => call.op === 'pushRotation');
     expect(upright?.args[0]).toBe(0);
 
     game.state.seat = 'p2';
     idle(game, input, AFTER_FLIP);
     const turned = new RecordingRenderer();
-    game.render(turned);
+    game.render(turned, 0);
     const angle = turned.calls.find((call) => call.op === 'pushRotation')?.args[0];
     expect(typeof angle).toBe('number');
     expect(angle).toBeCloseTo(Math.PI, 6);
@@ -658,12 +658,12 @@ describe('the seats', () => {
     for (const seat of SEATS) {
       const { game, input } = fresh({ presentation: 'single-seat', localSeat: seat });
       const first = new RecordingRenderer();
-      game.render(first);
+      game.render(first, 0);
       const before = first.calls.find((call) => call.op === 'pushRotation')?.args[0];
       game.state.seat = otherOf(seat);
       idle(game, input, AFTER_FLIP);
       const after = new RecordingRenderer();
-      game.render(after);
+      game.render(after, 0);
       expect(after.calls.find((call) => call.op === 'pushRotation')?.args[0], seat).toBe(before);
     }
   });
@@ -790,7 +790,7 @@ describe('what the player is shown', () => {
   it('draws a board, the pucks and the striker', () => {
     const { game } = fresh();
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('clear');
     expect(renderer.ops).toContain('rect');
     expect(renderer.ops).toContain('circle');
@@ -803,7 +803,7 @@ describe('what the player is shown', () => {
     for (let frame = 0; frame < 200; frame += 1) {
       idle(game, input, 3);
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const call of renderer.calls) {
         if (call.op === 'pushRotation' || call.op === 'clear') continue;
         const numbers = call.args.filter((a): a is number => typeof a === 'number');
@@ -819,7 +819,7 @@ describe('what the player is shown', () => {
     // Rule 7: playable in greyscale. Seat one's puck carries a ring, seat two's a bar.
     const { game } = fresh();
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && typeof call.args[2] === 'number' && call.args[2] < 12,
     );
@@ -833,7 +833,7 @@ describe('what the player is shown', () => {
   it('marks the queen with a cross that nothing else wears', () => {
     const { game } = fresh();
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const queen = queenOf(game.state);
     const across = renderer.calls.filter(
       (call) =>
@@ -848,7 +848,7 @@ describe('what the player is shown', () => {
   it('rings the striker in the colour of whoever is to play', () => {
     const { game } = fresh();
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const striker = strikerOf(game.state);
     const halo = renderer.calls.filter(
       (call) =>
@@ -862,7 +862,7 @@ describe('what the player is shown', () => {
   it('tells both players how many pucks each of them still has to pot', () => {
     const { game } = fresh();
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const lines = renderer.texts();
     expect(lines.filter((line) => line.includes('to go')).length).toBe(2);
     expect(lines).toContain('6 to go');
@@ -872,7 +872,7 @@ describe('what the player is shown', () => {
     const { game, input } = fresh();
     const say = (): string[] => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       return renderer.texts();
     };
     expect(say().join(' ')).toMatch(/slide|aim|flick/i);
@@ -899,7 +899,7 @@ describe('what the player is shown', () => {
     const last = game.state.bodies.find((b) => b.kind === 'p1');
     if (last !== undefined) last.potted = false;
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.texts().join(' ')).toMatch(/queen first/i);
   });
 
@@ -908,7 +908,7 @@ describe('what the player is shown', () => {
     // The pip at the far end of the aim line is the only circle of radius six on the board.
     const tipDistance = (): number => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       const striker = strikerOf(game.state);
       const pips = renderer.calls.filter((call) => call.op === 'circle' && call.args[2] === 6);
       expect(pips.length, 'no aim pip was drawn').toBe(1);
@@ -925,7 +925,7 @@ describe('what the player is shown', () => {
     const { game } = fresh();
     game.state.phase = 'over';
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const striker = strikerOf(game.state);
     const onStriker = renderer.calls.filter(
       (call) =>
@@ -942,7 +942,7 @@ describe('what the player is shown', () => {
     const before = game.state.bodies.map(
       (b) => `${String(b.x)},${String(b.y)},${String(b.potted)}`,
     );
-    for (let i = 0; i < 5; i += 1) game.render(new RecordingRenderer());
+    for (let i = 0; i < 5; i += 1) game.render(new RecordingRenderer(), 0);
     expect(
       game.state.bodies.map((b) => `${String(b.x)},${String(b.y)},${String(b.potted)}`),
     ).toEqual(before);
@@ -954,7 +954,7 @@ describe('what the player is shown', () => {
     for (let i = 0; i < 60 * 120; i += 1) {
       game.update(STEP, input);
       seen.add(game.state.phase);
-      game.render(new RecordingRenderer());
+      game.render(new RecordingRenderer(), 0);
       if (game.getScore().winner !== null) break;
     }
     expect([...seen].sort()).toEqual(['aiming', 'over', 'rolling']);

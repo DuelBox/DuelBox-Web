@@ -318,6 +318,10 @@ export class SeaBattleGame implements Game {
     return cellIn(x, y, originX, HALF_ORIGIN_Y, HALF_CELL);
   }
 
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_BACKGROUND);
     if (this.#position.phase === 'placing') {

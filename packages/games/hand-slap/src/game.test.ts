@@ -374,7 +374,7 @@ describe('rendering', () => {
     const game = new HandSlapGame();
     game.init(makeContext(41));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.base);
@@ -386,7 +386,7 @@ describe('rendering', () => {
     const game = new HandSlapGame();
     game.init(makeContext(43));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const labels = texts(renderer).map((entry) => entry.value);
     expect(labels).toContain('SLAP');
     expect(labels).toContain('DODGE');
@@ -399,7 +399,7 @@ describe('rendering', () => {
     const game = new HandSlapGame();
     game.init(makeContext(45));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     const height = manifest.logical.height;
     let rotated = false;
@@ -439,7 +439,7 @@ describe('rendering', () => {
     const game = new HandSlapGame();
     game.init(makeContext(55));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     let cursor = 0;
     const fists: { y: number; r: number }[] = [];
@@ -477,7 +477,7 @@ describe('rendering', () => {
 
     const armY = (): number => {
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       let cursor = 0;
       for (const op of renderer.ops) {
         if (op === 'line') {
@@ -504,7 +504,7 @@ describe('rendering', () => {
     for (let i = 0; i < Math.round(SWING_SECONDS / STEP) + 4; i += 1) game.update(STEP, input);
     expect(game.state.phase).toBe('settling');
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const labels = texts(renderer).map((entry) => entry.value);
     expect(labels.some((label) => label === 'hit' || label === 'ouch')).toBe(true);
     expect(SETTLE_SECONDS).toBeGreaterThan(0);
@@ -516,7 +516,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -531,8 +531,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = `${game.state.phase}${String(game.state.p1)}${String(game.state.p2)}`;
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(`${game.state.phase}${String(game.state.p1)}${String(game.state.p2)}`).toBe(before);
   });
 });

@@ -665,7 +665,7 @@ describe('lifecycle and render', () => {
     takePair(game, input, 'p1', a, b);
 
     const before = snapshot(game);
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.rects).toBeGreaterThan(0);
@@ -682,10 +682,10 @@ describe('lifecycle and render', () => {
     const played = new RecordingRenderer();
     game.init(makeContext(null, null));
 
-    game.render(dealt);
+    game.render(dealt, 0);
     const [a, b] = findPair(game);
     takePair(game, input, 'p1', a, b);
-    game.render(played);
+    game.render(played, 0);
 
     // A won pair shows a face, a glyph and a seat mark that a face-down card never does.
     expect(played.colours.size).toBeGreaterThan(dealt.colours.size);

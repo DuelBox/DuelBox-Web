@@ -466,7 +466,7 @@ describe('lifecycle and render', () => {
     step(game, input, 5);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.circles).toBeGreaterThan(0);
@@ -481,11 +481,11 @@ describe('lifecycle and render', () => {
     const input = new FakeInput();
     game.init(makeContext(null, null));
     const aiming = new RecordingRenderer();
-    game.render(aiming);
+    game.render(aiming, 0);
     input.p1.actionPressed = true;
     step(game, input, 10);
     const flying = new RecordingRenderer();
-    game.render(flying);
+    game.render(flying, 0);
     expect(game.state.phase).toBe('flying');
     expect(flying.lines).toBeGreaterThan(0);
     expect(aiming.calls).not.toBe(flying.calls);
@@ -498,7 +498,7 @@ describe('lifecycle and render', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 60 * 12; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.every((angle) => angle === 0)).toBe(true);
   });
@@ -510,7 +510,7 @@ describe('lifecycle and render', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 60 * 12; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.some((angle) => angle > 0.01)).toBe(true);
   });

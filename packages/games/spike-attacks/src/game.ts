@@ -243,6 +243,10 @@ export class SpikeAttacksGame implements Game {
    * carries at full resolution, so a frame is the state as it is rather than a guess
    * between two of them.
    */
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_SKY);
     this.#drawGround(renderer, 'p1');

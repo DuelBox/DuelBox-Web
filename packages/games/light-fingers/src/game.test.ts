@@ -195,7 +195,7 @@ function labels(renderer: RecordingRenderer): string[] {
 
 function frame(game: LightFingersGame): RecordingRenderer {
   const renderer = new RecordingRenderer();
-  game.render(renderer);
+  game.render(renderer, 0);
   return renderer;
 }
 

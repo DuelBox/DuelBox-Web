@@ -82,7 +82,10 @@ write(
       main: './dist/index.js',
       types: './dist/index.d.ts',
       exports: { '.': { types: './dist/index.d.ts', default: './dist/index.js' } },
-      scripts: { build: 'tsc --build', clean: 'tsc --build --clean' },
+      scripts: {
+        build: 'tsc --build tsconfig.build.json',
+        clean: 'tsc --build tsconfig.build.json --clean',
+      },
       dependencies: { '@duelbox/engine': 'workspace:*', '@duelbox/game-sdk': 'workspace:*' },
     },
     null,
@@ -94,23 +97,48 @@ write(
 // `exclude` onto three lines each where Prettier collapses them. That one difference made
 // every freshly scaffolded game fail `pnpm format:check` — the first step CI runs, and the
 // one this repository has already been caught by twice.
+//
+// Two projects per package, and the split matters. `tsconfig.build.json` emits dist and
+// excludes tests, so no test file is ever compiled into a shipped chunk. `tsconfig.json`
+// is the default project, includes the tests, and emits nothing — so the obvious
+// per-package command, `tsc --build packages/games/<id>`, typechecks the tests too.
+//
+// Scaffolding only the emitting one is what issue #2464 was: a game could be verified
+// per-package, reported clean, and still carry type errors that only CI's repo-wide
+// `tsconfig.lint.json` pass would catch. Three games shipped that way.
 write(
-  'tsconfig.json',
+  'tsconfig.build.json',
   `{
   "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist"
-  },
+  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"],
   "references": [
-    {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../game-sdk"
-    }
+    { "path": "../../engine/tsconfig.build.json" },
+    { "path": "../../game-sdk/tsconfig.build.json" }
+  ]
+}
+`,
+);
+
+write(
+  'tsconfig.json',
+  `{
+  // The default project deliberately INCLUDES *.test.ts, so that the obvious per-package
+  // command typechecks the tests as well as the source (issue #2464). It emits nothing;
+  // ./tsconfig.build.json is the project that writes dist.
+  //
+  // noUnusedLocals/noUnusedParameters are off here for the same reason they are off in
+  // tsconfig.lint.json: test doubles implement wide interfaces and ignore most of what
+  // they are handed. Source keeps both checks, because ./tsconfig.build.json still
+  // compiles src under the strict base config.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "noUnusedLocals": false, "noUnusedParameters": false },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "./tsconfig.build.json" },
+    { "path": "../../engine/tsconfig.build.json" },
+    { "path": "../../game-sdk/tsconfig.build.json" }
   ]
 }
 `,
@@ -234,6 +262,10 @@ export class ${name.replace(/[^A-Za-z0-9]/g, '')}Game implements Game {
     void input;
   }
 
+  // The contract's signature, declared so \`game.render(renderer, alpha)\` type-checks
+  // against the class as well as against \`Game\`. Declaring only the one-argument form is
+  // what made render-purity tests unable to render at two different alphas (issue #2464).
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear('#f7f8fc');
     renderer.text(

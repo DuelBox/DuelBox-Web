@@ -603,7 +603,7 @@ describe('rendering', () => {
     game.init(makeContext(61));
     setUp(game, { p1: [[4, 2]], p2: [[9, 3]], dice: [5, 2] });
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.count('rect'), 'seven slices a point, plus the frame').toBeGreaterThan(
       POINTS * 7,
     );
@@ -615,7 +615,7 @@ describe('rendering', () => {
     const game = new BackgammonGame();
     game.init(makeContext(67));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) =>
         call.op === 'strokeCircle' && call.args[3] === 4 && call.args[4] === SEAT_PALETTE.p1.deep,
@@ -634,13 +634,13 @@ describe('rendering', () => {
     setUp(game, { p1: [[4, 1]], dice: [3] });
     game.update(STEP, new ScriptedInput());
     const withMove = new RecordingRenderer();
-    game.render(withMove);
+    game.render(withMove, 0);
     expect(withMove.count('line'), 'source to destination').toBe(1);
 
     setUp(game, { p1: [[4, 1]], p2: [[POINTS - 1 - 7, 2]], dice: [3] });
     game.update(STEP, new ScriptedInput());
     const shutOut = new RecordingRenderer();
-    game.render(shutOut);
+    game.render(shutOut, 0);
     expect(shutOut.count('line'), 'nothing to point at').toBe(0);
   });
 
@@ -656,7 +656,7 @@ describe('rendering', () => {
     });
     game.update(STEP, new ScriptedInput());
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const dots = renderer.calls.filter((call) => call.op === 'circle' && call.args[2] === 5).length;
     expect(dots, 'one under each of the two points, not one per die').toBe(2);
   });
@@ -666,7 +666,7 @@ describe('rendering', () => {
     game.init(makeContext(79));
     setUp(game, { p1: [[4, 1]], dice: [5] });
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const half = DIE_SIZE / 2;
     const pips = renderer.calls.filter(
       (call) =>
@@ -685,7 +685,7 @@ describe('rendering', () => {
     const game = new BackgammonGame();
     game.init(makeContext(83));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
     expect(renderer.ops).toContain('popSeatRotation');
   });
@@ -696,7 +696,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 3600; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -713,7 +713,7 @@ describe('rendering', () => {
     game.init(makeContext(97));
     setUp(game, { p1: [[20, 1]], off: [CHECKERS - 1, 0], dice: [4] });
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const trayBars = renderer.calls.filter(
       (call) => call.op === 'rect' && call.args[4] === SEAT_PALETTE.p1.base,
     ).length;
@@ -727,8 +727,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });
@@ -782,7 +782,7 @@ describe('the single-seat presentation', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rotation = renderer.calls.find((call) => call.op === 'pushRotation');
     expect(rotation?.args[0], 'upright, whoever is to move').toBe(0);
   });

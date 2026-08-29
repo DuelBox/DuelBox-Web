@@ -578,7 +578,7 @@ describe('rendering', () => {
     const game = new PopItGame();
     game.init(makeContext(51));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     const circles = renderer.ops.filter((op) => op === 'circle').length;
     expect(circles, 'one per bubble').toBe(BUBBLE_COUNT);
@@ -593,7 +593,7 @@ describe('rendering', () => {
     position.popped[rowStart(0)] = true;
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const radii: number[] = [];
     let cursor = 0;
     for (const op of renderer.ops) {
@@ -630,14 +630,14 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     settle(game, input);
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     expect(before.args).not.toContain(SEAT_PALETTE.p1.base);
 
     const start = at(2, 1);
     input.down('p1', start.x, start.y);
     game.update(STEP, input);
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(after.args, 'the chosen run is marked in the mover colour').toContain(
       SEAT_PALETTE.p1.base,
     );
@@ -649,7 +649,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -664,8 +664,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = game.position.popped.join('');
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(game.position.popped.join('')).toBe(before);
   });
 });

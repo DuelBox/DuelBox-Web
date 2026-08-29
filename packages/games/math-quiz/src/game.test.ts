@@ -209,7 +209,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 200; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 9 === 0) game.render(renderer);
+      if (i % 9 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -245,7 +245,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 400; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(depth).toBe(0);
     }
     game.destroy();

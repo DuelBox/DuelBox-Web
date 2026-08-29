@@ -241,7 +241,7 @@ describe('the arena is shared', () => {
     const game = new SnakesGame();
     game.init(makeContext(19));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).not.toContain('pushRotation');
   });
 });
@@ -341,7 +341,7 @@ describe('rendering', () => {
     const game = new SnakesGame();
     game.init(makeContext(59));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const discs = renderer.calls.filter((call) => call.op === 'circle').length;
     expect(discs, 'two bodies plus the pellets').toBeGreaterThan(START_SEGMENTS);
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
@@ -353,7 +353,7 @@ describe('rendering', () => {
     const game = new SnakesGame();
     game.init(makeContext(61));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[4] === SEAT_PALETTE.p1.deep,
     ).length;
@@ -368,7 +368,7 @@ describe('rendering', () => {
     const game = new SnakesGame();
     game.init(makeContext(67));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const p1 = headOf(game.position.p1);
     const pointing = renderer.calls.some(
       (call) => call.op === 'line' && call.args[0] === p1.x && call.args[1] === p1.y,
@@ -384,7 +384,7 @@ describe('rendering', () => {
     // colour either way, so `> 0` passes with the body left bright — which is what the
     // first version of this asserted.
     const alive = new RecordingRenderer();
-    game.render(alive);
+    game.render(alive, 0);
     expect(
       alive.args.filter((a) => a === SEAT_PALETTE.p1.soft).length,
       'nothing is dimmed while it lives',
@@ -392,7 +392,7 @@ describe('rendering', () => {
 
     game.position.p1.alive = false;
     const dead = new RecordingRenderer();
-    game.render(dead);
+    game.render(dead, 0);
     expect(
       dead.args.filter((a) => a === SEAT_PALETTE.p1.soft).length,
       'the whole wreck is dimmed, not only its head',
@@ -403,7 +403,7 @@ describe('rendering', () => {
     const game = new SnakesGame();
     game.init(makeContext(73));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args).toContain(`0 — 0   first to ${String(PELLET_TARGET)}`);
   });
 
@@ -422,13 +422,13 @@ describe('rendering', () => {
       return best;
     };
     const full = new RecordingRenderer();
-    game.render(full);
+    game.render(full, 0);
     const before = widest(full);
     expect(before, 'the bar is there').toBeGreaterThan(0);
 
     game.position.elapsed = ROUND_SECONDS / 2;
     const half = new RecordingRenderer();
-    game.render(half);
+    game.render(half, 0);
     expect(widest(half), 'and it shortens').toBeLessThan(before);
   });
 
@@ -438,7 +438,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 1800; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -456,8 +456,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

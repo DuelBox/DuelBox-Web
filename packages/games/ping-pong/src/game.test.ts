@@ -231,7 +231,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 40; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 7 === 0) game.render(renderer);
+      if (i % 7 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -263,7 +263,7 @@ describe('rendering', () => {
     const before = { ...game.position.ball };
     // The interpolation alpha the contract passes is deliberately not read: nothing here
     // is drawn between two simulation states, so a frame is the state as it stands.
-    for (let i = 0; i < 50; i += 1) game.render(renderer);
+    for (let i = 0; i < 50; i += 1) game.render(renderer, 0);
     expect(game.position.ball).toEqual(before);
     game.destroy();
   });

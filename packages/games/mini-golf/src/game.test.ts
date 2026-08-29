@@ -558,7 +558,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(137));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('clear');
     const circles = renderer.calls.filter((call) => call.op === 'circle').length;
     // The cup, two balls, and the two markers on the scoreboard.
@@ -569,11 +569,11 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(139));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const was = before.calls.filter((call) => call.op === 'circle').length;
     ballOf(game.position, 'p2').holed = true;
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(after.calls.filter((call) => call.op === 'circle').length).toBeLessThan(was);
   });
 
@@ -582,7 +582,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(149));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const rings = renderer.calls.filter(
       (call) => call.op === 'strokeCircle' && call.args[4] === SEAT_PALETTE.p1.deep,
     ).length;
@@ -597,7 +597,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(151));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const halo = renderer.calls.find(
       (call) =>
         call.op === 'strokeCircle' &&
@@ -611,12 +611,12 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(157));
     const aiming = new RecordingRenderer();
-    game.render(aiming);
+    game.render(aiming, 0);
     const whileAiming = aiming.calls.filter((call) => call.op === 'line').length;
 
     game.position.phase = 'rolling';
     const rolling = new RecordingRenderer();
-    game.render(rolling);
+    game.render(rolling, 0);
     expect(rolling.calls.filter((call) => call.op === 'line').length).toBeLessThan(whileAiming);
   });
 
@@ -629,13 +629,13 @@ describe('rendering', () => {
     input.point('p1', side.x, side.y + 40);
     game.update(STEP, input);
     const soft = new RecordingRenderer();
-    game.render(soft);
+    game.render(soft, 0);
     const softHead = soft.calls.find((call) => call.op === 'line' && call.args[4] === 7);
 
     input.point('p1', side.x, side.y + PULL_FOR_FULL_POWER);
     game.update(STEP, input);
     const firm = new RecordingRenderer();
-    game.render(firm);
+    game.render(firm, 0);
     const firmHead = firm.calls.find((call) => call.op === 'line' && call.args[4] === 7);
 
     const softY = typeof softHead?.args[1] === 'number' ? softHead.args[1] : 0;
@@ -647,7 +647,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(167));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -657,7 +657,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const pushes = renderer.ops.filter((op) => op.startsWith('push')).length;
     const pops = renderer.ops.filter((op) => op === 'popSeatRotation').length;
     expect(pushes).toBe(pops);
@@ -672,7 +672,7 @@ describe('rendering', () => {
       game.update(STEP, input);
       if (i % 37 !== 0) continue;
       renderer.calls.length = 0;
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const call of renderer.calls) {
         if (call.op === 'text') continue;
         for (const value of call.args) {
@@ -692,7 +692,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(181));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const said = renderer.calls
       .filter((call) => call.op === 'text')
       .map((call) => String(call.args[0]))
@@ -718,7 +718,7 @@ describe('rendering', () => {
     const game = new MiniGolfGame();
     game.init(makeContext(193));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const said = renderer.calls
       .filter((call) => call.op === 'text')
       .map((call) => String(call.args[0]))
@@ -733,8 +733,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

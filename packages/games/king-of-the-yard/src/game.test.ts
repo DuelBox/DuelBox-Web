@@ -291,7 +291,7 @@ describe('rendering', () => {
     const game = new KingOfTheYardGame();
     game.init(makeContext(41));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.base);
@@ -304,12 +304,12 @@ describe('rendering', () => {
     const game = new KingOfTheYardGame();
     game.init(makeContext(43));
     const loose = new RecordingRenderer();
-    game.render(loose);
+    game.render(loose, 0);
     const before = loose.ops.filter((op) => op === 'strokeCircle').length;
 
     fixture(game).wearer = 'p1';
     const worn = new RecordingRenderer();
-    game.render(worn);
+    game.render(worn, 0);
     expect(worn.ops.filter((op) => op === 'strokeCircle').length).toBeGreaterThan(before);
   });
 
@@ -317,7 +317,7 @@ describe('rendering', () => {
     const game = new KingOfTheYardGame();
     game.init(makeContext(45));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     let cursor = 0;
     let p1Circles = 0;
     let p2Rects = 0;
@@ -349,7 +349,7 @@ describe('rendering', () => {
     const game = new KingOfTheYardGame();
     game.init(makeContext(47));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops.filter((op) => op === 'pushRotation').length).toBe(0);
   });
 
@@ -359,7 +359,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -374,8 +374,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = `${String(game.position.p1.x)}:${game.position.wearer ?? '-'}`;
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(`${String(game.position.p1.x)}:${game.position.wearer ?? '-'}`).toBe(before);
   });
 });

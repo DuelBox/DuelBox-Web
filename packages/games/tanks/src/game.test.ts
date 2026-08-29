@@ -303,7 +303,7 @@ describe('renders', () => {
     const { renderer, calls } = recorder();
     for (let i = 0; i < 600; i += 1) {
       game.update(STEP, IDLE);
-      if (i % 37 === 0) game.render(renderer);
+      if (i % 37 === 0) game.render(renderer, 0);
     }
     expect(calls.some((call) => call.op === 'text')).toBe(false);
     expect(calls.length).toBeGreaterThan(0);
@@ -316,7 +316,7 @@ describe('renders', () => {
     const { renderer, calls } = recorder();
     for (let i = 0; i < 400; i += 1) {
       game.update(STEP, IDLE);
-      if (i % 29 === 0) game.render(renderer);
+      if (i % 29 === 0) game.render(renderer, 0);
     }
     expect(calls.some((call) => call.op === 'pushRotation')).toBe(false);
     expect(calls.some((call) => call.op === 'pushSeatRotation')).toBe(false);
@@ -328,7 +328,7 @@ describe('renders', () => {
     const game = started({ p1: 'normal', p2: 'normal' }, 7);
     const { renderer, calls } = recorder();
     game.update(STEP, IDLE);
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(calls.some((call) => call.op === 'circle')).toBe(true);
     expect(calls.some((call) => call.op === 'strokeCircle')).toBe(true);
     expect(calls.some((call) => call.op === 'rect')).toBe(true);
@@ -340,7 +340,7 @@ describe('renders', () => {
     const { renderer, calls } = recorder();
     for (let i = 0; i < 400; i += 1) {
       game.update(STEP, IDLE);
-      if (i % 31 === 0) game.render(renderer);
+      if (i % 31 === 0) game.render(renderer, 0);
     }
     const slack = 60;
     for (const call of calls) {

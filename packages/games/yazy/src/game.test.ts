@@ -424,12 +424,12 @@ describe('rendering', () => {
     const game = new YazyGame();
     game.init(makeContext(59));
     const empty = new RecordingRenderer();
-    game.render(empty);
+    game.render(empty, 0);
     const textsBefore = empty.calls.filter((call) => call.op === 'text').length;
 
     game.position.dice.push(1, 2, 3, 4, 5);
     const rolled = new RecordingRenderer();
-    game.render(rolled);
+    game.render(rolled, 0);
     const textsAfter = rolled.calls.filter((call) => call.op === 'text').length;
     expect(textsAfter, 'a preview appeared in each open box').toBeGreaterThan(textsBefore);
   });
@@ -440,12 +440,12 @@ describe('rendering', () => {
     game.init(makeContext(61));
     game.position.dice.push(1, 2, 3, 4, 5);
     const loose = new RecordingRenderer();
-    game.render(loose);
+    game.render(loose, 0);
     const rectsBefore = loose.calls.filter((call) => call.op === 'rect').length;
 
     game.position.held[0] = true;
     const held = new RecordingRenderer();
-    game.render(held);
+    game.render(held, 0);
     const rectsAfter = held.calls.filter((call) => call.op === 'rect').length;
     expect(rectsAfter, 'keeping a die added a mark').toBeGreaterThan(rectsBefore);
   });
@@ -454,12 +454,12 @@ describe('rendering', () => {
     const game = new YazyGame();
     game.init(makeContext(67));
     const open = new RecordingRenderer();
-    game.render(open);
+    game.render(open, 0);
     const linesBefore = open.calls.filter((call) => call.op === 'line').length;
 
     game.position.sheetP1.ones = 3;
     const spent = new RecordingRenderer();
-    game.render(spent);
+    game.render(spent, 0);
     const linesAfter = spent.calls.filter((call) => call.op === 'line').length;
     expect(linesAfter, 'a spent box carries a stroke').toBeGreaterThan(linesBefore);
   });
@@ -469,7 +469,7 @@ describe('rendering', () => {
     game.init(makeContext(71));
     game.position.dice.push(1, 2, 3, 4, 5);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.calls.filter((call) => call.op === 'circle').length, '1+2+3+4+5').toBe(15);
   });
 
@@ -477,7 +477,7 @@ describe('rendering', () => {
     const game = new YazyGame();
     game.init(makeContext(73));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -487,7 +487,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 1800; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -505,8 +505,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 
@@ -514,7 +514,7 @@ describe('rendering', () => {
     const game = new YazyGame();
     game.init(makeContext(89));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args).toContain(`Roll (${String(ROLLS_PER_TURN)} left)`);
   });
 });

@@ -522,7 +522,7 @@ describe('rendering', () => {
     const game = new CheckersGame();
     game.init(makeContext(51));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops[0]).toBe('clear');
     expect(renderer.args).toContain(SEAT_PALETTE.p1.base);
     expect(renderer.args).toContain(SEAT_PALETTE.p2.base);
@@ -538,7 +538,7 @@ describe('rendering', () => {
     const game = new CheckersGame();
     game.init(makeContext(63));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     const dark: { x: number; y: number; w: number; h: number }[] = [];
     const discs: { x: number; y: number }[] = [];
@@ -577,7 +577,7 @@ describe('rendering', () => {
     const game = new CheckersGame();
     game.init(makeContext(53));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const circles = renderer.ops.filter((op) => op === 'circle').length;
     const rects = renderer.ops.filter((op) => op === 'rect').length;
     // 32 dark squares plus the felt, and p2's twelve pieces are three bars-pairs each.
@@ -591,13 +591,13 @@ describe('rendering', () => {
     const game = new CheckersGame();
     game.init(makeContext(55));
     const plain = new RecordingRenderer();
-    game.render(plain);
+    game.render(plain, 0);
     const before = plain.args.filter((value) => value === '#ffc94a').length;
     expect(before, 'nothing is forced in the opening position').toBe(0);
 
     fixture(game).slots[slotAt(4, 1)] = { seat: 'p2', kind: 'man' };
     const forced = new RecordingRenderer();
-    game.render(forced);
+    game.render(forced, 0);
     const after = forced.args.filter((value) => value === '#ffc94a').length;
     expect(after, 'the piece that must jump is ringed').toBeGreaterThan(0);
   });
@@ -608,11 +608,11 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     settle(game, input);
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
 
     tapSlot(game, input, 'p1', slotAt(5, 2));
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(after.args.filter((v) => v === 'rgba(255, 255, 255, 0.62)').length).toBeGreaterThan(
       before.args.filter((v) => v === 'rgba(255, 255, 255, 0.62)').length,
     );
@@ -624,7 +624,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const value of renderer.args) {
       if (typeof value !== 'number') continue;
       expect(Number.isFinite(value)).toBe(true);
@@ -640,8 +640,8 @@ describe('rendering', () => {
     for (let i = 0; i < 300; i += 1) game.update(STEP, input);
     const before = game.position.slots.map((s) => (s ? `${s.seat}${s.kind}` : '.')).join('');
     // Rendered twice, because a render that mutates usually does so on the second pass.
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(game.position.slots.map((s) => (s ? `${s.seat}${s.kind}` : '.')).join('')).toBe(before);
   });
 });

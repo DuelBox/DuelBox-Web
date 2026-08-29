@@ -335,7 +335,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 40; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 7 === 0) game.render(renderer);
+      if (i % 7 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -378,7 +378,7 @@ describe('rendering', () => {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
       if (i % 11 !== 0) continue;
       rects.length = 0;
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const [x, y, width, height] of rects as [number, number, number, number][]) {
         // The divider is the one shape that belongs to neither seat and straddles both.
         if (width === YARD_WIDTH && height <= 6) continue;
@@ -405,7 +405,7 @@ describe('rendering', () => {
     const before = { ...game.match.p1 };
     // The interpolation alpha the contract passes is deliberately not read: nothing here
     // is drawn between two simulation states, so a frame is the state as it stands.
-    for (let i = 0; i < 50; i += 1) game.render(renderer);
+    for (let i = 0; i < 50; i += 1) game.render(renderer, 0);
     expect(game.match.p1).toEqual(before);
     game.destroy();
   });
@@ -433,7 +433,7 @@ describe('rendering', () => {
     };
     const game = new LumberjackGame();
     game.init(context());
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     // The near seat's head is a disc with a disc inside it; the far seat's is a square
     // inside a square. Two circles on the board, and both of them belong to seat one.

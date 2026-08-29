@@ -434,6 +434,10 @@ export class TaxiRaceGame implements Game {
    * left — is already a continuous value the simulation carries at full resolution, so a
    * frame is the state as it stands rather than a guess between two of them.
    */
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_NIGHT);
     this.#drawWindow(renderer, 'p1');

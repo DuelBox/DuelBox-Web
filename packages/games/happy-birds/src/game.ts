@@ -191,6 +191,10 @@ export class HappyBirdsGame implements Game {
    * The interpolation alpha the contract offers is deliberately not read: nothing here is
    * drawn between two simulation states, so a frame is the state as it is.
    */
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_DUSK);
     this.#drawHorizon(renderer);

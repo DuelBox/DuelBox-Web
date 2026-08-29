@@ -233,6 +233,10 @@ export class WheelieGame implements Game {
     this.#winner = null;
   }
 
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_NIGHT);
     for (const seat of ['p1', 'p2'] as SeatId[]) {

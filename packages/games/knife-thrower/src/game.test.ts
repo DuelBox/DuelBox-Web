@@ -228,7 +228,7 @@ describe('rendering', () => {
     // every phase, and cost a fifth of the time.
     for (let i = 0; i < 60 * 200; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 37 === 0) game.render(renderer);
+      if (i % 37 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -263,7 +263,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 600; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(depth).toBe(0);
     }
     game.destroy();
@@ -278,7 +278,7 @@ describe('rendering', () => {
     drive(game, view, manager, 200);
     const before = game.position.spin;
     const knives = game.position.knives.length;
-    for (let i = 0; i < 40; i += 1) game.render(renderer);
+    for (let i = 0; i < 40; i += 1) game.render(renderer, 0);
     expect(game.position.spin).toBe(before);
     expect(game.position.knives).toHaveLength(knives);
     game.destroy();

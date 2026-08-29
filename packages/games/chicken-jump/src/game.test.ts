@@ -586,7 +586,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 25; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 7 === 0) game.render(renderer);
+      if (i % 7 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -604,7 +604,7 @@ describe('rendering', () => {
     const { renderer, drawn } = recorder();
     const { game, manager, view } = waiting({ botDifficulty: () => 'normal' });
     for (let i = 0; i < 200; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     expect(drawn.some((value) => value > FIELD_HEIGHT - LANE_HEIGHT)).toBe(true);
     expect(drawn.some((value) => value < LANE_HEIGHT)).toBe(true);
@@ -616,7 +616,7 @@ describe('rendering', () => {
     const { renderer, colours } = recorder();
     const { game, manager, view } = waiting({ botDifficulty: () => 'hard' });
     for (let i = 0; i < 60 * 12; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     expect(colours).toContain(SEAT_PALETTE.p1.base);
     expect(colours).toContain(SEAT_PALETTE.p2.base);
@@ -630,14 +630,14 @@ describe('rendering', () => {
     const { renderer, drawn } = recorder();
     const { game } = waiting();
     const before = drawn.length;
-    game.render(renderer);
+    game.render(renderer, 0);
     const withBlock = drawn.length - before;
     game.destroy();
 
     const bare = recorder();
     const other = new ChickenJumpGame();
     other.init(context());
-    other.render(bare.renderer);
+    other.render(bare.renderer, 0);
     const withoutBlock = bare.drawn.length;
     other.destroy();
     expect(withBlock).toBeGreaterThan(withoutBlock);
@@ -652,7 +652,7 @@ describe('rendering', () => {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
     }
     expect(game.match.p1.last).toBe('lost');
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     expect(drawn.length).toBeGreaterThan(0);
   });
@@ -663,7 +663,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'hard' }));
     finish(game, manager, view);
     const { renderer, drawn } = recorder();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(drawn.length).toBeGreaterThan(0);
     game.destroy();
   });
@@ -675,7 +675,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 300; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
     const before = JSON.stringify(game.match);
-    for (let i = 0; i < 50; i += 1) game.render(renderer);
+    for (let i = 0; i < 50; i += 1) game.render(renderer, 0);
     expect(JSON.stringify(game.match)).toBe(before);
     game.destroy();
   });

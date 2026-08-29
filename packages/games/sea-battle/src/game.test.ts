@@ -262,7 +262,7 @@ describe('the hidden fleets', () => {
     readyToFire(game, 23, 29);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     // Every cell either fleet occupies, mapped to where it would be drawn on the board.
     for (const seat of ['p1', 'p2'] as SeatId[]) {
@@ -289,12 +289,12 @@ describe('the hidden fleets', () => {
     const hidden = occupiedCells(game, 'p2')[0] as number;
 
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const beforeRects = before.calls.filter((call) => call.op === 'rect').length;
 
     fire(game.position, 'p2', hidden);
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     const afterRects = after.calls.filter((call) => call.op === 'rect').length;
     expect(afterRects, 'the hit appeared once it was earned').toBeGreaterThan(beforeRects);
   });
@@ -304,7 +304,7 @@ describe('the hidden fleets', () => {
     game.init(makeContext(43));
     readyToFire(game, 47, 53);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     // A status bar per ship, below the board — a count, at a fixed place.
     const below = renderer.calls.filter(
       (call) =>
@@ -321,7 +321,7 @@ describe('the hidden fleets', () => {
     place(fleetOf(game.position, 'p1'), cellAt(0, 0), 5, 'across');
     recordPlacement(game.position, 'p1');
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const drawn = renderer.calls.some(
       (call) =>
         call.op === 'rect' &&
@@ -482,7 +482,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 1200; i += 1) game.update(STEP, input);
     for (const renderer of [new RecordingRenderer()]) {
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const call of renderer.calls) {
         if (call.op === 'text') continue; // text is positioned by baseline, not by box
         for (const value of call.args) {
@@ -501,8 +501,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 
@@ -510,7 +510,7 @@ describe('rendering', () => {
     const game = new SeaBattleGame();
     game.init(makeContext(167));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops, 'nobody is upside down when both act at once').not.toContain(
       'pushRotation',
     );
@@ -521,7 +521,7 @@ describe('rendering', () => {
     game.init(makeContext(173));
     readyToFire(game, 179, 181);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).toContain('pushRotation');
   });
 
@@ -537,12 +537,12 @@ describe('rendering', () => {
 
     fire(game.position, 'p2', cells[0] as number);
     const hitOnly = new RecordingRenderer();
-    game.render(hitOnly);
+    game.render(hitOnly, 0);
     const linesAfterHit = hitOnly.calls.filter((call) => call.op === 'line').length;
 
     for (const cell of cells) fire(game.position, 'p2', cell);
     const sunk = new RecordingRenderer();
-    game.render(sunk);
+    game.render(sunk, 0);
     const linesAfterSunk = sunk.calls.filter((call) => call.op === 'line').length;
 
     expect(

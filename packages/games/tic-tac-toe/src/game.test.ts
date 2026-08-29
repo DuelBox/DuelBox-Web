@@ -446,7 +446,7 @@ describe('lifecycle and render', () => {
     input.clear();
 
     const before = boardOf(game);
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.calls).toBeGreaterThan(0);
@@ -464,7 +464,7 @@ describe('lifecycle and render', () => {
     const after = new RecordingRenderer();
     game.init(makeContext(null, null));
 
-    game.render(before);
+    game.render(before, 0);
     const script: readonly (readonly [SeatId, number])[] = [
       ['p1', 0],
       ['p2', 3],
@@ -477,7 +477,7 @@ describe('lifecycle and render', () => {
       tapCell(input, entry[0], entry[1]);
       step(game, input);
     }
-    game.render(after);
+    game.render(after, 0);
 
     // Grid lines, both crosses, and one more line for the strike through the top row.
     expect(after.lines).toBeGreaterThan(before.lines);
@@ -501,7 +501,7 @@ describe('the board turning to face the player with the move', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 40; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
 
     const partway = renderer.angles.filter((a) => a > 0.001 && a < HALF_TURN - 0.001);
@@ -546,7 +546,7 @@ describe('the board turning to face the player with the move', () => {
       // A tap is pressed on every single step of the turn.
       tapCell(input, 'p2', 4, true);
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
       const angle = renderer.angles[renderer.angles.length - 1] ?? 0;
       const squareOn = Math.abs(angle) < 1e-9 || Math.abs(angle - HALF_TURN) < 1e-9;
       const changed = boardOf(game).some((cell, index) => cell !== before[index]);
@@ -566,7 +566,7 @@ describe('the board turning to face the player with the move', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 40; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.every((a) => a === 0)).toBe(true);
   });
@@ -582,7 +582,7 @@ describe('the board turning to face the player with the move', () => {
       const renderer = new RecordingRenderer();
       for (let i = 0; i < steps; i += 1) {
         game.update(dt, input);
-        game.render(renderer);
+        game.render(renderer, 0);
       }
       return renderer.angles[renderer.angles.length - 1] ?? 0;
     };

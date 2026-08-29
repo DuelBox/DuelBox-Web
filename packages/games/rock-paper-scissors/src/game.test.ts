@@ -329,7 +329,7 @@ describe('lifecycle and render', () => {
     step(game, input, 5);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.calls).toBeGreaterThan(0);
     expect(renderer.texts).toBe(0);
   });
@@ -343,7 +343,7 @@ describe('lifecycle and render', () => {
       const renderer = new RecordingRenderer();
       for (let i = 0; i < 40; i += 1) {
         game.update(STEP, input);
-        game.render(renderer);
+        game.render(renderer, 0);
       }
       expect(
         renderer.angles.every((a) => a === 0),
@@ -362,14 +362,14 @@ describe('lifecycle and render', () => {
     step(game, input);
     expect(game.phase).toBe('window');
     const during = new RecordingRenderer();
-    game.render(during);
+    game.render(during, 0);
 
     input.clear();
     tapButton(input, 'p2', 1);
     step(game, input);
     expect(game.phase).toBe('reveal');
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     // The reveal draws more than the window did: the chosen buttons gain their rings.
     expect(after.circles).toBeGreaterThan(during.circles);
   });

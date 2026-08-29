@@ -1,17 +1,23 @@
 {
+  // The default project of every package deliberately INCLUDES *.test.ts, so that the
+  // obvious per-package command — `tsc --build packages/games/ludo` — typechecks the
+  // tests as well as the source. It used to skip them, which meant a package could be
+  // verified per-package, reported clean, and still be carrying type errors that only
+  // CI's repo-wide `tsconfig.lint.json` pass would find (issue #2464).
+  //
+  // It emits nothing. ./tsconfig.build.json is the project that writes dist, and that is
+  // the one excluding tests — so no test file is ever compiled into a shipped chunk.
+  //
+  // noUnusedLocals/noUnusedParameters are off here for the same reason they are off in
+  // tsconfig.lint.json: test doubles implement wide interfaces and ignore most of what
+  // they are handed. Source keeps both checks, because ./tsconfig.build.json still
+  // compiles src under the strict base config.
   "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist"
-  },
+  "compilerOptions": { "noEmit": true, "noUnusedLocals": false, "noUnusedParameters": false },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"],
   "references": [
-    {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../game-sdk"
-    }
+    { "path": "./tsconfig.build.json" },
+    { "path": "../../engine/tsconfig.build.json" },
+    { "path": "../../game-sdk/tsconfig.build.json" }
   ]
 }

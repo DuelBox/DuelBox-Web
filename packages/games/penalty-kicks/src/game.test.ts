@@ -320,7 +320,7 @@ describe('hidden choices', () => {
     const [x, y] = pickOf('p1', chosen);
 
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const markers = (renderer: RecordingRenderer): number =>
       renderer.calls.filter(
         (call) => call.op === 'strokeRect' && call.args[5] === SEAT_PALETTE.p1.base,
@@ -333,7 +333,7 @@ describe('hidden choices', () => {
     expect(game.position.shot, 'and the choice was taken').toBe(chosen);
 
     const after = new RecordingRenderer();
-    game.render(after);
+    game.render(after, 0);
     expect(markers(after), 'and gone the moment it is committed').toBe(0);
   });
 
@@ -341,7 +341,7 @@ describe('hidden choices', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(31));
     const before = new RecordingRenderer();
-    game.render(before);
+    game.render(before, 0);
     const cursors = before.calls.filter(
       (call) => call.op === 'strokeRect' && call.args[5] === SEAT_PALETTE.p1.base,
     ).length;
@@ -362,7 +362,7 @@ describe('hidden choices', () => {
     game.update(STEP, input);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     // A ball is drawn, which only happens on the reveal.
     expect(renderer.args, 'the ball appears').toContain('#f7f9f4');
   });
@@ -586,7 +586,7 @@ describe('rendering', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(67));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.calls.filter((call) => call.op === 'line').length, 'the net').toBeGreaterThan(
       2,
     );
@@ -600,7 +600,7 @@ describe('rendering', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(71));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const ticks = renderer.calls.filter(
       (call) => call.op === 'rect' && call.args[2] === 5 && call.args[3] === 5,
     ).length;
@@ -611,12 +611,12 @@ describe('rendering', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(73));
     const p1 = new RecordingRenderer();
-    game.render(p1);
+    game.render(p1, 0);
     expect(p1.args).toContain(SEAT_PALETTE.p1.base);
 
     game.position.kicker = 'p2';
     const p2 = new RecordingRenderer();
-    game.render(p2);
+    game.render(p2, 0);
     expect(p2.args).toContain(SEAT_PALETTE.p2.base);
   });
 
@@ -624,7 +624,7 @@ describe('rendering', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(79));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.args).toContain(`0 — 0   first to ${String(TARGET)}`);
   });
 
@@ -632,7 +632,7 @@ describe('rendering', () => {
     const game = new PenaltyKicksGame();
     game.init(makeContext(83));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).not.toContain('pushRotation');
   });
 
@@ -642,7 +642,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 2400; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -660,8 +660,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 900; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

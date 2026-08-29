@@ -382,7 +382,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 30; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 7 === 0) game.render(renderer);
+      if (i % 7 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -425,7 +425,7 @@ describe('rendering', () => {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
       if (i % 11 !== 0) continue;
       rects.length = 0;
-      game.render(renderer);
+      game.render(renderer, 0);
       for (const [x, y, width, height] of rects as [number, number, number, number][]) {
         // The divider is the one shape that belongs to neither seat and straddles both.
         if (width === COURSE_WIDTH && height <= 6) continue;
@@ -453,7 +453,7 @@ describe('rendering', () => {
     // The interpolation alpha the contract passes is deliberately not read: every moving
     // thing here is already a continuous value the simulation carries, so a frame is the
     // state as it stands.
-    for (let i = 0; i < 50; i += 1) game.render(renderer);
+    for (let i = 0; i < 50; i += 1) game.render(renderer, 0);
     expect(game.match.p1).toEqual(before);
     game.destroy();
   });
@@ -481,7 +481,7 @@ describe('rendering', () => {
     };
     const game = new GravityRunGame();
     game.init(context());
-    game.render(renderer);
+    game.render(renderer, 0);
     game.destroy();
     // The near seat's runner is a disc inside a disc; the far seat's is a square with a
     // bar across it. Two circles on the board, and both of them belong to seat one.
@@ -508,7 +508,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 600; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 13 === 0) game.render(renderer);
+      if (i % 13 === 0) game.render(renderer, 0);
     }
     game.destroy();
     expect(said).toEqual([]);

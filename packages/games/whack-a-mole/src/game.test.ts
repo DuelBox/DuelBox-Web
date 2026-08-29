@@ -596,8 +596,8 @@ describe('WhackaMoleGame render', () => {
     for (const mole of game.moles) before.push(mole.hole, mole.upSeconds);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
-    game.render(renderer);
+    game.render(renderer, 0);
+    game.render(renderer, 0);
 
     expect(renderer.ops.length).toBeGreaterThan(0);
     expect(renderer.ops[0]).toBe('clear');
@@ -615,7 +615,7 @@ describe('WhackaMoleGame render', () => {
       const game = new WhackaMoleGame();
       game.init(makeContext(17, null, null, presentation));
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
 
       const pushes = renderer.ops.filter((op) => op === 'pushSeatRotation').length;
       const pops = renderer.ops.filter((op) => op === 'popSeatRotation').length;

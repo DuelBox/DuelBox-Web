@@ -212,7 +212,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'normal' }));
     for (let i = 0; i < 60 * 120; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      if (i % 41 === 0) game.render(renderer);
+      if (i % 41 === 0) game.render(renderer, 0);
     }
     game.destroy();
 
@@ -244,7 +244,7 @@ describe('rendering', () => {
     game.init(context({ botDifficulty: () => 'easy' }));
     for (let i = 0; i < 600; i += 1) {
       game.update(STEP, view.sync(manager.beginStep(STEP)));
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     game.destroy();
     expect(rotations).toBe(0);
@@ -269,7 +269,7 @@ describe('rendering', () => {
     drive(game, view, manager, 200);
     const angle = game.position.bladeAngle;
     const x = robotOf(game.position, 'p1').x;
-    for (let i = 0; i < 40; i += 1) game.render(renderer);
+    for (let i = 0; i < 40; i += 1) game.render(renderer, 0);
     expect(game.position.bladeAngle).toBe(angle);
     expect(robotOf(game.position, 'p1').x).toBe(x);
     game.destroy();

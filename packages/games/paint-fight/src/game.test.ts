@@ -207,7 +207,7 @@ describe('the board is shared', () => {
     const game = new PaintFightGame();
     game.init(makeContext(17));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.ops).not.toContain('pushRotation');
   });
 });
@@ -293,7 +293,7 @@ describe('rendering', () => {
     const game = new PaintFightGame();
     game.init(makeContext(47));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const cells = renderer.calls.filter(
       (call) => call.op === 'rect' && call.args[2] === 40 && call.args[3] === 40,
     ).length;
@@ -308,7 +308,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 120; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
 
     const dots = renderer.calls.filter(
       (call) => call.op === 'circle' && call.args[3] === SEAT_PALETTE.p1.deep && call.args[2] === 4,
@@ -326,7 +326,7 @@ describe('rendering', () => {
     const game = new PaintFightGame();
     game.init(makeContext(59));
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const p1 = game.position.p1;
     expect(
       renderer.calls.some(
@@ -344,7 +344,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 240; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     const bars = renderer.calls.filter(
       (call) =>
         call.op === 'rect' &&
@@ -364,12 +364,12 @@ describe('rendering', () => {
     const game = new PaintFightGame();
     game.init(makeContext(67));
     const full = new RecordingRenderer();
-    game.render(full);
+    game.render(full, 0);
     expect(full.args).toContain(`${String(ROUND_SECONDS)}s`);
 
     game.position.elapsed = ROUND_SECONDS - 5;
     const later = new RecordingRenderer();
-    game.render(later);
+    game.render(later, 0);
     expect(later.args).toContain('5s');
   });
 
@@ -379,7 +379,7 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 1200; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     for (const call of renderer.calls) {
       if (call.op === 'text') continue;
       for (const value of call.args) {
@@ -397,8 +397,8 @@ describe('rendering', () => {
     const input = new ScriptedInput();
     for (let i = 0; i < 600; i += 1) game.update(STEP, input);
     const before = JSON.stringify(game.position);
-    game.render(new RecordingRenderer());
-    game.render(new RecordingRenderer());
+    game.render(new RecordingRenderer(), 0);
+    game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
   });
 });

@@ -336,6 +336,10 @@ export class CrashItGame implements Game {
    * players are shown the same cars in the same places the same way up — the two halves
    * differ only in which car each one marks as yours.
    */
+  // The contract's signature, declared so `game.render(renderer, alpha)` type-checks
+  // against the class as well as against `Game`. This game does not interpolate
+  // between fixed steps, so the implementation below ignores alpha.
+  render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_NIGHT);
     this.#drawHalf(renderer, 'p1');

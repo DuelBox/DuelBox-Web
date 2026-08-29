@@ -730,7 +730,7 @@ describe('lifecycle and drawing', () => {
     step(game, input, 5);
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.depth).toBe(0);
     expect(renderer.maxDepth).toBe(1);
     expect(renderer.circles).toBeGreaterThan(5);
@@ -748,7 +748,7 @@ describe('lifecycle and drawing', () => {
       if (game.getScore().winner !== null) break;
     }
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     expect(renderer.calls).toBeGreaterThan(10);
     expect(renderer.depth).toBe(0);
   });
@@ -762,11 +762,11 @@ describe('lifecycle and drawing', () => {
     lift(input, 'p1');
     step(game, input, 2);
     const flying = new RecordingRenderer();
-    game.render(flying);
+    game.render(flying, 0);
     input.clear();
     step(game, input, TURN_TAIL_FRAMES);
     const landed = new RecordingRenderer();
-    game.render(landed);
+    game.render(landed, 0);
     expect(flying.calls).not.toBe(landed.calls);
   });
 
@@ -790,14 +790,14 @@ describe('lifecycle and drawing', () => {
     game.init(makeContext(null, null));
 
     const one = new RecordingRenderer();
-    game.render(one);
+    game.render(one, 0);
     expect(arrowDiscs(one), 'seat one nocks a disc').toBe(1);
     expect(arrowBoxes(one)).toBe(0);
 
     shoot(game, input, 'p1', 0, 0);
     expect(game.activeSeat).toBe('p2');
     const two = new RecordingRenderer();
-    game.render(two);
+    game.render(two, 0);
     expect(arrowBoxes(two), 'seat two nocks a square').toBe(1);
     expect(arrowDiscs(two)).toBe(0);
   });
@@ -814,7 +814,7 @@ describe('lifecycle and drawing', () => {
       lift(input, seat);
       step(game, input, 2);
       const renderer = new RecordingRenderer();
-      game.render(renderer);
+      game.render(renderer, 0);
       expect(game.arrowInFlight).toBe(true);
       input.clear();
       step(game, input, TURN_TAIL_FRAMES);
@@ -847,7 +847,7 @@ describe('lifecycle and drawing', () => {
     expect(game.activeSeat).toBe('p2');
 
     const renderer = new RecordingRenderer();
-    game.render(renderer);
+    game.render(renderer, 0);
     // The gauge is 16 wide and sits against the near edge: its backing and its bar, both
     // of which are full height while the clock has not started.
     const gauge = renderer.boxes.filter((box) => box.width === 16 && box.x < 100);
@@ -864,7 +864,7 @@ describe('lifecycle and drawing', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 60; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.every((angle) => angle === 0)).toBe(true);
   });
@@ -877,7 +877,7 @@ describe('lifecycle and drawing', () => {
     const renderer = new RecordingRenderer();
     for (let i = 0; i < 60; i += 1) {
       game.update(STEP, input);
-      game.render(renderer);
+      game.render(renderer, 0);
     }
     expect(renderer.angles.some((angle) => angle > 0.01)).toBe(true);
   });

@@ -587,7 +587,7 @@ describe('rendering', () => {
   it('draws something', () => {
     const rigged = rig();
     const recorder = recordingRenderer();
-    rigged.game.render(recorder.renderer);
+    rigged.game.render(recorder.renderer, 0);
     expect(recorder.calls.length).toBeGreaterThan(20);
   });
 
@@ -598,7 +598,7 @@ describe('rendering', () => {
     const recorder = recordingRenderer();
     for (let i = 0; i < 600; i += 1) {
       rigged.step();
-      rigged.game.render(recorder.renderer);
+      rigged.game.render(recorder.renderer, 0);
     }
     expect(recorder.texts).toBe(0);
   });
@@ -606,7 +606,7 @@ describe('rendering', () => {
   it('pairs every rotation with a pop', () => {
     const rigged = rig();
     const recorder = recordingRenderer();
-    rigged.game.render(recorder.renderer);
+    rigged.game.render(recorder.renderer, 0);
     const pushes = recorder.calls.filter((call) => call === 'push').length;
     const pops = recorder.calls.filter((call) => call === 'pop').length;
     expect(pushes).toBe(pops);
@@ -618,7 +618,7 @@ describe('rendering', () => {
     const recorder = recordingRenderer();
     for (let i = 0; i < 300; i += 1) {
       rigged.step();
-      rigged.game.render(recorder.renderer);
+      rigged.game.render(recorder.renderer, 0);
     }
     const limit = Math.max(manifest.logical.width, manifest.logical.height) * 2;
     for (const call of recorder.calls) {
@@ -633,11 +633,11 @@ describe('rendering', () => {
     // You cannot parry with a sword you no longer hold, and the board says so.
     const rigged = rig();
     const before = recordingRenderer();
-    rigged.game.render(before.renderer);
+    rigged.game.render(before.renderer, 0);
     rigged.input.keyDown(P1_KEYS.action);
     rigged.step(4);
     const during = recordingRenderer();
-    rigged.game.render(during.renderer);
+    rigged.game.render(during.renderer, 0);
     expect(during.calls.length).toBeLessThan(before.calls.length);
   });
 
@@ -646,7 +646,7 @@ describe('rendering', () => {
     rigged.step(120);
     const snapshot = JSON.stringify(rigged.state);
     const recorder = recordingRenderer();
-    for (let i = 0; i < 10; i += 1) rigged.game.render(recorder.renderer);
+    for (let i = 0; i < 10; i += 1) rigged.game.render(recorder.renderer, 0);
     expect(JSON.stringify(rigged.state)).toBe(snapshot);
   });
 });
