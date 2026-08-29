@@ -161,13 +161,19 @@ export function rollWind(game: Game, rng: Rng): void {
   game.wind = (rng.float() * 2 - 1) * MAX_WIND;
 }
 
-export function resetGame(game: Game, rng: Rng): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, rng: Rng, opener: SeatId = 'p1'): void {
   game.p1Hits = 0;
   game.p2Hits = 0;
   game.p1Shots = 0;
   game.p2Shots = 0;
   game.volleys = 1;
-  game.active = 'p1';
+  game.active = opener;
   game.winner = null;
   game.lastHit = false;
   beginAim(game);

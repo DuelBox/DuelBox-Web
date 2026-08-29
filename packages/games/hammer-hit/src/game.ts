@@ -88,7 +88,7 @@ export class HammerHitGame implements Game {
     this.#winner = null;
     resetBotState(this.#botP1State);
     resetBotState(this.#botP2State);
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

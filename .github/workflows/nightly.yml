@@ -2,7 +2,7 @@ name: Nightly
 
 # Everything that is too slow to pay for on every push.
 #
-# Two things now. The third browser engine: the whole suite passes on Firefox and has done
+# Three things now. The third browser engine: the whole suite passes on Firefox and has done
 # since it was first tried, so running it per-push would spend install and run time to
 # re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
 #
@@ -15,6 +15,23 @@ name: Nightly
 #     drawing all hundred, and `checkers` no longer finishing at all; the first `easy` run
 #     found `hand-slap` handing seat one 100% of the matches it hands seat two 65% of on
 #     `normal`. `hard` costs three times `normal`, which is why it is here and not on a push.
+#
+# And the coverage gate. **It is here and not in `verify` — do not assume otherwise.** The
+# thresholds in `vitest.config.ts` (70% of lines, functions, branches and statements over
+# `packages/engine/src/**` and every game's `rules.ts`) had been correct and unexecuted since
+# the day they were written: `ci.yml` runs `pnpm test`, and nothing under `.github/` had ever
+# contained the word "coverage", so the threshold could not fail anything (#56).
+#
+# It is not in `verify` because running it there means running the suite twice, and the second
+# run is not a duplicate of the first — it is the expensive one. v8 instrumentation slows the
+# bot-search tests by several times over, which is why `vitest.config.ts` has to raise the test
+# timeout to ten minutes under `DUELBOX_COVERAGE=1`. `verify` is already the job that put #2459
+# on the board, so the choice was between a gate that runs nightly and a threshold that stays
+# unenforced in order to protect a budget that is over anyway.
+#
+# The cost of that choice, stated plainly: a pull request that drops coverage below 70% merges
+# green and is caught the next morning rather than in review. If that ever costs more than the
+# minutes it saves, move this job into `verify` — the command is identical either way.
 on:
   schedule:
     # 03:15 UTC, which is a quiet hour for the free-tier runners.
@@ -90,3 +107,38 @@ jobs:
         env:
           DUELBOX_BALANCE_TIER: ${{ matrix.tier }}
           DUELBOX_BALANCE_SEEDS: ${{ matrix.seeds }}
+
+  coverage:
+    name: coverage thresholds
+    runs-on: ubuntu-latest
+    # Measured at 5m52s quiet and 9m49s on a busy twelve-core development machine, and the
+    # seat-balance job's note above records that CI runs this kind of work four to five times
+    # slower again. Ninety minutes is headroom, not an estimate; if a run ever approaches it
+    # that is a finding, not a number to raise.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The registry loads every game from its `dist`, and `tsc --build` is what emits it.
+      # `verify` gets this for free by running `pnpm typecheck` before `pnpm test`; a job
+      # that runs the suite on its own has to ask for it.
+      - run: pnpm typecheck
+      # `test:coverage` sets DUELBOX_COVERAGE=1, which is what raises the test timeout. The
+      # thresholds live in vitest.config.ts and fail this step on their own; there is no
+      # separate check, and there must not be, or the number in the config and the number
+      # that is enforced can drift apart.
+      - run: pnpm test:coverage
+      # Published whether or not the thresholds held. A report you can only see when the run
+      # is green tells you nothing on the morning you need it: the failure message names the
+      # axis that dropped, and this names the files.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14

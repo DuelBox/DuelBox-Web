@@ -16,9 +16,11 @@ import type { LoadedGame } from './registry';
  * Those are not the same number, and this file used to open by stating only the first one.
  * The assertion is the flat band widened by {@link SIGMAS} standard errors of its own sample,
  * and at the fifty seeds a push runs that allowance is **21.2 points** - so what the push gate
- * forbids is a seat above 76.2% or below 23.8%, and nothing tighter. On a fully green run
- * **around half the catalogue measures outside the flat band**; the exact count is printed at
- * the top of every run, above the table, so nobody has to read this comment to find it out.
+ * forbids is a seat above 76.2% or below 23.8%, and nothing tighter. On a fully green run a
+ * large minority of the catalogue still **measures outside the flat band** - it was around
+ * half before #2487 taught 31 turn games to read the opening seat, and 31 of 107 after. The
+ * exact count is printed at the top of every run, above the table, so nobody has to read this
+ * comment to find it out, and nobody should quote the number in this sentence instead.
  *
  * The gap closes with sample size and only with sample size, and every run prints the number
  * it is actually enforcing:
@@ -64,14 +66,15 @@ import type { LoadedGame } from './registry';
  * Which is how this file's first finding fell out. **Almost no built game reads
  * `context.openingSeat`.** The contract says a game "must read it rather than assume `p1`",
  * `PlaySurface` passes the value `MatchState` computes, and that value alternates across the
- * rounds of a best-of precisely so first-mover advantage washes out. The measured figure over
- * the whole registry is {@link OPENER_BLIND} blind games - all of the older ones and none of
- * the newest. The first version of this file said "seventy-nine of seventy-nine, not one
+ * rounds of a best-of precisely so first-mover advantage washes out. That was true of every
+ * older game in the catalogue when this file was written; #2487 closed it, and the measured
+ * figure is now {@link OPENER_BLIND}. The first version of this file said "seventy-nine of seventy-nine, not one
  * built game reads it", and that number was wrong in the way a number is always wrong when it
  * is counted over a list rather than over the registry: it was counted after an allowlist had
  * removed nine games from the sweep, and five of those nine read the opening seat. Several
- * games - Tic Tac Toe among them - alternate the opener *internally* between their own rounds
- * and come out fair anyway; the rest simply always open with seat one. The `opener` column
+ * games - Tic Tac Toe among them - alternated the opener *internally* between their own
+ * rounds and came out fair anyway; they now start that alternation from the shell's opener
+ * rather than from a literal `p1`. The `opener` column
  * counts seed pairs whose two halves ended differently, and {@link OPENER_BLIND} is a ratchet
  * so the count cannot get worse.
  *
@@ -229,18 +232,30 @@ const STEP = 1 / 60;
  * exactly what the SDK permits. A guard that punishes correct behaviour gets disabled,
  * which is worse than no guard.
  *
- * 33 of the 46 turn games ignore it. The thirteen that read it are the newest, and #2487
- * tracks bringing the rest across in three groups - the ones that already rotate an opener
- * one level down and need only their starting value, the two running a bespoke rotation the
- * SDK should own, and `ship-battle`, which tosses its own coin and will otherwise toss on
- * top of the shell's.
+ * It was 33 of the 46 turn games. #2487 brought 31 of them across and it is now **two**:
+ * `basketball` and `cup-pong`. Both of those *do* read `context.openingSeat` - they simply
+ * cannot be seen to. Each gives every seat its own generator and hands out an even number of
+ * turns, so reversing the opener reorders the identical two sequences of shots and lands on
+ * the identical result. That is a property worth having rather than a defect: it is the
+ * strongest possible statement that neither seat is favoured. This measurement counts seed
+ * pairs that *ended differently*, and it cannot tell "ignores the opener" from "is exactly
+ * symmetric under it", so those two stay in the count.
+ *
+ * What the other 31 bought, on the default fifty-seed `normal` sample: eight records were
+ * deleted from {@link OUTSIDE_THE_BAND} because the games came back inside the band. Five of
+ * them - `reversi`, `color-wars`, `mancala`, `pop-it` and `ultimate-ttt` - are deterministic
+ * at `hard` and used to hand one seat all hundred matches; each now plays two matches, one
+ * per opening seat, and splits them 50/50 exactly. `four-in-a-row` did the same on `normal`
+ * and `hard`. `soccer-pool` came in from 57.5% to 50.0%. One real defect fell out on the way:
+ * `shut-the-box` ended the match after seat two's turn whichever seat had opened, so with a
+ * `p2` opener seat one never played at all and won on its unset score, 100 times in 100.
  *
  * An earlier value of 79 was counted over a sweep an allowlist had already narrowed, under
  * a comment reading "seventy-nine of seventy-nine, not one built game reads it". Both
  * halves were wrong. Counting a property over a list rather than over the registry is how a
  * harness ends up certain of a false thing.
  */
-const OPENER_BLIND = 33;
+const OPENER_BLIND = 2;
 
 /**
  * How many games must reach a conclusion under at least one driver, per tier.
@@ -301,6 +316,7 @@ const IDLE: SeatInput = {
   actionReleased: false,
   holdSeconds: 0,
   holdSecondsAtRelease: 0,
+  pointerCancelled: false,
 };
 const SILENT: InputState = { seat: (): SeatInput => IDLE };
 
@@ -314,6 +330,7 @@ function LOUD(width: number, height: number): InputState {
     actionReleased: true,
     holdSeconds: 0.5,
     holdSecondsAtRelease: 0,
+    pointerCancelled: false,
   };
   return { seat: (): SeatInput => seat };
 }
@@ -548,10 +565,15 @@ interface Exception {
  *
  * Everything below tagged `easy` or `hard` is new, and none of it was visible while the file
  * only ever ran `normal`. The `hard` bots in the turn-board games play near-perfectly, and a
- * solved game played perfectly twice is not a coin toss: `color-wars`, `mancala`, `pop-it`
- * and `ultimate-ttt` each produce **one** match, played identically a hundred times and won
- * by the same seat every time - seat two in the first two, seat one in the other two;
- * `tic-tac-toe` draws all hundred. `checkers` stops finishing at
+ * solved game played perfectly twice is not a coin toss: `color-wars`, `mancala`, `pop-it`,
+ * `ultimate-ttt` and `reversi` each produced **one** match, played identically a hundred
+ * times and won by the same seat every time. Those five lines are gone, and how they went is
+ * the point: none of the five games changed a rule, they started reading
+ * `context.openingSeat` (#2487). A deterministic game now produces **two** matches, one per
+ * opening seat, and splits them exactly 50/50 - the seat that wins is the seat the shell
+ * seated first, which is the shell's business and rotates on its own. `tic-tac-toe` draws all
+ * hundred and keeps its line, because a solved game at its top tier has no balance to
+ * measure whoever opens. `checkers` stops finishing at
  * all - a `termination.test.ts`-shaped finding this file can only report. And `hand-slap`
  * moves from 35% to 12% to 100% across normal, hard and easy, which is three different bugs
  * wearing one name.
@@ -586,25 +608,6 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
       'easy is the one tier that decides it, and it hands seat one every match of 100. So the ' +
       'symmetric board is not symmetric at all - the tie on normal and hard was hiding a total ' +
       'seat-one advantage, not proving fairness. distinct 1.',
-  },
-  {
-    id: 'four-in-a-row',
-    tier: 'normal',
-    share: 1.0,
-    seeds: 1000,
-    why:
-      'seat one wins every match, and the 2000 of them are one match played 2000 times - the ' +
-      'seed changes nothing. Rounds go 2-1: whoever opens a round wins it, the game alternates ' +
-      'the opener between its own rounds, and seat one therefore opens two of three. This is ' +
-      'the exact failure context.openingSeat exists to prevent, and the game does not read it.',
-  },
-  {
-    id: 'four-in-a-row',
-    tier: 'hard',
-    share: 1.0,
-    seeds: 50,
-    why: 'identical on hard, and identically deterministic. distinct 1. easy measures 52.1%, ' +
-      'so the rules are fine and the bot is what turns the opener into the whole match.',
   },
   {
     id: 'hot-potato',
@@ -673,27 +676,6 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
       'file that a single-tier balance number means nothing.',
   },
   {
-    id: 'soccer-pool',
-    tier: 'normal',
-    share: 0.575,
-    seeds: 1000,
-    why:
-      "outside the band but inside this sample's own 6.0 points, so it needs a deeper run to " +
-      'confirm. Worth an issue regardless: bot.test.ts asserts seat one takes between 50% and ' +
-      '65% and calls it "an edge, not the match" - the game blesses in its own tests a seat ' +
-      'advantage the product-level criterion forbids. easy is 70% of only 40 decided.',
-  },
-  {
-    id: 'reversi',
-    tier: 'hard',
-    share: 0.0,
-    seeds: 50,
-    why:
-      'on hard it is not marginal at all: seat two wins all 100, from one distinct match. Two ' +
-      'near-perfect Reversi bots on a fixed opening play the same game every time and the ' +
-      'second mover wins it. distinct 1.',
-  },
-  {
     id: 'tic-tac-toe',
     tier: 'hard',
     share: null,
@@ -702,37 +684,6 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
       'every one of 100 matches drawn - which is what perfect play against perfect play does ' +
       'to noughts and crosses, so this line is a statement about the harness, not the game: ' +
       'a solved game at its top tier has no balance to measure. distinct 1.',
-  },
-  {
-    id: 'color-wars',
-    tier: 'hard',
-    share: 0.0,
-    seeds: 50,
-    why: 'seat two wins all 100 from one distinct match. Hard plays deterministically, so the ' +
-      'seed is dead weight and whoever moves second wins every time. distinct 1.',
-  },
-  {
-    id: 'mancala',
-    tier: 'hard',
-    share: 0.0,
-    seeds: 50,
-    why: 'seat two wins all 100 from one distinct match. Same shape as color-wars: a solved ' +
-      'opening played perfectly is one match, not a sample. distinct 1.',
-  },
-  {
-    id: 'pop-it',
-    tier: 'hard',
-    share: 1.0,
-    seeds: 50,
-    why: 'seat one wins all 100 from one distinct match - the mirror of color-wars, first ' +
-      'mover instead of second. distinct 1.',
-  },
-  {
-    id: 'ultimate-ttt',
-    tier: 'hard',
-    share: 1.0,
-    seeds: 50,
-    why: 'seat one wins all 100 from one distinct match. distinct 1.',
   },
 ];
 

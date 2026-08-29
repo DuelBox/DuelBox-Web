@@ -319,11 +319,17 @@ export function createState(): State {
   };
 }
 
-export function resetState(state: State): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetState(state: State, opener: SeatId = 'p1'): void {
   const fresh = createState();
   state.bodies.length = 0;
   for (const b of fresh.bodies) state.bodies.push(b);
-  state.seat = 'p1';
+  state.seat = opener;
   state.phase = 'aiming';
   state.winner = null;
   state.offset = 0;

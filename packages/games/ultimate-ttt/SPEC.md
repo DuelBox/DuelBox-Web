@@ -78,6 +78,13 @@ without counting.
 Bot thinking (0.55 s) and the settle (1.2 s) are counted in whole simulation steps. The
 only randomness is the seeded RNG, for blunders.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and this game is
+where ignoring it showed worst: on `hard` two near-perfect bots play the *same game* every
+time, and it went to seat one all 100 matches of 100. Measured at 50 seeds x both opening
+seats, equal tiers: seat one takes **50.0%** on both `normal` and `hard`. Its `hard` line
+was deleted from the balance harness's `OUTSIDE_THE_BAND` (#2487).
+
 ## The bot
 
 Negamax with an alpha-beta window. The evaluation weights a won small board far above the

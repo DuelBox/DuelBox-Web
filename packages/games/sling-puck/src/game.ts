@@ -76,7 +76,7 @@ export class SlingPuckGame implements Game {
     this.#winner = null;
     resetBotState(this.#botState.p1);
     resetBotState(this.#botState.p2);
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

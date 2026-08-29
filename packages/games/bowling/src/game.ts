@@ -102,7 +102,7 @@ export class BowlingGame implements Game {
     this.#settleSteps = 0;
     this.#thinkSteps = -1;
     this.#lastKnocked = -1;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#flip.snap(this.#shouldRotate());
   }
 

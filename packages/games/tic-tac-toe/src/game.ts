@@ -148,10 +148,13 @@ export class TicTacToeGame implements Game {
     this.#options.timeExpired = false;
     this.#matchWinner = null;
     this.#roundsPlayed = 0;
-    this.#startingSeat = 'p1';
+    // The shell's opener, never a literal `p1`. The rounds inside one match still alternate
+    // it below, but that alternation has to start from `context.openingSeat` or the SDK's
+    // own rotation across the rounds of a best-of (#2466) reaches nothing at all.
+    this.#startingSeat = context.openingSeat;
     this.#settleSteps = 0;
     this.#stepsPerSecond = 0;
-    this.#resetRound('p1');
+    this.#resetRound(this.#startingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

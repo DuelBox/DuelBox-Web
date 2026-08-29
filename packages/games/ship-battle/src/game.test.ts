@@ -44,6 +44,7 @@ interface MutableSeatInput {
   actionReleased: boolean;
   holdSeconds: number;
   holdSecondsAtRelease: number;
+  pointerCancelled: boolean;
 }
 
 function blankSeat(): MutableSeatInput {
@@ -55,6 +56,7 @@ function blankSeat(): MutableSeatInput {
     actionReleased: false,
     holdSeconds: 0,
     holdSecondsAtRelease: 0,
+    pointerCancelled: false,
   };
 }
 
@@ -112,13 +114,14 @@ function makeContext(
   botP2: BotDifficulty | null = null,
   presentation: 'shared-screen' | 'single-seat' = 'shared-screen',
   localSeat: SeatId = 'p1',
+  openingSeat: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation,
     localSeat,
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
@@ -129,9 +132,10 @@ function started(
   seed: number,
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
+  openingSeat: SeatId = 'p1',
 ): ShipBattleGame {
   const game = new ShipBattleGame();
-  game.init(makeContext(seed, botP1, botP2));
+  game.init(makeContext(seed, botP1, botP2, 'shared-screen', 'p1', openingSeat));
   return game;
 }
 
@@ -625,11 +629,27 @@ describe('determinism', () => {
     }
   });
 
-  it('tosses for the opening shot from the match seed, and both seats can win it', () => {
-    const seats = new Set<SeatId>();
-    for (let seed = 0; seed < 40; seed += 1) seats.add(started(seed).position.attacker);
-    expect(seats.size, 'the toss must be able to go either way').toBe(2);
-    expect(started(71).position.attacker).toBe(started(71).position.attacker);
+  it('opens with the seat the shell names, and tosses no coin of its own', () => {
+    // This used to be a seeded coin toss inside the game. The shell already alternates
+    // `openingSeat` across the rounds of a best-of (#2466), and a game tossing on top of
+    // that is two compensations for one advantage — see rules.ts:resetGame.
+    for (const opener of ['p1', 'p2'] as SeatId[]) {
+      for (let seed = 0; seed < 12; seed += 1) {
+        expect(started(seed, null, null, opener).position.attacker, `seed ${String(seed)}`).toBe(
+          opener,
+        );
+      }
+    }
+  });
+
+  it('plays the same seed differently from each opening seat', () => {
+    // The opener is the only difference, so this is what makes the shell's rotation reach
+    // the simulation at all rather than being a value nobody reads.
+    const asP1 = playOut(started(77, 'normal', 'normal', 'p1'));
+    const asP2 = playOut(started(77, 'normal', 'normal', 'p2'));
+    expect(asP1).not.toBeNull();
+    expect(asP2).not.toBeNull();
+    expect(asP2).not.toBe(asP1);
   });
 
   it('starts a rematch from the same seed in the same place', () => {
@@ -900,16 +920,22 @@ describe('seat symmetry', () => {
   });
 
   it('is balanced between the seats when the two tiers are equal', () => {
+    // Every seed is played twice, once from each opening seat, exactly as the balance
+    // harness does. That is the only honest way to measure a seat here now: the game no
+    // longer tosses its own coin, so a sweep from one opening seat would measure the
+    // first-mover advantage of a symmetric race and call it a seat effect.
     for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
       let p1 = 0;
       let decided = 0;
       for (let seed = 0; seed < 40; seed += 1) {
-        const winner = playOut(started(300 + seed * 11, tier, tier));
-        if (winner === null || winner === 'draw') continue;
-        decided += 1;
-        if (winner === 'p1') p1 += 1;
+        for (const opener of ['p1', 'p2'] as SeatId[]) {
+          const winner = playOut(started(300 + seed * 11, tier, tier, opener));
+          if (winner === null || winner === 'draw') continue;
+          decided += 1;
+          if (winner === 'p1') p1 += 1;
+        }
       }
-      expect(decided, `${tier} decided nothing`).toBeGreaterThan(35);
+      expect(decided, `${tier} decided nothing`).toBeGreaterThan(70);
       const share = p1 / decided;
       expect(share, `${tier}: p1 took ${String(p1)} of ${String(decided)}`).toBeGreaterThan(0.3);
       expect(share, `${tier}: p1 took ${String(p1)} of ${String(decided)}`).toBeLessThan(0.7);

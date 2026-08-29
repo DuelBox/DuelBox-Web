@@ -372,8 +372,12 @@ queen* · *The queen first* · *Foul — a puck goes back* · *Running* · *Fram
   "clear your six" and a points system needs a match structure to be worth anything.
 - **Thumbing, back-hand strokes, and the rule against a striker touching the baseline circles.**
   All are real carrom; none of them is expressible with a slide, an angle and a power.
-- **Alternating the break.** Seat one always breaks, and the measured advantage is real if
-  small. Fixing it needs a match structure — best of three frames with the break alternating —
-  which is the shell's business, not this game's.
+- ~~**Alternating the break.**~~ **Done, at the layer that owns it.** The break used to be
+  seat one's every time and the measured advantage was real if small: the balance harness put
+  seat one at **61.4%** of 88 decided matches. `resetState` now takes the break from
+  `context.openingSeat`, which the SDK alternates across the rounds of a best-of (#2466,
+  #2487) — the match structure this entry asked for, supplied by the shell rather than
+  invented here. The harness measures **56.5%** of 92 at 50 seeds × both opening seats on
+  `normal`; the residue is not the break.
 - **Spin.** A carrom striker can be cut; this one cannot. Adding it would mean a third number
   in the stroke and a fourth in the bot's search.

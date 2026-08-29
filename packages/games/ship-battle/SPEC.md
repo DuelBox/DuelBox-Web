@@ -193,9 +193,9 @@ mean **78–98 s**, worst observed **111 s**, 27–39 turns.
 Trivially deterministic, with four places that needed care.
 
 - **All randomness is seeded** and comes from the one `Rng` on the `GameContext`. There are
-  exactly three draws: the opening toss (`rng.bool()` once per match), the bot's stray-shot
-  roll and target index (once per bot shot), and the bot's interception misjudgement
-  (`rng.float()` twice, at the moment of firing).
+  exactly two draws: the bot's stray-shot roll and target index (once per bot shot), and
+  the bot's interception misjudgement (`rng.float()` twice, at the moment of firing). There
+  used to be a third — an opening `rng.bool()` — see the weather gauge below.
 - **The misjudgement is drawn once and held for the whole flight.** A fresh error every
   step averages to zero, every tier intercepts perfectly, and the difficulty does nothing —
   the bug `@duelbox/game-sdk`'s `bot-judgement` module exists to stop being written a
@@ -209,10 +209,18 @@ A whole bot match stepped at 120 Hz reaches the same winner, the same turn count
 same breach pattern as the same match stepped at 60 Hz, with the plate agreeing to nine
 decimal places. Two runs from one seed hash identically over every draw call.
 
-The opening attacker is a **coin toss from the match seed**. A symmetric race hands the
-match to whoever shoots first, and the honest answer is the one two people would reach for:
-toss for the weather gauge, in front of both of them, before a shot is fired. It falls
-1003/2000 to seat one over 2000 seeds.
+The opening attacker is **`context.openingSeat`** — the shell's, not ours.
+
+A symmetric race hands the match to whoever shoots first, so the weather gauge has to be
+decided somewhere. This game used to decide it itself, with `openingAttacker(rng)`: a coin
+tossed from the match seed, in front of both devices, that fell 1003/2000 to seat one over
+2000 seeds. That was the right answer at the wrong layer. The SDK already alternates
+`openingSeat` across the rounds of a best-of so first-mover advantage washes out over the
+match rather than over the seeds (#2466), and a game tossing on top of that is two
+compensations for one advantage with neither able to see the other. The coin is gone
+(#2487). Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one takes
+**50.0%** of 100 decided matches, and all 50 seed pairs play out differently when only the
+opening seat changes.
 
 ## The bot
 
@@ -292,9 +300,10 @@ Two numbers worth reading honestly:
 first won 300 times. Two perfect gunners firing at sections the other's plate cannot reach
 sink each other at the same rate, so the first shell fired is the whole margin — the mean
 margin in a hard-versus-hard match is 1.0 sections. This is not a defect being tolerated: a
-symmetric race has that property by construction, and the seeded coin toss is the reason it
-is fair rather than the reason it is close. `easy` and `normal` are far noisier, with the
-first mover taking 61 % and 63 %.
+symmetric race has that property by construction, and the alternating `openingSeat` is the
+reason it is fair rather than the reason it is close — the balance harness plays every seed
+from both opening seats, so a first-mover margin of 100% still measures 50.0% to seat one.
+`easy` and `normal` are far noisier, with the first mover taking 61 % and 63 %.
 
 **`easy` loses to a player who never touches the plate 46 % of the time** (65 wins in 120).
 That is the right shape for an easy tier: a starting plate covers two of twelve sections, so

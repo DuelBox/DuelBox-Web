@@ -123,25 +123,28 @@ export function createGame(): Game {
   };
 }
 
-export function resetGame(game: Game): void {
+/**
+ * Reset the board, with `opener` holding the weather gauge.
+ *
+ * A symmetric race hands the match to whoever shoots first, so who fires first has to be
+ * decided somewhere — and it used to be decided here, by `openingAttacker(rng)`, a seeded
+ * coin tossed in front of both devices. That was the right answer at the wrong layer. The
+ * shell already decides it: `GameContext.openingSeat` alternates across the rounds of a
+ * best-of so first-mover advantage washes out over the match rather than over the seeds
+ * (#2466, #2487), and a game that tossed its own coin on top of it would be compensating
+ * twice — once here and once in the shell — with neither half able to see the other.
+ *
+ * So the toss is gone and the opener is the shell's. `p1` is the default only so the rules
+ * tests can name a concrete side.
+ */
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   resetShip(game.p1);
   resetShip(game.p2);
-  game.attacker = 'p1';
+  game.attacker = opener;
   game.phase = 'aim';
   game.target = 0;
   game.lastResult = 'none';
   game.turns = 0;
-}
-
-/**
- * Who fires first: a coin toss, from the match's own seeded stream.
- *
- * A symmetric race hands the match to whoever shoots first, and the honest answer to that
- * is the one two people would reach for — toss for the weather gauge, in front of both of
- * them, before a shot is fired. Seeded, so both devices toss the same coin.
- */
-export function openingAttacker(rng: Rng): SeatId {
-  return rng.bool() ? 'p1' : 'p2';
 }
 
 export function otherOf(seat: SeatId): SeatId {

@@ -150,7 +150,7 @@ export class ShutTheBoxGame implements Game {
     this.#deadSteps = 0;
     this.#thinkSteps = -1;
     this.#settleSteps = 0;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#cursor.reset();
     this.#flip.snap(this.#shouldRotate());
   }

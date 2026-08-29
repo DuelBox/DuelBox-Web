@@ -34,7 +34,11 @@ Alternating strokes rather than playing one ball out at a time, because both bal
 the screen and each player can see how the other is getting on. **The two balls never
 interact** — a ball at rest in another's line is marked and lifted, exactly as it is on a
 real green — so nothing is gained by playing first, and the seats simply alternate the
-honour hole by hole.
+honour hole by hole, starting from `context.openingSeat` rather than from a literal `p1`.
+The SDK alternates that opener across the rounds of a best-of (#2466); a game that ignored
+it would leave the rotation reaching nothing. Measured at 50 seeds x both opening seats on
+`normal`, equal tiers: seat one takes **50.0%** of 100 decided matches, and all 50 seed
+pairs play out differently when only the opening seat changes.
 
 ## Scoring and the win condition
 

@@ -99,7 +99,13 @@ export function createGame(): Game {
   return game;
 }
 
-export function resetGame(game: Game): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
     const row = rowOf(slot);
     // Three rows each, with two empty rows between them.
@@ -107,7 +113,7 @@ export function resetGame(game: Game): void {
     else if (row > 4) game.slots[slot] = { seat: 'p1', kind: 'man' };
     else game.slots[slot] = null;
   }
-  game.toMove = 'p1';
+  game.toMove = opener;
   game.chain = -1;
 }
 

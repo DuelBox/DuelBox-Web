@@ -242,6 +242,12 @@ export interface Game {
   readonly p2: Ball;
   /** Who putts next. A turn game has to answer this. */
   seat: SeatId;
+  /**
+   * Who tees off on hole one. The shell's `context.openingSeat`, never a literal `p1` — the
+   * SDK alternates it across the rounds of a best-of (#2466), and a game that always opened
+   * with seat one would leave that rotation reaching nothing.
+   */
+  opener: SeatId;
   phase: Phase;
   /** 0-based index into {@link COURSE}. */
   hole: number;
@@ -287,6 +293,7 @@ export function createGame(): Game {
     p1: ball(),
     p2: ball(),
     seat: 'p1',
+    opener: 'p1',
     phase: 'aiming',
     hole: 0,
     points: { p1: 0, p2: 0 },
@@ -301,7 +308,8 @@ export function createGame(): Game {
   return game;
 }
 
-export function resetGame(game: Game): void {
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
+  game.opener = opener;
   game.hole = 0;
   game.points.p1 = 0;
   game.points.p2 = 0;
@@ -324,7 +332,7 @@ export function placeForHole(game: Game): void {
   const hole = holeAt(game.hole);
   placeOnTee(game.p1, hole);
   placeOnTee(game.p2, hole);
-  game.seat = game.hole % 2 === 0 ? 'p1' : 'p2';
+  game.seat = game.hole % 2 === 0 ? game.opener : otherOf(game.opener);
   game.phase = 'aiming';
   game.lastSunk = false;
   game.lastSplashed = false;

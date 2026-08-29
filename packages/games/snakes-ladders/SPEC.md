@@ -244,10 +244,15 @@ always upright. The rules and the simulation are byte-identical; only the rotati
 
 ## What is not specified here
 
-- **Who opens.** Seat one always rolls first and always has, in every turn game in the
-  catalogue. Nothing in `match.ts` alternates it across the rounds of a best-of, so the
-  first-mover edge measured above does not wash out over a match. That is a shell-level
-  question and is reported as a new issue rather than solved here.
+- ~~**Who opens.**~~ **Answered.** It was seat one, always, in every turn game in the
+  catalogue — the issue this entry reported. `match.ts` alternates the opener across the
+  rounds of a best-of now (#2466) and publishes it as `context.openingSeat`; `resetPosition`
+  reads it (#2487), so the first-mover edge measured above washes out over a match instead of
+  landing on the same chair every time. The balance harness measures seat one at **50.0%** of
+  100 decided matches at 50 seeds × both opening seats on `normal`, and all 50 seed pairs end
+  differently when only the opening seat changes. What is still open is #2489: the bot ladder
+  above was measured from one seat order and so carries the first-mover edge inside its tier
+  numbers.
 - **Interaction between the players.** There is none: two tokens race up one board and never
   affect each other. Every mechanism that would add some — bumping, blocking, stealing a die
   — either breaks the termination proof or takes a decision away from the person whose turn

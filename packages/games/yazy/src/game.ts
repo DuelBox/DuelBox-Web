@@ -183,7 +183,7 @@ export class YazyGame implements Game {
     this.#focus = 'dice';
     this.#thinkSteps = -1;
     this.#settleSteps = 0;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#sheetCursor.reset();
     this.#diceCursor.reset();
     this.#flip.snap(this.#shouldRotate());

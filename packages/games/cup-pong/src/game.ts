@@ -87,7 +87,7 @@ export class CupPongGame implements Game {
     this.#winner = null;
     resetBotState(this.#botP1State);
     resetBotState(this.#botP2State);
-    resetGame(this.#table);
+    resetGame(this.#table, context.openingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

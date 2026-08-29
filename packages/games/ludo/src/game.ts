@@ -138,7 +138,7 @@ export class LudoGame implements Game {
     this.#thinkSteps = -1;
     this.#passSteps = 0;
     this.#settleSteps = 0;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#cursor.reset();
     this.#flip.snap(this.#shouldRotate());
   }

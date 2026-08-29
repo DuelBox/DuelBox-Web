@@ -254,6 +254,13 @@ parts that do not.
   outcome, the pointer's world position and the sight's walking point are all preallocated.
   The bot's cut list is a 12-bit mask, which is also why the grove is capped at twelve canes.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetState`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **50.0%** of 86 decided matches, and 43 of the 50 seed pairs end differently when only
+the opening seat changes.
+
 ## The bot
 
 It reads cane positions, stone positions and the flight model. That is precisely what is

@@ -103,6 +103,13 @@ would make the bot's misses look mechanical, clustering at the corners of a squa
 and score it as a miss forever after, so the draw is nudged into `(0, 1]`. A test throws
 five thousand darts asserting every one is finite.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in the
+game's own `#active`. Measured at 50 seeds x both opening seats on `normal`, equal tiers:
+seat one takes **50.0%** of 100 decided matches, and all 50 seed pairs end differently when
+only the opening seat changes.
+
 ## The bot
 
 It plays the game a person plays: treble twenty while the score is high, the finishing

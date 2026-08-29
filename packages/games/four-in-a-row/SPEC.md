@@ -28,6 +28,20 @@ mechanic is genuinely descriptive and the trademarked one is not ours to use.
 row in any direction, or drawn when the board fills. As with Tic Tac Toe the outcome is
 reported rather than derived, because "four in a row" is not a generic condition.
 
+**Who opens round one is `context.openingSeat`, and it decides the match.** The starting
+seat alternates between the three rounds, so whoever opens round one opens two of them —
+and against an equal bot whoever opens a round of Connect Four wins it. Rounds go 2–1 to the
+opener, every time. Started from a literal `p1`, that made seat one win **every one of 2000
+matches** in the balance harness at `normal` and all 100 at `hard`, from a single distinct
+match: the seed changed nothing because nothing about the game was random. It reads the
+shell's opener now (#2466, #2487), the shell alternates it across the rounds of a best-of,
+and the harness measures **50.0%** to seat one at 50 seeds × both opening seats on both
+`normal` and `hard`. Both of the game's `OUTSIDE_THE_BAND` lines were deleted.
+
+The 2–1 rounds are not a defect to fix underneath that. A deterministic solved-ish game
+played by two equal bots *should* be decided by who moves first; what must not happen is
+the same seat moving first for ever.
+
 ## Controls
 
 | | Pointer | Keyboard |

@@ -249,6 +249,19 @@ export function GameHost({
     function onPointerUp(event: PointerEvent): void {
       input.pointerUp(event.pointerId);
     }
+    /**
+     * A cancellation is not a release, and must never be delivered as one.
+     *
+     * `pointercancel` is the browser saying the gesture *did not happen* — a system
+     * edge-swipe, palm rejection, an incoming call, the pointer being taken away. Wired
+     * to `onPointerUp`, as it was until #2480, it produced an ordinary `actionReleased`,
+     * so a player who started to aim and got a system gesture did not get their aim
+     * cancelled: they got a shot they never took, at whatever the aim happened to be. On
+     * a phone, where an edge swipe is how you leave an app, that is not an edge case.
+     */
+    function onPointerCancel(event: PointerEvent): void {
+      input.pointerCancel(event.pointerId);
+    }
     function onKeyDown(event: KeyboardEvent): void {
       // Escape belongs to the shell's pause menu, so it is never swallowed here.
       if (event.code === 'Escape') return;
@@ -290,7 +303,7 @@ export function GameHost({
     el.addEventListener('pointerdown', onPointerDown);
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerup', onPointerUp);
-    el.addEventListener('pointercancel', onPointerUp);
+    el.addEventListener('pointercancel', onPointerCancel);
     el.addEventListener('contextmenu', onContextMenu);
     globalThis.addEventListener('keydown', onKeyDown);
     globalThis.addEventListener('keyup', onKeyUp);
@@ -381,7 +394,7 @@ export function GameHost({
       el.removeEventListener('pointerdown', onPointerDown);
       el.removeEventListener('pointermove', onPointerMove);
       el.removeEventListener('pointerup', onPointerUp);
-      el.removeEventListener('pointercancel', onPointerUp);
+      el.removeEventListener('pointercancel', onPointerCancel);
       el.removeEventListener('contextmenu', onContextMenu);
       globalThis.removeEventListener('keydown', onKeyDown);
       globalThis.removeEventListener('keyup', onKeyUp);

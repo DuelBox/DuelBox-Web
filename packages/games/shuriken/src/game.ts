@@ -123,7 +123,7 @@ export class ShurikenGame implements Game {
     this.#pointerAiming = false;
     resetBotPlan(this.#p1Plan);
     resetBotPlan(this.#p2Plan);
-    resetState(this.#state, this.#rng);
+    resetState(this.#state, this.#rng, context.openingSeat);
     this.#flip.snap(this.#shouldRotate());
   }
 

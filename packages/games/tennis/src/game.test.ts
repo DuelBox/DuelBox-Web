@@ -32,6 +32,7 @@ interface MutableSeatInput {
   actionReleased: boolean;
   holdSeconds: number;
   holdSecondsAtRelease: number;
+  pointerCancelled: boolean;
 }
 
 function blankSeat(): MutableSeatInput {
@@ -43,6 +44,7 @@ function blankSeat(): MutableSeatInput {
     actionReleased: false,
     holdSeconds: 0,
     holdSecondsAtRelease: 0,
+    pointerCancelled: false,
   };
 }
 

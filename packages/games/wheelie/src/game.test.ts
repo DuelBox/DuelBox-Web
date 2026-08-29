@@ -52,6 +52,7 @@ function seatInput(overrides: Partial<SeatInput> = {}): SeatInput {
     actionReleased: false,
     holdSeconds: 0,
     holdSecondsAtRelease: 0,
+    pointerCancelled: false,
     ...overrides,
   };
 }

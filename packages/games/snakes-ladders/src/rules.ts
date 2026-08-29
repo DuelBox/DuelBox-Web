@@ -196,13 +196,19 @@ export function createPosition(): Position {
 }
 
 /** Put a position back to the start without allocating a new one. */
-export function resetPosition(position: Position): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetPosition(position: Position, opener: SeatId = 'p1'): void {
   position.dice.fill(0);
   position.p1 = START;
   position.p2 = START;
   position.p1Bitten = 0;
   position.p2Bitten = 0;
-  position.seat = 'p1';
+  position.seat = opener;
   position.phase = 'rolling';
   position.usedDie = -1;
   position.lastFrom = START;

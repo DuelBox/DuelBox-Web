@@ -134,6 +134,13 @@ rotation target archery actually uses — p1 p2, then p2 p1, then p1 p2. One sea
 twice running, across the boundary between two arrows, and that is the point of the
 rotation rather than a flaw in it: over twelve arrows each seat leads exactly six.
 
+**The alternation starts from `context.openingSeat`, not from the literal `p1`.** Twelve
+arrows is an even number, so each seat leads six whichever seat opens and the within-match
+balance does not depend on this — but the SDK alternates the opener across the rounds of a
+best-of (#2466), and a game that always opened with seat one would leave that rotation
+reaching nothing. `leaderFor` and `shooterFor` take the opener as their starting value and
+default to `p1` only so the rules tests can name a concrete order.
+
 **Every turn draws the same number of values, in a fixed order.** A turn draws exactly four
 floats for the wobble, and a bot turn four more (two for its hand, two for the Box-Muller
 dither). The counts are unconditional and the turn order is fixed, so each seat's draws sit

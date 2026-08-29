@@ -55,6 +55,100 @@ test.describe('the keyboard', () => {
     expect(tag).toBe('CANVAS');
   });
 
+  /**
+   * The pause menu is the product's only modal, and it is raised mid-match on a device two
+   * people are sharing. It declares `aria-modal="true"` — assistive technology is told the
+   * rest of the page does not exist — so Tab must not be able to walk out of it into a page
+   * that has just been declared inert.
+   */
+  test('Tab cannot walk out of the pause menu', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    const paused = page.getByRole('dialog', { name: 'Paused' });
+    await expect(paused).toBeVisible();
+
+    // More presses than there are stops, in both directions: a trap that only survives one
+    // lap is not a trap, and Shift+Tab off the first control is the way out that gets
+    // forgotten.
+    const stops = await paused.locator('a[href], button:not([disabled])').count();
+    expect(stops, 'the panel has controls to cycle through').toBeGreaterThan(1);
+
+    const inDialog = () =>
+      page.evaluate(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        const active = document.activeElement;
+        return dialog !== null && active !== null && dialog.contains(active);
+      });
+
+    for (let press = 1; press <= stops + 3; press += 1) {
+      await page.keyboard.press('Tab');
+      expect(await inDialog(), `Tab ${String(press)} left the panel`).toBe(true);
+    }
+    for (let press = 1; press <= stops + 3; press += 1) {
+      await page.keyboard.press('Shift+Tab');
+      expect(await inDialog(), `Shift+Tab ${String(press)} left the panel`).toBe(true);
+    }
+  });
+
+  /**
+   * Closing the menu used to drop focus on `<body>`, which loses a keyboard player their
+   * place entirely.
+   *
+   * Resuming hands it back to the board rather than to the pause button that opened it,
+   * and deliberately: the HUD stops rendering that button the moment the match pauses, so
+   * there is no such node to return to, and a live match belongs to the board anyway —
+   * which is where the host puts focus on every return to play.
+   */
+  test('closing the pause menu hands focus back to the board', async ({ page }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.tagName ?? 'none'))
+      .toBe('CANVAS');
+    // And the pause button is back where a player left it.
+    await expect(page.getByRole('button', { name: 'Pause the match' })).toBeVisible();
+  });
+
+  test('quitting from the pause menu hands focus to the lobby, never to the body', async ({
+    page,
+  }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
+      timeout: 10_000,
+    });
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    await page.getByRole('button', { name: 'Quit match' }).click();
+
+    await expect(page.getByRole('button', { name: 'Play together here' })).toBeVisible();
+    // A control of the lobby that replaced the match, rather than the body. Which control
+    // is deliberately not asserted: the lobby grew a set of options while this was being
+    // written, and "focus is somewhere a keyboard can carry on from" is the property that
+    // matters, not which of them happens to come first.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const active = document.activeElement;
+          if (!(active instanceof HTMLElement)) return 'none';
+          const inMain = active.closest('main') !== null;
+          return `${active.tagName}|${inMain ? 'in-main' : 'elsewhere'}`;
+        }),
+      )
+      .toMatch(/^(BUTTON|INPUT|A|CANVAS)\|in-main$/);
+  });
+
   test('Escape still reaches the pause menu, and is never swallowed', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     await page.getByRole('button', { name: 'Play together here' }).click();

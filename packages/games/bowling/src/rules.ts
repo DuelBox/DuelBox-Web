@@ -173,10 +173,16 @@ export function resetBall(game: Game): void {
   ball.down = false;
 }
 
-export function resetGame(game: Game): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   game.rollsP1.length = 0;
   game.rollsP2.length = 0;
-  game.seat = 'p1';
+  game.seat = opener;
   game.phase = 'aiming';
   game.frameP1 = 0;
   game.frameP2 = 0;

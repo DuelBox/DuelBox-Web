@@ -127,9 +127,15 @@ gate on. `game.test.ts` asserts the traces are identical.
 ## The lead alternates, and a match can only end on an even round **[ours]**
 
 Whoever swings second in a round has seen what they have to beat. In a game whose only
-decision is how far to push a gamble, that is worth something — so seat one leads round
-one, seat two leads round two, and so on, and the match may only be called after an even
-number of rounds. Each seat then takes the informed swing exactly as often.
+decision is how far to push a gamble, that is worth something — so the opening seat leads
+round one, the other seat leads round two, and so on, and the match may only be called after
+an even number of rounds. Each seat then takes the informed swing exactly as often.
+
+The seat that leads round one is `context.openingSeat`, not a literal `p1`: the SDK
+alternates it across the rounds of a best-of (#2466), and a game that always opened with
+seat one would leave that rotation reaching nothing. Measured at 50 seeds x both opening
+seats on `normal`, equal tiers: seat one takes **50.0%** of 100 decided matches, and all 50
+seed pairs play out differently when only the opening seat changes.
 
 Measured, because a fairness claim without a number is a hope. Equal tiers, 900 matches a
 row, seat one's share of the decided matches:

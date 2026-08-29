@@ -78,7 +78,7 @@ export class KnifeThrowerGame implements Game {
     this.#splinterFlash = 0;
     resetBotState(this.#botP1State);
     resetBotState(this.#botP2State);
-    resetGame(this.#position, this.#rng);
+    resetGame(this.#position, this.#rng, context.openingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

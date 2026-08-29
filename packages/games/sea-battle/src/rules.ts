@@ -50,6 +50,13 @@ export interface Game {
   readonly p2: Fleet;
   /** Whose turn to fire. Meaningless while placing, when both act at once. */
   seat: SeatId;
+  /**
+   * Who fires the first shot once both fleets are down. The shell's
+   * `context.openingSeat`, never a literal `p1`: the SDK alternates it across the rounds
+   * of a best-of so first-mover advantage washes out (#2466), and in a symmetric race
+   * that is the whole match. Held on the game because firing starts long after `resetGame`.
+   */
+  opener: SeatId;
   phase: Phase;
   /** How many ships each seat has placed. Both must reach FLEET.length to start firing. */
   placedP1: number;
@@ -69,6 +76,7 @@ export function createGame(): Game {
     p1: createFleet(),
     p2: createFleet(),
     seat: 'p1',
+    opener: 'p1',
     phase: 'placing',
     placedP1: 0,
     placedP2: 0,
@@ -81,10 +89,11 @@ function resetFleet(fleet: Fleet): void {
   fleet.occupancy.fill(-1);
 }
 
-export function resetGame(game: Game): void {
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   resetFleet(game.p1);
   resetFleet(game.p2);
-  game.seat = 'p1';
+  game.seat = opener;
+  game.opener = opener;
   game.phase = 'placing';
   game.placedP1 = 0;
   game.placedP2 = 0;
@@ -190,7 +199,7 @@ export function recordPlacement(game: Game, seat: SeatId): void {
   else game.placedP2 += 1;
   if (game.placedP1 === FLEET.length && game.placedP2 === FLEET.length) {
     game.phase = 'firing';
-    game.seat = 'p1';
+    game.seat = game.opener;
   }
 }
 

@@ -1,0 +1,130 @@
+/*
+ * The pre-match options: the bot's tier and the match length.
+ *
+ * Sized from the touch-target token rather than from a font size, because this sits on the
+ * screen a pair taps on a phone before every match, and a 32px radio row is a mis-tap that
+ * starts a match at the wrong difficulty.
+ */
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-4);
+  justify-content: center;
+  width: 100%;
+}
+
+/* Side by side where there is room for both, one above the other where there is not. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--db-space-2);
+  flex: 1 1 15rem;
+  max-width: 24rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  font-size: var(--db-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--db-faint);
+}
+
+/*
+ * Equal columns, as many as fit.
+ *
+ * Three across on a phone held upright, two and one on a 320px screen, and never a row of
+ * options at three different widths — which is what flex wrapping gave, and which reads as
+ * one option being more important than the others.
+ */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: var(--db-space-2);
+}
+
+/*
+ * The whole option is the target, not just the dot: `min-height` meets the token and the
+ * label wraps the input, so a thumb landing anywhere on the words selects the tier.
+ */
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--db-space-2);
+  min-width: 0;
+  min-height: var(--db-touch-target);
+  padding-block: var(--db-space-2);
+  padding-inline: var(--db-space-3);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font-size: var(--db-text-base);
+  cursor: pointer;
+}
+
+/*
+ * The chosen option differs by weight, border and background as well as by hue, and the
+ * radio keeps its own filled dot — so which one is picked survives greyscale, a projector
+ * and a player who cannot separate blue from grey (CLAUDE.md rule 7).
+ */
+.chosen {
+  border-color: var(--db-brand);
+  background: var(--db-brand-tint);
+  color: var(--db-ink);
+  font-weight: 700;
+}
+
+/*
+ * The native radio, kept visible and kept native.
+ *
+ * Hiding it and drawing a replacement is the usual move and it is how focus rings and
+ * screen-reader semantics get lost. It is only resized here; the browser draws it, and the
+ * site-wide :focus-visible ring lands on it.
+ */
+.radio {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  accent-color: var(--db-brand);
+  flex: 0 0 auto;
+}
+
+/* And the ring is repeated on the whole option, so a keyboard player sees the target they
+   are about to choose rather than a 19px dot inside it. */
+.choice:has(.radio:focus-visible) {
+  outline: 3px solid var(--db-focus);
+  outline-offset: 2px;
+}
+
+/* Allowed to wrap: on a 320px screen "One round" over two lines is better than an
+   option that overflows its column. */
+.name {
+  text-align: center;
+}
+
+/* The tier ladder, counted out. Reads in greyscale, and reads to somebody who does not
+   know whether this game's "hard" is harder than its "normal". */
+.pips {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+  letter-spacing: 0.1em;
+  color: var(--db-muted);
+}
+
+.chosen .pips {
+  color: var(--db-brand-deep);
+}
+
+@media (hover: hover) {
+  .choice:hover {
+    border-color: var(--db-brand);
+  }
+}

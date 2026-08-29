@@ -85,7 +85,7 @@ export class CornholeGame implements Game {
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#matchWinner = null;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#resetAim();
     this.#thinkSteps = -1;
     this.#pauseSteps = 0;

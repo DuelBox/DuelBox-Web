@@ -32,7 +32,11 @@ reported to the shell rather than derived from a score, because "a line of three
 something a generic win condition can express — see `match.ts` and its `outcome` field.
 
 The starting seat alternates between rounds, so neither player has the first-move
-advantage twice running.
+advantage twice running — and the alternation starts from `context.openingSeat` rather than
+from a literal `p1`. The shell alternates that opener across the rounds of a best-of for the
+same reason (#2466); starting our own rotation anywhere else would leave it reaching
+nothing. With an odd `MAX_ROUNDS` the opener takes two of three rounds, which is exactly the
+failure that gave Connect Four seat one 100% of 2000 matches before #2487.
 
 ## Controls
 

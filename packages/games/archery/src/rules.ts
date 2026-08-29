@@ -298,14 +298,18 @@ export function arrowInRoundFor(shotIndex: number): number {
  * exactly the wind they are about to shoot into. That is a small advantage and it is a
  * real one, so neither seat is allowed to hold it twice running. With an even number of
  * arrows in the match each seat leads exactly half of them.
+ *
+ * The alternation starts from `opener`, which is the shell's `context.openingSeat` rather
+ * than a literal `p1`: the SDK alternates that across the rounds of a best-of so the
+ * remaining half-arrow of first-mover advantage washes out over a match too.
  */
-export function leaderFor(arrowIndex: number): SeatId {
-  return arrowIndex % 2 === 0 ? 'p1' : 'p2';
+export function leaderFor(arrowIndex: number, opener: SeatId = 'p1'): SeatId {
+  return arrowIndex % 2 === 0 ? opener : otherSeat(opener);
 }
 
 /** Whose shot this is. */
-export function shooterFor(shotIndex: number): SeatId {
-  const leader = leaderFor(arrowFor(shotIndex));
+export function shooterFor(shotIndex: number, opener: SeatId = 'p1'): SeatId {
+  const leader = leaderFor(arrowFor(shotIndex), opener);
   return shotIndex % 2 === 0 ? leader : otherSeat(leader);
 }
 

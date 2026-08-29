@@ -124,7 +124,7 @@ export class CarromGame implements Game {
     this.#settleSteps = 0;
     this.#thinkSteps = -1;
     this.#potted.length = 0;
-    resetState(this.#state);
+    resetState(this.#state, context.openingSeat);
     placeStriker(this.#state);
     this.#flip.snap(this.#shouldRotate());
   }

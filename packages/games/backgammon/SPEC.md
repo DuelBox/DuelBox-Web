@@ -246,6 +246,13 @@ shown.
   steps, not of this game, and it is the reason the fixed timestep exists.
 - Nothing in `render` touches the position — a test renders twice and compares.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetPosition`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat
+one takes **50.0%** of 100 decided matches, and all 50 seed pairs end differently when only
+the opening seat changes.
+
 ## The bot
 
 | | Blunder rate | Hunts blots | Counts shots against its own |

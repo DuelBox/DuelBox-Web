@@ -70,6 +70,12 @@ export interface Game {
   readonly bags: Bag[];
   phase: Phase;
   toThrow: SeatId;
+  /**
+   * Who throws first in round zero. The shell's `context.openingSeat`, never a literal
+   * `p1` — the SDK alternates it across the rounds of a best-of (#2466), and a game that
+   * always opened with seat one would leave that rotation reaching nothing.
+   */
+  opener: SeatId;
   /** Bags each seat has left this round. */
   readonly left: { p1: number; p2: number };
   /** Match score, after cancellation each round. */
@@ -91,6 +97,7 @@ export function createGame(): Game {
     bags: [],
     phase: 'aiming',
     toThrow: 'p1',
+    opener: 'p1',
     left: { p1: BAGS_PER_ROUND, p2: BAGS_PER_ROUND },
     score: { p1: 0, p2: 0 },
     round: 0,
@@ -100,10 +107,11 @@ export function createGame(): Game {
   };
 }
 
-export function resetGame(game: Game): void {
+export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   game.bags.length = 0;
   game.phase = 'aiming';
-  game.toThrow = 'p1';
+  game.opener = opener;
+  game.toThrow = opener;
   game.left.p1 = BAGS_PER_ROUND;
   game.left.p2 = BAGS_PER_ROUND;
   game.score.p1 = 0;
@@ -238,7 +246,7 @@ export function settleRound(game: Game): void {
   game.left.p2 = BAGS_PER_ROUND;
   game.round += 1;
   // The seat that did not throw first last round throws first now.
-  game.toThrow = game.round % 2 === 0 ? 'p1' : 'p2';
+  game.toThrow = game.round % 2 === 0 ? game.opener : otherOf(game.opener);
 }
 
 export function roundOver(game: Readonly<Game>): boolean {

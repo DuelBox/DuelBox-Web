@@ -147,7 +147,9 @@ making the arena impassable; over the full 450 matches a tier reported below it 
 
 The obvious thing is to give both the same starting stance, and it is wrong. A blade only
 moves while its owner is parrying, so the two stances march in lockstep — and starting them
-*equal* starts them in **opposite phases** of that lockstep, because seat one throws first.
+*equal* starts them in **opposite phases** of that lockstep, because the opening seat throws
+first (`context.openingSeat`, which the shell alternates — #2466, #2487 — so over a best-of
+it is not the same seat each time).
 Measured over three independent families of 150 `hard` matches, seat one won **40.5%, 40.7%
 and 39.5%** of the decided ones. That is not noise and it is not a difficulty ladder; it is a
 seat advantage, and it was invisible in every other measurement.

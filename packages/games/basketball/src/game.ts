@@ -104,7 +104,7 @@ export class BasketballGame implements Game {
     this.#winner = null;
     resetBotState(this.#botP1State);
     resetBotState(this.#botP2State);
-    resetCourt(this.#court);
+    resetCourt(this.#court, context.openingSeat);
     this.#flip.snap(this.#shouldRotate());
   }
 

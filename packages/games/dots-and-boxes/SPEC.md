@@ -80,6 +80,13 @@ Bot thinking (0.4 s) and the settle after the last edge (1.1 s) are counted in w
 simulation steps. The bot's only randomness is the seeded RNG — for its blunders and for
 choosing among equally safe edges.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466). The field for it
+was already here — a `#startingSeat` and a `#resetRound(startingSeat)` — and nothing ever
+put the shell's value in it. Measured at 50 seeds x both opening seats, equal tiers: seat
+one takes **50.0%** of 100 decided matches on `normal`, and all 50 seed pairs play out
+differently when only the opening seat changes.
+
 ## The bot
 
 The strategy every human learns, at three levels of reliability:

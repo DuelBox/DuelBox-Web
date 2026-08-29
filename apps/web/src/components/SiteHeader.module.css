@@ -37,7 +37,14 @@
   font-weight: 500;
 }
 
+/* The header's links were the one set of controls in the product with no touch target at
+   all (#178): a 20px-tall line of text, tapped by a thumb, next to a 48px button. The
+   height comes from the token rather than from padding, so widening the target never
+   widens the row — which is what has to hold at 320px. */
 .nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
   color: var(--db-body);
 }
 
@@ -63,10 +70,38 @@
   background: var(--db-brand-deep);
 }
 
-/* The nav collapses before the primary action does: on a phone the one thing that must
-   survive is the route into a game. */
+/*
+ * On a phone the links stay and the button goes — the other way round from before.
+ *
+ * The nav used to be hidden outright below 40rem with nothing put in its place, so on the
+ * product's primary device "Games" and "How to play" were unreachable from the header
+ * (#2484). "How to play" is exactly what a pair who have never played reach for, and the
+ * only other place it appears is the footer.
+ *
+ * Dropping the button costs nothing, because `.cta` and the nav's first link are the same
+ * destination: `/games/`. The route into a game still survives the breakpoint — it is just
+ * a link now rather than a button, and it brings the second destination with it.
+ *
+ * Measured rather than assumed, which is why there is no disclosure widget here: at 320px
+ * the brand is 115px and the two 48px-tall links are 152px together, which with the gap
+ * and the 16px page gutters comes to 279 of the 288 between the gutters — on Chromium and
+ * on WebKit alike. Two links fit with room to spare. A third would not, and the 320px case
+ * in `e2e/safe-area.spec.ts` is what will say so before anyone ships it.
+ */
 @media (max-width: 40rem) {
+  /* Smaller than the 24px above only where it is load-bearing: at 320px this gap is the
+     nine pixels of headroom. Every width above that has slack, and `margin-left: auto`
+     below holds the nav against the right gutter regardless. */
+  .inner {
+    gap: var(--db-space-3);
+  }
+
   .nav {
+    margin-left: auto;
+    gap: var(--db-space-4);
+  }
+
+  .cta {
     display: none;
   }
 }

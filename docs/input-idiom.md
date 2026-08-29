@@ -52,11 +52,14 @@ The full membership:
 
 ## What the primitives can and cannot say
 
-A game reads six values per seat, through `SeatInputView` in
+A game reads eight values per seat, through `SeatInputView` in
 `packages/engine/src/input-view.ts`, and nothing else:
 
 `move` · `pointer` (null when absent) · `actionPressed` · `actionHeld` · `actionReleased`
-· `holdSeconds`
+· `holdSeconds` · `holdSecondsAtRelease` · `pointerCancelled`
+
+The last two were the first two items on the list at the end of this document, and both
+have landed: `holdSecondsAtRelease` under #2475, `pointerCancelled` under #2480.
 
 Every gesture below has to be expressible in those. Three of the five are not, and saying
 which is the point of this section.
@@ -67,7 +70,7 @@ which is the point of this section.
 | **drag** | Yes, with game-side state | `pointer !== null` on subsequent steps. The *origin* is not kept by the engine; every game that needs it stores its own. |
 | **release** | Yes, with game-side state | `actionReleased`. **The pointer is already null on that step**, so the last position must have been carried. |
 | **tap** | No | There is no tap radius anywhere. A press-and-release that travelled 300 units is indistinguishable from one that travelled none. |
-| **cancel** | **No** | `pointercancel` is wired straight to `input.pointerUp` in `GameHost.tsx:289`, which produces an ordinary `actionReleased`. A browser cancelling a gesture and a player deliberately lifting are the same event. |
+| **cancel** | Yes, as of #2480 | `pointerCancelled`, true for the one step on which the gesture was taken away. `GameHost` calls `InputManager.pointerCancel(id)` from its `pointercancel` listener, and `clear()` raises the same bit for every live pointer. A cancel **suppresses** the release, so the two can never both be true — see below. |
 | **hover** | No, and deliberately | `pointerMove` returns immediately for an unowned id, and ownership is only claimed at `pointerDown`. A mouse moving with no button down produces nothing at all. |
 
 ### The three facts every game has had to rediscover
@@ -119,17 +122,40 @@ press point — `2 × envelopeFor(logical)`, which is `min(w, h) / 100`. Express
 envelopes rather than units so it means the same on a 600-unit box and a 1080-unit one,
 and so it can never be finer than the lattice the position was quantised onto.
 
-**Cancel.** A gesture that ends without committing. Three sources, and the engine can
-distinguish none of them today:
+**Cancel.** A gesture that **abandons**: it ends, and it commits nothing. Three sources,
+and the engine now distinguishes the first two from a release:
 
 - the browser cancelling (`pointercancel`: a system gesture, palm rejection, the page
-  losing the pointer)
-- the shell pausing or the window losing focus, which calls `InputManager.clear()`
-- the player deliberately aborting — dragging back inside the deadzone and lifting
+  losing the pointer) — `pointerCancelled`
+- the shell pausing or the window losing focus, which calls `InputManager.clear()` —
+  also `pointerCancelled`, raised for every pointer that was live at the clear
+- the player deliberately aborting — dragging back inside the deadzone and lifting. Still
+  the game's own business, because only the game knows where its deadzone is; exactly one
+  game implements it (cornhole).
 
-The third is the only one a game can implement now, and exactly one game does (cornhole).
-The first two currently **fire the shot**: a `pointercancel` during an aim drag in pool, mini-golf,
-soccer-pool, bowling or carrom releases the stroke the player was still setting up.
+**A cancel is not a release, and the engine enforces that rather than asking games to
+remember it.** `pointercancel` was wired straight to `pointerUp` until #2480, so every one
+of these arrived as an ordinary `actionReleased` — and every drag-and-release aim game
+commits on `actionReleased`. A `pointercancel` during an aim drag in pool, mini-golf,
+soccer-pool, bowling or carrom therefore released the stroke the player was still setting
+up: the player did not get their aim cancelled, they got a shot they never took, at
+whatever the aim happened to be. On a phone, where the edge swipe is how you leave an app,
+that is not an edge case.
+
+The fix is one line in `#applySeat`: a cancelled step raises `pointerCancelled` and
+suppresses `actionReleased`, on that step and on every later one — the release does not
+arrive a step late instead. So the shot stops being fired in all 107 games without a line
+of game code changing, and `actionReleased` now means *the player let go* and nothing
+else. The pointer is null on the cancel step, and a press that had not been read yet is
+dropped with the rest of the gesture, so a tap-to-commit board does not play the move the
+browser has just disowned.
+
+What is still per game is the second half: **abandoning the aim the game is carrying.** A
+game that keeps `#dragOrigin`, `#power`, `#pointerAiming` or a draw count must clear it on
+`pointerCancelled`, or the aim stays armed and is committed by whatever release comes
+next. The audit below names every game that needs it; none of them has it yet, and until
+they do the engine's guarantee is the narrower one: no shot is fired *at the moment of the
+cancellation*.
 
 **Hover does not exist, and must not.** Touch has no hover; a game that used one would
 either branch on device type (rule 10) or show one player information the other cannot
@@ -480,11 +506,12 @@ delivers a change every step.
 The idiom above cannot be implemented from `SeatInputView` as it stands. Six additions,
 smallest first. None of them changes what a game already reads.
 
-1. **`pointerCancelled`** — true for exactly one step when a gesture ended without a
-   deliberate lift. `GameHost` must call a new `InputManager.pointerCancel(id)` from the
-   `pointercancel` listener instead of `pointerUp`, and `clear()` must raise it for every
-   live pointer. Without this, a system gesture fires the player's shot, and issue #2426's
-   third acceptance criterion cannot be met at all.
+1. ~~**`pointerCancelled`**~~ — **done (#2480).** True for exactly one step when a gesture
+   ended without a deliberate lift. `GameHost` calls `InputManager.pointerCancel(id)` from
+   the `pointercancel` listener instead of `pointerUp`, `clear()` raises it for every
+   pointer that was live, and a cancelled step suppresses `actionReleased`. The remaining
+   work is per game — reading the bit and dropping the carried aim — and is listed in the
+   audit.
 2. **`pointerStartX` / `pointerStartY`** — where the live gesture went down, in the same
    logical frame as `pointerX`/`pointerY`, held until the gesture ends. Replaces
    `#dragOrigin` in six games, `#dragging`/`#dragX` in two, and `stick.originX` in one, and
@@ -492,12 +519,11 @@ smallest first. None of them changes what a game already reads.
 3. **`pointerEndX` / `pointerEndY`, valid on the release step** — the last position of the
    gesture that just ended. Replaces `#pointerAiming` in three games, `#armed` in
    four-in-a-row, `#anchorFromPointer` in pop-it, and closes fact 2 above permanently.
-4. **`heldSeconds` on the release step** — either keep `holdSeconds` alive for the release
-   step, or add `releasedAfterSeconds`. Today the release step reports zero, which is why
-   sea-battle's long-press does nothing. Whichever is chosen, `input.test.ts:221` changes
-   with it and the change is a breaking one for any game reading `holdSeconds` — currently
-   seven, six of which read it only while held and one of which reads it at the release
-   and gets zero.
+4. ~~**`heldSeconds` on the release step**~~ — **done (#2475),** as
+   `holdSecondsAtRelease`: the total, valid on the release step and zero everywhere else.
+   `holdSeconds` keeps its old meaning, so nothing that read it changed. Sea Battle's
+   long-press works now; the games counting the hold by hand can drop their private
+   fields.
 5. **`wasTap`** — true on the release step when the gesture stayed within
    `2 × envelopeFor(logical)`. One definition, so a tap means the same thing in 79 games.
 6. **Presentation-aware zoning** — `GameHost` must force `split: 'shared'` and
@@ -506,8 +532,8 @@ smallest first. None of them changes what a game already reads.
    (from `getActiveSeat()`, not from `manifest.zoneSplit`) or the storm exercises splits
    the shell never uses.
 
-Two of these (1 and 6) are correctness fixes with no idiom attached and should not wait for
-the rest.
+Of the four left, 6 is a correctness fix with no idiom attached and should not wait for the
+rest.
 
 ## The audit
 
@@ -578,7 +604,7 @@ Every game measured against the idiom above. A game not listed conforms.
 
 | Item | Where |
 |---|---|
-| `pointercancel` fires the shot in every drag-and-release game | `GameHost.tsx:289` |
+| ~~`pointercancel` fires the shot in every drag-and-release game~~ — fixed in #2480; what is left is per game, in the audit above | `GameHost.tsx`, `packages/engine/src/input.ts` |
 | Single-seat still splits the pointer surface | `GameHost.tsx:154–160`, `:333–334` |
 | The fuzz harness and the shell disagree about the split for the 11 real-time `shared-board` games | `input-fuzz.ts:50` vs `GameHost.tsx:155` |
 | The system cursor is never hidden during a match | no `cursor` rule on the canvas anywhere |

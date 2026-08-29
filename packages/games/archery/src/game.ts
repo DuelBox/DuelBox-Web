@@ -174,6 +174,8 @@ export class ArcheryGame implements Game {
   #stuckCount = 0;
   #shotIndex = 0;
   #active: SeatId = 'p1';
+  /** Who leads the first arrow. The shell's, never assumed — see `GameContext.openingSeat`. */
+  #opener: SeatId = 'p1';
   #localSeat: SeatId = 'p1';
   #presentation: Presentation = 'shared-screen';
   #botP1: BotDifficulty | null = null;
@@ -210,6 +212,7 @@ export class ArcheryGame implements Game {
 
   init(context: GameContext): void {
     this.#rng = context.rng;
+    this.#opener = context.openingSeat;
     this.#localSeat = context.localSeat;
     this.#presentation = context.presentation;
     this.#botP1 = context.botDifficulty('p1');
@@ -220,7 +223,7 @@ export class ArcheryGame implements Game {
     for (const wind of this.#winds) rollWind(wind, this.#rng);
     this.#stuckCount = 0;
     this.#shotIndex = 0;
-    this.#active = shooterFor(0);
+    this.#active = shooterFor(0, this.#opener);
     this.#flightSteps = 0;
     this.#settleSteps = 0;
     this.#beginTurn();
@@ -526,7 +529,7 @@ export class ArcheryGame implements Game {
     // The boss is cleared between ends, so each round is shot at a clean target and the
     // eight arrows in it are always the ones this round put there.
     if (roundFor(this.#shotIndex) !== previousRound) this.#stuckCount = 0;
-    this.#active = shooterFor(this.#shotIndex);
+    this.#active = shooterFor(this.#shotIndex, this.#opener);
     this.#beginTurn();
   }
 

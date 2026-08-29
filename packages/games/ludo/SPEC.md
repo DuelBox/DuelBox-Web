@@ -60,6 +60,13 @@ costs one of three tokens rather than the race, and dodging is not worth the tem
 an expensive behaviour that changes every decision and no outcome would have been
 decoration, so it came out.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **50.0%** of 100 decided matches, and all 50 seed pairs end differently when only the
+opening seat changes.
+
 ## The bot
 
 | | Blunder rate | Hunts captures |

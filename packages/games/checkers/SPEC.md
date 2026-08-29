@@ -79,6 +79,14 @@ The bot's blunder rolls come from the seeded RNG; the think delay is counted in 
 simulation steps, sized on the first update once the step rate is known rather than in
 `init`, where it would be sized before the rate is known.
 
+**Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
+across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
+assumed seat one would leave that rotation reaching nothing (#2487). It is read in
+`resetGame`. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one
+takes **58.0%** of 100 decided matches, and all 50 seed pairs end differently when only the
+opening seat changes. The residue is not the opener: it is the same seat-one lean under
+either one.
+
 ## The bot
 
 Negamax with alpha-beta over a reused stack of positions — no node allocates a board or a

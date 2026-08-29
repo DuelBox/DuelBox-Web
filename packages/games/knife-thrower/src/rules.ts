@@ -215,14 +215,20 @@ export function dressLog(game: Game, rng: Rng): void {
   game.spinRate = spinRateFor(game.knives.length) * (rng.float() < 0.5 ? -1 : 1);
 }
 
-export function resetGame(game: Game, rng: Rng): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetGame(game: Game, rng: Rng, opener: SeatId = 'p1'): void {
   game.p1Points = 0;
   game.p2Points = 0;
   game.throws = 0;
   game.p1Throws = 0;
   game.p2Throws = 0;
   game.phase = 'aiming';
-  game.active = 'p1';
+  game.active = opener;
   game.settle = 0;
   game.lastOutcome = null;
   game.winner = null;

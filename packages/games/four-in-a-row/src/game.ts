@@ -171,10 +171,15 @@ export class DropFourGame implements Game {
     this.#score.winner = null;
     this.#options.timeExpired = false;
     this.#roundsPlayed = 0;
-    this.#startingSeat = 'p1';
+    // The shell's opener, never a literal `p1`. The rounds inside one match still alternate
+    // it below, but with an odd round count whoever opens round one opens two of the three
+    // — and whoever opens a round of Connect Four against an equal bot wins it. Starting
+    // that alternation from `context.openingSeat` (#2466) is what stops the seat number
+    // deciding the match.
+    this.#startingSeat = context.openingSeat;
     this.#settleSteps = 0;
     this.#stepsPerSecond = 0;
-    this.#resetRound('p1');
+    this.#resetRound(this.#startingSeat);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

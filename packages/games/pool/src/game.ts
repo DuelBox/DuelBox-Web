@@ -92,7 +92,7 @@ export class PoolGame implements Game {
     this.#settleSteps = 0;
     this.#thinkSteps = -1;
     this.#potted.length = 0;
-    resetGame(this.#position);
+    resetGame(this.#position, context.openingSeat);
     this.#flip.snap(this.#shouldRotate());
   }
 

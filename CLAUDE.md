@@ -97,6 +97,31 @@ the nightly workflow runs — the suite passes on Firefox and has since it was f
 tried, so paying for a third engine on every push buys nothing. If a nightly ever
 fails, move it back to every push.
 
+**Three things run nightly rather than on every push, and the gate above does not
+cover them.** The third browser engine; the deep seat-balance sample
+(`pnpm balance:audit`, 250 seeds a game against the push gate's 50, plus an `easy`
+and `hard` pass); and **the coverage gate** (`pnpm test:coverage`, 70% of lines,
+functions, branches and statements over `packages/engine/src/**` and every game's
+`rules.ts`). Coverage is not in `verify` because instrumentation makes the suite
+several times slower and `verify` is already the job that put #2459 on the board —
+so a change that drops coverage merges green and is caught the next morning. That
+trade is written into `nightly.yml`, along with what to do if it ever costs more
+than it saves.
+
+Those thresholds were correct and **unexecuted from the day they were written**
+until 29 August 2026: nothing under `.github/` contained the word "coverage", so
+nothing could fail. Counting honestly, that makes it the **fifth** guard in this
+repository found claiming something nothing ran — after `pnpm size` falling
+through to the system `size(1)`, the asset-licence check this file said CI
+enforced, CI itself being red on every commit behind another workflow's green
+tick, and a balance harness whose headline promised a band it did not enforce.
+The React hook rules, enforced by nothing at all, were the sixth.
+
+Five of the six were found in a single day, by looking. The habit that finds
+them is cheap: when a rule matters, **run the thing that is supposed to execute
+it and watch it fail on purpose.** A guard nobody has seen fail is a guard
+nobody has seen.
+
 **CI was over its own budget** — 14 minutes against the 8 that issue #2459 names —
 for two reasons, both now addressed: Playwright defaults to a **single worker on CI**,
 and `smoke.spec.ts` was re-confirming the same server-rendered HTML on four engines.

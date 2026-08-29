@@ -11,26 +11,26 @@ import {
   type MatchRules,
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
-import { CATALOGUE } from '@/data/catalogue.generated';
+import { GAME_NAMES } from '@/data/game-names.generated';
 import { seatColour } from '@/styles/tokens';
-import { readLastMode, writeLastMode } from '@/lib/last-mode';
+import { readSetup, writeSetup } from '@/lib/last-mode';
+import {
+  DEFAULT_SETUP,
+  botSeatsFor,
+  matchRulesFor,
+  type BotDifficulty,
+  type MatchSetup,
+  type PlayMode,
+} from '@/lib/match-setup';
 import { GameHost } from './GameHost';
 import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
+import { MatchOptions } from './MatchOptions';
 import { Controls } from './Controls';
 import styles from './PlaySurface.module.css';
 
-type Mode = 'friend' | 'bot';
-
-/**
- * Hoisted so its identity is stable across renders.
- *
- * Written inline it was a fresh object every render, and it sits in the game host's
- * setup-effect dependencies — so the first countdown frame tore the game down and
- * rebuilt it, and bot matches hung on the countdown forever.
- */
-const BOT_OPPONENT = { p2: 'normal' } as const;
+type Mode = PlayMode;
 
 /**
  * The shared match flow every game runs inside: choose a mode, count in, play, pause,
@@ -67,14 +67,29 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [seed, setSeed] = useState(1);
 
   /**
+   * What this player last chose for this game: mode, bot tier and match length.
+   *
+   * Loaded in an effect rather than during render, for the reason the trace flag is: the
+   * page is statically exported, so the server's HTML knows nothing about this device's
+   * storage, and reading it while rendering makes the first paint disagree with it. The
+   * defaults render, and the remembered choice replaces them a frame later.
+   */
+  const [setup, setSetup] = useState<MatchSetup>(DEFAULT_SETUP);
+  useEffect(() => {
+    setSetup(readSetup(slug));
+  }, [slug]);
+
+  /**
    * The seven games built so far settle their own rounds and report a winner, so the
    * shell trusts that outcome rather than second-guessing it from the score. Games that
    * declare a win condition instead get it resolved here; both paths run the same flow.
+   *
+   * The match length is the player's, from the pre-match screen. It was hardcoded to one
+   * round, which made `round-over` unreachable in the entire product (#2485) — and with
+   * it the round pips, the "Next round" screen and the opening-seat rotation of #2466,
+   * all of which are implemented and were being shipped switched off.
    */
-  const rules = useMemo<MatchRules>(
-    () => ({ win: { kind: 'first-to', target: 1 }, rounds: 1, countdownSeconds: 3 }),
-    [],
-  );
+  const rules = useMemo<MatchRules>(() => matchRulesFor(setup.rounds), [setup.rounds]);
 
   const [match, send] = useReducer(
     (state: ReturnType<typeof initialMatchState>, event: MatchEvent) => reduce(state, event, rules),
@@ -162,7 +177,8 @@ export function PlaySurface({ slug }: { slug: string }) {
     (chosen: Mode) => {
       // Remembered as a default for next time, never as a decision: reopening this game
       // pre-selects what you last chose, it does not start it.
-      writeLastMode(slug, chosen);
+      writeSetup(slug, { mode: chosen });
+      setSetup((previous) => ({ ...previous, mode: chosen }));
       setMode(chosen);
       setActiveSeat(null);
       const next = seed + 1;
@@ -174,8 +190,8 @@ export function PlaySurface({ slug }: { slug: string }) {
     },
     // `seed` is read, so it belongs here: without it the callback closes over the seed
     // from the render that created it and every match after the first would open on a
-    // stale one. React's exhaustive-deps rule would say so, but it is not enabled in this
-    // repo yet (#2482).
+    // stale one. This was found by hand; `react-hooks/exhaustive-deps` now fails the
+    // build on it, so the next one will not be (#2482).
     [slug, seed],
   );
 
@@ -190,6 +206,38 @@ export function PlaySurface({ slug }: { slug: string }) {
     setMode(null);
     send({ kind: 'quit' });
   }, []);
+
+  // Both written through as they are chosen rather than when a match starts, so a player
+  // who sets a tier and then walks away still finds it set tomorrow.
+  const chooseDifficulty = useCallback(
+    (difficulty: BotDifficulty) => {
+      writeSetup(slug, { difficulty });
+      setSetup((previous) => ({ ...previous, difficulty }));
+    },
+    [slug],
+  );
+
+  const chooseRounds = useCallback(
+    (rounds: number) => {
+      writeSetup(slug, { rounds });
+      setSetup((previous) => ({ ...previous, rounds }));
+    },
+    [slug],
+  );
+
+  /**
+   * Which seats a bot holds this match, and how hard it tries.
+   *
+   * Memoised because its identity has to be stable for the life of a match: it sits in
+   * the game host's setup-effect dependencies, and when this was written inline it was a
+   * fresh object on every render — the first countdown frame tore the game down and
+   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
+   * change while a match is running: the tier is only offered before one starts.
+   */
+  const botSeats = useMemo(
+    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
+    [mode, setup.difficulty],
+  );
 
   const nextGame = useMemo(() => suggestNextGame(slug), [slug]);
 
@@ -211,7 +259,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   }
 
   if (match.phase === 'idle' || mode === null) {
-    const remembered = readLastMode(slug);
+    const remembered = setup.mode;
     const offered = manifest.modes.filter((m): m is Mode => m === 'friend' || m === 'bot');
     // The remembered mode leads, so the button under the player's thumb is the one they
     // used last. Order, not preselection — nothing starts without a deliberate press.
@@ -223,6 +271,18 @@ export function PlaySurface({ slug }: { slug: string }) {
     return (
       <div className={styles.state}>
         <h2>{manifest.name}</h2>
+        {/* Above the buttons, because these settle what the button is about to start —
+            and the buttons stay last, nearest the thumb that presses them. The tier is
+            offered only where the manifest has a bot to play, which today is every
+            playable game: even the solo puzzles declare `friend` and `bot` as well,
+            because a solo-only manifest is a game page nobody can start. */}
+        <MatchOptions
+          showDifficulty={offered.includes('bot')}
+          difficulty={setup.difficulty}
+          onDifficulty={chooseDifficulty}
+          rounds={setup.rounds}
+          onRounds={chooseRounds}
+        />
         <div className={styles.modes}>
           {ordered.map((offer, index) => (
             <button
@@ -269,7 +329,7 @@ export function PlaySurface({ slug }: { slug: string }) {
             presentation="shared-screen"
             localSeat="p1"
             openingSeat={match.openingSeat}
-            {...(mode === 'bot' ? { botDifficulty: BOT_OPPONENT } : {})}
+            {...(botSeats ? { botDifficulty: botSeats } : {})}
             onTick={handleTick}
             onScore={handleScore}
             onActiveSeat={setActiveSeat}
@@ -319,6 +379,5 @@ function suggestNextGame(slug: string): { slug: string; name: string } | undefin
   let hash = 0;
   for (let i = 0; i < slug.length; i += 1) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
   const pick = others[hash % others.length] ?? first;
-  const entry = CATALOGUE.find((game) => game.slug === pick);
-  return { slug: pick, name: entry?.name ?? pick.replace(/-/g, ' ') };
+  return { slug: pick, name: GAME_NAMES[pick] ?? pick.replace(/-/g, ' ') };
 }

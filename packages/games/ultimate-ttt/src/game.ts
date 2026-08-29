@@ -125,7 +125,10 @@ export class UltimateTicTacToeGame implements GameContract {
     this.#botP2 = context.botDifficulty('p2');
     this.#matchWinner = null;
     resetGame(this.#game);
-    this.#active = 'p1';
+    // The shell's opener, never a literal `p1` — the SDK alternates it across the rounds
+    // of a best-of so first-mover advantage washes out (#2466), and a game that assumed
+    // seat one would leave that rotation reaching nothing.
+    this.#active = context.openingSeat;
     this.#thinkSteps = -1;
     this.#settleSteps = 0;
     this.#cursor.reset();

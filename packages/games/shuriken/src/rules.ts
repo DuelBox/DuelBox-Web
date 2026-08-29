@@ -250,10 +250,16 @@ export function dressGrove(state: State, rng: Rng): void {
   }
 }
 
-export function resetState(state: State, rng: Rng): void {
+/**
+ * The opener is the shell's `context.openingSeat`, never a literal `p1`: the SDK
+ * alternates it across the rounds of a best-of so first-mover advantage washes out
+ * (#2466), and a game that assumed seat one would leave that rotation reaching nothing.
+ * The default exists only so the rules tests can name a concrete side.
+ */
+export function resetState(state: State, rng: Rng, opener: SeatId = 'p1'): void {
   dressGrove(state, rng);
   state.phase = 'aiming';
-  state.active = 'p1';
+  state.active = opener;
   state.aim = 0;
   state.spin = 0;
   state.shot.x = THROW_X;
