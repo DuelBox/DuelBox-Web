@@ -38,11 +38,21 @@ import type { Rng, SeatId } from '@duelbox/engine';
  * {@link SOLDIERS} for the arithmetic. **[ours]**
  *
  * **Both walls face the same army.** The wave is dealt once and handed to both seats in their
- * own frames, so the two fields are exact half-turn images of each other at every step of
- * every match. That is not a fairness measurement, it is a fairness *proof*: a seed played
- * from one opening seat and the same seed played from the other are the same match mirrored,
- * so seat one takes exactly half of the decided matches rather than approximately half.
- * **[ours]**
+ * own frames, and both guns start at the same end of their own rails, so the two seats hold
+ * bit-identical positions in their own frames and therefore exact half-turn images of each
+ * other on the board — at the first step and at every step after it. What that buys is a
+ * *proof* rather than a measurement: swap the two seats' bot streams and the whole match
+ * reflects, 0 of 1500 matches failing to flip and 0 scoring differently. Nothing about this
+ * game favours a chair, and that is checked match by match rather than inferred from a win
+ * rate. The sampled companion figure, from the harness the shell actually produces — each seed
+ * played from both openers with the streams left alone — is 50.5 / 49.6 / 50.5% to seat one
+ * over 4000 matches a tier, each to within 0.8 of a point.
+ *
+ * It buys a second thing worth naming, because it explains the shape of every ladder number in
+ * SPEC.md: sharing the wave removes the *seed* variance from a comparison between two seats.
+ * Two tiers are not being asked to beat different armies, so a difference of a few points of
+ * ground is almost never reversed by luck, and the head-to-head rates come out steeper than in
+ * a game where each seat draws its own board. **[ours]**
  *
  * ## Everything here is in a seat's own frame
  *
@@ -152,9 +162,10 @@ export const CHARGE_SECONDS = 1;
  * In seconds of slop — which is the currency both halves of a shot are actually paid in — it
  * is `BLAST / TRAVERSE_RATE` = 0.089 s on the road, and on the distance it runs from 0.089 s
  * at the far edge to 0.444 s at the near one. Cup Pong measured a person's timing error at
- * 0.11 to 0.20 s and Explosive Festival shipped its tiers at 0.10 to 0.22; the far band of
- * this game sits just under that window and the near band comfortably above it, which is the
- * ladder the bands are for.
+ * 0.11 to 0.20 s and Explosive Festival shipped its tiers at 0.10 to 0.22; this game's are
+ * 0.115 to 0.20. So the far band sits just under the window a person plays in and the near
+ * band comfortably above it — which is the whole reason a deep shot is worth three and a near
+ * one worth one, and it is a consequence of the geometry rather than a table anybody tuned.
  */
 export const BLAST = 40;
 
@@ -233,15 +244,29 @@ export const RELOAD = 0.45;
  * saturates and a measure of ground held does not.** A seat that smashes everything close in
  * scores 14; a seat that smashes half of them at the far edge scores 21.
  *
- * The edges are deliberately **off the step lattice**. A soldier's distance is
- * `DEPTH − MARCH_SPEED · n · dt`, which at 60 Hz moves in steps of 5/6 of a unit and would
- * land on a round boundary like 240 exactly — and "a threshold a state variable lands on
- * exactly by construction" is the family of bug that cost Frozen Beaks 24 diverging matches
- * and Snowball Throw its 64% seat. 175 and 265 are reached at n = 222 and n = 114 of a step,
- * so no soldier is ever judged sitting on a band edge.
+ * The edges are deliberately **off the step lattice**, and the arithmetic is worth writing
+ * down rather than asserting. A soldier's distance after `n` marches is
+ * `DEPTH − MARCH_SPEED · n · dt`, so at a rate of `R` steps a second it lands exactly on a
+ * band edge when `R · (DEPTH − BAND) / MARCH_SPEED` is a whole number. `DEPTH − BAND` is 186
+ * and 96 here, neither divisible by 5, and `gcd` with `MARCH_SPEED` = 50 leaves a factor of
+ * 25 to find — so a soldier sits on an edge only at a rate that is a multiple of **25 Hz**,
+ * and 60, 90, 120 and 240 are not. The round-looking 175 and 265 this file first carried both
+ * failed that: 185 and 95 *are* multiples of 5, and a soldier reached them dead on step 222
+ * and step 114 of every 60 Hz match.
+ *
+ * "A threshold a state variable lands on exactly by construction, rather than by coincidence"
+ * is the family of bug that cost Frozen Beaks 24 diverging matches and Snowball Throw its 64%
+ * seat, and it is cheaper to step around it than to argue it is harmless. Here it would in
+ * fact have been harmless — both seats compute `d` by the identical arithmetic in their own
+ * frames, so they land on the same side of any edge in the same bit — but that argument holds
+ * only for as long as nobody writes a second thing that reads a band, and the constants cost
+ * nothing.
+ *
+ * `rules.test.ts` walks whole matches at all four rates and asserts no soldier is ever judged
+ * sitting on an edge.
  */
-export const BAND_NEAR = 175;
-export const BAND_FAR = 265;
+export const BAND_NEAR = 174;
+export const BAND_FAR = 264;
 
 /**
  * Shot slots, a fixed set to each seat.
@@ -252,9 +277,12 @@ export const BAND_FAR = 265;
  * nothing to do with the game.
  *
  * A seat cannot fire faster than one shot per `RELOAD` = 0.45 s and a shot lives at most
- * `RANGE_MAX / SHOT_SPEED + BURST_SECONDS` = 0.81 s, so two of a seat's own can overlap by
- * arithmetic. Four is that with room to spare, and a test asserts the set is never exhausted
- * rather than leaving the arithmetic in a comment.
+ * `RANGE_MAX / SHOT_SPEED + BURST_SECONDS` = 0.81 s, so exactly two of a seat's own can
+ * overlap and a third cannot: the earliest a third could leave the gun is 0.93 s after the
+ * first, and the first is gone by 0.81 s. Measured over 4000 randomised hold patterns the
+ * worst concurrent load is **2 of 4** — and under bot play it is 1, because no tier taps. Four
+ * is that with room to spare, and a test asserts the set is never exhausted rather than
+ * leaving the arithmetic in a comment.
  */
 export const SHOT_SLOTS = 4;
 
@@ -271,9 +299,16 @@ export const SHOT_BURST = 2;
  * Fourteen soldiers at up to three apiece is a score with forty-three distinct values in it,
  * and that is the number the size of the army was chosen for. The failure to avoid is the one
  * Sudoku shipped and Blocks shipped again: a score two players of the same standard land on
- * the same value of. Measured over 2000 seeds a tier, level-on-ground before the tie-break
- * happens in 8.0% of `easy` pairings, 8.3% of `normal` and 9.9% of `hard`; the tie-break
- * below splits about three quarters of those.
+ * the same value of. Measured over 2000 matches a tier, level-on-ground before the tie-break
+ * happens in 6.9% of `easy` pairings, 7.8% of `normal` and 8.7% of `hard`; the tie-break below
+ * splits 44%, 62% and 49% of those, leaving 3.9 / 3.0 / 4.4% genuine draws.
+ *
+ * The score does not saturate, which is the other half of that failure and the reason it is
+ * ground held rather than soldiers smashed. At `hard` a seat smashes 12.5 of the 14 — a count
+ * two good players would land level on constantly — but takes only 27.3 of the 42 points of
+ * ground available, because the deep shot it is choosing is the one it is least likely to
+ * place. Scoring the same matches on soldiers smashed instead would put two `hard` seats level
+ * far more often, which is Sudoku's failure with the numbers changed.
  *
  * Nothing is decided while a soldier is still walking. That is the real-time form of Cup
  * Pong's completed round: a seat is owed every soldier still on its field, so the match
@@ -469,21 +504,31 @@ export function createSiege(): Siege {
 /**
  * Put a gun back on its rail, at the end the opening seat decides.
  *
- * The opening seat's gun takes the low end of the rail and traverses up it; the other takes
- * the high end and traverses down. **The two arrangements are exact mirror images**, so which
- * seat gets which provably cannot favour either — every road is reached by one gun exactly as
- * often as by the other, and the wave is the same in both frames.
+ * **Both guns take the same end of their own rails, and which end is what the opening seat
+ * decides.** In each seat's own frame the two are then bit-identical, which through `boardX` —
+ * an exact half-turn — puts them at opposite ends of the board moving in opposite directions,
+ * and keeps them exact half-turn images of each other at every step of every match. So the
+ * whole picture is its own half-turn, guns included, and `game.test.ts` asserts that mark by
+ * mark rather than taking it on trust.
  *
- * That is why it is safe to hang `context.openingSeat` on. A real-time game has no opener and
- * the contract says it may ignore the value; ignoring it means the shell's alternation across
- * the rounds of a best-of reaches nothing, and a balance harness that plays each seed from
- * both openers gets the identical match twice and cannot tell a seat effect from a seed
- * effect. Reading it here costs one comparison and turns the pair of matches into a match and
- * its exact mirror — which is what makes seat one's share exactly 50.0% rather than 49-point-
- * something.
+ * The first version of this file gave the opener the low end and the *other seat* the high end
+ * of its own rail, on the reasoning that the two arrangements are mirror images of one another.
+ * They are — but mirroring a seat's position *within its own rail* and then mapping to the
+ * board composes to a translation rather than to the half-turn, and it put the two guns on the
+ * same column of the board, moving in the same direction, for the whole match. Nothing about
+ * that was unfair; it simply was not the picture the file claimed to draw, and the render
+ * mirror test in `game.test.ts` found it on the first run.
+ *
+ * Reading `context.openingSeat` at all is optional — a real-time game has no opener and the
+ * contract says so. Ignoring it means the shell's alternation across the rounds of a best-of
+ * reaches nothing, and a balance harness that plays each seed from both openers gets the
+ * identical match twice and cannot tell a seat effect from a seed effect. Reading it here costs
+ * one comparison, gives the two openers genuinely different matches, and provably favours
+ * neither seat: both guns are moved together, so the position is symmetric either way.
  */
 function resetTurret(turret: Turret, seat: SeatId, opener: SeatId): void {
-  const low = seat === opener;
+  void seat;
+  const low = opener === 'p1';
   turret.u = low ? 0 : RAIL;
   turret.rising = low;
   turret.loaded = true;
@@ -860,9 +905,9 @@ export interface BotProfile {
  * The measured ladder, and what each knob is worth on its own, is in SPEC.md.
  */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: { timing: 0.22, blunder: 0.16 },
+  easy: { timing: 0.2, blunder: 0.16 },
   normal: { timing: 0.15, blunder: 0.08 },
-  hard: { timing: 0.1, blunder: 0.02 },
+  hard: { timing: 0.115, blunder: 0.02 },
 });
 
 /** How much larger a fumbled moment's error is than the tier's ordinary one. */
@@ -1001,17 +1046,35 @@ export function doomed(side: Readonly<Side>, soldier: Readonly<Soldier>): boolea
  * Choose the shot, once, when a fresh one is loaded. Returns false when there is nothing
  * worth pressing for.
  *
- * **It takes the soldier that is closest to the wall among those it can still reach**, and
- * that measured the right way round at every tier — unlike Explosive Festival's equivalent
- * choice, which changed sign across its ladder. The two rules and the numbers are in SPEC.md.
- * The short version: the deep shot is worth three and the near shot one, but the deep shot is
- * five times less forgiving on the release and the near soldier is the one about to be worth
- * *nothing*, and over-subscribing the wave — see {@link SPAWN_INTERVAL} — means the second
- * effect wins at every standard of play.
+ * **It takes the soldier that is farthest out among those it can still reach, and the first
+ * version of this file took the nearest.** Nearest-first is the rule the catalogue row appears
+ * to ask for — *don't let them get close* — and it is the rule Explosive Festival measured its
+ * way into, so it was written first and then played head to head against deepest-first at the
+ * same tier, 400 seeds in each seat order and each opener, everything else identical:
+ *
+ * | | deepest-first's share of decided |
+ * |---|---|
+ * | easy | 54.3% |
+ * | normal | 58.5% |
+ * | hard | 57.5% |
+ *
+ * Deepest-first wins at every tier, so it ships. The reason it wins is worth stating because
+ * it is the whole economics of the game: **a deep shot is worth three points and a missed deep
+ * shot is not a wasted one.** The soldier keeps walking, the gun comes round again, and it can
+ * be taken later for two or for one. A near shot is worth one point and missing it costs the
+ * soldier entirely — it walks through the gate. Deepest-first is therefore taking the three
+ * whenever it can and keeping the ones and twos as a second chance; nearest-first takes the
+ * one and throws the three away, which is the same trade Explosive Festival found and the
+ * opposite answer, because its short shots landed on its *own* lanterns and these do not.
+ *
+ * The measured shape of a match says the same thing from the other side: deepest-first smashes
+ * fewer soldiers (12.5 against 13.7 at `hard`) and holds more ground (27.3 against 25.9) — and
+ * at `easy` it lets seven soldiers a match through the gate where nearest-first lets four
+ * through, which is the visible price it is paying for the points.
  *
  * A target is skipped when a shot of this seat's own is already going to take it, and when it
  * is inside the minimum range at the moment the gun would be on its road: `holdToSmash`
- * returns `NaN` for the first and a hold past `CHARGE_SECONDS` is not a shot that exists.
+ * returns `NaN` for the second and a hold past `CHARGE_SECONDS` is not a shot that exists.
  *
  * **Everything here is in the firing seat's own frame** — a road index and a distance — so the
  * two seats rank an identical wave identically. Ranking on a board coordinate would sort the
@@ -1029,8 +1092,12 @@ export function planShot(
   const side = sideOf(siege, seat);
   const turret = side.turret;
 
+  // Farthest reachable soldier wins. The comparison is strict, so on the vanishingly rare tie
+  // the earlier index takes it — and because both seats hold the identical array of soldiers
+  // in their own frames, both seats break that tie the same way, which a board-coordinate rule
+  // could not do (Maze Paint, and Snowball Throw before it).
   let target = -1;
-  let bestD = Infinity;
+  let bestD = -Infinity;
   for (let i = 0; i < side.soldiers.length; i += 1) {
     const soldier = side.soldiers[i] as Soldier;
     if (!soldier.alive) continue;
@@ -1041,7 +1108,7 @@ export function planShot(
     if (at <= 0) continue;
     const hold = holdToSmash(at, dt);
     if (!(hold >= 0) || hold > CHARGE_SECONDS) continue;
-    if (at >= bestD) continue;
+    if (at <= bestD) continue;
     bestD = at;
     target = i;
   }
@@ -1126,14 +1193,19 @@ export function botHold(
       state.hold = false;
       return false;
     }
-    const soldier = side.soldiers[state.target] as Soldier | undefined;
-    // The target may have walked through the gate, or been taken by a shot fired before this
-    // one was planned. There is a press committed either way, so the shot goes at the bottom
-    // of the charge — which is a person's answer too, and a poor one.
-    const hold =
-      soldier !== undefined && soldier.alive
-        ? clamp(holdToSmash(soldier.d, dt), 0, CHARGE_SECONDS)
-        : 0;
+    const soldier: Soldier | undefined = side.soldiers[state.target];
+    // The target may have walked through the gate, been taken by a shot fired before this one
+    // was planned, or walked inside the minimum range while the gun was traversing to it —
+    // `holdToSmash` answers `NaN` for the third. There is a press committed either way, so the
+    // shot goes at the bottom of the charge, which is a person's answer too and a poor one.
+    //
+    // Written as a test for `>= 0` rather than through `clamp`, because `clamp` passes `NaN`
+    // straight through: both of its comparisons are false. The old spelling happened to behave
+    // the same way — a `NaN` timer never exceeds `dt / 2`, so the release came on the next step
+    // — but it got there by arithmetic nobody should have to reconstruct, and it silently threw
+    // away the tier's timing error on exactly the shots where the bot is already in trouble.
+    const wanted = soldier !== undefined && soldier.alive ? holdToSmash(soldier.d, dt) : Number.NaN;
+    const hold = wanted >= 0 ? (wanted > CHARGE_SECONDS ? CHARGE_SECONDS : wanted) : 0;
     state.rangeTimer = hold + state.rangeOffset;
     // Cleared on the press. `laneTimer` counts a traverse and `rangeTimer` counts a charge;
     // leaving the first standing in a field the release reads is how a charge ends up let go

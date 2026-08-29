@@ -834,8 +834,33 @@ for (let square = 0; square < SQUARES; square += 1) {
 
 /** Below this much non-pawn material on the board, kings come out and start fighting. */
 const ENDGAME_MATERIAL = 1400;
-/** How hard a winning side is pushed to drive the bare king to the edge. Swept; see SPEC.md. */
-export const MOP_UP_WEIGHT = 6;
+/**
+ * How hard a winning side is pushed to drive a bare king to the edge.
+ *
+ * Swept alone over 0…48, and it is worth reading what the sweep actually said, because it
+ * is not what the term was put in for. It changes **nothing** about how strong the bot is —
+ * weight 12 against weight 6 scores 48.5% over a hundred matches, and against weight 0,
+ * 50.0% — and it changes a great deal about whether a won ending gets *finished*:
+ *
+ * | weight | K+Q against a bare king, 40 placements | decisive matches, `hard` v `hard` |
+ * |---|---|---|
+ * | 0 | 8 mated, 27 repeated | 48% |
+ * | 6 | 5 mated, 30 repeated | 52% |
+ * | 10 | 26 mated, 9 repeated | 58% |
+ * | **12** | **29 mated, 6 repeated** | **56%** |
+ * | 16 and above | 20 mated, 15 repeated | 54% |
+ *
+ * Non-monotone, and the shape is the explanation: the term has to out-vote the queen's own
+ * centrality (1 a square) and the king term (3 a square) before it decides anything, which
+ * happens between 8 and 10; above about 14 it swamps them entirely and the winning side
+ * walks its king in without keeping the queen anywhere useful. Twelve is the top of the
+ * middle plateau, not a single lucky point — ten is nearly as good.
+ *
+ * What the sweep does *not* fix is the underlying cause: the search cannot see a
+ * repetition, so a side with an overwhelming position and nothing to capture has no reason
+ * to prefer progress. That is what the remaining 6 of 40 are, and SPEC.md records it.
+ */
+export const MOP_UP_WEIGHT = 12;
 /** The lead at which mopping up is worth more than shuffling. */
 const MOP_UP_THRESHOLD = 400;
 
@@ -854,9 +879,11 @@ const CENTRE_WEIGHT = [0, 0, 3, 2, 1, 1, 0];
  *   pawns still on their starting squares.
  * - **Mopping up**, which only switches on once one side is clearly winning a simple
  *   endgame: the losing king is pushed to the edge and the winning king is drawn towards
- *   it. A three-ply search with no such term cannot mate with a queen — it shuffles until
- *   the fifty-move rule bails it out, and the match that was won is scored a draw. This one
- *   term is the difference between "two bots draw most endings" and "two bots finish them".
+ *   it. A three-ply search with no such term wins a queen and then shuffles, because
+ *   nothing in the other two terms prefers progress — 8 conversions in 40 bare-king
+ *   endings against 29 with it. It buys no *strength*: see {@link MOP_UP_WEIGHT} for the
+ *   sweep, which is one of the two knobs here that measured flat on the thing it was
+ *   assumed to move.
  */
 export function evaluate(position: Position): number {
   const board = position.board;
@@ -899,7 +926,14 @@ export function evaluate(position: Position): number {
     score += leadP1 > 0 ? mop : -mop;
   }
 
-  return position.toMove === 'p1' ? score : -score;
+  // `| 0` rather than a bare negation, and it is not decoration. Every term above is a
+  // whole number, so this truncates nothing — what it does is turn `-0` back into `0` for
+  // a level position seen from seat two. The two are equal to every comparison the search
+  // makes, so nothing played differently; they are *not* equal to `Object.is`, so the
+  // mirror suite could not assert the symmetry it exists to assert. That is the family
+  // lesson 8 of the brief names: a value a variable lands on exactly by construction,
+  // reached from opposite ends by the two seats, differing in the last bit.
+  return (position.toMove === 'p1' ? score : -score) | 0;
 }
 
 /* ------------------------------------------------------------------ search */
@@ -922,12 +956,27 @@ for (let ply = 0; ply <= MAX_SEARCH_PLY; ply += 1) {
 let aborted = false;
 
 /**
+ * Clear the abort flag before a sweep.
+ *
+ * A function rather than a bare `aborted = false`, and that is a compiler detail worth one
+ * line: assigned in place, TypeScript narrows the flag to `false` for the rest of the
+ * block and then objects that reading it back after the search is a check that can never
+ * fire. It can — {@link search} sets it from three levels down. Hiding the assignment
+ * behind a call keeps the declared type, and keeps the lint honest instead of suppressed.
+ */
+function beginSweep(): void {
+  aborted = false;
+}
+
+/**
  * Order the moves so the cheapest refutations are tried first.
  *
  * Captures by most-valuable-victim, least-valuable-attacker; then promotions; then
  * everything else in generation order. This is not polish — alpha-beta prunes in proportion
- * to how good the first move is, and without ordering a three-ply chess search does not fit
- * in the node budget at all. See SPEC.md for the measured node counts either way.
+ * to how good the first move is. Measured over 3 900 `hard` decisions, ordering against no
+ * ordering at all: **5 246 nodes a decision against 8 264**, and the node ceiling reached
+ * on **11.4% of decisions against 48.0%**. Nearly half of an unordered `hard`'s moves would
+ * be a depth-two answer wearing a depth-three label.
  */
 function scoreMoves(moves: Int32Array, scores: Int32Array, count: number, board: Int8Array): void {
   for (let i = 0; i < count; i += 1) {
@@ -971,12 +1020,21 @@ function pickBest(moves: Int32Array, scores: Int32Array, count: number, at: numb
  * Search the captures out of a position before scoring it.
  *
  * Without this a search stops in the middle of an exchange and calls whatever it finds the
- * truth: a bot that has just taken a defended queen believes it is a queen up. The result is
- * that a *deeper* search is not reliably a better one, because odd and even depths stop on
- * opposite sides of every trade — which is issue #2495, and which SPEC.md measures with this
- * function switched off.
+ * truth: a bot that has just taken a defended queen believes it is a queen up. It is the
+ * single largest lever in the whole bot. The same three-ply search against the shipped
+ * `normal`, over fifty matches, scores **94% with it and 31% without**; at one ply, 34%
+ * against 0%.
+ *
+ * It is also the reason {@link depthFor} can be the identity — see the note there, and
+ * SPEC.md for the ablation table both functions were measured from.
  */
-function quiesce(position: Position, ply: number, alphaIn: number, beta: number, budget: SearchBudget): number {
+function quiesce(
+  position: Position,
+  ply: number,
+  alphaIn: number,
+  beta: number,
+  budget: SearchBudget,
+): number {
   if (!budget.spend()) {
     aborted = true;
     return 0;
@@ -1057,12 +1115,50 @@ function search(
 const rootMoves = new Int32Array(MOVE_CAPACITY);
 const rootScores = new Int32Array(MOVE_CAPACITY);
 
+/**
+ * Shuffle the root list before it is ordered. **[ours]**
+ *
+ * Alpha-beta replaces its best move only on a *strict* improvement, so when several root
+ * moves come back with the same score the one that is played is simply whichever the
+ * generator happened to emit first. That is a real defect and not a cosmetic one: with
+ * `hard`'s blunder rate at zero nothing else in the bot consumes randomness, so every
+ * `hard` match was **the same game**, seed for seed. Twenty seeds measured the opener at
+ * 100% and the honest reading of that number was "one match, and the opener won it".
+ *
+ * Shuffling only the root cannot change how strong the bot is. The score a move gets is
+ * computed by {@link search} from the position after it, which no permutation of its
+ * siblings touches; ordering is re-applied by {@link pickBest} straight afterwards, so
+ * captures are still tried first. All that moves is the choice *between moves the search
+ * cannot separate* — and SPEC.md measures the ladder either way to say so with numbers.
+ *
+ * Two properties it has to keep, both of them by construction rather than by luck:
+ *
+ * - **No extra random draw.** The key is the second of the two floats {@link chooseWith}
+ *   already takes, so a decision still costs exactly two, and the seats stay uncoupled.
+ * - **σ-covariance.** The permutation is a function of the index and the key alone, never
+ *   of the board, so the mirrored position's list — which holds the mirrored moves in the
+ *   same order — is permuted the same way, and the k-th move stays the σ-image of the
+ *   k-th move. A shuffle keyed on squares would decide a mirrored position differently,
+ *   which is lesson 11 of the brief with the board coordinates hidden inside a hash.
+ */
+function shuffleRoot(moves: Int32Array, count: number, key: number): void {
+  let state = (key ^ 0x9e3779b9) | 0;
+  for (let i = count - 1; i > 0; i -= 1) {
+    state = (Math.imul(state, 1_664_525) + 1_013_904_223) | 0;
+    const j = (state >>> 9) % (i + 1);
+    const move = moves[i] ?? 0;
+    moves[i] = moves[j] ?? 0;
+    moves[j] = move;
+  }
+}
+
 /** One full sweep at a fixed depth. Returns the best move, or {@link NO_MOVE} if none. */
-function rootSearch(position: Position, depth: number, budget: SearchBudget): number {
+function rootSearch(position: Position, depth: number, budget: SearchBudget, key: number): number {
   const child = searchStates[0];
   if (child === undefined) return NO_MOVE;
   const seat = position.toMove;
   const count = generate(rootMoves, position, false);
+  shuffleRoot(rootMoves, count, key);
   scoreMoves(rootMoves, rootScores, count, position.board);
   let alpha = -INFINITY;
   let best = NO_MOVE;
@@ -1090,24 +1186,41 @@ export interface BotProfile {
   readonly levels: number;
   /** How often it throws the search away and plays any legal move at all. */
   readonly blunder: number;
-  /** The deterministic node ceiling. Nodes, never milliseconds — see the SDK's note. */
-  readonly nodes: number;
 }
 
 /**
- * A node ceiling, not a clock.
+ * A node ceiling, not a clock, and **one ceiling for all three tiers**.
  *
  * The same position spends the same budget on a phone and on a laptop, which rule 8
- * requires and which a stopwatch cannot give. 2 600 is set from measurement rather than
- * taste: it is where `hard`'s worst single step lands at about a third of a frame on the
- * reference machine while still reaching three plies in the opening. SPEC.md has the trade.
+ * requires and which a stopwatch cannot give.
+ *
+ * There used to be a `nodes` field on {@link BotProfile} as well. It was dead: the budget
+ * is a module-level singleton and {@link chooseWith} only ever called `reset()` on it, so
+ * the field was carried, documented and never read. Sweeping it alone is what found that —
+ * 400 nodes and 12 000 nodes produced byte-identical matches, which no real ceiling can.
+ * The brief's fourth lesson says to delete a knob that does nothing, so it is gone, and
+ * what is left is one number swept for real by rebuilding:
+ *
+ * | ceiling | `hard`'s score against shipped `normal` | worst single decision |
+ * |---|---|---|
+ * | 1 500 | 78.3% | 0.56 ms |
+ * | 2 600 | 77.5% | 1.00 ms |
+ * | 6 000 | 88.3% | 2.26 ms |
+ * | **12 000** | **94.2%** | **3.96 ms** |
+ * | 25 000 | 95.0% | 8.20 ms |
+ * | 60 000 | 95.0% | 19.02 ms |
+ *
+ * 12 000 is the knee. Above it the search is buying almost nothing — a full depth-three
+ * sweep costs about 7 400 nodes, so 25 000 only pays for the rare wide position — and
+ * 60 000 puts the worst decision past a whole 60 Hz frame, which is the thing the ceiling
+ * exists to prevent.
  */
-export const SEARCH_NODES = 2_600;
+export const SEARCH_NODES = 12_000;
 
 export const PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: { levels: 1, blunder: 0.3, nodes: SEARCH_NODES },
-  normal: { levels: 2, blunder: 0.08, nodes: SEARCH_NODES },
-  hard: { levels: 3, blunder: 0, nodes: SEARCH_NODES },
+  easy: { levels: 1, blunder: 0.2 },
+  normal: { levels: 2, blunder: 0.08 },
+  hard: { levels: 3, blunder: 0 },
 });
 
 /**
@@ -1121,14 +1234,31 @@ const budget = new SearchBudget(SEARCH_NODES);
 /**
  * The depth a deepening level searches to.
  *
- * Identity, and that is a decision rather than a default. Issue #2495 says `deepen`
- * assumes deeper is better and that this is false without quiescence, and Solitaire worked
- * around it by mapping level → 2·level−1 so that a level always ends on the same side of an
- * exchange. **We fixed the cause instead**: {@link quiesce} resolves the captures at every
- * leaf, so a depth is not measured mid-trade and one more ply is worth having. SPEC.md
- * measures both — with quiescence off, the parity effect is there and is worth 12 points of
- * win rate; with it on, every extra ply is monotone and the odd-only mapping costs strength
- * by throwing a usable depth away.
+ * Identity, and that is a decision rather than a default. Issue #2495 says `deepen` assumes
+ * deeper is monotonically better and that this is false without quiescence, so Solitaire
+ * maps level → 2·level−1 to keep every iteration on the same side of an exchange. The
+ * instruction was to do the same or say why not, so this was measured rather than argued.
+ *
+ * **Deeper is monotonically better here, at every depth the node ceiling can pay for.**
+ * Head to head at equal everything else, 120 matches a pair:
+ *
+ * | | score |
+ * |---|---|
+ * | depth 2 against depth 1 | 86.3% |
+ * | depth 3 against depth 2 | 85.4% |
+ * | depth 4 against depth 3 | 53.8% (39W 51D 30L) |
+ * | depth 5 against depth 4 | 50.4% |
+ *
+ * No inversion at any parity, with quiescence on **or off** — the ablation in SPEC.md
+ * searched for one deliberately and found none. The flattening at four is the node ceiling,
+ * not the exchange: depth four rarely completes inside 12 000 nodes, so `deepen` throws it
+ * away and keeps depth three.
+ *
+ * The odd-only mapping is therefore not needed, and here it would cost something real:
+ * levels 1, 2, 3 are depths **1, 2, 3**, which measure 34%, 80% and 94% against the shipped
+ * `normal` — three usable rungs. Under level → 2·level−1 they would be depths 1, 3 and 5,
+ * and depth 5 does not fit in the budget, so `normal` and `hard` would collapse onto the
+ * same search and the ladder would lose its middle.
  */
 function depthFor(level: number): number {
   return level;
@@ -1169,9 +1299,12 @@ export function chooseWith(position: Position, rng: Rng, profile: BotProfile): n
   // Iterative deepening under the node budget. A depth cut short part-way is thrown away
   // rather than trusted: half a ply is not an opinion, it is whichever moves happened to be
   // ordered first.
+  // The same key at every level, so a deeper sweep re-examines the same list in the same
+  // order rather than changing its mind about two moves it already could not separate.
+  const key = (pick * 0x7fff_ffff) | 0;
   const found = deepen(budget, profile.levels, (level) => {
-    aborted = false;
-    const move = rootSearch(position, depthFor(level), budget);
+    beginSweep();
+    const move = rootSearch(position, depthFor(level), budget, key);
     return aborted || move === NO_MOVE ? null : move;
   });
   return found > 0 ? found : fallback;

@@ -343,15 +343,19 @@ export interface Game {
 export function createGame(): Game {
   const hazards: Hazard[] = [];
   for (let i = 0; i < MAX_HAZARDS; i += 1) hazards.push(createHazard());
-  return {
+  const game: Game = {
     clock: 0,
     count: 0,
     hazards,
     total: 0,
     p1: createRunner(),
     p2: createRunner(),
-    winner: null,
+    winner: 'draw',
   };
+  // A game with no course in it is over before it begins, which is what makes a shell that
+  // steps a game it has not started — or one it has already destroyed — step nothing at all.
+  resetGame(game, null);
+  return game;
 }
 
 export function runnerOf(game: Readonly<Game>, seat: SeatId): Runner {
@@ -382,16 +386,21 @@ function put(game: Game, arrival: number, speed: number, dir: number, beast: Bea
  */
 export function resetGame(game: Game, rng: Rng | null): void {
   game.clock = 0;
-  game.winner = null;
   game.count = 0;
   game.total = 0;
   resetRunner(game.p1);
   resetRunner(game.p2);
-  if (rng === null) return;
+  if (rng === null) {
+    game.winner = 'draw';
+    return;
+  }
+  game.winner = null;
 
   let at = LEAD_IN;
   for (let wave = 0; wave < WAVES; wave += 1) {
-    const along = WAVES === 1 ? 0 : wave / (WAVES - 1);
+    // 0 on the first wave, 1 on the last. `max` rather than a branch on WAVES so that
+    // narrowing the course to a single wave in a test stays a division by one.
+    const along = wave / Math.max(1, WAVES - 1);
     const speed = SPEED_START + (SPEED_END - SPEED_START) * along;
     const choiceShare = CHOICE_SHARE_START + (CHOICE_SHARE_END - CHOICE_SHARE_START) * along;
     const pincerShare = PINCER_SHARE_START + (PINCER_SHARE_END - PINCER_SHARE_START) * along;
@@ -532,7 +541,14 @@ export type BotDifficulty = 'easy' | 'normal' | 'hard';
 export interface BotProfile {
   /** Triangular, `±this` at the extremes. The whole of how well a tier keeps a moment. */
   readonly pressError: number;
-  /** How far past the beast it is planning for it will look for a second one. */
+  /**
+   * How far past the beast it is planning for it will look for a second one.
+   *
+   * Governs the `choice` branch of {@link plannedPress} and nothing else. It used to govern
+   * the pincer case too and that half of it measured **backwards**, so the pincer case was
+   * deleted; what is left is a step function with exactly three rungs, one per value in
+   * {@link CHOICE_SEPARATIONS}, and it is monotone across all three.
+   */
   readonly planHorizon: number;
   /** Chance a plan is abandoned outright. A person who simply did not see one. */
   readonly blunder: number;
@@ -544,11 +560,16 @@ export interface BotProfile {
  * `pressError` is loose by the standards of the aiming games — Cup Pong's hardest tier is
  * 0.11 s — and it should be: those games stop a needle against a gauge, and this one asks a
  * player to watch both edges of a lane at once and pick a moment out of the air with nothing
- * to read it against. Every tier is at least twenty-eight frames wide end to end, so no tier
- * picks a moment more finely than a person can, which is rule 6 by construction.
+ * to read it against. Every tier is at least twenty-eight frames wide end to end against a
+ * twenty-frame window, so no tier picks a moment more finely than a person can, which is
+ * rule 6 by construction.
+ *
+ * `planHorizon` reads as three sentences about how far ahead a tier looks. `easy` does not
+ * look past the beast in front of it; `normal` sees the near two thirds of what a `choice`
+ * can be; `hard` sees all of it. Measured alone, that is 70.5%, 73.7% and 75.4% of the herd.
  */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: Object.freeze({ pressError: 0.56, planHorizon: 0.2, blunder: 0.16 }),
+  easy: Object.freeze({ pressError: 0.56, planHorizon: 0, blunder: 0.16 }),
   normal: Object.freeze({ pressError: 0.38, planHorizon: 0.42, blunder: 0.07 }),
   hard: Object.freeze({ pressError: 0.24, planHorizon: 0.6, blunder: 0.02 }),
 });
@@ -581,6 +602,34 @@ export function botCanSee(game: Readonly<Game>, hazard: Readonly<Hazard>): boole
 }
 
 /**
+ * How long before a beast arrives a bot makes up its mind about it.
+ *
+ * **This number decides whether the lookahead tier is a difficulty axis or a decoration**,
+ * and the first version had no such number at all: the bot planned the instant a beast came
+ * over the horizon, which is `visibleLead` — 1.79 s to 2.23 s out. At that moment the *next*
+ * beast is still `separation` seconds short of visible, so the whole `choice` branch of
+ * {@link plannedPress} could not fire, and {@link BotProfile.planHorizon} swept flat:
+ * 92.5% against 94.1% across its entire range, and not monotone inside it, because what
+ * little it did do depended on how wide the gap between waves happened to be.
+ *
+ * Deciding at a fixed lead instead makes both beasts of a pair visible at the moment the
+ * decision is taken, whatever the gap. **It is not a way for a bot to see further:** 1 s is
+ * less than the 1.79 s minimum {@link visibleLead}, so the beast is always already on screen,
+ * and {@link decideAt} takes the *later* of the two so the rule cannot be broken by tuning
+ * this constant. A test measures the margin — 0.33 s at the tightest beast the course can
+ * generate — and would fail if a course change ate it.
+ */
+export const BOT_PLAN_LEAD = 1;
+
+/**
+ * The moment a bot commits to a beast: {@link BOT_PLAN_LEAD} before it arrives, or when it
+ * comes into view, whichever is **later**. Rule 6 by construction rather than by tuning.
+ */
+export function decideAt(hazard: Readonly<Hazard>): number {
+  return hazard.arrival - Math.min(BOT_PLAN_LEAD, visibleLead(hazard));
+}
+
+/**
  * The first beast this runner still has to do something about.
  *
  * Beasts before the cursor are settled. Of the rest, one already inside the jump the runner
@@ -608,14 +657,25 @@ export function nextUncovered(game: Readonly<Game>, runner: Readonly<Runner>): n
  *
  * Three cases and they are the whole of the game's decision content:
  *
- * - **Two close enough for one jump** — centre the jump on the pair rather than on either.
+ * - **Two close enough for one jump** — a `pincer`. One jump covers both, and the best
+ *   moment for the pair turns out to be the same moment as for the first of them, so there
+ *   is nothing here for a tier to be better at. That is **measured, not assumed**, and it
+ *   was a surprise: an earlier version centred the jump on the midpoint of the pair, which
+ *   is the midpoint of the interval that covers both, and it scored *worse* at every
+ *   separation and every error width. The reason is that the two ways of being wrong are
+ *   not worth the same. A press that is too early still covers the first beast, so it costs
+ *   one; a press that is too late is swallowed by the stagger from the beast that has
+ *   already bowled you over, so it costs both. The optimum therefore sits early of the
+ *   midpoint, within a frame of the plain centred press. SPEC.md has the table.
  * - **Two far enough apart for two jumps** — take the first, but never so late that the
  *   second becomes unreachable. With the shipped course this branch never binds, because the
  *   gap between waves never falls under a second; it is here because it is the correct rule
  *   and a tightened course would need it, and SPEC.md says plainly that it is inert today.
  * - **Two that are neither** — a `choice`. Exactly one can be saved, so save the one worth
  *   more, and take the knock from the other. A tier that will not look this far ahead always
- *   saves the first one it sees, which is the right beast only half the time.
+ *   saves the first one it sees, which is the right beast only half the time. **This is the
+ *   whole of what {@link BotProfile.planHorizon} buys**, and after the pincer case above was
+ *   deleted it is the only thing that knob touches.
  *
  * Written entirely in arrival times and values. There is no lane coordinate anywhere in it,
  * and no seat: the same board hands the same answer to whichever runner asks.
@@ -632,12 +692,14 @@ export function plannedPress(
 
   const partner = game.hazards[next] as Hazard;
   const apart = partner.arrival - hazard.arrival;
-  if (apart > profile.planHorizon || !botCanSee(game, partner)) {
-    return { at: centred, target: index };
-  }
-  if (apart <= PRESS_WINDOW) {
-    return { at: (hazard.arrival + partner.arrival) / 2 - AIR_SECONDS / 2, target: index };
-  }
+  // A pincer. One jump takes both and the aim is the aim for the first of them; every tier
+  // plays it the same way because there is no better way to play it.
+  if (apart <= PRESS_WINDOW) return { at: centred, target: index };
+  // Not looking that far ahead, or nothing on screen yet to look at. The second is rule 6
+  // written down: with {@link BOT_PLAN_LEAD} at a second it never binds, and a test measures
+  // by how much rather than leaving that as an assurance.
+  if (apart > profile.planHorizon) return { at: centred, target: index };
+  if (!botCanSee(game, partner)) return { at: centred, target: index };
   if (apart >= DANGER_SECONDS + RECOVER_SECONDS) {
     const latest = partner.arrival - DANGER_HALF - AIR_SECONDS - RECOVER_SECONDS;
     const earliest = hazard.arrival + DANGER_HALF - AIR_SECONDS;
@@ -679,7 +741,7 @@ export function botPress(
     return false;
   }
   if (state.target < next) {
-    if (!botCanSee(game, game.hazards[next] as Hazard)) {
+    if (game.clock < decideAt(game.hazards[next] as Hazard)) {
       state.target = -1;
       return false;
     }

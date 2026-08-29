@@ -15,7 +15,7 @@ import type { WinCondition } from '@duelbox/game-sdk';
  * No rendering, no timing, no DOM — the bot, the balance harness and the tests all reuse
  * this module.
  *
- * ## The four decisions this file exists to record
+ * ## The five decisions this file exists to record
  *
  * **Both lagoons are simulated in ONE local frame, not in board coordinates.** A swimmer's
  * position is a point in a 560 x 470 box that starts at (0, 0) for *both* seats, and
@@ -24,14 +24,19 @@ import type { WinCondition } from '@duelbox/game-sdk';
  * *shown* to agree — they run the **identical arithmetic on the identical numbers**, and
  * seat symmetry is a property of the type rather than a measurement. `rules.test.ts` drives
  * the two seats with one command stream and asserts their whole states are bit-identical,
- * which is the strongest form of the check `docs`-level lore asks every game to make; see
- * SPEC.md, "The half-turn is a rendering transform".
+ * which is the strongest form of the check the repository's mirror-symmetry lore asks every
+ * game to make; see SPEC.md, "Seat balance".
  *
  * **A heading is one of nine values, and nothing here is continuous.** The catalogue row
  * says "run", and a run is a *position* — exactly the quantity `docs/input-parity.md` says
- * a thumb can name and a key cannot. So the simulation is handed a {@link Command} carrying
+ * a thumb can name and a key cannot, so it is not what this game reads. So the simulation is handed a {@link Command} carrying
  * a direction drawn from the nine values a keyboard produces — eight compass points and a
  * standstill — and the swim runs at one {@link SWIM_SPEED} whichever instrument named it.
+ *
+ * **The match is decided on distance swum, and the tiebreak is a time and then a count.**
+ * On a symmetric board no tiebreak written in board coordinates can settle a level position,
+ * and here that is certain rather than likely: the two lagoons are the same six coral heads
+ * at the same six coordinates. See {@link judge}.
  *
  * **The match is guaranteed to end by arithmetic, not by a clock.** Every piranha is a pure
  * pursuer whose speed is a function of elapsed time alone, so the gap to the swimmer obeys
@@ -98,10 +103,21 @@ export function toBoardY(seat: SeatId, localY: number): number {
 /**
  * Which way a seat's own axes point along the device.
  *
- * The only thing the half-turn costs anybody: seat two reads the device upside down, so
- * its own "forward" is the device's "up". `game.ts` multiplies both the keyboard's move
- * vector and the pointer's gap by this and gets a lagoon-local heading; nothing else in
- * the package needs it, because nothing else in the package knows about the device.
+ * The lagoon frame is already **each seat's own upright view** — `toBoardX`/`toBoardY`
+ * carry the half-turn, so local `+x` is the player's own right and local `+y` is the
+ * water in front of their own shore, for both of them. That has one consequence worth
+ * stating because it is easy to get backwards, and `game.test.ts` asserts it:
+ *
+ * - **The keyboard needs no sign at all.** `InputManager` reports `move` in device
+ *   orientation, and the far seat *means* the opposite of what the device saw, so the
+ *   two flips cancel: local heading is the raw `move` vector for both seats.
+ * - **The pointer needs one.** A finger names a point on the glass, which is the same
+ *   point from either side of the device, so the gap between it and the swimmer comes
+ *   out in board units and has to be turned into the seat's own frame — which is
+ *   multiplying by this, once, in `game.ts` and nowhere else.
+ *
+ * Frozen Beaks needs the mirror of this (a sign on the keys and none on the pointer)
+ * because its birds are stored in board coordinates. Same half-turn, moved one layer.
  */
 export function seatAxisSign(seat: SeatId): number {
   return seat === 'p1' ? 1 : -1;
@@ -152,11 +168,16 @@ export const PIRANHA_COUNT = 4;
  * form instead of a hope, and it is also the honest model: the shoal is not reacting to
  * you, it is simply working itself up.
  *
- * It opens at 0.64 of {@link SWIM_SPEED}, which is comfortably outrun, and crosses it at
- * `(150 - 96) / 2.2 = 24.5` seconds, after which no swimmer can pull away from anything.
+ * It opens at 0.4 of {@link SWIM_SPEED}, which is comfortably outrun, and crosses it at
+ * `(150 - 60) / 3.4 = 26.5` seconds, after which no swimmer can pull away from anything.
+ *
+ * Both numbers were measured rather than chosen; SPEC.md carries the sweep. A shoal that
+ * opens fast has the pincer close before anybody has swum anywhere — at `96 + 2.2t` two
+ * `hard` bots were finished in 11.7 s — and one that ramps slowly pushes
+ * {@link terminationBoundSeconds} past the round length the catalogue card advertises.
  */
-export const PIRANHA_BASE = 96;
-export const PIRANHA_RAMP = 2.2;
+export const PIRANHA_BASE = 60;
+export const PIRANHA_RAMP = 3.4;
 
 export function piranhaSpeed(elapsed: number): number {
   return PIRANHA_BASE + PIRANHA_RAMP * elapsed;
@@ -186,10 +207,14 @@ export const SCORE_UNIT = SWIM_RADIUS * 2;
  * The backstop clock, in seconds.
  *
  * **It is not the termination guarantee and it has never fired.** The guarantee is the
- * shoal's ramp, whose closed form {@link terminationBoundSeconds} puts at 59.7 seconds at
- * 60 Hz; this sits well above it so that a defect in the ramp shows up as a strange
- * scoreline rather than as a hung test suite. `rules.test.ts` asserts the ordering of the
- * two numbers and counts how often the clock decides a match, which is zero.
+ * shoal's ramp, whose closed form {@link terminationBoundSeconds} puts at 59.82 seconds at
+ * 60 Hz and 59.87 at 15 Hz; this sits well above both so that a defect in the ramp shows
+ * up as a strange scoreline rather than as a hung test suite. `rules.test.ts` asserts the
+ * ordering of the numbers and counts how often the clock decides a match, which is zero.
+ *
+ * The manifest's `roundSeconds` is 60, and that is not a coincidence and not a clock
+ * either: the bound is under it at every step rate tested, so the catalogue card's
+ * "about 1 min" is a **proved ceiling** on a match rather than the usual advertising.
  */
 export const MATCH_SECONDS = 90;
 
@@ -334,6 +359,18 @@ export function clamp(value: number, low: number, high: number): number {
 /** A swimmer's score: whole body lengths swum. */
 export function lengthsOf(lagoon: Readonly<Lagoon>): number {
   return Math.floor(lagoon.swimmer.distance / SCORE_UNIT);
+}
+
+/**
+ * How long this swimmer lasted, in seconds, or Infinity while it is still swimming.
+ *
+ * The first tiebreak, and the reason it is a *time* is the whole of {@link judge}'s
+ * argument: on a symmetric board no rule written in board coordinates can settle a level
+ * position, because a covariant rule returns the mirror answer. Both lagoons here are
+ * literally the same lagoon, so that failure is not merely likely, it is certain.
+ */
+export function survivalOf(lagoon: Readonly<Lagoon>): number {
+  return lagoon.swimmer.alive ? Infinity : lagoon.swimmer.diedAt;
 }
 
 /* ------------------------------------------------------------------------------------ */
@@ -659,7 +696,7 @@ function driveSwimmer(game: Game, lagoon: Lagoon, command: Readonly<Command>, dt
  * second place for the two seats to disagree: the lagoon is convex and both the piranha
  * and the swimmer are inside it, so every point of the segment between them is too.
  */
-function driveShoal(lagoon: Lagoon, speed: number, dt: number): void {
+function driveShoal(lagoon: Lagoon, speed: number, dt: number): boolean {
   const swimmer = lagoon.swimmer;
   const reach = speed * dt;
   for (let i = 0; i < lagoon.piranhas.length; i += 1) {
@@ -678,6 +715,10 @@ function driveShoal(lagoon: Lagoon, speed: number, dt: number): void {
     const ny = swimmer.y - piranha.y;
     if (nx * nx + ny * ny <= CATCH_RADIUS * CATCH_RADIUS) swimmer.alive = false;
   }
+  // Returned rather than re-read by the caller, which is not only tidier: after the early
+  // return above, the type of `swimmer.alive` is narrowed to `true` and a second test on it
+  // reads as dead code to the linter. The verdict belongs to the function that reached it.
+  return swimmer.alive;
 }
 
 function driveSeat(game: Game, seat: SeatId, command: Readonly<Command>, dt: number): void {
@@ -686,8 +727,8 @@ function driveSeat(game: Game, seat: SeatId, command: Readonly<Command>, dt: num
   // happened and nothing about a finished lagoon can move the score any further.
   if (!lagoon.swimmer.alive) return;
   driveSwimmer(game, lagoon, command, dt);
-  driveShoal(lagoon, piranhaSpeed(game.elapsed), dt);
-  if (!lagoon.swimmer.alive) lagoon.swimmer.diedAt = game.elapsed;
+  const survived = driveShoal(lagoon, piranhaSpeed(game.elapsed), dt);
+  if (!survived) lagoon.swimmer.diedAt = game.elapsed;
 }
 
 /**
@@ -699,14 +740,34 @@ function driveSeat(game: Game, seat: SeatId, command: Readonly<Command>, dt: num
  *
  * The winner is the higher score, through the SDK's `highest-when-time-expires`, which is
  * also what makes two swimmers finishing level a draw rather than a win for whichever seat
- * this file happens to read first. The tiebreak on top of it is the one thing the helper
- * cannot know about: level on lengths, the swimmer that caught **fewer** coral heads takes
- * it.
+ * this file happens to read first.
  *
- * That tiebreak is deliberately not a function of the board. A rule written in positions —
- * "the swimmer further up the lagoon", "the swimmer nearer the middle" — cannot settle
- * this game at all, because the two lagoons are the same lagoon: a covariant rule returns
- * the mirror answer and decides nothing. A count of events is not a position, so it does.
+ * ## The tiebreak, and why it cannot be a position
+ *
+ * The score is a whole number of body lengths and two players of a standard sit on the
+ * same one of them often — **8 to 19 % of matches** before this chain existed. So the
+ * tiebreak is load-bearing rather than ceremonial, and it is the one thing the SDK helper
+ * cannot know about.
+ *
+ * It is deliberately **not a function of the board**. That is Maze Paint's finding and it
+ * bites harder here than anywhere: a rule written in positions — "the swimmer further up
+ * the lagoon", "the swimmer nearer the middle", "the swimmer with more open water" —
+ * cannot settle this game *at all*, because the two lagoons are not merely congruent, they
+ * are the same six coral heads at the same six coordinates. A covariant rule returns the
+ * mirror answer on a level position and decides nothing.
+ *
+ * Two things that are not positions, in order:
+ *
+ * 1. **The swimmer taken later wins.** A time, counted from the start of the match, and
+ *    the honest reading of "run from the piranhas": the one that ran longer ran better.
+ *    It separates 23 of the 25 level `hard` matches on its own.
+ * 2. **Level on that too, the swimmer that hit fewer coral heads wins.** A count of
+ *    events. It catches the case the first cannot — both taken on the same step, which
+ *    happens when both were cornered by the ramp rather than by anything they did.
+ *
+ * Level on all three is a genuine draw: the same course, the same shoal, the same length,
+ * the same last breath and the same number of collisions is two people who played the
+ * same match.
  */
 function judge(game: Game): void {
   const done = !game.p1.swimmer.alive && !game.p2.swimmer.alive;
@@ -717,6 +778,12 @@ function judge(game: Game): void {
   if (decided === null) return;
   if (decided !== 'draw') {
     game.winner = decided;
+    return;
+  }
+  const lasted1 = survivalOf(game.p1);
+  const lasted2 = survivalOf(game.p2);
+  if (lasted1 !== lasted2) {
+    game.winner = lasted1 > lasted2 ? 'p1' : 'p2';
     return;
   }
   const s1 = game.p1.swimmer.snags;
@@ -815,7 +882,20 @@ export interface BotProfile {
  *
  * Every one of these is a strong knob on its own, so the shipped spread is deliberately
  * narrow — three strong knobs pulled apart by intuition compound into a ladder nobody can
- * climb. SPEC.md carries every sweep.
+ * climb. SPEC.md carries every sweep; the short version, each varied alone against an
+ * untouched `normal` over 300 seeds in both seat orders:
+ *
+ * - `think` runs 59 / 61 / 57 / 42 / 21 / 13 % at 0.12 / 0.16 / 0.26 / 0.4 / 0.6 / 0.9, so
+ *   it is monotone over the whole shipped range and **flat below about 0.16**, where a bot
+ *   is already re-planning faster than the board changes.
+ * - `blunder` runs 63 / 61 / 56 / 53 / 42 / 30 / 11 % from 0 to 0.7 — the only one of the
+ *   three that is monotone end to end, and the strongest.
+ * - `lookAhead` runs 39 / 41 / 55 / 63 / 61 / 61 / 60 % from 0.1 to 3.5, so it is a strong
+ *   knob up to about 1.0 and **saturates above it**. `hard`'s 1.5 buys nothing measurable
+ *   over `normal`'s 1.0; it is kept because the plateau is wide and the ladder reads
+ *   better with the three tiers ordered, and the `normal`-to-`hard` step is carried by
+ *   `think` and `blunder`. That is stated here rather than hidden, because a knob whose
+ *   top two settings are indistinguishable is a knob that is doing two thirds of a job.
  */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
   easy: Object.freeze({ think: 0.4, blunder: 0.26, lookAhead: 0.55 }),
@@ -829,10 +909,18 @@ export const REACTION_WANDER = 0.25;
 /**
  * How far ahead a bot insists on clear water before it will swim somewhere.
  *
- * Not a difficulty knob — every tier uses it, and it is the shape of the game rather than
- * a handicap. Below this a heading is refused outright however open it looks further on,
- * so no tier ever swims knowingly into a coral head it can see; what separates the tiers
- * is how stale their plan is when they do, which is where the game is.
+ * One body diameter. Below this a heading is refused outright however open it looks
+ * further on, so no tier ever swims knowingly into a coral head it can see; what
+ * separates the tiers is how stale their plan is when they do, which is where the game is.
+ *
+ * **Every tier uses the same value, and it is not a difficulty knob** — but not for the
+ * reason that phrase usually hides. Swept alone it is a strong parameter and a
+ * *non-monotone* one: `hard`'s win rate against `normal` runs 46 / 70 / 61 / 44 / 26 / 21 %
+ * at 0 / 20 / 40 / 70 / 110 / 160, because zero makes a bot swim through the reef (6.0
+ * snags a match) and a large value makes it refuse every heading and pin itself against a
+ * rim. A parameter with an interior optimum cannot be a difficulty dial — one side of the
+ * peak would make the *weaker* tier better — so it is a shape constant and SPEC.md carries
+ * the sweep that says so.
  */
 export const ESCAPE_ROOM = SWIM_RADIUS * 2;
 
@@ -841,8 +929,12 @@ export const ESCAPE_ROOM = SWIM_RADIUS * 2;
  * shoal.
  *
  * Small on purpose: fleeing is the game and room is the tie-break, so this only decides
- * between two headings the shoal is equally far from. It is not a difficulty knob for the
- * reason SPEC.md records — swept alone it is flat.
+ * between two headings the shoal is equally far from.
+ *
+ * Not a difficulty knob, and for the same reason {@link ESCAPE_ROOM} is not: swept alone
+ * it reads 58 / 57 / 61 / 71 / 45 / 63 % at 0 / 0.04 / 0.12 / 0.3 / 0.8 / 2.0, which is
+ * not a direction at all. Past about 0.5 a bot chases open water instead of running from
+ * anything and the average match collapses from 19 s to 3.9 s.
  */
 export const ROOM_WEIGHT = 0.12;
 

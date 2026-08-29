@@ -53,7 +53,7 @@ import type { WinCondition } from '@duelbox/game-sdk';
 /**
  * The smallest division of the beat, in seconds, and the three gaps a note may sit at.
  *
- * 0.25 s is a semiquaver at 120 beats a minute. Gaps of two, three and four slots are
+ * 0.25 s is a quaver at 120 beats a minute. Gaps of two, three and four slots are
  * 0.5, 0.75 and 1.0 seconds, and **the shortest of them is what makes the referee
  * unambiguous**: two good windows are `2 x GOOD_SECONDS` = 0.36 s wide together, so no press
  * can ever be inside the window of two different notes at once. That is asserted rather than
@@ -99,9 +99,10 @@ export const MATCH_SECONDS = LEAD_SECONDS + TRACK_SECONDS + TAIL_SECONDS;
  * person needs to see a note, place the beat, and commit.
  *
  * It also bounds the bot. A tier commits to a moment when a note appears, and the largest
- * error any tier can commit to is `timing x (1 + FUMBLE_SCALE)` = 1.38 s, comfortably inside
- * this — so a bot's countdown is always positive when it is set. A test asserts that for every
- * tier, because a countdown that starts already expired is the shape of a bot that mashes.
+ * error any tier can commit to is `timing x FUMBLE_SCALE` = 0.92 s at `easy`, comfortably
+ * inside this — so a bot's countdown is always positive when it is set. A test asserts that
+ * for every tier, because a countdown that starts already expired is the shape of a bot that
+ * mashes rather than one that is merely late.
  */
 export const APPROACH_SECONDS = 2;
 
@@ -159,7 +160,7 @@ export interface Side {
   lastOffset: number;
 }
 
-export interface Game {
+export interface State {
   /**
    * When each note lands, in seconds from the start of the match.
    *
@@ -200,12 +201,12 @@ function makeSide(): Side {
   };
 }
 
-export function createGame(): Game {
+export function createState(): State {
   const arrivals = new Array<number>(NOTE_COUNT).fill(0);
   const p1Judged = new Array<Judgement>(NOTE_COUNT).fill('none');
   const p2Judged = new Array<Judgement>(NOTE_COUNT).fill('none');
   const gaps = new Array<number>(NOTE_COUNT - 1).fill(0);
-  const game: Game = {
+  const state: State = {
     arrivals,
     p1Judged,
     p2Judged,
@@ -216,8 +217,8 @@ export function createGame(): Game {
     clock: 0,
     winner: null,
   };
-  layOutTrack(game, new Rng(1));
-  return game;
+  layOutTrack(state, new Rng(1));
+  return state;
 }
 
 /**
@@ -228,8 +229,8 @@ export function createGame(): Game {
  * that was an average rather than a fact. Fixing the multiset and permuting it gives a track
  * whose *rhythm* is different every match and whose *length* is 36.0 seconds every match.
  */
-export function layOutTrack(game: Game, rng: Rng): void {
-  const gaps = game.gaps;
+export function layOutTrack(state: State, rng: Rng): void {
+  const gaps = state.gaps;
   let at = 0;
   for (let g = 0; g < GAP_MENU.length; g += 1) {
     const length = GAP_MENU[g] as number;
@@ -240,10 +241,10 @@ export function layOutTrack(game: Game, rng: Rng): void {
   }
   rng.shuffle(gaps);
   let slot = 0;
-  game.arrivals[0] = LEAD_SECONDS;
+  state.arrivals[0] = LEAD_SECONDS;
   for (let n = 1; n < NOTE_COUNT; n += 1) {
     slot += gaps[n - 1] as number;
-    game.arrivals[n] = LEAD_SECONDS + slot * SLOT_SECONDS;
+    state.arrivals[n] = LEAD_SECONDS + slot * SLOT_SECONDS;
   }
 }
 
@@ -258,30 +259,30 @@ function resetSide(side: Side): void {
   side.lastOffset = 0;
 }
 
-export function resetGame(game: Game, rng: Rng): void {
-  layOutTrack(game, rng);
+export function resetState(state: State, rng: Rng): void {
+  layOutTrack(state, rng);
   for (let i = 0; i < NOTE_COUNT; i += 1) {
-    game.p1Judged[i] = 'none';
-    game.p2Judged[i] = 'none';
+    state.p1Judged[i] = 'none';
+    state.p2Judged[i] = 'none';
   }
-  resetSide(game.p1);
-  resetSide(game.p2);
-  game.cursor = 0;
-  game.clock = 0;
-  game.winner = null;
+  resetSide(state.p1);
+  resetSide(state.p2);
+  state.cursor = 0;
+  state.clock = 0;
+  state.winner = null;
 }
 
-export function sideOf(game: Readonly<Game>, seat: SeatId): Readonly<Side> {
-  return seat === 'p1' ? game.p1 : game.p2;
+export function sideOf(state: Readonly<State>, seat: SeatId): Readonly<Side> {
+  return seat === 'p1' ? state.p1 : state.p2;
 }
 
-export function judgedBy(game: Readonly<Game>, seat: SeatId): readonly Judgement[] {
-  return seat === 'p1' ? game.p1Judged : game.p2Judged;
+export function judgedBy(state: Readonly<State>, seat: SeatId): readonly Judgement[] {
+  return seat === 'p1' ? state.p1Judged : state.p2Judged;
 }
 
 /** Mistakes a seat has made: notes it let go, plus presses that answered nothing. */
-export function mistakesBy(game: Readonly<Game>, seat: SeatId): number {
-  const side = sideOf(game, seat);
+export function mistakesBy(state: Readonly<State>, seat: SeatId): number {
+  const side = sideOf(state, seat);
   return side.missed + side.wild;
 }
 
@@ -292,8 +293,36 @@ export function mistakesBy(game: Readonly<Game>, seat: SeatId): number {
  * Deliberately **not** clamped below zero — a note that has gone past the platform keeps
  * counting down so `game.ts` can draw it leaving. Above one it is not yet in sight.
  */
-export function approachOf(game: Readonly<Game>, note: number): number {
-  return ((game.arrivals[note] as number) - game.clock) / APPROACH_SECONDS;
+export function approachOf(state: Readonly<State>, note: number): number {
+  return ((state.arrivals[note] as number) - state.clock) / APPROACH_SECONDS;
+}
+
+/**
+ * How much of the track is still to come, as a fraction of the whole match.
+ *
+ * A fraction, for the same reason {@link approachOf} is one, and the only clock either player
+ * is shown. The shell knows nothing about this match's length — `roundSeconds` is a label on
+ * a catalogue card — so the game draws its own, once, in a place both seats are exactly as
+ * near to.
+ */
+export function remainingOf(state: Readonly<State>): number {
+  const left = (MATCH_SECONDS - state.clock) / MATCH_SECONDS;
+  if (left < 0) return 0;
+  return left > 1 ? 1 : left;
+}
+
+/**
+ * The lowest note index worth drawing. Never negative, and never behind a closed window.
+ *
+ * The cursor is the first note whose window is still open, so note `cursor - 1` closed at
+ * most a step ago and note `cursor - 2` closed a whole gap before that — which at the
+ * shortest gap the menu allows is 0.5 s, further past the platform than anything is drawn.
+ * Two is therefore not a guess: it is the smallest number that cannot clip a note still on
+ * screen.
+ */
+export function firstDrawable(state: Readonly<State>): number {
+  const first = state.cursor - 2;
+  return first > 0 ? first : 0;
 }
 
 /* ------------------------------------------------------------------ the referee */
@@ -329,15 +358,15 @@ const WIN_CONDITION: WinCondition = Object.freeze({ kind: 'highest-when-time-exp
  * player mashing — a masher answers every note and pays for the two thousand presses in
  * between.
  */
-function judgePress(game: Game, seat: SeatId): Verdict {
-  const judged = seat === 'p1' ? game.p1Judged : game.p2Judged;
-  const side = seat === 'p1' ? game.p1 : game.p2;
-  const clock = game.clock;
+function judgePress(state: State, seat: SeatId): Verdict {
+  const judged = seat === 'p1' ? state.p1Judged : state.p2Judged;
+  const side = seat === 'p1' ? state.p1 : state.p2;
+  const clock = state.clock;
 
   let best = -1;
   let bestGap = GOOD_SECONDS;
-  for (let i = game.cursor; i < NOTE_COUNT; i += 1) {
-    const arrival = game.arrivals[i] as number;
+  for (let i = state.cursor; i < NOTE_COUNT; i += 1) {
+    const arrival = state.arrivals[i] as number;
     if (arrival - clock > GOOD_SECONDS) break;
     if (judged[i] !== 'none') continue;
     const gap = Math.abs(arrival - clock);
@@ -356,7 +385,7 @@ function judgePress(game: Game, seat: SeatId): Verdict {
 
   const perfect = bestGap <= PERFECT_SECONDS;
   judged[best] = perfect ? 'perfect' : 'good';
-  side.lastOffset = clock - (game.arrivals[best] as number);
+  side.lastOffset = clock - (state.arrivals[best] as number);
   if (perfect) {
     side.perfect += 1;
     side.score += PERFECT_POINTS;
@@ -376,25 +405,25 @@ function judgePress(game: Game, seat: SeatId): Verdict {
  * They are the same boundary read from opposite sides, which is the property that lets this
  * function be a plain sweep instead of a per-seat scan.
  */
-function closeWindows(game: Game): void {
-  while (game.cursor < NOTE_COUNT) {
-    const arrival = game.arrivals[game.cursor] as number;
-    if (game.clock <= arrival + GOOD_SECONDS) break;
-    if (game.p1Judged[game.cursor] === 'none') {
-      game.p1Judged[game.cursor] = 'missed';
-      game.p1.missed += 1;
-      game.p1.score -= MISS_PENALTY;
-      game.p1.verdict = 'missed';
-      game.p1.flash = FLASH_SECONDS;
+function closeWindows(state: State): void {
+  while (state.cursor < NOTE_COUNT) {
+    const arrival = state.arrivals[state.cursor] as number;
+    if (state.clock <= arrival + GOOD_SECONDS) break;
+    if (state.p1Judged[state.cursor] === 'none') {
+      state.p1Judged[state.cursor] = 'missed';
+      state.p1.missed += 1;
+      state.p1.score -= MISS_PENALTY;
+      state.p1.verdict = 'missed';
+      state.p1.flash = FLASH_SECONDS;
     }
-    if (game.p2Judged[game.cursor] === 'none') {
-      game.p2Judged[game.cursor] = 'missed';
-      game.p2.missed += 1;
-      game.p2.score -= MISS_PENALTY;
-      game.p2.verdict = 'missed';
-      game.p2.flash = FLASH_SECONDS;
+    if (state.p2Judged[state.cursor] === 'none') {
+      state.p2Judged[state.cursor] = 'missed';
+      state.p2.missed += 1;
+      state.p2.score -= MISS_PENALTY;
+      state.p2.verdict = 'missed';
+      state.p2.flash = FLASH_SECONDS;
     }
-    game.cursor += 1;
+    state.cursor += 1;
   }
 }
 
@@ -402,42 +431,60 @@ function closeWindows(game: Game): void {
  * One fixed step. `pressP1` and `pressP2` are the whole of the input this game has.
  *
  * The two seats are handled by the same two calls in the same order with no shared state
- * between them — `judgePress` touches only its own seat's arrays — so swapping the two press
- * bits swaps the two scores exactly. That is the game's symmetry proof, and `rules.test.ts`
- * asserts it board by board rather than measuring a win rate and hoping.
+ * between them — `judgePress` touches only its own seat's arrays, and neither call moves the
+ * cursor — so swapping the two press bits swaps the two scores exactly. That is the game's
+ * symmetry proof, and `rules.test.ts` asserts it board by board rather than measuring a win
+ * rate and hoping.
+ *
+ * **A press is judged against the clock the step began with, and the clock advances after.**
+ * That ordering is the whole of issue #2465 in this game. A tier commits to a moment as
+ * `arrival - clock + offset` and counts it down one delta a step, so it presses on the frame
+ * nearest `arrival + offset`; the referee has to be reading the same clock on that frame, or
+ * every bot press in the catalogue is a systematic sixtieth of a second late — a fifth of the
+ * perfect window, charged to one player and not to the person sitting opposite. A test fires
+ * on the exact frame `driveBot` chooses and asserts `lastOffset` is the offset the tier drew,
+ * to within half a step.
+ *
+ * Windows close *after* the advance, against the new clock, so the cursor a press is judged
+ * against is always the one that was right at that press's own moment.
  */
-export function step(game: Game, fixedDeltaSeconds: number, pressP1: boolean, pressP2: boolean): StepResult {
+export function step(
+  state: State,
+  fixedDeltaSeconds: number,
+  pressP1: boolean,
+  pressP2: boolean,
+): StepResult {
   result.p1Verdict = 'none';
   result.p2Verdict = 'none';
   result.finished = false;
-  if (game.winner !== null) return result;
-
-  game.clock += fixedDeltaSeconds;
+  if (state.winner !== null) return result;
 
   if (pressP1) {
-    const verdict = judgePress(game, 'p1');
-    game.p1.verdict = verdict;
-    game.p1.flash = FLASH_SECONDS;
+    const verdict = judgePress(state, 'p1');
+    state.p1.verdict = verdict;
+    state.p1.flash = FLASH_SECONDS;
     result.p1Verdict = verdict;
   }
   if (pressP2) {
-    const verdict = judgePress(game, 'p2');
-    game.p2.verdict = verdict;
-    game.p2.flash = FLASH_SECONDS;
+    const verdict = judgePress(state, 'p2');
+    state.p2.verdict = verdict;
+    state.p2.flash = FLASH_SECONDS;
     result.p2Verdict = verdict;
   }
 
-  const p1Missed = game.p1.missed;
-  const p2Missed = game.p2.missed;
-  closeWindows(game);
-  if (game.p1.missed !== p1Missed) result.p1Verdict = 'missed';
-  if (game.p2.missed !== p2Missed) result.p2Verdict = 'missed';
+  state.clock += fixedDeltaSeconds;
 
-  if (game.p1.flash > 0) game.p1.flash -= fixedDeltaSeconds;
-  if (game.p2.flash > 0) game.p2.flash -= fixedDeltaSeconds;
+  const p1Missed = state.p1.missed;
+  const p2Missed = state.p2.missed;
+  closeWindows(state);
+  if (state.p1.missed !== p1Missed) result.p1Verdict = 'missed';
+  if (state.p2.missed !== p2Missed) result.p2Verdict = 'missed';
 
-  if (game.clock >= MATCH_SECONDS) {
-    finish(game);
+  if (state.p1.flash > 0) state.p1.flash -= fixedDeltaSeconds;
+  if (state.p2.flash > 0) state.p2.flash -= fixedDeltaSeconds;
+
+  if (state.clock >= MATCH_SECONDS) {
+    finish(state);
     result.finished = true;
   }
   return result;
@@ -458,27 +505,31 @@ export function step(game: Game, fixedDeltaSeconds: number, pressP1: boolean, pr
  * both seats — and the two tie-breaks count what each *player* did, which is the only thing in
  * the game that differs between them.
  */
-function finish(game: Game): void {
-  const outcome = resolve(WIN_CONDITION, { p1: game.p1.score, p2: game.p2.score }, { timeExpired: true });
+function finish(state: State): void {
+  const outcome = resolve(
+    WIN_CONDITION,
+    { p1: state.p1.score, p2: state.p2.score },
+    { timeExpired: true },
+  );
   if (outcome !== 'draw' && outcome !== null) {
-    game.winner = outcome;
+    state.winner = outcome;
     return;
   }
-  if (game.p1.perfect !== game.p2.perfect) {
-    game.winner = game.p1.perfect > game.p2.perfect ? 'p1' : 'p2';
+  if (state.p1.perfect !== state.p2.perfect) {
+    state.winner = state.p1.perfect > state.p2.perfect ? 'p1' : 'p2';
     return;
   }
-  const p1Mistakes = game.p1.missed + game.p1.wild;
-  const p2Mistakes = game.p2.missed + game.p2.wild;
+  const p1Mistakes = state.p1.missed + state.p1.wild;
+  const p2Mistakes = state.p2.missed + state.p2.wild;
   if (p1Mistakes !== p2Mistakes) {
-    game.winner = p1Mistakes < p2Mistakes ? 'p1' : 'p2';
+    state.winner = p1Mistakes < p2Mistakes ? 'p1' : 'p2';
     return;
   }
-  game.winner = 'draw';
+  state.winner = 'draw';
 }
 
-export function winnerOf(game: Readonly<Game>): SeatId | 'draw' | null {
-  return game.winner;
+export function winnerOf(state: Readonly<State>): SeatId | 'draw' | null {
+  return state.winner;
 }
 
 /* ------------------------------------------------------------------ the bot */
@@ -504,14 +555,21 @@ export interface BotProfile {
  * a moment when the note *appears on the lane*, which is exactly when a player can first see
  * it.
  *
- * `easy` at nearly half a second sounds generous until you remember there is no sound: a
- * beginner reading a beat off a moving shape, with nothing to hear, is half a second out
- * often. The measured ladder is in SPEC.md and all three knobs were swept alone.
+ * `easy` at four tenths of a second sounds generous until you remember there is no sound: a
+ * beginner reading a beat off a moving shape, with nothing to hear, is that far out often.
+ *
+ * **The three are closer together than they look, and that was deliberate.** The first set —
+ * 0.46, 0.32, 0.22 — read as a fine ladder on its own scores and was a cliff as a duel:
+ * `hard` took 99.4% off `normal` and 100.0% off `easy` over 1600 matches, so two of the three
+ * tiers were unplayable rather than merely harder. Narrowing the ends to 0.40 and 0.25 costs
+ * nothing in separation (the score ladder is still 29.5 / 57.8 / 83.0 of a possible 147) and
+ * buys a `normal` player a real 5% against `hard`. The measured ladder is in SPEC.md, and all
+ * three knobs were swept alone across their whole range and are monotone.
  */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: { timing: 0.46, fumble: 0.1, stray: 0.14 },
-  normal: { timing: 0.32, fumble: 0.05, stray: 0.07 },
-  hard: { timing: 0.22, fumble: 0.02, stray: 0.02 },
+  easy: { timing: 0.4, fumble: 0.1, stray: 0.14 },
+  normal: { timing: 0.31, fumble: 0.05, stray: 0.07 },
+  hard: { timing: 0.25, fumble: 0.02, stray: 0.02 },
 });
 
 /** How much larger a fumbled note's error is than the tier's ordinary one. */
@@ -578,9 +636,9 @@ export function createBotRngs(source: Rng): { p1: Rng; p2: Rng } {
  * pulled out of step by what happened on the board.
  */
 export function planNote(
-  game: Readonly<Game>,
+  state: Readonly<State>,
   difficulty: BotDifficulty,
-  state: BotState,
+  bot: BotState,
   rng: Rng,
 ): void {
   const profile = BOT_PROFILES[difficulty];
@@ -600,10 +658,10 @@ export function planNote(
   // scrambling to catch up, and it is bounded — one note a step until it is level again.
   // Leaving the countdown negative would instead skip the note silently, which is a second
   // behaviour nothing in the tiers asked for.
-  const wanted = (game.arrivals[state.next] as number) - game.clock + offset;
-  state.timer = wanted > 0 ? wanted : 0;
-  state.stray = strayRoll < profile.stray;
-  state.next += 1;
+  const wanted = (state.arrivals[bot.next] as number) - state.clock + offset;
+  bot.timer = wanted > 0 ? wanted : 0;
+  bot.stray = strayRoll < profile.stray;
+  bot.next += 1;
 }
 
 /**
@@ -619,40 +677,52 @@ export function planNote(
  * away: `next` only increases and both timers only decrease.
  */
 export function driveBot(
-  game: Readonly<Game>,
+  state: Readonly<State>,
   difficulty: BotDifficulty,
-  state: BotState,
+  bot: BotState,
   rng: Rng,
   fixedDeltaSeconds: number,
 ): boolean {
   if (
-    state.timer < 0 &&
-    state.strayTimer < 0 &&
-    state.next < NOTE_COUNT &&
-    approachOf(game, state.next) <= 1
+    bot.timer < 0 &&
+    bot.strayTimer < 0 &&
+    bot.next < NOTE_COUNT &&
+    approachOf(state, bot.next) <= 1
   ) {
-    planNote(game, difficulty, state, rng);
+    planNote(state, difficulty, bot, rng);
   }
 
-  if (state.timer >= 0) {
-    if (state.timer > fixedDeltaSeconds / 2) {
-      state.timer -= fixedDeltaSeconds;
+  if (bot.timer >= 0) {
+    if (bot.timer > fixedDeltaSeconds / 2) {
+      // Floored at zero rather than left to run negative, and this is not tidiness.
+      // `-1` is this field's *idle* sentinel, so a countdown that overshot into
+      // (-delta/2, 0) read as idle on the very next step: the committed press vanished
+      // and the tier planned the following note instead. It cost about half of every
+      // tier's presses — `hard` was letting 25.8 of 49 notes go while making only 1.7
+      // wild presses, which is the signature of a bot that is not pressing rather than
+      // one that is pressing badly. The clamp cannot move which frame a press lands on:
+      // it only ever applies on the step whose remainder is already inside half a delta,
+      // and that step is the one the fire branch below takes.
+      const left = bot.timer - fixedDeltaSeconds;
+      bot.timer = left > 0 ? left : 0;
       return false;
     }
-    state.timer = -1;
+    bot.timer = -1;
     // The double-tap is timed from the press it follows rather than from the beat, so a
     // tier that was late is late twice over — which is what a nervous second tap looks like.
-    state.strayTimer = state.stray ? STRAY_GAP_SECONDS : -1;
-    state.stray = false;
+    bot.strayTimer = bot.stray ? STRAY_GAP_SECONDS : -1;
+    bot.stray = false;
     return true;
   }
 
-  if (state.strayTimer >= 0) {
-    if (state.strayTimer > fixedDeltaSeconds / 2) {
-      state.strayTimer -= fixedDeltaSeconds;
+  if (bot.strayTimer >= 0) {
+    if (bot.strayTimer > fixedDeltaSeconds / 2) {
+      // The same floor, for the same reason. Both countdowns share one sentinel.
+      const left = bot.strayTimer - fixedDeltaSeconds;
+      bot.strayTimer = left > 0 ? left : 0;
       return false;
     }
-    state.strayTimer = -1;
+    bot.strayTimer = -1;
     return true;
   }
 
