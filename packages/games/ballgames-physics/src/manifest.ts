@@ -1,6 +1,7 @@
 import { parseGameManifest } from '@duelbox/game-sdk';
+import type { GameManifest } from '@duelbox/game-sdk';
 
-export const manifest = parseGameManifest({
+export const manifest: GameManifest = parseGameManifest({
   id: 'ballgames-physics',
   name: 'Ball Games',
   category: 'Sports',
@@ -9,14 +10,13 @@ export const manifest = parseGameManifest({
   presentations: ['shared-screen', 'single-seat'],
   logical: { width: 600, height: 1000 },
   orientation: 'portrait',
+  // One pitch, two ends, both players roaming all of it. The split divides the *pointer
+  // surface* so a touch belongs to whoever it came from; it does not divide the pitch.
   zoneSplit: 'horizontal',
-  roundSeconds: 60,
-  // Required, and deliberately not optional: the shell shows this before the match and
-  // again from the pause menu, so a game without it would advertise nothing to a player
-  // holding a keyboard. Written for a player rather than as a spec.
+  roundSeconds: 90,
   controls: {
-    keyboard: 'TODO: which keys do what, for both seats',
-    pointer: 'TODO: the pointer idiom, or empty if this archetype has none',
+    keyboard: 'W A S D for the near seat, arrow keys for the far seat, to run at the ball',
+    pointer: 'Touch down in your own half and drag: your player runs towards your finger',
   },
-  tags: [],
+  tags: ['sports', 'physics', 'arena'],
 });
