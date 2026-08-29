@@ -243,6 +243,24 @@
     },
     {
       "path": "./packages/games/crash-it"
+    },
+    {
+      "path": "./packages/games/target-practice"
+    },
+    {
+      "path": "./packages/games/sudoku"
+    },
+    {
+      "path": "./packages/games/happy-hippos"
+    },
+    {
+      "path": "./packages/games/explosive-festival"
+    },
+    {
+      "path": "./packages/games/sliding-puzzle"
+    },
+    {
+      "path": "./packages/games/throw"
     }
   ]
 }

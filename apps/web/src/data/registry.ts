@@ -98,6 +98,12 @@ const LOADERS: Record<string, Loader> = {
   pinball: () => import('@duelbox/game-pinball').then((m) => m.default),
   'dung-battle': () => import('@duelbox/game-dung-battle').then((m) => m.default),
   'crash-it': () => import('@duelbox/game-crash-it').then((m) => m.default),
+  'target-practice': () => import('@duelbox/game-target-practice').then((m) => m.default),
+  sudoku: () => import('@duelbox/game-sudoku').then((m) => m.default),
+  'happy-hippos': () => import('@duelbox/game-happy-hippos').then((m) => m.default),
+  'explosive-festival': () => import('@duelbox/game-explosive-festival').then((m) => m.default),
+  'sliding-puzzle': () => import('@duelbox/game-sliding-puzzle').then((m) => m.default),
+  throw: () => import('@duelbox/game-throw').then((m) => m.default),
 };
 
 /**

@@ -87,6 +87,12 @@ import { manifest as animalStack } from '@duelbox/game-animal-stack';
 import { manifest as pinball } from '@duelbox/game-pinball';
 import { manifest as dungBattle } from '@duelbox/game-dung-battle';
 import { manifest as crashIt } from '@duelbox/game-crash-it';
+import { manifest as targetPractice } from '@duelbox/game-target-practice';
+import { manifest as sudoku } from '@duelbox/game-sudoku';
+import { manifest as happyHippos } from '@duelbox/game-happy-hippos';
+import { manifest as explosiveFestival } from '@duelbox/game-explosive-festival';
+import { manifest as slidingPuzzle } from '@duelbox/game-sliding-puzzle';
+import { manifest as throwGame } from '@duelbox/game-throw';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -113,6 +119,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   darts,
   dotsAndBoxes,
   dungBattle,
+  explosiveFestival,
   flappyJump,
   fourInARow,
   frogsFight,
@@ -121,6 +128,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   hammerHit,
   handSlap,
   happyBirds,
+  happyHippos,
   hotPotato,
   kingOfTheYard,
   knifeThrower,
@@ -150,6 +158,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   shipBattle,
   shuriken,
   shutTheBox,
+  slidingPuzzle,
   slingPuck,
   slotCars,
   snakes,
@@ -158,11 +167,14 @@ export const MANIFESTS: readonly GameManifest[] = [
   spikeAttacks,
   spinWar,
   starCatcher,
+  sudoku,
   sumo,
   swordThrowing,
   tankBattle,
+  targetPractice,
   taxiRace,
   tennis,
+  throwGame,
   ticTacToe,
   trafficJam,
   ultimateTtt,

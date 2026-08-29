@@ -28,8 +28,67 @@ if (!id) fail('usage: node scripts/register-game.mjs <id>');
 if (!existsSync(join(ROOT, 'packages', 'games', id)))
   fail(`packages/games/${id} does not exist — run \`pnpm create-game ${id}\` first`);
 
+/**
+ * Every reserved word and literal that cannot be bound as an identifier. A game id is
+ * lowercase kebab-case, so only the all-lowercase ones can ever collide — but `throw` did,
+ * and `import { manifest as throw }` does not parse, which took `pnpm typecheck` down
+ * repo-wide along with two test files that could no longer load. Strict mode's reserved
+ * words are here too: this file emits into an ES module, where they are always reserved.
+ */
+const RESERVED = new Set([
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'implements',
+  'import',
+  'in',
+  'instanceof',
+  'interface',
+  'let',
+  'new',
+  'null',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'return',
+  'static',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+  'await',
+]);
+
 /** `four-in-a-row` → `fourInARow`, which is what the manifest imports are named. */
-const camel = id.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+const rawCamel = id.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+
+/** Suffixed rather than prefixed so it still sorts next to its siblings in the import block. */
+const camel = RESERVED.has(rawCamel) ? `${rawCamel}Game` : rawCamel;
 
 /** A key only needs quoting when it is not a plain identifier. Prettier strips the rest. */
 const key = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(id) ? id : `'${id}'`;

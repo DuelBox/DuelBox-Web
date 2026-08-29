@@ -118,6 +118,9 @@ importers:
       '@duelbox/game-dung-battle':
         specifier: workspace:*
         version: link:../../packages/games/dung-battle
+      '@duelbox/game-explosive-festival':
+        specifier: workspace:*
+        version: link:../../packages/games/explosive-festival
       '@duelbox/game-flappy-jump':
         specifier: workspace:*
         version: link:../../packages/games/flappy-jump
@@ -142,6 +145,9 @@ importers:
       '@duelbox/game-happy-birds':
         specifier: workspace:*
         version: link:../../packages/games/happy-birds
+      '@duelbox/game-happy-hippos':
+        specifier: workspace:*
+        version: link:../../packages/games/happy-hippos
       '@duelbox/game-hot-potato':
         specifier: workspace:*
         version: link:../../packages/games/hot-potato
@@ -232,6 +238,9 @@ importers:
       '@duelbox/game-shut-the-box':
         specifier: workspace:*
         version: link:../../packages/games/shut-the-box
+      '@duelbox/game-sliding-puzzle':
+        specifier: workspace:*
+        version: link:../../packages/games/sliding-puzzle
       '@duelbox/game-sling-puck':
         specifier: workspace:*
         version: link:../../packages/games/sling-puck
@@ -256,6 +265,9 @@ importers:
       '@duelbox/game-star-catcher':
         specifier: workspace:*
         version: link:../../packages/games/star-catcher
+      '@duelbox/game-sudoku':
+        specifier: workspace:*
+        version: link:../../packages/games/sudoku
       '@duelbox/game-sumo':
         specifier: workspace:*
         version: link:../../packages/games/sumo
@@ -265,12 +277,18 @@ importers:
       '@duelbox/game-tanks':
         specifier: workspace:*
         version: link:../../packages/games/tanks
+      '@duelbox/game-target-practice':
+        specifier: workspace:*
+        version: link:../../packages/games/target-practice
       '@duelbox/game-taxi-race':
         specifier: workspace:*
         version: link:../../packages/games/taxi-race
       '@duelbox/game-tennis':
         specifier: workspace:*
         version: link:../../packages/games/tennis
+      '@duelbox/game-throw':
+        specifier: workspace:*
+        version: link:../../packages/games/throw
       '@duelbox/game-tic-tac-toe':
         specifier: workspace:*
         version: link:../../packages/games/tic-tac-toe
@@ -518,6 +536,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/explosive-festival:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/flappy-jump:
     dependencies:
       '@duelbox/engine':
@@ -582,6 +609,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/happy-birds:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/happy-hippos:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
@@ -851,6 +887,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/sliding-puzzle:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/sling-puck:
     dependencies:
       '@duelbox/engine':
@@ -923,6 +968,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/sudoku:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/sumo:
     dependencies:
       '@duelbox/engine':
@@ -950,6 +1004,15 @@ importers:
         specifier: workspace:*
         version: link:../../game-sdk
 
+  packages/games/target-practice:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
   packages/games/taxi-race:
     dependencies:
       '@duelbox/engine':
@@ -960,6 +1023,15 @@ importers:
         version: link:../../game-sdk
 
   packages/games/tennis:
+    dependencies:
+      '@duelbox/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@duelbox/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+
+  packages/games/throw:
     dependencies:
       '@duelbox/engine':
         specifier: workspace:*
