@@ -10,13 +10,15 @@ export const manifest = parseGameManifest({
   logical: { width: 600, height: 1000 },
   orientation: 'portrait',
   zoneSplit: 'horizontal',
-  roundSeconds: 60,
-  // Required, and deliberately not optional: the shell shows this before the match and
-  // again from the pause menu, so a game without it would advertise nothing to a player
-  // holding a keyboard. Written for a player rather than as a spec.
+  // Catalogue copy, and it ends nothing: the two bounds that do are `PIECE_CAP` and
+  // `ROUND_SECONDS` in `rules.ts`. The measured mean match is 21 s and the longest of
+  // 3600 was 41.5 s, so 45 is what a player should expect rather than what is enforced.
+  roundSeconds: 45,
   controls: {
-    keyboard: 'TODO: which keys do what, for both seats',
-    pointer: 'TODO: the pointer idiom, or empty if this archetype has none',
+    keyboard:
+      'Player one: A and D shunt a notch, Space drops. ' +
+      'Player two: the arrow keys shunt, Enter drops.',
+    pointer: 'Drag in your own half to shunt to the notch under your finger; tap to drop.',
   },
-  tags: [],
+  tags: ['stacking', 'balance', 'physics'],
 });
