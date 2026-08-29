@@ -16,8 +16,11 @@ constitution and its rules are non-negotiable.
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
 ```
 
-**2,509 unit tests, 297 browser tests** across four Playwright projects — Desktop Chrome,
+**8,995 unit tests, 282 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
+
+**85 games play end to end.** Twenty-two of the catalogue's 107 remain unbuilt; the ids are
+in `data/catalog.yaml` and each one still carries its 17–19 open issues.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
 
@@ -69,8 +72,23 @@ The termination one is worth a note: the first version played `hard` against `ea
 worthless — it passed with Pool's stalemate rule deleted, because that pairing finishes by
 potting the black. **The weakest pairing is the one that finds positions nothing resolves.**
 
-**~1,910 issues open.** The bulk is the per-game backlog: 19 issues each across the 78
-games not yet built, of which about twelve are closeable by building the game.
+**~1,160 issues open**, down from 1,242 at the start of the 29 August session. The bulk is
+still the per-game backlog: about twelve of each unbuilt game's issues are closeable by
+building the game, and that is the highest-throughput work available.
+
+**Be careful what you close.** Of the ~465 per-game issues on games that are already built,
+roughly 356 are blocked on things that do not exist rather than on effort:
+
+| Bucket | Why it cannot close |
+|---|---|
+| Research the reference genre | Needs a `RESEARCH.md` written from **playing a reference app**. Zero exist, and rule 2 forbids the shortcut |
+| Create art + wire audio | No art, no sound files; the audio engine exists but has nothing to play |
+| Cross-device remote play | There is no networking of any kind |
+| QA pass vs the definition of done | Needs hand-verification on real iOS Safari / Chrome Android and a playtest with a real pair |
+| "Build the game" | A **parent tracker**: "close it when the child issues are all done and the game passes its QA pass" |
+
+Closing those without doing the work is the exact failure this repository has had three
+times already. Do not.
 
 **Twenty-nine games play end to end**, each with a `SPEC.md` and 38–90 tests:
 
@@ -115,12 +133,69 @@ that; counting nodes is deterministic. The ceiling was picked by measuring the t
 1,500 nodes keeps 87.5% of the strongest tier's edge against 93.3% unbounded, for a fifth
 of the cost.
 
+## What the 29 August session changed, and what it found
+
+Nine platform fixes and fourteen games. The findings are worth more than the fixes:
+
+- **CodeQL had never run on a pull request.** `security-extended` is selected deliberately,
+  with a comment saying the default suite misses most injection paths — and it had scanned
+  only already-merged code, because the pinned action wrote its diff-range pack in a shape
+  the current CLI rejects. Verified fixed on a throwaway PR, because the failure is
+  invisible from `main`.
+- **Every security header is generated, CI-enforced, and then discarded by GitHub Pages.**
+  The issues claiming that work were closed as done. #2367's iframe threat model assumes
+  headers nobody serves. Filed as #2481, and it is the most under-rated item in the backlog.
+- **The site's own CSP blocked its own fonts**, so every visitor got system fonts — and the
+  two people sharing one screen did not see the same thing. Self-hosting is 66% lighter than
+  the Google link it replaced.
+- **Three bot difficulties are built, tuned across many commits, and no player can pick one**
+  (#2485). `BOT_OPPONENT` is hardcoded to `normal`, and `rounds: 1` makes `round-over`
+  unreachable — which also makes the new opening-seat rotation invisible in the product.
+- **The per-package typecheck was lying.** `tsc --build <package>` skipped test files, so a
+  package could pass the obvious command and fail CI. Three games had shipped that way.
+- **Five shipped games are outside the 45–55% seat band** (#2492), found the day a harness
+  first asserted one. `rock-paper-scissors` sits at 80% in a game that is symmetric by
+  construction.
+
+### The three harnesses added, and why they matter
+
+`presentation-parity`, `balance-aggregate` and `greyscale` in `apps/web/src/data/`. Between
+them they are the acceptance criteria of ~99 per-game issues, checked once instead of 99
+times. Each was mutation-tested — break the property, watch the test go red, restore.
+
+`balance-aggregate` runs a cheap sample on every push and a 250-seed deep sample nightly,
+because CI is already at its 8-minute budget.
+
+### The two habits that paid best this session
+
+**Mirror-symmetry testing.** Snowball Throw measured seat one at 64.3%; bisecting found a
+tie-break written in board coordinates that was not covariant under the half-turn, and a
+reaction threshold on a knife edge where the two seats accumulated `y` from opposite ends.
+Neither is visible to a unit test or a win-rate ladder. Mirror the board, mirror the inputs,
+require mirrored results.
+
+**Sweep every difficulty knob alone and delete the ones that do nothing.** Three of six games
+deleted knobs after measuring: one was flat across its whole range, one ran *backwards*, and
+one changed sign across the ladder.
+
+
 ## Start here
 
-1. **Build more games.** It is the highest-value work available and the pattern is
-   established: scaffold, rules module with tests, game module, spec, verify in a browser,
-   close the twelve issues with evidence. All five archetypes have at least one game, so any
-   of the 80 remaining is a matter of picking a well-specified one from `data/catalog.yaml`.
+1. **Build more games.** Still the highest-value work available, and now the
+   highest-throughput: each one closes about twelve issues with evidence. Twenty-two remain,
+   all in `data/catalog.yaml`. The pattern is scaffold, rules module with tests, game module,
+   spec, verify, close.
+
+   `pnpm create-game <id>` then `node scripts/register-game.mjs <id>` do the boilerplate.
+   **Run them yourself before dispatching any parallel work** — both edit shared files
+   (`registry.ts`, `controls.ts`, `tsconfig.json`) and two agents running them at once race.
+
+   Two traps that cost real time this session. The cross-game guards in `apps/web/src/data/`
+   load games from **`dist/`, not `src/`** — until you run
+   `npx tsc --build packages/games/<id>/tsconfig.build.json`, every one of them is testing
+   the placeholder scaffold and failing for reasons that do not exist. And `tsc -p
+   tsconfig.lint.json` **silently drops all semantic diagnostics when any file in the program
+   has a syntax error**, so one broken file can make the whole repo look type-clean.
 
    Two habits are worth copying rather than rediscovering. **Mutate every test until it
    fails before trusting it** — roughly one in six turned out to prove nothing, and two of
