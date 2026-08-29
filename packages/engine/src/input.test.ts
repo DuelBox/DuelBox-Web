@@ -227,6 +227,41 @@ describe('InputManager keyboard', () => {
     expect(manager.beginStep(DT).seat('p1').holdSeconds).toBeCloseTo(DT, 12);
   });
 
+  it('reports the hold that just ended, on the release step and only there', () => {
+    // `holdSeconds` is zero on the release step by design — the hold is over — which makes
+    // `actionReleased && holdSeconds > x` a contradiction. Sea Battle shipped exactly that
+    // line, so its keyboard long-press had never once fired (#2475). This is the value a
+    // game needs on the step it learns the hold is finished.
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+
+    expect(manager.beginStep(DT).seat('p1').holdSecondsAtRelease).toBe(0);
+    expect(manager.beginStep(DT).seat('p1').holdSecondsAtRelease).toBe(0);
+    expect(manager.beginStep(DT).seat('p1').holdSecondsAtRelease).toBe(0);
+
+    manager.keyUp('Space');
+    const released = manager.beginStep(DT).seat('p1');
+    expect(released.actionReleased).toBe(true);
+    expect(released.holdSeconds).toBe(0);
+    expect(released.holdSecondsAtRelease).toBeCloseTo(2 * DT, 12);
+
+    // And nowhere else: the step after a release is not a release.
+    expect(manager.beginStep(DT).seat('p1').holdSecondsAtRelease).toBe(0);
+  });
+
+  it('reports a sub-frame tap as no hold at all', () => {
+    // A press and release between two steps is a tap, not a hold of unknown length: a game
+    // asking "was that a long press" must get no, rather than a stale total.
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+    manager.keyUp('Space');
+
+    const step = manager.beginStep(DT).seat('p1');
+    expect(step.actionPressed).toBe(true);
+    expect(step.actionReleased).toBe(true);
+    expect(step.holdSecondsAtRelease).toBe(0);
+  });
+
   it('counts the holds of the two seats independently', () => {
     const manager = new InputManager(SIZE);
     manager.keyDown('Space');

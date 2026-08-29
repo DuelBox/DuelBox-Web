@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng, vec2 } from '@duelbox/engine';
+import { InputManager, InputView, Rng, vec2 } from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -26,7 +26,7 @@ import {
   rowOf,
   shipCells,
 } from './rules.js';
-import type { BotDifficulty } from './rules.js';
+import type { BotDifficulty, Ship } from './rules.js';
 
 const STEP = 1 / 60;
 
@@ -37,6 +37,7 @@ interface MutableSeatInput {
   actionHeld: boolean;
   actionReleased: boolean;
   holdSeconds: number;
+  holdSecondsAtRelease: number;
 }
 
 function blankSeat(): MutableSeatInput {
@@ -47,6 +48,7 @@ function blankSeat(): MutableSeatInput {
     actionHeld: false,
     actionReleased: false,
     holdSeconds: 0,
+    holdSecondsAtRelease: 0,
   };
 }
 
@@ -245,6 +247,82 @@ describe('laying out', () => {
     game.init(makeContext(17, null, 'hard'));
     expect(game.position.p2.ships.length).toBe(FLEET.length);
     expect(game.position.p1.ships.length, 'the human still has to lay theirs out').toBe(0);
+  });
+});
+
+describe('the keyboard long-press that rotates a ship', () => {
+  /**
+   * Driven through a real `InputManager`, and that is the whole point of the test.
+   *
+   * The rotate was guarded by `actionReleased && holdSeconds > 0.4`, which the engine can
+   * never satisfy: `holdSeconds` is zero on the release step by contract, because the hold
+   * is over by then. So a keyboard player had never once rotated a ship (#2475).
+   *
+   * The scripted fake above could not have caught it. It sets whatever fields a test asks
+   * for, so it will happily produce a state the engine never produces — a fake input record
+   * can assert any input contract you like, including one that is false.
+   */
+  /**
+   * Places two ships, optionally holding before the second.
+   *
+   * Note the press that begins a hold *also* places a ship — `actionPressed` fires on the
+   * way down and `#tryPlace` runs there — so the rotate a hold performs applies to the
+   * ship after it. That is the behaviour, and the test has to compare like with like.
+   */
+  function lastShipAfter(hold: boolean): Ship {
+    const size = { width: manifest.logical.width, height: manifest.logical.height };
+    const manager = new InputManager(size);
+    const view = new InputView();
+    const game = new SeaBattleGame();
+    game.init(makeContext(21));
+
+    const tap = (): void => {
+      manager.keyDown('Space');
+      game.update(STEP, view.sync(manager.beginStep(STEP)));
+      manager.keyUp('Space');
+      game.update(STEP, view.sync(manager.beginStep(STEP)));
+    };
+
+    /**
+     * Walk the cursor clear of the last ship, so the next placement is not an overlap.
+     * Sideways rather than down, because a turned ship is vertical and needs the rows
+     * below it free.
+     */
+    const nudgeDown = (): void => {
+      manager.keyDown('KeyD');
+      for (let step = 0; step < 60; step += 1) {
+        game.update(STEP, view.sync(manager.beginStep(STEP)));
+      }
+      manager.keyUp('KeyD');
+      game.update(STEP, view.sync(manager.beginStep(STEP)));
+    };
+
+    if (hold) {
+      // Well past the 0.4 s threshold, then let go: places one ship on the way down and
+      // turns the next on the way up.
+      manager.keyDown('Space');
+      for (let step = 0; step < 40; step += 1) {
+        game.update(STEP, view.sync(manager.beginStep(STEP)));
+      }
+      manager.keyUp('Space');
+      game.update(STEP, view.sync(manager.beginStep(STEP)));
+    } else {
+      tap();
+    }
+    nudgeDown();
+    tap();
+
+    const ships = fleetOf(game.position, 'p1').ships;
+    expect(ships.length).toBe(2);
+    return ships[ships.length - 1] as Ship;
+  }
+
+  it('turns the ship a keyboard player places next', () => {
+    expect(lastShipAfter(true).orientation).not.toBe(lastShipAfter(false).orientation);
+  });
+
+  it('leaves a tap alone, so placing is not also rotating', () => {
+    expect(lastShipAfter(false).orientation).toBe(lastShipAfter(false).orientation);
   });
 });
 

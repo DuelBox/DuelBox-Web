@@ -186,7 +186,10 @@ export class SeaBattleGame implements Game {
         continue;
       }
       if (seatInput.actionPressed) this.#tryPlace(seat, cursor.index);
-      if (seatInput.actionReleased && seatInput.holdSeconds > 0.4) this.#turn(seat);
+      // `holdSeconds` is zero on the release step by contract, so the obvious spelling of
+      // this — `actionReleased && holdSeconds > 0.4` — is a contradiction, and the rotate
+      // it guards had never once fired for a keyboard player (#2475).
+      if (seatInput.actionReleased && seatInput.holdSecondsAtRelease > 0.4) this.#turn(seat);
     }
   }
 

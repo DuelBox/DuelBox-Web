@@ -291,6 +291,7 @@ const IDLE: SeatInput = {
   actionHeld: false,
   actionReleased: false,
   holdSeconds: 0,
+  holdSecondsAtRelease: 0,
 };
 const SILENT: InputState = { seat: (): SeatInput => IDLE };
 
@@ -303,6 +304,7 @@ function LOUD(width: number, height: number): InputState {
     actionHeld: true,
     actionReleased: true,
     holdSeconds: 0.5,
+    holdSecondsAtRelease: 0,
   };
   return { seat: (): SeatInput => seat };
 }

@@ -24,6 +24,7 @@ class FakeSeat implements SeatInput {
   actionHeld = false;
   actionReleased = false;
   holdSeconds = 0;
+  holdSecondsAtRelease = 0;
 
   reset(): void {
     this.move.x = 0;

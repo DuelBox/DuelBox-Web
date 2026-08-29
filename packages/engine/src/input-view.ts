@@ -24,6 +24,8 @@ export interface SeatInputView {
   readonly actionHeld: boolean;
   readonly actionReleased: boolean;
   readonly holdSeconds: number;
+  /** How long the action had been held when released; valid on the release step only. */
+  readonly holdSecondsAtRelease: number;
 }
 
 export interface InputStateView {
@@ -38,6 +40,7 @@ class SeatView implements SeatInputView {
   actionHeld = false;
   actionReleased = false;
   holdSeconds = 0;
+  holdSecondsAtRelease = 0;
 
   get pointer(): Readonly<Vec2> | null {
     return this.#pointerActive ? this.#pointer : null;
@@ -53,6 +56,7 @@ class SeatView implements SeatInputView {
     this.actionHeld = source.actionHeld;
     this.actionReleased = source.actionReleased;
     this.holdSeconds = source.holdSeconds;
+    this.holdSecondsAtRelease = source.holdSecondsAtRelease;
   }
 }
 

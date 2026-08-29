@@ -43,6 +43,7 @@ function seatInput(overrides: Partial<SeatInput> = {}): SeatInput {
     actionPressed: false,
     actionReleased: false,
     holdSeconds: 0,
+    holdSecondsAtRelease: 0,
     ...overrides,
   };
 }

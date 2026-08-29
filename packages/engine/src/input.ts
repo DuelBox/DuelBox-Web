@@ -42,6 +42,18 @@ export interface SeatInputState {
   actionReleased: boolean;
   /** Seconds the action had been held before this step; 0 on the press and release steps. */
   holdSeconds: number;
+  /**
+   * How long the action had been held when it was let go, valid on the release step only
+   * and 0 on every other.
+   *
+   * {@link holdSeconds} is deliberately 0 on the release step — the hold is over — which
+   * means `actionReleased && holdSeconds > x` is a contradiction that can never be true.
+   * Sea Battle shipped that exact line, so its keyboard long-press to rotate a ship had
+   * never once fired (#2475), and ten other games carry a private field reconstructing
+   * this by hand. A tap that began and ended inside one step reports 0, because it was a
+   * tap and not a hold.
+   */
+  holdSecondsAtRelease: number;
 }
 
 function createSeatInputState(): SeatInputState {
@@ -55,6 +67,7 @@ function createSeatInputState(): SeatInputState {
     actionHeld: false,
     actionReleased: false,
     holdSeconds: 0,
+    holdSecondsAtRelease: 0,
   };
 }
 
@@ -68,6 +81,7 @@ function resetSeatInputState(state: SeatInputState): void {
   state.actionHeld = false;
   state.actionReleased = false;
   state.holdSeconds = 0;
+  state.holdSecondsAtRelease = 0;
 }
 
 /**
@@ -510,7 +524,11 @@ export class InputManager {
     out.actionHeld = held;
     out.actionPressed = (held || latched) && !was;
     out.actionReleased = !held && (was || latched);
-    out.holdSeconds = held && was ? out.holdSeconds + delta : 0;
+    // Read before the reset: the release step is the one that needs the total, and it is
+    // also the step on which `holdSeconds` goes to zero.
+    const heldFor = out.holdSeconds;
+    out.holdSeconds = held && was ? heldFor + delta : 0;
+    out.holdSecondsAtRelease = out.actionReleased ? heldFor : 0;
     sources.wasActionHeld = held;
     sources.actionLatched = false;
     sources.pointerLatched = false;

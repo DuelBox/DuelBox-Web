@@ -34,6 +34,7 @@ const IDLE: SeatInput = {
   actionHeld: false,
   actionReleased: false,
   holdSeconds: 0,
+  holdSecondsAtRelease: 0,
 };
 
 const SILENT: InputState = { seat: (): SeatInput => IDLE };

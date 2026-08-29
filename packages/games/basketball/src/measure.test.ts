@@ -16,6 +16,7 @@ const IDLE_SEAT: SeatInput = {
   actionHeld: false,
   actionReleased: false,
   holdSeconds: 0,
+  holdSecondsAtRelease: 0,
 };
 
 const idle: InputState = { seat: () => IDLE_SEAT };
