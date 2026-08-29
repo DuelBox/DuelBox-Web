@@ -146,6 +146,17 @@
     justify-content: space-between;
     gap: var(--db-space-1);
     padding: var(--db-space-1);
+    /*
+     * And the cutout, which the line above does not cover. In landscape the home
+     * indicator runs along the bottom edge the pause button sits on, and the button
+     * only reached it once the round indicator arrived and made this column taller —
+     * measured at a bottom edge of 331 in a 343-tall window against a 322 limit.
+     *
+     * `max()` rather than a sum, matching every other use of these tokens: an inset may
+     * only widen a gutter, never narrow one, and on a device with no cutout this is
+     * exactly the padding above.
+     */
+    padding-bottom: max(var(--db-space-1), var(--db-safe-bottom));
     min-height: 0;
     overflow: hidden;
   }
@@ -177,8 +188,17 @@
     display: none;
   }
 
+  /*
+   * A row, not a column — the opposite of the stacked seats above it.
+   *
+   * Height is the scarce axis here: this band is a 343px-tall window with a home
+   * indicator along the bottom edge. A column of pips was affordable while best-of-1
+   * was the default and `rounds > 1` never rendered them; once best-of-3 shipped it
+   * pushed the column past its own container and the pause button 9px into the cutout
+   * band, which is the same failure the comment on `.hud` above records from before.
+   */
   .rounds {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   /* A smaller target, but still a real one: the web minimum is 44px. */
