@@ -37,6 +37,19 @@ one. The engine quantises pointer position to a grid derived from the logical bo
 mouse cannot exploit sub-pixel precision a thumb cannot match. This costs the mouse player
 nothing they can perceive and removes an advantage they could not otherwise give up.
 
+**Aimed scalars — the same envelope, one level up.** An angle, a power, a spin is aimed
+just as a position is, and until #2506 the engine levelled none of them. A game derives
+such a scalar twice: the pointer path inherits the position lattice, and the keyboard path
+is `SOME_KEY_RATE × fixedDeltaSeconds`, a constant the game picked. Nothing made the two
+commensurate. Measured in Shuriken's spin, they were not merely unequal — they were
+**disjoint**: multiples of 0.021 under a finger, of 0.043333 under a key, whose first
+common multiple is 2.73 and the clamp is ±1.9. Across the whole legal range the only spins
+both instruments could name were zero and the clamp itself. `scalarEnvelopeFor(span)` and
+`quantiseScalar` are the fix: one lattice, a sixty-fourth of the scalar's own span, that
+both paths are written through. It works for the same reason the position envelope does —
+if every increment either instrument can apply is smaller than a cell, a sweep on either
+passes through every cell, so both reach the identical set.
+
 **Drag distance — logical, not physical.** A drag is measured in logical units, never in
 millimetres of desk or screen. A short trackpad flick and a long phone swipe that cover
 the same fraction of the play area mean the same thing.
@@ -97,6 +110,44 @@ ships", and by the time it landed **two had** — Darts and Cornhole. Darts had 
 locally, by nudging its reticle at a rate rather than jumping it; Cornhole had not, and the
 measurement on its issue is worth reading, because the gap turned out to be smaller than
 the game's own seeded wobble. Both are now levelled by the engine instead of by argument.
+
+**Implemented: the scalar envelope, as a seam rather than as a sweep.** The engine exports
+`SCALAR_ENVELOPE`, `scalarEnvelopeFor(span)` and `quantiseScalar(value, lattice)`, and
+`input.test.ts` asserts the property that matters — that two instruments with different
+per-step increments reach the **same set of reachable values** once both go through one
+lattice. A set comparison is the right test and a win-rate comparison is not: the second
+half of this document compares win rates inside a ±75-point band explicitly looking for "a
+game one instrument simply cannot play", and a 2.1× resolution difference is invisible
+there at any sample size, because it is not a difference in strength but in what can be
+expressed.
+
+**Not applied to any game yet, and that is the honest state.** The seam exists; no game is
+written through it. `docs/input-idiom.md` names the obligation a game takes on when it
+does — its own keyboard rate must be finer than one cell, or the key skips cells the
+finger visits and the sets diverge again. The five aimed scalars in the collection today
+all satisfy it without retuning: Shuriken's spin spans 87 key steps, Shuriken's aim 99,
+Sword Throwing's aim 82, Archery Master's aim 81 and its draw 70. The draw is the binding
+one, so a denominator of 64 clears every one of them. **Only Shuriken's spin has been
+measured**; the other four are candidates by arithmetic, not by measurement, and the
+thirty-odd games carrying a keyboard rate constant have not been triaged at all. The
+discriminator is whether the scalar is *aimed and committed* (an angle, a power, a spin) or
+merely *integrated* (a velocity, a position), and #2478 is the standing reminder that this
+must be settled by measurement rather than by reading.
+
+**The one thing no envelope can level: a finger count.** #2498. The engine tracks ten
+concurrent pointers and now exposes the number to a game as `SeatInputView.pointerCount`,
+where it used to collapse it to a boolean. It is the one input capability in this document
+with **no fair equivalent in another family and no prospect of one** —
+`docs/keyboard-rollover.md` establishes that a commodity keyboard guarantees two or three
+simultaneous keys, that our seats already spend them, and that a blocked press is
+undetectable from the browser, so a game could not even degrade when the fingers failed to
+arrive. So reading the count costs `sameInputClassOnly: true`, and
+`apps/web/src/data/multi-touch.test.ts` enforces that rather than trusting anyone to
+remember it. Before the field existed the flag was a *trap* for exactly this case: a game
+could declare itself touch-only and still be handed one finger, advertising a restriction
+that bought the player no game. Position remains the fair multi-finger channel — a radius,
+a sweep, a place on the board — and Money Grabber's SPEC is the worked example of choosing
+it.
 
 **Not implemented: gamepad support.** #130 covers it. The table above anticipates it so
 the decision is not made twice.

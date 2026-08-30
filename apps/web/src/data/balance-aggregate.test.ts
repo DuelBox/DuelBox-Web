@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
-import type { GameContext, InputState, SeatInput } from '@duelbox/game-sdk';
+import type { Game, GameContext, InputState, MatchScore, SeatInput } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 import { LOADERS_FOR_TEST } from './registry';
 import type { LoadedGame } from './registry';
@@ -83,15 +83,30 @@ import type { LoadedGame } from './registry';
  * `PlaySurface` passes the value `MatchState` computes, and that value alternates across the
  * rounds of a best-of precisely so first-mover advantage washes out. That was true of every
  * older game in the catalogue when this file was written; #2487 closed it, and the measured
- * figure is now {@link OPENER_BLIND}. The first version of this file said "seventy-nine of seventy-nine, not one
+ * figure is now {@link OPENER_BLIND} - **zero of the 45 turn games**, asked of each game
+ * directly. The first version of this file said "seventy-nine of seventy-nine, not one
  * built game reads it", and that number was wrong in the way a number is always wrong when it
  * is counted over a list rather than over the registry: it was counted after an allowlist had
  * removed nine games from the sweep, and five of those nine read the opening seat. Several
  * games - Tic Tac Toe among them - alternated the opener *internally* between their own
  * rounds and came out fair anyway; they now start that alternation from the shell's opener
- * rather than from a literal `p1`. The `opener` column
- * counts seed pairs whose two halves ended differently, and {@link OPENER_BLIND} is a ratchet
- * so the count cannot get worse.
+ * rather than from a literal `p1`, which is the correct shape and not a bespoke copy of
+ * anything: the shell rotates the opener between the rounds of a *best-of*, and those games
+ * rotate it between the rounds of *one match* from the seat the shell handed them.
+ *
+ * Three things are measured about the opener, and they are three different facts about a
+ * game: whether it **reads** the property, whether it **opens with** the seat the property
+ * names, and whether the match comes out the same either way. The `opener` column is the
+ * third of those - seed pairs whose two halves ended differently - and it is interesting
+ * rather than evidence, because a game that honours the opener perfectly can still be exactly
+ * symmetric under it, so it asserts nothing on its own. {@link OPENER_BLIND} is the ratchet,
+ * and it keys on {@link opensWithNominatedSeat}: does the game name the nominated seat as the
+ * one to move, before a step has run. That distinction is the whole of the fix that took the
+ * ratchet to zero - see {@link OPENER_BLIND} for the three games the old proxy libelled.
+ * {@link Played.readOpener} is the first of the three, and it decides only how the game is
+ * *sampled*: a game that never asks which seat opens cannot be moved by it, so its second arm
+ * is the first one again and is not played. None of the three implies another, and reading one
+ * off another is the mistake both fixes are about.
  *
  * ## The sample, and what it buys
  *
@@ -331,10 +346,10 @@ const MAX_STEPS = 60 * 600;
 const STEP = 1 / 60;
 
 /**
- * How many measurable games in the registry ignore the opening seat completely.
+ * How many measurable turn games in the registry do not open with the nominated seat.
  *
  * A ratchet, not a target. It may only ever go down, so a new turn game cannot quietly join
- * them - and every turn game that starts reading `openingSeat` tightens it.
+ * them - and at **zero** it is closed: there is no room left for one to.
  *
  * **Counted over `turn-*` games only.** The contract says outright that "real-time games
  * have no opener and may ignore this", and almost every game that ignores it is real-time -
@@ -343,19 +358,49 @@ const STEP = 1 / 60;
  * doing exactly what the SDK permits. A guard that punishes correct behaviour gets disabled,
  * which is worse than no guard.
  *
- * It was 33 of the 46 turn games. #2487 brought 31 of them across and it is now **two**:
- * `basketball` and `cup-pong`. Both of those *do* read `context.openingSeat` - they simply
- * cannot be seen to. Each gives every seat its own generator and hands out an even number of
- * turns, so reversing the opener reorders the identical two sequences of shots and lands on
- * the identical result. That is a property worth having rather than a defect: it is the
- * strongest possible statement that neither seat is favoured. This measurement counts seed
- * pairs that *ended differently*, and it cannot tell "ignores the opener" from "is exactly
- * symmetric under it", so those two stay in the count - and they are the two games on which
- * {@link Tally.unexplained} is the only thing standing between a zero here and a halved
- * sweep. Both are measured paired, because they read the property; both come back
- * bit-identical, which is what makes the symmetry a claim rather than a hope.
+ * It was 33 of the 46 turn games; #2487 brought 31 of them across and left the constant at
+ * two. Both of those two - `basketball` and `cup-pong` - were false alarms, and so was the
+ * third, `tic-tac-toe`, that the `hard` tier added afterwards and went red on `main` for.
+ * All three read `context.openingSeat` and all three open with it. Each hands every seat its
+ * own generator and an even number of turns, so reversing the opener reorders the identical
+ * two sequences onto the identical result - which is a property worth having rather than a
+ * defect, and the strongest possible statement that neither seat is favoured. The measurement
+ * was the defect, not the games, and it is now made directly by
+ * {@link opensWithNominatedSeat} - which puts the true count at **zero**, over the registry
+ * rather than over a list. Every turn game in it honours the opener: 45 of 45 on `easy` and
+ * `normal`, and 44 of 44 on `hard`, where `checkers` is unmeasurable and drops out of the
+ * sweep entirely - see {@link MEASURED_MIN}.
  *
- * What the other 31 bought, on the default fifty-seed `normal` sample: eight records were
+ * That exact symmetry is a fact worth keeping, and #2494 keeps it - for a different purpose
+ * and under a different name. Being symmetric under the opener is what makes a second arm
+ * free to skip; *honouring* the opener is what this ratchet is about. Neither number is
+ * derived from the other and neither may be read as the other: `basketball` and `cup-pong`
+ * honour the opener **and** come back bit-identical, and they are still measured paired,
+ * because {@link Tally.blind} keys on {@link Played.readOpener} - the game's own reading of
+ * the property - rather than on how the two arms happened to end. {@link Tally.unexplained}
+ * is the guard on that side, and between them the sweep can halve the work for a game that
+ * cannot see the opener without ever having to guess that a game which can see it is safe to
+ * halve.
+ *
+ * The old proxy asked whether a seed's two matches *ended differently* when only the opener
+ * changed. That conflates "ignores the opener" with "is exactly symmetric under it", and the
+ * comment here said so while the assertion went on keying off it. Exact symmetry is the
+ * property those games are supposed to have: `basketball` and `cup-pong` give each seat its
+ * own generator and an even number of turns, so reversing the opener reorders two identical
+ * sequences of shots onto the same result, and `tic-tac-toe` at `hard` is perfect play
+ * against perfect play, which draws all hundred matches whoever starts. A guard whose
+ * cheapest repair is to *break* a property worth having is pointed the wrong way round.
+ *
+ * It was also tier-dependent, which is how it reached `main`. The same three games count two
+ * on `normal` and three on `hard`, so a single constant could only ever be right for the tier
+ * a push runs, and the nightly matrix's `hard` leg failed for a non-defect. The direct
+ * measurement does not vary by tier, does not vary by seed, and costs two `init` calls a game
+ * rather than a hundred matches.
+ *
+ * `openerSwung` is still measured and still printed - it is the interesting number, and the
+ * SPEC.md files quote it - it simply no longer decides anything.
+ *
+ * What #2487's 31 bought, on the default fifty-seed `normal` sample: eight records were
  * deleted from {@link OUTSIDE_THE_BAND} because the games came back inside the band. Five of
  * them - `reversi`, `color-wars`, `mancala`, `pop-it` and `ultimate-ttt` - are deterministic
  * at `hard` and used to hand one seat all hundred matches; each now plays two matches, one
@@ -367,9 +412,10 @@ const STEP = 1 / 60;
  * An earlier value of 79 was counted over a sweep an allowlist had already narrowed, under
  * a comment reading "seventy-nine of seventy-nine, not one built game reads it". Both
  * halves were wrong. Counting a property over a list rather than over the registry is how a
- * harness ends up certain of a false thing.
+ * harness ends up certain of a false thing - and measuring a property by a proxy it does not
+ * imply is the other way.
  */
-const OPENER_BLIND = 2;
+const OPENER_BLIND = 0;
 
 /**
  * How many games must reach a conclusion under at least one driver, per tier.
@@ -549,6 +595,48 @@ function play(
   }
 }
 
+/**
+ * Does this game actually open with the seat the context nominates?
+ *
+ * The contract's wording is "which seat moves first this round", and `getActiveSeat` is the
+ * game's own answer to "whose turn is it" - the same answer the shell's turn indicator and
+ * seat flip are drawn from. So the question is asked directly: build a fresh game under each
+ * opener and ask it, before a single step has run. A game that honours the opener names it;
+ * a game that hardcodes `p1` names `p1` both times.
+ *
+ * **This replaced an outcome proxy, and the proxy was wrong.** The ratchet below used to key
+ * on `openerSwung === 0` - "the two halves of every seed pair ended identically, so the
+ * opening seat changed nothing". That cannot tell *ignores the opener* from *is exactly
+ * symmetric under it*, and the file said so in a comment while asserting on it anyway. The
+ * three games it named on `hard` - `basketball`, `cup-pong` and `tic-tac-toe` - all read
+ * `context.openingSeat` and all open with it; they are symmetric. `basketball` and `cup-pong`
+ * hand each seat its own generator and an even number of turns, so reversing the opener
+ * reorders two identical sequences of shots onto the same result. `tic-tac-toe` at `hard` is
+ * perfect play against perfect play, which draws all hundred matches whoever starts.
+ *
+ * Being unable to distinguish those from a defect made the guard fail on the tier rather than
+ * on the code: the same three games measured two blind on `normal` and three on `hard`, so the
+ * constant was calibrated on the tier a push happens to run and the nightly's `hard` matrix
+ * leg went red on `main` for a property that is not a defect. Worse, the pressure it applied
+ * pointed the wrong way - the cheapest way to satisfy it would have been to *break* the exact
+ * seat symmetry in two games that have it.
+ *
+ * A turn game with no `getActiveSeat` cannot be asked and counts as blind, which is the
+ * conservative direction: the contract's turn indicator is not optional for a game that has
+ * turns.
+ */
+function opensWithNominatedSeat(loaded: LoadedGame): boolean {
+  return (['p1', 'p2'] as const).every((opener) => {
+    const game = loaded.create();
+    try {
+      game.init(contextFor(loaded, 1000003, opener));
+      return game.getActiveSeat?.() === opener;
+    } finally {
+      game.destroy();
+    }
+  });
+}
+
 interface Tally {
   readonly id: string;
   readonly archetype: string;
@@ -574,7 +662,22 @@ interface Tally {
   openerSwung: number;
   /** Seed pairs both arms of which were played, which is what {@link openerSwung} is out of. */
   pairsChecked: number;
-  /** True when the game never read `context.openingSeat` and is measured from one arm. */
+  /**
+   * Whether the game opens with the seat `context.openingSeat` names, asked of the game
+   * directly rather than inferred from outcomes - see {@link opensWithNominatedSeat}. This is
+   * what the ratchet keys on; {@link openerSwung} is reported beside it and asserts nothing,
+   * because a game can honour the opener and still be exactly symmetric under it.
+   */
+  honoursOpener: boolean;
+  /**
+   * True when the game never read `context.openingSeat` and is measured from one arm.
+   *
+   * A different question from {@link honoursOpener}, and the two are independent: this one
+   * asks whether the second arm would be the first arm again, which is what makes it free to
+   * skip. A game can honour the opener and be exactly symmetric under it - `basketball` and
+   * `cup-pong` are - and it is still measured paired, because it read the property and the
+   * sweep will not infer from a handful of identical outcomes that it may stop looking.
+   */
   blind: boolean;
   /**
    * Pairs whose two arms differ in a way this game's reading of the opening seat cannot
@@ -582,10 +685,12 @@ interface Tally {
    *
    * Two shapes, and both are the case where halving the sweep would have been wrong:
    *
-   * - The game's {@link openerSwung} is **zero** - so the sweep and the report both call it
-   *   opener-blind - and yet a pair came back with the same winner after the same number of
-   *   steps and a *different scoreline*. That is per-opener state `openerSwung` cannot see,
-   *   and it is #2494's guard in as many words.
+   * - The game's {@link openerSwung} is **zero** - so the report calls it symmetric under the
+   *   opener - and yet a pair came back with the same winner after the same number of steps
+   *   and a *different scoreline*. That is per-opener state `openerSwung` cannot see, and it
+   *   is #2494's guard in as many words. A pair neither arm of which ever ended does not
+   *   count: `openerSwung` counts endings, and a game that has none has claimed nothing to
+   *   contradict.
    * - The game never read `context.openingSeat` at all and a pair still differed. The two
    *   contexts differ in that property and nothing else, so this is state surviving from one
    *   match into the next, which would make every number in this file a measurement of the
@@ -595,6 +700,13 @@ interface Tally {
    * the opener - that is what reading the opening seat looks like - and says nothing here.
    */
   readonly unexplained: string[];
+  /**
+   * Pairs held back from {@link unexplained} because neither arm ever ended - see the
+   * `ceilinged` list in {@link measure}. Printed by the report so that setting them aside
+   * leaves a trace: an exclusion nobody can see is how a guard stops guarding without
+   * anybody deciding that it should.
+   */
+  readonly setAside: string[];
   /** True if the same seed played differently when the device was shouted at. */
   readsInput: boolean;
   /**
@@ -643,8 +755,10 @@ function measure(id: string, loaded: LoadedGame): Tally {
     concluded: 0,
     openerSwung: 0,
     pairsChecked: 0,
+    honoursOpener: opensWithNominatedSeat(loaded),
     blind: false,
     unexplained: [],
+    setAside: [],
     readsInput: false,
     outcomes: new Set<string>(),
   };
@@ -676,6 +790,40 @@ function measure(id: string, loaded: LoadedGame): Tally {
   const silent: string[] = [];
   /** Pairs that came apart at all - a finding only for a game that never read the opener. */
   const divergent: string[] = [];
+  /**
+   * The same shape as {@link silent}, from a pair that never *ended* at all: both arms ran
+   * into the {@link MAX_STEPS} ceiling, so "the same winner after the same number of steps"
+   * is a fact about the ceiling rather than about the opening seat, and a scoreline that
+   * moved is the opener doing its job on a match nobody got to see the end of.
+   *
+   * Kept apart because the two readings of these lists differ. For a game that never read
+   * `context.openingSeat` they are as damning as any other difference - the arms had to be
+   * the same match, finished or not - so they are reported. For a game that did read it,
+   * `openerSwung` counts endings and there were none to count, so a zero there is not the
+   * claim "this game ignores the opener" and there is nothing to contradict.
+   *
+   * **`checkers` on `hard` is the case, and it is why this list exists.** It reports
+   * `seed 1000003: the same winner after the same 36000 steps, but 6-8 against 11-9` - and
+   * 36000 steps is {@link MAX_STEPS} exactly, both arms, with a null winner. It decides
+   * nothing inside ten simulated minutes at that tier, so it drops out of the sweep as
+   * unmeasurable and asserts nothing about seat balance at all; the two scorelines are how
+   * many pieces each side had taken when the clock ran out, which is precisely the thing the
+   * opening seat is expected to move. It was being reported as hidden per-opener state.
+   *
+   * **This narrows the condition, and it is not a loosening of the assertion.** Three things
+   * have to be true together before a pair lands here, and each one independently rules out
+   * the failure #2494 is guarding against: the game *read* `context.openingSeat`, so
+   * {@link Tally.blind} is false and it is measured from both arms whatever this list says;
+   * neither arm reached a conclusion, so `openerSwung` had no ending to count and the zero it
+   * reports is not the claim "opener-blind" that the guard exists to contradict; and a game
+   * with no conclusions is unmeasurable, so the sweep publishes no number about it to protect.
+   * Nowhere that the single-arm optimisation can actually be applied does anything change -
+   * the `blind` branch below still reports these, because there the two arms had to be the
+   * same match whether they ended or not. What is removed is a case where the guard's premise
+   * was vacuous, which is the same defect as the outcome proxy the ratchet stopped using: an
+   * inference from how a match ended, drawn about a match that did not end.
+   */
+  const ceilinged: string[] = [];
 
   /** Everything the sweep can learn from having played both arms of one seed. */
   const comparePair = (index: number, first: Played, second: Played): void => {
@@ -686,13 +834,15 @@ function measure(id: string, loaded: LoadedGame): Tally {
     const at = `seed ${String(seedAt(index))}`;
     if (swung) {
       divergent.push(`${at}: ${fingerprint(first)} against ${fingerprint(second)}`);
-    } else {
-      silent.push(
-        `${at}: the same winner after the same ${String(first.steps)} steps, but ` +
-          `${String(first.p1)}-${String(first.p2)} against ` +
-          `${String(second.p1)}-${String(second.p2)}`,
-      );
+      return;
     }
+    const note =
+      `${at}: the same winner after the same ${String(first.steps)} steps, but ` +
+      `${String(first.p1)}-${String(first.p2)} against ` +
+      `${String(second.p1)}-${String(second.p2)}`;
+    // `!swung` and a null winner means both arms hit the ceiling: neither ended.
+    if (first.winner === null) ceilinged.push(note);
+    else silent.push(note);
   };
 
   const probe: [Played, Played][] = [];
@@ -767,7 +917,7 @@ function measure(id: string, loaded: LoadedGame): Tally {
           `context.openingSeat, so something survived from one match into the next`,
       );
     }
-    for (const note of silent) {
+    for (const note of [...silent, ...ceilinged]) {
       tally.unexplained.push(
         `${note} - the game never read context.openingSeat, so the two arms should have been ` +
           `the same match`,
@@ -781,6 +931,9 @@ function measure(id: string, loaded: LoadedGame): Tally {
           `seat is still moving its scoreline`,
       );
     }
+    // Not a finding, and not silence either: both arms ran out the clock, so there is no
+    // ending for openerSwung to have counted and nothing for the scoreline to contradict.
+    tally.setAside.push(...ceilinged);
   }
   return tally;
 }
@@ -1054,6 +1207,11 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
 const IDS = Object.keys(LOADERS_FOR_TEST).sort();
 
 const TALLIES = new Map<string, Tally>();
+/**
+ * The loaded packages, kept past the sweep so a test can borrow a real manifest for a stand-in
+ * game. Nothing else reads it: a `Tally` is the sweep's output and this is its raw material.
+ */
+const LOADED = new Map<string, LoadedGame>();
 /** A game with no bot has nobody to sit opposite; `bot-parity.test.ts` owns that gap. */
 const NO_BOT: string[] = [];
 let sweepSeconds = 0;
@@ -1171,7 +1329,9 @@ function report(): string {
       ].join(' '),
     );
   }
-  const blind = rows.filter((tally) => tally.openerSwung === 0);
+  const symmetric = rows.filter((tally) => tally.openerSwung === 0);
+  const turns = rows.filter((tally) => tally.archetype.startsWith('turn'));
+  const deaf = turns.filter((tally) => !tally.honoursOpener);
   lines.push('');
   lines.push(
     `${String(outsideBand)} games measured outside the flat ` +
@@ -1182,9 +1342,16 @@ function report(): string {
   );
   lines.push(
     `opener: of the seed pairs both arms of which were played, how many ended differently ` +
-      `when only the opening seat changed. ${String(blind.length)} of ${String(rows.length)} ` +
-      `games never swung; ${String(solo.length)} of those never read context.openingSeat at ` +
-      `all and are the ones measured from one arm.`,
+      `when only the opening seat changed. ${String(symmetric.length)} of ${String(rows.length)} ` +
+      `games came out identical either way - which is not the same as ignoring the opener, and ` +
+      `asserts nothing on its own; ${String(solo.length)} of them never read ` +
+      `context.openingSeat at all and are the ones measured from one arm.`,
+  );
+  lines.push(
+    `opener, honoured: ${String(turns.length - deaf.length)} of ${String(turns.length)} turn ` +
+      `games open with the seat context.openingSeat names, asked of the game before its first ` +
+      `step. That is the number the ratchet gates, at ${String(OPENER_BLIND)}. Not honouring ` +
+      `it: ${deaf.map((t) => t.id).join(', ') || 'none'}`,
   );
   const scripted = rows.filter((tally) => tally.outcomes.size === 1);
   lines.push(
@@ -1198,7 +1365,11 @@ function report(): string {
       `${String(MATCH_BUDGET + 1)} matches, under either opening seat or with the device ` +
       `shouted at. Computed, not listed: ${dark.map((t) => t.id).join(', ') || 'none'}`,
   );
-  const odd = rows.filter((tally) => tally.unexplained.length > 0);
+  // Over every tally rather than over `rows`, because `rows` is the measured games and the
+  // one game that has ever reached this list - `checkers` on `hard` - is unmeasurable. The
+  // assertion below reads `TALLIES`, so a report built from `rows` printed nothing at all
+  // while the run went red, and the failure named the game only inside the message.
+  const odd = [...rows, ...dark].filter((tally) => tally.unexplained.length > 0);
   if (odd.length > 0) {
     lines.push('');
     lines.push(
@@ -1212,6 +1383,21 @@ function report(): string {
       }
     }
   }
+  const held = [...rows, ...dark].filter((tally) => tally.setAside.length > 0);
+  if (held.length > 0) {
+    lines.push('');
+    lines.push(
+      `pairs set aside: ${String(held.length)} games produced a seed whose two arms ended on ` +
+        `different scorelines with neither arm ever ending. Both hit the ${String(MAX_STEPS)}-` +
+        `step ceiling, so openerSwung had no ending to count and the difference is not ` +
+        `evidence of hidden per-opener state - see the ceilinged list in measure():`,
+    );
+    for (const tally of held) {
+      lines.push(`  ${tally.id}: ${String(tally.setAside.length)} of ${String(tally.pairsChecked)}`);
+      for (const note of tally.setAside.slice(0, 2)) lines.push(`    ${note}`);
+    }
+  }
+
   lines.push('');
   const mine = OUTSIDE_THE_BAND.filter((entry) => entry.tier === TIER).length;
   lines.push(
@@ -1272,6 +1458,7 @@ beforeAll(async () => {
   const started = Date.now();
   for (const id of IDS) {
     const loaded = await LOADERS_FOR_TEST[id]!();
+    LOADED.set(id, loaded);
     if (!loaded.manifest.modes.includes('bot')) {
       NO_BOT.push(id);
       continue;
@@ -1420,25 +1607,84 @@ describe('the balance harness', () => {
   it('does not let another turn-based game ignore the opening seat', () => {
     // A ratchet: it may only ever go down, so a new turn game cannot quietly join the ones
     // that ignore `context.openingSeat` and leave the SDK alternating an opener that
-    // reaches nothing.
+    // reaches nothing. It is at zero, so there is no room left to join.
     //
     // Scoped to `turn-*`, because the contract says outright that "real-time games have no
-    // opener and may ignore this" — and roughly half the blind list is real-time. Counting
-    // those failed four games in one afternoon for doing exactly what the SDK permits,
-    // which is a guard punishing correct behaviour rather than catching a defect.
+    // opener and may ignore this" — and almost every game that never reads it is real-time.
+    // Counting those failed four games in one afternoon for doing exactly what the SDK
+    // permits, which is a guard punishing correct behaviour rather than catching a defect.
     //
     // Several real-time games this session did find an honest use anyway — handing bot
     // streams out by opener makes a seed's two rounds exact mirrors, which turns a 50%
     // *measurement* into a symmetry *proof*. That is worth doing and is not worth failing
     // a build over.
-    const blind = measuredTallies()
-      .filter((tally) => tally.openerSwung === 0 && tally.archetype.startsWith('turn'))
+    //
+    // What this keys on is `opensWithNominatedSeat`, which asks the game, not the outcome.
+    // The `openerSwung === 0` proxy it replaced could not tell a game that ignores the
+    // opener from one that is exactly symmetric under it, and every game it ever named was
+    // the second kind — `basketball` and `cup-pong` on `normal`, plus `tic-tac-toe` on
+    // `hard`, which is what took the nightly matrix red on `main`. See OPENER_BLIND.
+    // `deaf`, not `blind`: `Tally.blind` is the sampling question - whether the game ever
+    // read the property - and this is the other one, whether it opens with what it read.
+    const deaf = measuredTallies()
+      .filter((tally) => !tally.honoursOpener && tally.archetype.startsWith('turn'))
       .map((t) => t.id);
     expect(
-      blind.length,
-      `${String(blind.length)} turn-based games ignore context.openingSeat and the ratchet ` +
-        `is set at ${String(OPENER_BLIND)}. A new turn game must read it: ${blind.join(', ')}`,
+      deaf.length,
+      `${String(deaf.length)} turn-based games do not open with the seat ` +
+        `context.openingSeat names, and the ratchet is set at ${String(OPENER_BLIND)}. A turn ` +
+        `game must report that seat from getActiveSeat() before its first step: ` +
+        `${deaf.join(', ')}`,
     ).toBeLessThanOrEqual(OPENER_BLIND);
+  });
+
+  it('can tell a game that ignores the opening seat from one that is symmetric under it', () => {
+    // The guard above is only worth having if it fails when a turn game hardcodes `p1`, and
+    // only safe to set at zero if it does not fail for the three games the old proxy named.
+    // Both halves are asserted here rather than left to be believed, because the version of
+    // this file that shipped a proxy nobody had watched fail is the reason this test exists.
+    //
+    // A stand-in game, because the real ones all pass: the contract's shape, an opener it
+    // is told and then discards.
+    const ignores: Game = {
+      init(): void {},
+      update(): void {},
+      render(): void {},
+      onPause(): void {},
+      onResume(): void {},
+      getScore: (): MatchScore => ({ p1: 0, p2: 0, winner: null }),
+      getActiveSeat: (): SeatId => 'p1',
+      destroy(): void {},
+    };
+    // Any real manifest will do - the stand-in never looks at it, and building a fake one
+    // would only be a second place for the manifest schema to drift.
+    const borrowed = LOADED.get('tic-tac-toe');
+    expect(borrowed, 'tic-tac-toe is not in the registry').toBeDefined();
+    if (borrowed === undefined) return;
+    const stub: LoadedGame = { manifest: borrowed.manifest, create: () => ignores };
+    expect(opensWithNominatedSeat(stub), 'a hardcoded p1 opener must be caught').toBe(false);
+
+    // And the three the proxy libelled, measured the same way, on whichever tier is running.
+    for (const id of ['basketball', 'cup-pong', 'tic-tac-toe']) {
+      const tally = TALLIES.get(id);
+      expect(tally, `${id} is not in the registry`).toBeDefined();
+      expect(
+        tally?.honoursOpener,
+        `${id} reads context.openingSeat and opens with it. If this has genuinely regressed ` +
+          `that is a defect in the game; it is not a reason to loosen the ratchet.`,
+      ).toBe(true);
+      // The other half of the same point, and the reason the two flags are separate fields.
+      // These three are exactly symmetric under the opener, which is what fooled the proxy -
+      // and #2494 still measures them paired, because they read the property. Symmetry is
+      // never allowed to stand in for blindness: `Tally.blind` keys on the reading, so the
+      // sweep can only halve a game whose second arm it can prove is its first arm.
+      expect(
+        tally?.blind,
+        `${id} reads context.openingSeat, so its second arm is not free to skip however its ` +
+          `two arms happen to come out. Measuring it from one arm would be inferring ` +
+          `blindness from symmetry, which is the mistake the ratchet above was just fixed for.`,
+      ).toBe(false);
+    }
   });
 });
 

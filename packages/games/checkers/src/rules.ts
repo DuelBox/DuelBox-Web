@@ -340,6 +340,29 @@ export const BLUNDER_CHANCE: Readonly<Record<BotDifficulty, number>> = Object.fr
   hard: 0,
 });
 
+/**
+ * How deep each tier searches, counted in **turns**.
+ *
+ * Turns, not moves: a jump chain does not pass the turn and so does not spend depth
+ * either (#2524). Re-measured after that change — 120 games a row, seats alternated,
+ * randomised 2/4/6-ply openings, blunder off for the depth rows, a game outliving the
+ * 300-turn cap settled on captures the way the shell's round timer settles one, and score
+ * counted as win + half a draw for the first-named side:
+ *
+ * | | before #2524 | after |
+ * |---|---|---|
+ * | d2 v d1 | 99.2% | 100.0% |
+ * | d3 v d2 | 70.8% | 72.9% |
+ * | d4 v d3 | 62.5% | 66.3% |
+ * | d5 v d4 | 53.8% | 52.9% |
+ * | normal v easy | 96.7% | 98.3% |
+ * | hard v normal | 97.1% | 95.4% |
+ * | hard v easy | 100.0% | 100.0% |
+ *
+ * Each depth still beats the one below it and the tiers keep their order. Head to head at
+ * the same tier the fixed search scores 60.0% easy, 52.5% normal, 55.8% hard against the
+ * old one — at or above even everywhere, which is as much as 120 games can say.
+ */
 export const SEARCH_DEPTH: Readonly<Record<BotDifficulty, number>> = Object.freeze({
   easy: 1,
   normal: 3,
@@ -377,10 +400,47 @@ export function evaluate(game: Game, seat: SeatId): number {
   return score;
 }
 
-/** One game state per ply, reused across the search so no node allocates. */
-const SEARCH_PLIES = 12;
+/**
+ * One game state per ply, reused across the search so no node allocates.
+ *
+ * A line is no longer at most `depth` moves long. A jump chain does not pass the turn, so
+ * it no longer spends depth either (#2524) — which means a line is at most
+ * `SEARCH_DEPTH.hard` turn-passing moves plus one extra move per capture inside a chain.
+ * Every such capture takes a piece off the board and there are only `PIECES_PER_SEAT * 2`
+ * pieces to take, so 5 + 24 = 29 moves is the ceiling and no real line comes near it.
+ * Sized above that so the ply guard below is a memory backstop rather than something a
+ * chain can walk into.
+ */
+const SEARCH_PLIES = 32;
 const searchStates: Game[] = Array.from({ length: SEARCH_PLIES }, () => createGame());
 const moveBuffers: Move[][] = Array.from({ length: SEARCH_PLIES }, () => new Array<Move>(64));
+
+/**
+ * Test seam: every leaf the search scores passes through here first.
+ *
+ * #2524 asks for a *property* — no leaf is ever scored while a capture is pending — and a
+ * claim about every leaf of every sweep cannot be shown by choosing a board. One null
+ * check per leaf makes the whole search checkable from a test instead.
+ */
+let leafObserver: ((game: Game) => void) | null = null;
+
+export function observeLeaves(observer: ((game: Game) => void) | null): void {
+  leafObserver = observer;
+}
+
+/**
+ * The value of a position the search has decided to stop at.
+ *
+ * **A position with a capture pending is not a position worth scoring.** `evaluate` counts
+ * material, and mid-chain the mover is *guaranteed* at least one more capture — so scoring
+ * there books a half-taken chain as though it had stopped, and undervalues exactly the
+ * branches where the material swing is largest (#2524). Every stopping condition below is
+ * therefore conditioned on `chain < 0`; this is the single funnel they all come through.
+ */
+function leafValue(game: Game): number {
+  if (leafObserver !== null) leafObserver(game);
+  return evaluate(game, game.toMove);
+}
 
 function copyInto(target: Game, source: Game): void {
   for (let i = 0; i < SLOT_COUNT; i += 1) {
@@ -411,13 +471,22 @@ function search(
 ): number {
   // Charged on every node, leaves included: leaves are the overwhelming majority of the
   // work, and charging only internal nodes puts the ceiling above the thing it limits.
-  if (!budget.spend()) return evaluate(game, game.toMove);
+  //
+  // Running out is a reason to stop *thinking*, not a reason to score a half-taken chain,
+  // so an exhausted budget only ends the line once the capture is finished. What that
+  // costs is bounded by the chain still in flight — the continuations are forced and each
+  // one takes a piece — and the sweep is thrown away anyway once the budget is gone.
+  const affordable = budget.spend();
+  if (!affordable && game.chain < 0) return leafValue(game);
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
     return decided === game.toMove ? 10_000 - ply : -(10_000 - ply);
   }
-  if (depth === 0 || ply >= SEARCH_PLIES - 1) return evaluate(game, game.toMove);
+  // Depth counts *turns*, so a chain runs to its end before the line can stop. The ply
+  // guard is the backstop on the state stack and cannot fire mid-chain — see SEARCH_PLIES.
+  if (game.chain < 0 && depth <= 0) return leafValue(game);
+  if (ply >= SEARCH_PLIES - 1) return leafValue(game);
 
   const buffer = moveBuffers[ply] ?? [];
   const count = legalMoves(buffer, game);
@@ -431,10 +500,11 @@ function search(
     if (move === undefined) continue;
     copyInto(next, game);
     applyMove(next, move.from, move.to);
-    // A jump chain does not pass the turn, so the same seat keeps searching at this sign.
+    // A jump chain does not pass the turn, so the same seat keeps searching at this sign
+    // — and does not spend depth either, because depth is a count of turns.
     const score =
       next.toMove === mover
-        ? search(next, depth - 1, ply + 1, alpha, beta, budget)
+        ? search(next, depth, ply + 1, alpha, beta, budget)
         : -search(next, depth - 1, ply + 1, -beta, -alpha, budget);
     if (score > best) best = score;
     if (best > alpha) alpha = best;
@@ -471,7 +541,7 @@ export function bestMove(game: Game, rng: Rng, difficulty: BotDifficulty): Move 
       applyMove(next, move.from, move.to);
       const score =
         next.toMove === mover
-          ? search(next, depth - 1, 1, -Infinity, Infinity, budget)
+          ? search(next, depth, 1, -Infinity, Infinity, budget)
           : -search(next, depth - 1, 1, -Infinity, Infinity, budget);
       if (budget.exhausted) return undefined;
       if (score > bestScore) {

@@ -7,6 +7,14 @@ all of our copy, art, audio, and layout is original.
 
 **Coverage: 107 of 107 games — complete.**
 
+**Nothing on this page ships.** These rows are the provenance record: what the screen said,
+and which game it said it on. The `rule` text in `data/catalog.yaml` — the `<meta>` description
+each game's page carries — is written from that game's own `SPEC.md` and manifest, in our
+voice, and is deliberately not this text (#2513 item 7, CLAUDE.md rule 1).
+`apps/web/src/data/research-provenance.test.ts` holds both ends of that: every observed game
+keeps a row here and no other game gains one, and a catalogue rule that comes back to matching
+the row beside it fails the build.
+
 Method: five emulator sweeps driving the app with `adb`, then parallel transcription of
 every captured screen. The app draws its text to canvas, so nothing was readable through
 the accessibility tree — every line below came from looking at the screen, and no APK was

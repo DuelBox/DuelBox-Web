@@ -65,6 +65,25 @@ real `InputManager`, and the game is shown to receive one position per seat. If 
 grows a per-finger view, that test is where somebody will find out that this game could have been
 built the other way.
 
+**Since #2498, route 1 exists — and this game still would not take it.** The engine now
+carries the count through to `SeatInputView.pointerCount`, so a game *can* address "how many
+fingers" and `sameInputClassOnly` has stopped being a trap. Two things about that are worth
+recording here, because this package is where the trap was found.
+
+The first is that it would not have bought this game. The count says how many fingers there
+are; it does not say where they are. The engine still keeps **one position per seat** —
+whichever pointer moved most recently — so ten fingers pinning ten notes in ten places is
+still not expressible, and that, not the count, was the mechanic the catalogue row describes.
+
+The second is the price. Reading the count costs `sameInputClassOnly: true`, enforced by
+`apps/web/src/data/multi-touch.test.ts`, because a finger count is the one input capability
+with no fair equivalent in another family and no prospect of one — `docs/keyboard-rollover.md`
+shows a commodity keyboard guarantees two or three simultaneous keys, that our seats already
+spend them on a direction and an action, and that a blocked press never arrives at all, so a
+game could not even detect that the fingers it asked for had not come. Route 2 was chosen
+because it keeps every input family in the match, and that reason is untouched by the count
+existing.
+
 ### Route 2 — reduce it to something both input families express, and say what was traded
 
 Built. The reduction has two halves.

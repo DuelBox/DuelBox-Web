@@ -17,6 +17,7 @@ import {
   isLegalMove,
   legalMoves,
   movesFrom,
+  observeLeaves,
   otherOf,
   resetGame,
   rowOf,
@@ -409,6 +410,45 @@ describe('the bot', () => {
     game.toMove = 'p1';
     const move = bestMove(game, new Rng(3), 'hard');
     expect(move?.from, 'the double jump is worth more').toBe(chainer);
+  });
+
+  it('never scores a position with a capture pending', { timeout: SERIES_TIMEOUT_MS }, () => {
+    // #2524. A jump chain does not pass the turn, so the search used to reach leaves in
+    // the middle of one and score them with the rest of the chain's captures still on the
+    // board — and `evaluate` is material. What is asked for here is the *property*, over
+    // every leaf of every sweep, rather than one board chosen because it exposes it: the
+    // search reports each position it stops at, and the whole ladder is played through it.
+    let leaves = 0;
+    let pending = 0;
+    observeLeaves((position) => {
+      leaves += 1;
+      if (position.chain >= 0) pending += 1;
+    });
+    try {
+      for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+        for (const seed of [5, 6, 7]) playOut(difficulty, difficulty, seed, 120);
+      }
+      // And from a board that is nothing but chains, where a mid-chain leaf was the common
+      // case rather than an incidental one. The hard tier here runs out of budget part-way
+      // through its deepest sweep, which is the other way a leaf used to land mid-chain.
+      const chains = empty();
+      put(chains, 7, 0, 'p1', 'man');
+      put(chains, 6, 1, 'p2', 'man');
+      put(chains, 4, 3, 'p2', 'man');
+      put(chains, 2, 5, 'p2', 'man');
+      put(chains, 0, 3, 'p2', 'king');
+      put(chains, 5, 6, 'p1', 'king');
+      put(chains, 3, 4, 'p1', 'man');
+      chains.toMove = 'p1';
+      bestMove(chains, new Rng(11), 'hard');
+    } finally {
+      observeLeaves(null);
+    }
+    expect(leaves, 'the search was actually observed').toBeGreaterThan(10_000);
+    expect(
+      pending,
+      `${String(pending)} of ${String(leaves)} leaves were scored with a capture pending`,
+    ).toBe(0);
   });
 
   it('is deterministic for a seed', { timeout: SERIES_TIMEOUT_MS }, () => {
