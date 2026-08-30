@@ -623,10 +623,11 @@ this row named no control scheme at all, so the fair idiom cost nothing.
 
 ## For whoever picks this up
 
-- **`the-last-sashimi` is still listed in `SCAFFOLDS` in
-  `apps/web/src/data/balance-aggregate.test.ts`**, so that harness skips it. It is no longer a
-  scaffold. Deleting the entry is safe: the table above is that harness's own protocol, run against
-  this game, and it lands at 48.8–51.3%. `OPENER_BLIND` can drop by one at the same time — this
-  game reads `context.openingSeat` and about four seed pairs in five swing on it.
+- **Done.** This game used to be listed in a `SCAFFOLDS` allowlist in
+  `apps/web/src/data/balance-aggregate.test.ts`, so that harness skipped it. There is no such
+  list any more — the skip is computed from measurement — and this game is swept like every
+  other, landing where the table above says. `OPENER_BLIND` is now 0 over 45 turn games and
+  keys on whether a game opens with the nominated seat rather than on whether its outcomes
+  swing; this game reads `context.openingSeat`, opens with it, and swings on it as well.
 - It is **not** on the skip lists in `greyscale.test.ts` or `presentation-parity.test.ts`, and it
   passes both as shipped.
