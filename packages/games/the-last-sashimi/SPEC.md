@@ -626,8 +626,10 @@ this row named no control scheme at all, so the fair idiom cost nothing.
 - **Done.** This game used to be listed in a `SCAFFOLDS` allowlist in
   `apps/web/src/data/balance-aggregate.test.ts`, so that harness skipped it. There is no such
   list any more — the skip is computed from measurement — and this game is swept like every
-  other, landing where the table above says. `OPENER_BLIND` is now 0 over 45 turn games and
-  keys on whether a game opens with the nominated seat rather than on whether its outcomes
-  swing; this game reads `context.openingSeat`, opens with it, and swings on it as well.
+  other, landing where the table above says. `OPENER_BLIND` is now 0 — 45 of 45 turn games on
+  `easy` and `normal`, and 44 of 44 on `hard`, where `checkers` is unmeasurable and drops out
+  of the sweep — and it keys on whether a game opens with the nominated seat rather than on
+  whether its outcomes swing; this game reads `context.openingSeat`, opens with it, and swings
+  on it as well: 38 of 50 seed pairs on `hard`.
 - It is **not** on the skip lists in `greyscale.test.ts` or `presentation-parity.test.ts`, and it
   passes both as shipped.
