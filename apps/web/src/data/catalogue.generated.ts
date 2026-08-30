@@ -30,7 +30,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Score in the opposing goal! Use your finger to move your paddle and get 3 goals!",
+    "rule": "A puck on a frictionless table and a mallet each, confined to your own half. Send the puck through the mouth at the far end, and the first to seven goals wins.",
     "researched": true
   },
   {
@@ -47,7 +47,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Take turns dropping animals. First player to drop an animal off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
+    "rule": "A crane swings an animal in over your platform. Walk it along, turn it round if it is facing the wrong way, and let it drop onto the tower. If anything comes off the platform, you have lost.",
     "researched": true
   },
   {
@@ -63,7 +63,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Tap the screen, drag to aim, and release the arrow. Watch out for the wind! Hit the inner rings for higher scores. The player with the most points after three rounds wins.",
+    "rule": "Point the bow, bring it to full draw and loose. A crosswind carries the arrow while it flies, and the bow arm wanders if you dither. Three rounds of four arrows, and the higher card wins.",
     "researched": true
   },
   {
@@ -79,7 +79,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Load your bow and hit 70 targets before your opponent!",
+    "rule": "A gallery of drifting targets at the far end of the field. Swing the bow, set the draw and let go, because one arrow can skewer several targets if you find the line. First archer to seventy wins.",
     "researched": true
   },
   {
@@ -95,7 +95,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move your fifteen checkers according to the roll of two dice. The objective is to move all checkers into your home board and then bear them off. You can also hit opponent's blots to send them to the bar, delaying their progress.",
+    "rule": "Move fifteen checkers round the board on the roll of two dice. A lone checker can be hit and sent back to the bar to start its lap again; bear all fifteen off your home board to win.",
     "researched": true
   },
   {
@@ -111,7 +111,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Shoot and score with every part of your body",
+    "rule": "One pitch, one ball with a height to it, and a goal each. How high the ball is when you reach it decides which part of you meets it, and the three parts do three different things. Ninety seconds, or first to five.",
     "researched": true
   },
   {
@@ -127,7 +127,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hoop! Take the ball when it's in your half of the field and shoot. Until the ball bounces off the ground, the opponent can't touch it!",
+    "rule": "One hoop on the halfway line and one ball. Whoever's half it is lying in shoots, keeping a line and then a range. A clean shot pays three and one off the ring pays two, over fourteen possessions.",
     "researched": true
   },
   {
@@ -143,7 +143,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Try to shoot the beachball over the opponent's side. First to 3 wins.",
+    "rule": "A ball over a net on sand, one player a side. Get under it and send it back, because whoever's sand it lands on concedes. First to three.",
     "researched": true
   },
   {
@@ -158,7 +158,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Place blocks in the 9x9 board and fill rows, columns or squares to clear them from the game.",
+    "rule": "A nine-by-nine board and a shared tray of three shapes. Fill a row, a column or a box and it clears, and every cleared square pays whoever placed it. The tray refills only when it is bare, so the last pick is whatever you were left.",
     "researched": true
   },
   {
@@ -174,7 +174,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Classic 10 pin bowling. Swipe to shoot your ball and knock down the pins. Highest score after 4 rounds wins!",
+    "rule": "Four frames each, two balls a frame at ten pins and a third in the last frame if you earn it. Strikes and spares are paid by the balls that follow them, and the higher total wins.",
     "researched": true
   },
   {
@@ -190,7 +190,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Move the paddle with your finger to keep the balls in play. If you miss, your opponent scores a point.",
+    "rule": "A paddle each along your own baseline, two balls in play, and a wall of bricks between you. Miss a ball and the point goes to the other side, and hitting off centre angles the return. First to five.",
     "researched": true
   },
   {
@@ -206,7 +206,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Run around but watch out, the ice breaks every time you run over it or stop on it.",
+    "rule": "A floor of ice each, seven by seven. Standing wears through the tile under you and stepping off costs it as well. Go through, or run out of ice to step onto, and the round is your opponent's. First to three.",
     "researched": true
   },
   {
@@ -222,7 +222,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Use timing to aim and shoot your opponent's cannon. Watch out for the wind! First to get 3 hits wins",
+    "rule": "Two cannons face each other down the board in a crosswind. Keep an angle, then a power, and the shot goes. Both players fire under the same wind, and three hits takes the match.",
     "researched": true
   },
   {
@@ -238,7 +238,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Pot all your pucks before your opponent and win. The Queen can be potted anytime but it must be potted before the last puck and must be covered immediately in the same turn.",
+    "rule": "Flick a striker across the board to send your six pucks into the corner pockets. The queen may go down at any point before your last puck, but must be covered in the same turn. First to clear six wins.",
     "researched": true
   },
   {
@@ -254,7 +254,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Capture all your opponent's pieces!",
+    "rule": "Diagonal moves and compulsory captures on an eight-by-eight board. Chain your jumps, crown a man on the far row, and win by taking every piece or by leaving your opponent no move.",
     "researched": true
   },
   {
@@ -270,7 +270,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Chess! Capture your opponent's king and keep yours alive!",
+    "rule": "Chess for two on a board that turns to face whoever is to move, with castling, en passant, promotion and the standard draws all played out. Mate the other king to win.",
     "researched": true
   },
   {
@@ -286,7 +286,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Jump to stack blocks and get points if the block stops in the middle before the chicken lands on it.",
+    "rule": "A block swings on a rope above your perch, and one action does two things at once, hopping your chicken and cutting the block loose to slide on and stop somewhere. Land on it and it stacks, dead centre pays double. First to thirteen.",
     "researched": true
   },
   {
@@ -302,7 +302,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Try to fill the entire field with your color. Click on your circles to enlarge the dots by one. Take 4 new squares when you reach 4 white dots in a circle.",
+    "rule": "Add a dot to an empty cell or one of your own. A cell holding as many dots as it has neighbours bursts into all of them and turns them your colour, which can set off a chain. Hold every cell to win.",
     "researched": true
   },
   {
@@ -318,7 +318,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Throw your bags into the hole and try to push the other players' bags off the board.",
+    "rule": "Four bags each at a board with a hole near the top. In the hole is three, on the board is one, and a bag landing on another shoves it. Only the difference between the two rounds counts.",
     "researched": true
   },
   {
@@ -334,7 +334,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 120,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Drop the ball into your opponent's field! Five points to win!",
+    "rule": "Two crabs, a net between them, and a ball that bounces off whatever it touches. Move along your own half and jump to keep it up; let it land on your side and your opponent scores. First to five.",
     "researched": true
   },
   {
@@ -350,7 +350,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 20,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Drive, jump and flip your car by tapping the buttons. Hit your opponent on the head with your car to score points and watch your own head so that nothing touches it!",
+    "rule": "Both cars share one pit, and the only thing that scores is touching the other driver's head, which sits on a roof. Drive, jump and flip to get above your opponent while nothing touches your own. First to five.",
     "researched": true
   },
   {
@@ -366,7 +366,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "One bowls, one bats. Time the swing to find the boundary; miss and the stumps go down. Both bat an innings and the bigger score wins.",
+    "rule": "One seat bowls and the other bats, two overs each before they swap. Find the boundary for four along the ground or six in the air, and a ball that beats the bat and hits the stumps is out. The bigger total wins.",
     "researched": true
   },
   {
@@ -382,7 +382,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Swipe up to throw balls into cups!\nLand in the cup to remove it. First to clear all your cups wins!",
+    "rule": "Six cups stand at each end of the table. Keep a line, then a distance along it, and the ball goes; land in a cup and it comes off the table. Nine throws each, and most cups taken wins.",
     "researched": true
   },
   {
@@ -398,7 +398,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Take turns throwing darts and be the first to score 301 points. The last dart must hit the exact score.",
+    "rule": "Count down from 301, three darts a turn. The dart that reaches zero must be a double, and going below zero voids the whole turn rather than the offending dart.",
     "researched": true
   },
   {
@@ -414,7 +414,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 420,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Take turns rolling the dice and try to score as many points as possible based on the combinations on the sheet.",
+    "rule": "Five dice and three rolls a turn, keeping whichever you like between them. Every hand must be spent on one of thirteen scoring boxes, each usable once, and the higher total after thirteen turns wins.",
     "researched": true
   },
   {
@@ -430,7 +430,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Go wild at the disco! Press at the right moment when the notes hit your platform! Each mistake will lower your score, the one with more points at the end of the song wins!",
+    "rule": "One track of notes runs at both players at once, each note landing on your own platform. Meet it dead centre for three and near enough for one, while a note you let go, or an answer to nothing, costs you. Higher score at the end of the song wins.",
     "researched": true
   },
   {
@@ -446,7 +446,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Take turns tapping horizontal or vertical lines to connect the boxes. The last line that completes a box turns it into the line color. Own the most boxes to win.",
+    "rule": "Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.",
     "researched": true
   },
   {
@@ -462,7 +462,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Connect 4 of the same colored discs in a row to win.",
+    "rule": "Discs fall down a column and settle on whatever is already there. Line up four in any direction to take the round, and two rounds take the match.",
     "researched": true
   },
   {
@@ -478,7 +478,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Move your beetle and bring the precious brown ball to your base! Don't get too close to ladybugs!",
+    "rule": "One ball, two beetles and a base at each end. A beetle shoves the ball directly away from itself, so where you arrive decides where it goes, and walking across it rolls it out of a squeeze. Keep clear of the ladybirds and deliver three.",
     "researched": true
   },
   {
@@ -494,7 +494,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 30,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Hit your opponent's side of the screen! Press to fire your rocket!",
+    "rule": "A row of paper lanterns in each half of the ground, and a firework cart rolling along your own edge. Stop the cart to keep a column, then let go to keep a distance and fire. A burst puts out any lantern it covers, including your own.",
     "researched": true
   },
   {
@@ -510,7 +510,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 34,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Don't let the enemy soldiers get close, smash them first! Press at the right moment and hold to shoot farther!",
+    "rule": "Soldiers march up five roads towards your wall and never stop. Keep a road, hold to charge the shot further out, then fire. A soldier smashed deep is worth three and one close in is worth one, while anything reaching the gate is worth nothing.",
     "researched": true
   },
   {
@@ -526,7 +526,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to jump and shoot as many baskets as you can. First to 10 wins.",
+    "rule": "A lane each, with hoops drifting towards you. Beat a wing to rise, hold to glide down slowly, let go and fall. Thread the hoop as it passes and that is a basket, and the first to ten wins.",
     "researched": true
   },
   {
@@ -542,7 +542,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Jump among the water lilies and catch the bugs! The dragonfly is worth 5 points and the first to reach 10 wins!",
+    "rule": "Two frogs share one pond of twenty-five lily pads. Land on the pad a bug is sitting on to take it, where a fly is worth one and a dragonfly five. The first frog to ten wins.",
     "researched": true
   },
   {
@@ -558,7 +558,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Collect 30 fish! Move your finger to walk and release it to slide on the ice! Don't fall in the hole!",
+    "rule": "Two ice floes, a bird on each. Walking is slow but you can steer, and stopping launches the bird into a slide it cannot steer at all. Thirty fish wins, and the holes swallow anything that crosses a rim.",
     "researched": true
   },
   {
@@ -574,7 +574,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Watch the icon in the center and tap the saber as soon as you see a fruit (watermelon, pomgrenade, orange). First to 10 wins.",
+    "rule": "One thing appears between the two players. If it is fruit, cut it first and the point is yours; if it is not, keep still, because cutting anything else scores for your opponent. First to ten.",
     "researched": true
   },
   {
@@ -590,7 +590,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Score points by shooting the ball into the hole. Find the right angle and the right power. The longer you press, the stronger the shot.",
+    "rule": "A cup sits in a goal mouth and each player owns a ball. Keep a line, hold for power, and let go to kick. Holing out pays three from range and one from close in, over nine kicks each.",
     "researched": true
   },
   {
@@ -606,7 +606,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to change gravity. Run fast and don't fall!",
+    "rule": "Your runner goes forward on its own and gets faster the longer it runs clean. Blocks stand on the floor and hang from the ceiling, and the only way past one is to say which way is down before it arrives. First over the line wins.",
     "researched": true
   },
   {
@@ -622,7 +622,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The thief has to collect the coins, the guard must catch the thief. Whoever has more coins at the end of the match wins!",
+    "rule": "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.",
     "researched": true
   },
   {
@@ -638,7 +638,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Ask yes/no questions to narrow down which character the other player chose and guess it before they do.",
+    "rule": "Thirty characters, and each player is hunting a different one. Spend your turn on a question that splits the field, or on naming a character outright. Name yours first to take the deal; best of three.",
     "researched": true
   },
   {
@@ -654,7 +654,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hit the hammer when the needle is pointing up. The closer to the white line, the stronger the hit. The best score in 3 rounds wins!",
+    "rule": "A fairground striker each. Swing as the needle crosses the mark and the puck goes up the tower; let it turn round instead and the hammer winds harder, but the needle comes back faster. Four rounds, higher total wins.",
     "researched": true
   },
   {
@@ -670,7 +670,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Slap to score. Dodge to avoid. Dodging without a slap gives the attacker a point. First to 5 points wins!",
+    "rule": "One player holds their hands out and the other tries to slap them before they are pulled away. Pull away with no slap in the air and the point goes to the attacker. First to five.",
     "researched": true
   },
   {
@@ -686,7 +686,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to fly. Avoid the spikes! Survive 3 times to win.",
+    "rule": "A strip of sky each and walls of spikes coming across it. Beat a wing to rise, let go to fall, hold to tuck into a dive. The gap is the only way through, and outlasting your opponent three times takes the match.",
     "researched": true
   },
   {
@@ -702,7 +702,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins!",
+    "rule": "One pond, a hippo on each bank, and twelve balls drifting in it. Lunge, and your hippo takes back whatever its mouth touched, where your own kind is worth two and your opponent's costs you one. First to fifty.",
     "researched": true
   },
   {
@@ -718,7 +718,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap at the right moment to make the potato fly into your opponent's arms.",
+    "rule": "A potato on a burning fuse goes back and forth. Send it away as the marker crosses your band, and whoever is holding it when the fuse runs out loses the round.",
     "researched": true
   },
   {
@@ -734,7 +734,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Take the crown and keep it on your head until the time is expired! Don't let your opponent touch you!",
+    "rule": "One crown in an open yard. Whoever is wearing it banks time, and touching the wearer takes it, so the same touch that wins you the crown makes you the one being chased. First to twenty banked seconds.",
     "researched": true
   },
   {
@@ -750,7 +750,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Tap to throw knives. Land in the wood, avoiding other knives. First to 20 wins.",
+    "rule": "A log turns between the two players. A knife that finds bare wood sticks and scores; one that meets a knife already standing splinters and costs you a point. First to twenty.",
     "researched": true
   },
   {
@@ -766,7 +766,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Steal the diamond faster than your opponent! First to 5 wins!",
+    "rule": "Five pedestals under one case. The lights come up with the diamond on exactly one of them, and both thieves reach at once. Close on the wrong pedestal and the alarm freezes your hand. First to five.",
     "researched": true
   },
   {
@@ -782,7 +782,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space.",
+    "rule": "Roll to bring a token out, then walk it round a shared loop and up your own home column. Landing on an opponent sends them back to the start, and the first token home takes the match.",
     "researched": true
   },
   {
@@ -798,7 +798,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches!",
+    "rule": "A tree each and an axe apiece. Every swing takes a log off the trunk and drops the whole tree one notch onto you, so what lands at your shoulder is what you must not be standing under. First to sixty logs.",
     "researched": true
   },
   {
@@ -814,7 +814,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move your stones counterclockwise across the board and try to collect more stones than your opponent!",
+    "rule": "Lift a pit of stones and sow them one at a time around the board. Finishing in your own store buys another turn, and finishing in an empty pit of yours captures the pit opposite. Most stones banked wins.",
     "researched": true
   },
   {
@@ -830,7 +830,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Compare the 2 sets of objects. Find the 1 matching object before your opponent to earn a point. First to 10 points wins!",
+    "rule": "Two sets of five symbols share exactly one symbol between them. Find it in your own set before your opponent finds it in theirs, because a wrong pick costs you. First to ten.",
     "researched": true
   },
   {
@@ -846,7 +846,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The first player to solve the task gets a point. For any wrong answer the opponent gets a point. First to 10 wins.",
+    "rule": "One sum, shown to both players at the same instant, with four answers to choose between. Be first with the right one and you score; a wrong one scores for your opponent. Fifteen questions, most points wins.",
     "researched": true
   },
   {
@@ -861,7 +861,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Swipe to paint all squares to complete each level!",
+    "rule": "A roller each on one floor. Pick a direction and you slide until you meet a block, the edge, or your opponent's paint, laying colour on every bare square you cross. Your own paint you roll straight over, and the most squares wins.",
     "researched": true
   },
   {
@@ -877,7 +877,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Flip 2 cards and find pairs.",
+    "rule": "Sixteen cards face down in eight pairs. Turn two over, and a pair is yours and keeps the turn, so a player who remembers can clear the table in one visit. Most pairs wins.",
     "researched": true
   },
   {
@@ -893,7 +893,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hole in one! The player with 2 points more than the other wins!",
+    "rule": "Putt across a green towards the hole, choosing a line and how hard to strike. Holing out scores a point, and the match goes to the first player two points clear.",
     "researched": true
   },
   {
@@ -909,7 +909,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Move your finger to control your team! Who has scored more after 90 seconds wins!",
+    "rule": "One outfield player each, one ball, and a goal at either end. Run into the ball to push it and run into it hard to strike it. Most goals after ninety seconds wins, and a draw is a real result.",
     "researched": true
   },
   {
@@ -925,7 +925,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 35,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Drag the money to your safe box using all the fingers of your hand!",
+    "rule": "Banknotes drift across one table with a safe let into each end. A hand grips every note under its palm at once, but a full hand moves at less than half the speed of an empty one. Most money banked wins.",
     "researched": true
   },
   {
@@ -940,7 +940,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move nuts between the bolts until all the nuts on each bolt are the same colour!\n\nYou can only move nuts onto other nuts of the same colour.",
+    "rule": "Twenty nuts on a rack of seven bolts, half of them marked as yours from the deal. Only the outermost nut comes off a bolt, and it only goes onto a bare bolt or onto its own kind. A bolt of one kind pays whoever owns the nuts standing in it.",
     "researched": true
   },
   {
@@ -956,7 +956,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Paint the screen with your color! The winner is the one who painted the most after 45 seconds!",
+    "rule": "Both players roll across one board leaving colour behind them, and rolling over your opponent's paint makes it yours. Most of the board after forty-five seconds wins.",
     "researched": true
   },
   {
@@ -972,7 +972,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Swipe your finger to dive or to kick the ball! First to 5 win!",
+    "rule": "One player takes the kick and the other keeps goal, both committing at the same moment and neither seeing the other's choice. Then the roles swap. First to five, with both players taking the same number of kicks.",
     "researched": true
   },
   {
@@ -988,7 +988,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 55,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Tap left and right to fire the ball right in your opponent goal!",
+    "rule": "One table, two flippers each, and a goal at either end. Work the flippers to send the ball past your opponent's baseline, and the first to five goals wins.",
     "researched": true
   },
   {
@@ -1004,7 +1004,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Use your finger to move the racket and to spin the ball. Get 7 points to win!",
+    "rule": "A table seen from above, a racket at each end, and a ball that never stops. Slide along your own baseline to meet it, and sweep as it strikes to put spin on the return. First to seven points.",
     "researched": true
   },
   {
@@ -1020,7 +1020,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Run from the piranhas! And watch out for corals!",
+    "rule": "Two lagoons, a swimmer in each, and four piranhas that get faster every second. Coral heads stop you dead for half a second while the shoal does not wait. You score the water you cover, and the longer swim wins.",
     "researched": true
   },
   {
@@ -1036,7 +1036,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell!",
+    "rule": "An order is dealt onto your pizza, held for a moment, and taken away. Rebuild it from the rail in front of you and ring the bell to send it out, because wrong or unfinished is spoiled. Most orders served wins.",
     "researched": true
   },
   {
@@ -1052,7 +1052,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "A classic! Throw the balls of your color into the holes and finally the black ball!",
+    "rule": "A cue ball, seven balls each and a black. Pot one of your own and you shoot again; clear your seven and then the black to win, but sink the black early and you lose.",
     "researched": true
   },
   {
@@ -1068,7 +1068,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game.",
+    "rule": "Rows of bubbles between two players. On your turn you press any run of neighbouring bubbles in a single row, and whoever presses the last bubble on the board loses.",
     "researched": true
   },
   {
@@ -1084,7 +1084,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap as fast as you can to pull hard! Pull the flag across the line to win!",
+    "rule": "A rope, a flag, and two people pulling. The faster you work your own side, the further the flag comes across, and ten marks over the line takes the match.",
     "researched": true
   },
   {
@@ -1100,7 +1100,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Compete against your opponent and finish first! Move your finger to drive the car.",
+    "rule": "Two cars, a road each, and a finish line. Steer across the lanes, keep off what is coming the other way, and whoever reaches the line first wins.",
     "researched": true
   },
   {
@@ -1116,7 +1116,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Press to run! Run away from the cats' paws and collect the pieces of cheese before your opponent!",
+    "rule": "Run down a burrow, changing rails to keep clear of the cats' paws and to reach the cheese. Every piece is there for both rats, so this is a race rather than a scramble. First to carry sixteen home wins.",
     "researched": true
   },
   {
@@ -1132,7 +1132,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Fill the board with more pieces of your color than the opponents to win!",
+    "rule": "Place a piece so it traps a line of your opponent's between two of yours, and that whole line changes hands. The game ends when neither side can move, and the larger army wins.",
     "researched": true
   },
   {
@@ -1148,7 +1148,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Tap to steer left and right to dodge obstacles on the road",
+    "rule": "Obstacles come down a three-lane road in pairs, leaving exactly one lane open. Change lane before they arrive, because your score is how far you got and whoever is still driving wins.",
     "researched": true
   },
   {
@@ -1164,7 +1164,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Survive the obstacles in the deadly robot arena! Dodge lasers, spinning blades and cannonballs!",
+    "rule": "Two robots on one round floor that is trying to kill both of them. Dodge the sweeping blade, the lasers and the cannonballs, because the last one still moving takes the round. First to three rounds.",
     "researched": true
   },
   {
@@ -1180,7 +1180,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Press the button of your choice before the hand stops. First to 3 wins.",
+    "rule": "Rock, paper and scissors, with both players committing inside the same window and neither seeing the other's choice. Choosing nothing loses to anything. First to three rounds.",
     "researched": true
   },
   {
@@ -1196,7 +1196,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Place your ships without showing your opponent and take turns guessing your opponent's ship locations",
+    "rule": "Lay out a fleet on your own ten-by-ten grid, then take turns calling shots at your opponent's water. A hit buys another shot, and sinking the whole fleet wins.",
     "researched": true
   },
   {
@@ -1212,7 +1212,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Protect your ship from your opponent's cannon shots! Move your finger to move the shield!",
+    "rule": "Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.",
     "researched": true
   },
   {
@@ -1228,7 +1228,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Cut the bamboo canes of your opponent! Grab the shuriken and throw it! Move your finger to add spin to your shot.",
+    "rule": "A grove of bamboo stands between two players, six canes each. Point the blade, put spin on it and let go, and it flies a curve that cuts every cane it passes through, including your own. Cut all six of your opponent's to win.",
     "researched": true
   },
   {
@@ -1244,7 +1244,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Roll the dice, then flip one or more numbered tiles that add up to your roll. Keep playing until no move is possible.",
+    "rule": "Nine numbered tiles stand open. Roll two dice and shut any set of tiles adding up to the roll, until nothing adds up. What you failed to shut is your score, and the lower score wins.",
     "researched": true
   },
   {
@@ -1259,7 +1259,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "This is a classic Sliding Puzzle game. Move the boxes into the correct order.",
+    "rule": "One board of numbered tiles with a single gap, and two players solving it from opposite sides of the table. You want the tiles in order as you read them, and so does your opponent, so every helpful slide gets in the other's way.",
     "researched": true
   },
   {
@@ -1275,7 +1275,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Shoot all pucks into the opponent's side of the board to win",
+    "rule": "A wall with one gap in it divides the board, and each side starts with eight pucks to be rid of. Keep a line, then a strength, and send one at the gap. Seven shots each, and most pucks through wins.",
     "researched": true
   },
   {
@@ -1291,7 +1291,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Tap the screen and race your car round the laps as fast as you can. But be careful, if flames come out of the car, you should slow down in the curves by taking your finger off the screen!",
+    "rule": "Hold the throttle and the car winds up, but carry too much speed into a bend and it leaves the slot and costs you the best part of two seconds. Three laps, and the first car home wins.",
     "researched": true
   },
   {
@@ -1307,7 +1307,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Don't touch the other player's snake body! Move your finger to change direction and stay alive!",
+    "rule": "Two snakes share one arena. You can steer but you cannot stop and you cannot reverse, and running into a wall, into yourself, or into the other snake ends you. Eat ten pellets to win.",
     "researched": true
   },
   {
@@ -1323,7 +1323,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Roll a die to move across the board. Land on a ladder to climb higher, or a snake to slide down. First to reach or pass the last field wins!",
+    "rule": "Roll and move up a numbered track, climbing the ladders and falling down the snakes. A snake swallows a given player only once, and reaching or passing the last field wins.",
     "researched": true
   },
   {
@@ -1339,7 +1339,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Snowball fight! Pull back to aim. Release to throw. Hit your opponent. First to reduce their opponent's health to zero wins!",
+    "rule": "A snowball packs itself in your hands and grows through three sizes, and you throw the one you have, hooked by whichever way you were walking. Two ice walls take the throws that miss and break as they do. Knock the other health bar to nothing to win.",
     "researched": true
   },
   {
@@ -1355,7 +1355,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Take turns to hit the ball and score.",
+    "rule": "Strike the ball at the goal at the far end, choosing a line and then how hard. Whoever concedes restarts from the centre spot, and the first to three goals wins.",
     "researched": true
   },
   {
@@ -1370,7 +1370,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "This is a classic Solitaire game. Depending on the selected difficulty, different numbers of cards are revealed.",
+    "rule": "One solitaire deal and two players taking turns on it, one move each. A card you send up to a foundation scores its face value to you and is gone for your opponent, and when nobody can move the higher score wins.",
     "researched": true
   },
   {
@@ -1386,7 +1386,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Hide behind the stones so you don't get hit by the spikes.",
+    "rule": "A row of nine standing stones and a volley of spikes down the row. Each stone shelters the ground behind it and cracks as it takes the blow, so cover runs out. Two hits end your round, and three rounds take the match.",
     "researched": true
   },
   {
@@ -1402,7 +1402,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Push your opponent out of the bowl! Use your finger to move the spinner! 4 points to win!",
+    "rule": "Two spinning tops in a shallow dish, both driven at once with no turns in it. Push your opponent over the lip for two points, while a top whose spin runs out topples where it stands and pays one. First to four.",
     "researched": true
   },
   {
@@ -1418,7 +1418,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 38,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Look for dangers coming from the left or right and jump to avoid them",
+    "rule": "Beasts charge across your lane from either side while your runner stands in the middle of it. A jump puts you over whatever is coming, and a beast that reaches you on the ground bowls you over. Twenty waves, and the fuller herd wins.",
     "researched": true
   },
   {
@@ -1434,7 +1434,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Catch all the stars and be aware of black holes! First to get 7 stars wins!",
+    "rule": "Two skies holding the same objects, raced side by side. Fly your net into a star to take it and into a black hole to lose two. First to ten stars, or the higher count when the sky runs dry.",
     "researched": true
   },
   {
@@ -1450,7 +1450,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 100,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Use your tongue to catch the dragonfly, and use the joystick to escape from your opponent's blows! Don't miss too many shots or you'll lose the match!",
+    "rule": "Frogs on opposite banks of one marsh, with dragonflies drifting between them. A tongue goes straight out and brings back whatever it touched, and a flick that catches nothing counts against you. First to thirty-five.",
     "researched": true
   },
   {
@@ -1465,7 +1465,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Play Sudoku, train your brain and beat your highscore",
+    "rule": "One nine-by-nine grid, filled a square at a time. Answer correctly and the square is yours; answer wrongly and the right digit goes in anyway and the square is your opponent's. Whoever holds more of the twenty-seven lines wins.",
     "researched": true
   },
   {
@@ -1481,7 +1481,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Tap as fast as you can to push out your opponent! Stay in the ring!",
+    "rule": "Two wrestlers, one ring, and nothing to do but shove. A wrestler whose centre passes the ring edge is out, and both out in the same instant is a draw.",
     "researched": true
   },
   {
@@ -1497,7 +1497,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Draw your sword and throw it towards the targets of your enemy. Hold it in your hand and move it to parry your opponents throws!",
+    "rule": "Two fighters, with a rack of five targets behind each. Send your sword the length of the arena while your opponent runs theirs along a guard line to meet it. First to land five wins.",
     "researched": true
   },
   {
@@ -1513,7 +1513,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Destroy the enemy tank. Use the left stick to move and the right to shoot!",
+    "rule": "One yard, two tanks and a stack of crates. The gun is bolted to the hull, so aiming and driving are the same act, and holding the controls swings the gun and loads it while letting go fires. Take three lives to win.",
     "researched": true
   },
   {
@@ -1528,7 +1528,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Tap to collect cards. Complete sets of 3 to clear cards. You can hold up to 7 cards in your stack, so collect strategically.",
+    "rule": "Six piles between two players, one card of each turned up. Take a card into your rack, where three alike clear and score. The rack holds seven and there is no eighth slot, so a card that completes nothing when you are full puts you out.",
     "researched": true
   },
   {
@@ -1544,7 +1544,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Shoot targets to score points. Small targets score double. First to 10 points wins. Tap to start, then tap to aim up, then tap to fire.",
+    "rule": "Targets ride two belts across the range. Keep a distance, then shoot; the shot takes a moment to arrive, so you are leading the target rather than pointing at it. Small targets pay double, first to ten.",
     "researched": true
   },
   {
@@ -1560,7 +1560,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up.",
+    "rule": "Traffic fills the road ahead, and some of it can be driven round while some of it cannot. Pick your lane, and hop the rest. First taxi across the city wins.",
     "researched": true
   },
   {
@@ -1576,7 +1576,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast.",
+    "rule": "Run along your own half and jump to meet the ball, because jumping moves your reach rather than extending it. Catch it with the middle of the strings and it goes back fast. First to four points.",
     "researched": true
   },
   {
@@ -1592,7 +1592,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Eat all before your opponent! First to 15 wins, sashimi is worth 1 point, onigiri is worth 3 point and for every mistake you lose a point!",
+    "rule": "A conveyor carries plates past both counters. Close your chopsticks on what is passing, where a slice of sashimi is worth one and a rice ball three, and closing on bare belt costs you. First to fifteen.",
     "researched": true
   },
   {
@@ -1608,7 +1608,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Red is cross, blue is circle!",
+    "rule": "Two players share one three-by-three grid, placing marks in turn, and the board turns to face whoever is to move. Three in a row takes a round, and three rounds take the match.",
     "researched": true
   },
   {
@@ -1624,7 +1624,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Crash your opponent and be careful not to fall into the water! Use the joystick to steer.",
+    "rule": "One island, two cars, and water all round it. Steer, and shoulder your opponent towards the edge, because a car that goes in scores for the other player whatever put it there. First to three splashes.",
     "researched": true
   },
   {
@@ -1640,7 +1640,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Play on a big board with nine small tic-tac-toe games. Where you place your mark tells the other player where they must play next. Win small boards, then get three small boards in a row to win.",
+    "rule": "Nine small grids make up one large board, and where you play sends your opponent to the matching grid. Win small grids, then three of them in a line to take the match.",
     "researched": true
   },
   {
@@ -1656,7 +1656,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Throw the bait and rewind the reel! First to catch 25 fishes wins!",
+    "rule": "Send the bait out over the water, then wind it back in with whatever it hooked. A fish counts when it is landed rather than when it is hooked, and the first rod to twenty-five wins.",
     "researched": true
   },
   {
@@ -1672,7 +1672,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 165,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The balls swim in water. Give the balls speed by pressing the buttons. Let the ball fly through the basket. First to 15 wins.",
+    "rule": "Two balls float in one tank, each with a pointer turning steadily on it. A shove sends your ball whichever way the pointer happens to be facing, and the water bleeds the speed off again. Send it out through the basket at your end; first to fifteen.",
     "researched": true
   },
   {
@@ -1688,7 +1688,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Hit the moles, but only those of your color! The first one that gets to 30 wins!",
+    "rule": "Both players' moles surface in the same twelve holes. Hitting one of yours scores and hitting your opponent's costs you a point, so the game is telling them apart at speed rather than swinging fast. First to thirty.",
     "researched": true
   },
   {
@@ -1705,7 +1705,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Accelerate your bike to pull up a wheelie. Earn more points the longer you maintain a wheelie.",
+    "rule": "Lean back and the front wheel comes up, and the higher it rides the faster the bike goes. Lean too far and you go over backwards, and the bumps down the lane kick the nose up whether you wanted it or not. First to the end of the course.",
     "researched": true
   },
   {
@@ -1722,7 +1722,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
+    "rule": "A plinth each, with the next piece hanging over it on a rail of notches. Shunt it sideways and let it go onto whatever is already there. The tower leans as it grows, and the first player to put a piece off the plinth loses.",
     "researched": true
   },
   {
@@ -1738,7 +1738,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Jump and try not to fall on your head. Try to push your opponent to the ground instead. Watch the wind!",
+    "rule": "Two stiff-bodied wrestlers on one mat in a crosswind. Lean, leap and shove, because whoever puts their head on the floor first loses the round. First to three rounds.",
     "researched": true
   }
 ] as const;
