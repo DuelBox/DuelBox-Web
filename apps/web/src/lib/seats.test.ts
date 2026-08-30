@@ -69,7 +69,21 @@ function stripComments(source: string): string {
 }
 
 describe('the seat names have one home', () => {
-  const files = sources(web).filter((path) => !ALLOWED.has(path));
+  /**
+   * `e2e/` is in scope, and it is in scope because leaving it out cost a broken `main`.
+   *
+   * This guard was written over `apps/web/src` only. The e2e suite meanwhile asserted the
+   * HUD said "Player two" — the placeholder that #2513 replaced with a real name — so when
+   * the shell started naming both seats properly, 57 e2e tests went red against an app that
+   * was behaving correctly. The shell was right and its tests were stale, and nothing was
+   * watching the half of the repository that reads the shell from outside.
+   *
+   * Spelling a name here is the symptom the guard can see; importing it is the fix, and an
+   * imported name cannot go stale when the name changes.
+   */
+  const files = [...sources(web), ...sources(join(web, '..', '..', '..', 'e2e'))].filter(
+    (path) => !ALLOWED.has(path),
+  );
 
   it('finds the shell to check', () => {
     expect(files.length).toBeGreaterThan(20);

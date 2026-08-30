@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
 import type { Page } from '@playwright/test';
 
 /**
@@ -46,7 +47,7 @@ async function startAndAim(page: Page) {
 
 const turnPassed = (page: Page) =>
   expect(page.getByRole('group', { name: 'Score' })).toContainText(
-    'Player two has 0 points, and it is their turn',
+    `${SEAT_CHARACTERS.p2} has 0 points, and it is their turn`,
   );
 
 test.describe('placing a mark', () => {
@@ -138,12 +139,16 @@ test.describe('reaching the whole board', () => {
       // version of this and it passed on the broken build too, because that sentence is
       // already on the page — the same vacuous-assertion trap this file exists to record.
       // Score-agnostic, because not every game starts level — Reversi opens two apiece.
-      await expect(hud).toContainText(/Pip has \d+ points?, and it is their turn/);
+      await expect(hud).toContainText(
+        new RegExp(`${SEAT_CHARACTERS.p1} has \\d+ points?, and it is their turn`),
+      );
 
       await page.mouse.click(target.x, target.y);
 
       // The turn passing to the *other* seat is the proof the tap was accepted.
-      await expect(hud).toContainText(/Player two has \d+ points?, and it is their turn/);
+      await expect(hud).toContainText(
+        new RegExp(`${SEAT_CHARACTERS.p2} has \\d+ points?, and it is their turn`),
+      );
     });
   }
 
@@ -212,7 +217,7 @@ test.describe('a quick tap, in every game that takes one', () => {
       // game that genuinely ignores a quick tap still fails, it just takes eight goes to
       // say so.
       const hud = page.getByRole('group', { name: 'Score' });
-      const theirTurn = /Player two has \d+ points?, and it is their turn/;
+      const theirTurn = new RegExp(`${SEAT_CHARACTERS.p2} has \\d+ points?, and it is their turn`);
       await expect
         .poll(
           async () => {

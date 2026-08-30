@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
+import { CATALOGUE } from '../apps/web/src/data/catalogue.generated';
 
 test.describe('the static build', () => {
   test('lands, shows the catalogue, and reaches a game page', async ({ page }) => {
@@ -16,8 +18,14 @@ test.describe('the static build', () => {
     const response = await page.goto('/games/air-hockey/');
     const html = (await response?.text()) ?? '';
     expect(html).toContain('Air Hockey');
-    // The observed rule text is rendered server-side, not fetched by the client.
-    expect(html).toContain('Score in the opposing goal');
+    // The rule text is rendered server-side, not fetched by the client — read from the
+    // catalogue rather than quoted, because quoting it is what made this test stale: it
+    // held "Score in the opposing goal", which was the reference app's own wording until
+    // #2513 rewrote all 108 rules into our own voice. A hardcoded copy of a string whose
+    // whole point is that it must be ours would break again on the next rewrite.
+    const rule = CATALOGUE.find((entry) => entry.slug === 'air-hockey')?.rule ?? '';
+    expect(rule.length).toBeGreaterThan(0);
+    expect(html).toContain(rule.slice(0, 40));
   });
 
   test('a game loads and renders a non-blank frame', async ({ page }) => {
@@ -86,8 +94,11 @@ test.describe('the navigation', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('How to play');
     await expect(page.getByRole('heading', { name: 'Sit opposite each other' })).toBeVisible();
     // The keyboard split is the thing two people on one laptop most need to be told.
-    await expect(page.getByRole('table')).toContainText('Player one');
-    await expect(page.getByRole('table')).toContainText('Player two');
+    // The names come from `lib/seats.ts`, which owns seat identity — not spelled here,
+    // because spelling them is what made this stale: the table said "Player one" until
+    // #2513 gave both seats a real name instead of one name and one placeholder.
+    await expect(page.getByRole('table')).toContainText(SEAT_CHARACTERS.p1);
+    await expect(page.getByRole('table')).toContainText(SEAT_CHARACTERS.p2);
   });
 });
 
