@@ -29,19 +29,26 @@
   gap: 4px;
 }
 
+/* The two seats, sitting on the tile.
+ *
+ * Both of these were discs. `SeatGlyph` has said since it was written that Pip is a disc
+ * and Bo a rounded square precisely so rule 7 holds — colour is never the only signal —
+ * and this pair, on 108 cards, was the one place in the shell that ignored it. Rendering
+ * the catalogue in greyscale is what showed it: two identical grey dots. */
 .seats i {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
   display: block;
 }
 
 .p1 {
   background: var(--db-p1);
+  border-radius: 50%;
 }
 
 .p2 {
   background: var(--db-p2);
+  border-radius: 2px;
 }
 
 .name {

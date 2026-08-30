@@ -117,3 +117,22 @@ export type {
   AudioBufferSourceNodeLike,
   GainNodeLike,
 } from './audio.js';
+
+export {
+  LoopbackTransport,
+  loopbackPair,
+  frameProblem,
+  createFrameBuffer,
+  copyFrameInto,
+} from './transport.js';
+export type {
+  MatchTransport,
+  SeatInputFrame,
+  SeatInputFrameBuffer,
+  FrameSink,
+  TransportStatus,
+  LoopbackOptions,
+} from './transport.js';
+
+export { LockstepSession, configFingerprint, mixNumber } from './lockstep.js';
+export type { LockstepOptions, MatchConfig, SessionStatus } from './lockstep.js';

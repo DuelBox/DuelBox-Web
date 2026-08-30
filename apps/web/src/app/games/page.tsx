@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CATALOGUE, CATEGORIES } from '@/data/catalogue.generated';
 import { GameCard } from '@/components/GameCard';
+import { TileSprite } from '@/components/TileSprite';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function GamesPage() {
 
   return (
     <div className="db-wrap">
+      <TileSprite games={CATALOGUE} />
       <header className={styles.head}>
         <h1>All games</h1>
         <p className={styles.count}>

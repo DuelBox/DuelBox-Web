@@ -1,6 +1,7 @@
 {
   "_comment": "Rule 3: every asset shipped from this app says where it came from and under what terms. Checked by scripts/check-asset-licenses.mjs, which requires source, licence and author on every entry. Paths are relative to this file.",
   "_fonts": "All three families are variable fonts. The files here were fetched from the Google Fonts CSS2 API with the weight axis clipped to the range this site actually sets (wght@500..700 and wght@400..700), which is why one file covers every weight of a family instead of one file per weight. Each family is split into the 'latin' and 'latin-ext' subsets Google publishes, so a browser downloads only the subset the page needs. The bytes are Google's own subsetted, hinted builds, redistributed unmodified under the OFL; the licence text is in src/styles/fonts/OFL.txt.",
+  "_generated": "One entry below has no file. The 108 catalogue tiles (#2457) are not files: they are composed during `next build` from the vocabulary in src/lib/tiles.ts and land as inline SVG in the exported HTML, so there is no .svg or .png for the extension scan to find. Rule 3 says every asset carries a source, a licence and an author, and the answer for a generated asset is the code that generates it — not an invented provenance. check-asset-licenses.mjs checks entries as well as files, so this one is enforced: its three required fields must be present and the path it names must exist.",
   "assets": [
     {
       "file": "src/styles/fonts/fredoka-latin.woff2",
@@ -61,6 +62,14 @@
       "licence": "OFL-1.1",
       "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
       "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "src/lib/tiles.ts",
+      "what": "The per-game catalogue tile artwork: 24 marks, 6 field textures and 3 chips, composed into one tile per game at build time and inlined as SVG.",
+      "generated": "Composed at build time by src/lib/tiles.ts and src/components/TileSprite.tsx. No image file is shipped or fetched.",
+      "source": "Original to this repository — every coordinate is written in src/lib/tiles.ts. Nothing is traced from, derived from, or fitted to another product's art (rule 1).",
+      "licence": "Proprietary — © DuelBox, all rights reserved. Part of this repository and covered by its licence.",
+      "author": "DuelBox"
     }
   ]
 }

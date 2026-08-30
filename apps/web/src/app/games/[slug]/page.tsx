@@ -6,6 +6,7 @@ import { formatRound } from '@/lib/format';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
+import { TileSprite } from '@/components/TileSprite';
 import { CONTROLS } from '@/data/controls';
 import styles from './page.module.css';
 
@@ -73,6 +74,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="db-wrap">
+      <TileSprite games={[game, ...related]} />
       <nav className={styles.crumbs} aria-label="Breadcrumb">
         <Link href="/games/">All games</Link>
         <span aria-hidden="true">/</span>
@@ -81,7 +83,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
       <div className={styles.top}>
         <div className={styles.art}>
-          <GameTile tint={game.tint} mark={game.mark} name={game.name} />
+          <GameTile game={game} />
         </div>
 
         <div className={styles.detail}>
