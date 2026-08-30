@@ -1,3 +1,4 @@
+import { quantiseScalar, scalarEnvelopeFor } from '@duelbox/engine';
 import type { Rng, SeatId } from '@duelbox/engine';
 import { misjudgement, resolve } from '@duelbox/game-sdk';
 import type { Outcome, WinCondition } from '@duelbox/game-sdk';
@@ -307,9 +308,37 @@ export function turnAim(state: State, delta: number): void {
   aimAt(state, state.aim + delta);
 }
 
+/**
+ * The lattice every instrument's spin lands on.
+ *
+ * Without it the two paths were **disjoint**, not merely unequal. A finger's spin is its
+ * sideways travel times `SPIN_PER_UNIT`, and that travel is already quantised by the
+ * engine's positional envelope, so its step is 700/200 × 0.006 = **0.021**. A key winds
+ * spin at `SPIN_KEY_RATE` over the fixed step: 2.6/60 = **0.043333**. Those are 21/1000 and
+ * 13/300, whose first common multiple is **2.73** — past the ±1.9 clamp. So across the whole
+ * legal range the only two spins both players could name were zero and the clamp itself, and
+ * every other spin in the game belonged to exactly one instrument.
+ *
+ * That is not a resolution difference, which is what #2506 was filed as. It is a game where
+ * two people holding different instruments cannot describe the same throw, and CLAUDE.md's
+ * fairness rule — a common precision envelope, so no input family can aim finer than another
+ * — is exactly the rule it breaks.
+ *
+ * Quantising both onto one lattice fixes it by *removing* precision rather than inventing
+ * any, which is the engine's own stated approach. 64 steps across the range is coarser than
+ * either native step, so neither instrument keeps an advantage, and `MAX_SPIN` sits exactly
+ * on it at step 32 — the clamp is reachable rather than being a value only one path can hit.
+ */
+export const SPIN_ENVELOPE = scalarEnvelopeFor(2 * MAX_SPIN);
+
 export function spinTo(state: State, value: number): void {
   if (state.phase !== 'aiming') return;
   if (!Number.isFinite(value)) return;
+  // Stored exactly. Quantising here was tried and is wrong: `addSpin` feeds the running
+  // total back through, so rounding the accumulator makes the result depend on the *path*
+  // rather than the sum — and `presentation-parity` caught it, because the far seat's
+  // mirrored travel arrives as a different sequence of increments that sums the same. The
+  // lattice belongs at the commit, below.
   state.spin = clamp(value, -MAX_SPIN, MAX_SPIN);
 }
 
@@ -330,7 +359,13 @@ export function throwShuriken(state: State, seat: SeatId): boolean {
   shot.x = THROW_X;
   shot.y = THROW_Y;
   shot.heading = state.aim;
-  shot.spin = state.spin;
+  // The lattice lands here, on the one value that leaves the hand. A finger's step is the
+  // positional envelope times SPIN_PER_UNIT and a key's is SPIN_KEY_RATE over the fixed
+  // step; as fractions those are 21/1000 and 13/300, whose first common multiple is 2.73 —
+  // past the clamp. So before this line the only spins both instruments could throw were
+  // zero and the clamp itself. Snapping the committed spin makes the two sets identical
+  // without making the accumulator path-dependent.
+  shot.spin = clamp(quantiseScalar(state.spin, SPIN_ENVELOPE), -MAX_SPIN, MAX_SPIN);
   shot.elapsed = 0;
   state.phase = 'flying';
   state.lastCut = 0;
@@ -626,6 +661,11 @@ export function predictShot(
   spin: number,
   out: ShotOutcome,
 ): void {
+  // The spin the world will actually use, not the one asked for. `spinTo` snaps onto
+  // SPIN_ENVELOPE, so a bot predicting the raw value would be aiming at a game nobody is
+  // playing — the same shape as #2465, where a bot's analytic distance disagreed with the
+  // simulation stepping it. One arithmetic, reached through one function.
+  const settled = clamp(quantiseScalar(spin, SPIN_ENVELOPE), -MAX_SPIN, MAX_SPIN);
   imagined.x = THROW_X;
   imagined.y = THROW_Y;
   imagined.heading = aim;
@@ -636,7 +676,7 @@ export function predictShot(
   let taken = 0;
 
   for (;;) {
-    advanceArc(imagined, spin, SAMPLE_SECONDS);
+    advanceArc(imagined, settled, SAMPLE_SECONDS);
     out.seconds += SAMPLE_SECONDS;
 
     for (let i = 0; i < state.canes.length; i += 1) {
