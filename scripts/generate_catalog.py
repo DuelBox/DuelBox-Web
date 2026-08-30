@@ -79,6 +79,22 @@ def main() -> None:
         tint, mark = ARCHETYPE_ART.get(archetype, ("surface", "ring"))
         modes = [m for m in (game.get("modes") or "friend").split(",") if m]
 
+        # There is deliberately no `researched` field here any more (#2514).
+        #
+        # It used to be emitted as `bool(game.get("rule"))` under the doc comment "False when
+        # the game still has an open research issue", and it was `true` for all 108 games while
+        # **107 of the 108 research issues were open** — because every game has a one-line rule
+        # blurb, and that is all the expression ever tested. The site therefore shipped a
+        # per-game claim that observation research had been done, derived from a field that
+        # cannot know it. Its only reader, the home page's `featured` list, filtered on it and
+        # removed nothing, so the falsehood was invisible from the page as well as from the data.
+        #
+        # What a game's research state actually depends on is whether
+        # `packages/games/{id}/RESEARCH.md` exists, and today none does — see
+        # `docs/research-status.md` for the count and what is blocked on a person. Nothing on the
+        # site needs that fact, so it is recorded there rather than re-invented here, and
+        # `apps/web/src/data/research-provenance.test.ts` fails if a research-provenance field
+        # comes back before the files it would describe do.
         entries.append(
             {
                 "id": gid,
@@ -91,7 +107,6 @@ def main() -> None:
                 "tint": tint,
                 "mark": mark,
                 "rule": game.get("rule", ""),
-                "researched": bool(game.get("rule")),
             }
         )
 
@@ -116,8 +131,6 @@ def main() -> None:
         "  readonly tint: string;\n"
         "  readonly mark: string;\n"
         "  readonly rule: string;\n"
-        "  /** False when the game still has an open research issue. */\n"
-        "  readonly researched: boolean;\n"
         "}\n\n"
         f"export const CATALOGUE: readonly CatalogueEntry[] = {body} as const;\n\n"
         f"export const CATEGORIES: readonly string[] = {cats} as const;\n"

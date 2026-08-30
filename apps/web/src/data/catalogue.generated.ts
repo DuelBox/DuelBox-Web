@@ -12,8 +12,6 @@ export interface CatalogueEntry {
   readonly tint: string;
   readonly mark: string;
   readonly rule: string;
-  /** False when the game still has an open research issue. */
-  readonly researched: boolean;
 }
 
 export const CATALOGUE: readonly CatalogueEntry[] = [
@@ -30,8 +28,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Score in the opposing goal! Use your finger to move your paddle and get 3 goals!",
-    "researched": true
+    "rule": "Score in the opposing goal! Use your finger to move your paddle and get 3 goals!"
   },
   {
     "id": "animal-stack",
@@ -47,8 +44,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Take turns dropping animals. First player to drop an animal off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
-    "researched": true
+    "rule": "Take turns dropping animals. First player to drop an animal off the platform loses, so take care to drag left & right, and tap to rotate before you drop."
   },
   {
     "id": "archery",
@@ -63,8 +59,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Tap the screen, drag to aim, and release the arrow. Watch out for the wind! Hit the inner rings for higher scores. The player with the most points after three rounds wins.",
-    "researched": true
+    "rule": "Tap the screen, drag to aim, and release the arrow. Watch out for the wind! Hit the inner rings for higher scores. The player with the most points after three rounds wins."
   },
   {
     "id": "archery-master",
@@ -79,8 +74,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Load your bow and hit 70 targets before your opponent!",
-    "researched": true
+    "rule": "Load your bow and hit 70 targets before your opponent!"
   },
   {
     "id": "backgammon",
@@ -95,8 +89,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move your fifteen checkers according to the roll of two dice. The objective is to move all checkers into your home board and then bear them off. You can also hit opponent's blots to send them to the bar, delaying their progress.",
-    "researched": true
+    "rule": "Move your fifteen checkers according to the roll of two dice. The objective is to move all checkers into your home board and then bear them off. You can also hit opponent's blots to send them to the bar, delaying their progress."
   },
   {
     "id": "ballgames-physics",
@@ -111,8 +104,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Shoot and score with every part of your body",
-    "researched": true
+    "rule": "Shoot and score with every part of your body"
   },
   {
     "id": "basketball",
@@ -127,8 +119,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hoop! Take the ball when it's in your half of the field and shoot. Until the ball bounces off the ground, the opponent can't touch it!",
-    "researched": true
+    "rule": "Hoop! Take the ball when it's in your half of the field and shoot. Until the ball bounces off the ground, the opponent can't touch it!"
   },
   {
     "id": "beach-ball",
@@ -143,8 +134,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Try to shoot the beachball over the opponent's side. First to 3 wins.",
-    "researched": true
+    "rule": "Try to shoot the beachball over the opponent's side. First to 3 wins."
   },
   {
     "id": "blocks",
@@ -158,8 +148,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Place blocks in the 9x9 board and fill rows, columns or squares to clear them from the game.",
-    "researched": true
+    "rule": "Place blocks in the 9x9 board and fill rows, columns or squares to clear them from the game."
   },
   {
     "id": "bowling",
@@ -174,8 +163,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Classic 10 pin bowling. Swipe to shoot your ball and knock down the pins. Highest score after 4 rounds wins!",
-    "researched": true
+    "rule": "Classic 10 pin bowling. Swipe to shoot your ball and knock down the pins. Highest score after 4 rounds wins!"
   },
   {
     "id": "brick-blast",
@@ -190,8 +178,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Move the paddle with your finger to keep the balls in play. If you miss, your opponent scores a point.",
-    "researched": true
+    "rule": "Move the paddle with your finger to keep the balls in play. If you miss, your opponent scores a point."
   },
   {
     "id": "broken-tiles",
@@ -206,8 +193,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Run around but watch out, the ice breaks every time you run over it or stop on it.",
-    "researched": true
+    "rule": "Run around but watch out, the ice breaks every time you run over it or stop on it."
   },
   {
     "id": "cannon-duel",
@@ -222,8 +208,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Use timing to aim and shoot your opponent's cannon. Watch out for the wind! First to get 3 hits wins",
-    "researched": true
+    "rule": "Use timing to aim and shoot your opponent's cannon. Watch out for the wind! First to get 3 hits wins"
   },
   {
     "id": "carrom",
@@ -238,8 +223,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Pot all your pucks before your opponent and win. The Queen can be potted anytime but it must be potted before the last puck and must be covered immediately in the same turn.",
-    "researched": true
+    "rule": "Pot all your pucks before your opponent and win. The Queen can be potted anytime but it must be potted before the last puck and must be covered immediately in the same turn."
   },
   {
     "id": "checkers",
@@ -254,8 +238,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Capture all your opponent's pieces!",
-    "researched": true
+    "rule": "Capture all your opponent's pieces!"
   },
   {
     "id": "chess",
@@ -270,8 +253,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Chess! Capture your opponent's king and keep yours alive!",
-    "researched": true
+    "rule": "Chess! Capture your opponent's king and keep yours alive!"
   },
   {
     "id": "chicken-jump",
@@ -286,8 +268,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Jump to stack blocks and get points if the block stops in the middle before the chicken lands on it.",
-    "researched": true
+    "rule": "Jump to stack blocks and get points if the block stops in the middle before the chicken lands on it."
   },
   {
     "id": "color-wars",
@@ -302,8 +283,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Try to fill the entire field with your color. Click on your circles to enlarge the dots by one. Take 4 new squares when you reach 4 white dots in a circle.",
-    "researched": true
+    "rule": "Try to fill the entire field with your color. Click on your circles to enlarge the dots by one. Take 4 new squares when you reach 4 white dots in a circle."
   },
   {
     "id": "cornhole",
@@ -318,8 +298,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Throw your bags into the hole and try to push the other players' bags off the board.",
-    "researched": true
+    "rule": "Throw your bags into the hole and try to push the other players' bags off the board."
   },
   {
     "id": "crabby-volley",
@@ -334,8 +313,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 120,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Drop the ball into your opponent's field! Five points to win!",
-    "researched": true
+    "rule": "Drop the ball into your opponent's field! Five points to win!"
   },
   {
     "id": "crash-it",
@@ -350,8 +328,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 20,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Drive, jump and flip your car by tapping the buttons. Hit your opponent on the head with your car to score points and watch your own head so that nothing touches it!",
-    "researched": true
+    "rule": "Drive, jump and flip your car by tapping the buttons. Hit your opponent on the head with your car to score points and watch your own head so that nothing touches it!"
   },
   {
     "id": "cricket",
@@ -366,8 +343,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "One bowls, one bats. Time the swing to find the boundary; miss and the stumps go down. Both bat an innings and the bigger score wins.",
-    "researched": true
+    "rule": "One bowls, one bats. Time the swing to find the boundary; miss and the stumps go down. Both bat an innings and the bigger score wins."
   },
   {
     "id": "cup-pong",
@@ -382,8 +358,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Swipe up to throw balls into cups!\nLand in the cup to remove it. First to clear all your cups wins!",
-    "researched": true
+    "rule": "Swipe up to throw balls into cups!\nLand in the cup to remove it. First to clear all your cups wins!"
   },
   {
     "id": "darts",
@@ -398,8 +373,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Take turns throwing darts and be the first to score 301 points. The last dart must hit the exact score.",
-    "researched": true
+    "rule": "Take turns throwing darts and be the first to score 301 points. The last dart must hit the exact score."
   },
   {
     "id": "yazy",
@@ -414,8 +388,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 420,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Take turns rolling the dice and try to score as many points as possible based on the combinations on the sheet.",
-    "researched": true
+    "rule": "Take turns rolling the dice and try to score as many points as possible based on the combinations on the sheet."
   },
   {
     "id": "disco-battle",
@@ -430,8 +403,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Go wild at the disco! Press at the right moment when the notes hit your platform! Each mistake will lower your score, the one with more points at the end of the song wins!",
-    "researched": true
+    "rule": "Go wild at the disco! Press at the right moment when the notes hit your platform! Each mistake will lower your score, the one with more points at the end of the song wins!"
   },
   {
     "id": "dots-and-boxes",
@@ -446,8 +418,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Take turns tapping horizontal or vertical lines to connect the boxes. The last line that completes a box turns it into the line color. Own the most boxes to win.",
-    "researched": true
+    "rule": "Take turns tapping horizontal or vertical lines to connect the boxes. The last line that completes a box turns it into the line color. Own the most boxes to win."
   },
   {
     "id": "four-in-a-row",
@@ -462,8 +433,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Connect 4 of the same colored discs in a row to win.",
-    "researched": true
+    "rule": "Connect 4 of the same colored discs in a row to win."
   },
   {
     "id": "dung-battle",
@@ -478,8 +448,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Move your beetle and bring the precious brown ball to your base! Don't get too close to ladybugs!",
-    "researched": true
+    "rule": "Move your beetle and bring the precious brown ball to your base! Don't get too close to ladybugs!"
   },
   {
     "id": "explosive-festival",
@@ -494,8 +463,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 30,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Hit your opponent's side of the screen! Press to fire your rocket!",
-    "researched": true
+    "rule": "Hit your opponent's side of the screen! Press to fire your rocket!"
   },
   {
     "id": "fatal-siege",
@@ -510,8 +478,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 34,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Don't let the enemy soldiers get close, smash them first! Press at the right moment and hold to shoot farther!",
-    "researched": true
+    "rule": "Don't let the enemy soldiers get close, smash them first! Press at the right moment and hold to shoot farther!"
   },
   {
     "id": "flappy-jump",
@@ -526,8 +493,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to jump and shoot as many baskets as you can. First to 10 wins.",
-    "researched": true
+    "rule": "Tap to jump and shoot as many baskets as you can. First to 10 wins."
   },
   {
     "id": "frogs-fight",
@@ -542,8 +508,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Jump among the water lilies and catch the bugs! The dragonfly is worth 5 points and the first to reach 10 wins!",
-    "researched": true
+    "rule": "Jump among the water lilies and catch the bugs! The dragonfly is worth 5 points and the first to reach 10 wins!"
   },
   {
     "id": "frozen-beaks",
@@ -558,8 +523,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Collect 30 fish! Move your finger to walk and release it to slide on the ice! Don't fall in the hole!",
-    "researched": true
+    "rule": "Collect 30 fish! Move your finger to walk and release it to slide on the ice! Don't fall in the hole!"
   },
   {
     "id": "fruit-duel",
@@ -574,8 +538,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Watch the icon in the center and tap the saber as soon as you see a fruit (watermelon, pomgrenade, orange). First to 10 wins.",
-    "researched": true
+    "rule": "Watch the icon in the center and tap the saber as soon as you see a fruit (watermelon, pomgrenade, orange). First to 10 wins."
   },
   {
     "id": "golf-football",
@@ -590,8 +553,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Score points by shooting the ball into the hole. Find the right angle and the right power. The longer you press, the stronger the shot.",
-    "researched": true
+    "rule": "Score points by shooting the ball into the hole. Find the right angle and the right power. The longer you press, the stronger the shot."
   },
   {
     "id": "gravity-run",
@@ -606,8 +568,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to change gravity. Run fast and don't fall!",
-    "researched": true
+    "rule": "Tap to change gravity. Run fast and don't fall!"
   },
   {
     "id": "guard-and-thief",
@@ -622,8 +583,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The thief has to collect the coins, the guard must catch the thief. Whoever has more coins at the end of the match wins!",
-    "researched": true
+    "rule": "The thief has to collect the coins, the guard must catch the thief. Whoever has more coins at the end of the match wins!"
   },
   {
     "id": "guess-the-person",
@@ -638,8 +598,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Ask yes/no questions to narrow down which character the other player chose and guess it before they do.",
-    "researched": true
+    "rule": "Ask yes/no questions to narrow down which character the other player chose and guess it before they do."
   },
   {
     "id": "hammer-hit",
@@ -654,8 +613,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hit the hammer when the needle is pointing up. The closer to the white line, the stronger the hit. The best score in 3 rounds wins!",
-    "researched": true
+    "rule": "Hit the hammer when the needle is pointing up. The closer to the white line, the stronger the hit. The best score in 3 rounds wins!"
   },
   {
     "id": "hand-slap",
@@ -670,8 +628,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Slap to score. Dodge to avoid. Dodging without a slap gives the attacker a point. First to 5 points wins!",
-    "researched": true
+    "rule": "Slap to score. Dodge to avoid. Dodging without a slap gives the attacker a point. First to 5 points wins!"
   },
   {
     "id": "happy-birds",
@@ -686,8 +643,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to fly. Avoid the spikes! Survive 3 times to win.",
-    "researched": true
+    "rule": "Tap to fly. Avoid the spikes! Survive 3 times to win."
   },
   {
     "id": "happy-hippos",
@@ -702,8 +658,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins!",
-    "researched": true
+    "rule": "Tap to eat balls and score. +2 points for your color, and -1 if you eat your opponent's color. First to 50 points wins!"
   },
   {
     "id": "hot-potato",
@@ -718,8 +673,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap at the right moment to make the potato fly into your opponent's arms.",
-    "researched": true
+    "rule": "Tap at the right moment to make the potato fly into your opponent's arms."
   },
   {
     "id": "king-of-the-yard",
@@ -734,8 +688,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Take the crown and keep it on your head until the time is expired! Don't let your opponent touch you!",
-    "researched": true
+    "rule": "Take the crown and keep it on your head until the time is expired! Don't let your opponent touch you!"
   },
   {
     "id": "knife-thrower",
@@ -750,8 +703,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Tap to throw knives. Land in the wood, avoiding other knives. First to 20 wins.",
-    "researched": true
+    "rule": "Tap to throw knives. Land in the wood, avoiding other knives. First to 20 wins."
   },
   {
     "id": "light-fingers",
@@ -766,8 +718,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Steal the diamond faster than your opponent! First to 5 wins!",
-    "researched": true
+    "rule": "Steal the diamond faster than your opponent! First to 5 wins!"
   },
   {
     "id": "ludo",
@@ -782,8 +733,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space.",
-    "researched": true
+    "rule": "Race one token from start to finish according to the rolls of a die. The first player to move one tokens to the end wins the game. Roll a six to move a token out of the starting area. Capture opponents' tokens by landing on the same space."
   },
   {
     "id": "lumber-jack",
@@ -798,8 +748,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches!",
-    "researched": true
+    "rule": "Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches!"
   },
   {
     "id": "mancala",
@@ -814,8 +763,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move your stones counterclockwise across the board and try to collect more stones than your opponent!",
-    "researched": true
+    "rule": "Move your stones counterclockwise across the board and try to collect more stones than your opponent!"
   },
   {
     "id": "match",
@@ -830,8 +778,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Compare the 2 sets of objects. Find the 1 matching object before your opponent to earn a point. First to 10 points wins!",
-    "researched": true
+    "rule": "Compare the 2 sets of objects. Find the 1 matching object before your opponent to earn a point. First to 10 points wins!"
   },
   {
     "id": "math-quiz",
@@ -846,8 +793,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The first player to solve the task gets a point. For any wrong answer the opponent gets a point. First to 10 wins.",
-    "researched": true
+    "rule": "The first player to solve the task gets a point. For any wrong answer the opponent gets a point. First to 10 wins."
   },
   {
     "id": "maze-paint",
@@ -861,8 +807,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Swipe to paint all squares to complete each level!",
-    "researched": true
+    "rule": "Swipe to paint all squares to complete each level!"
   },
   {
     "id": "memory",
@@ -877,8 +822,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Flip 2 cards and find pairs.",
-    "researched": true
+    "rule": "Flip 2 cards and find pairs."
   },
   {
     "id": "mini-golf",
@@ -893,8 +837,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Hole in one! The player with 2 points more than the other wins!",
-    "researched": true
+    "rule": "Hole in one! The player with 2 points more than the other wins!"
   },
   {
     "id": "mini-soccer",
@@ -909,8 +852,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Move your finger to control your team! Who has scored more after 90 seconds wins!",
-    "researched": true
+    "rule": "Move your finger to control your team! Who has scored more after 90 seconds wins!"
   },
   {
     "id": "money-grabber",
@@ -925,8 +867,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 35,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Drag the money to your safe box using all the fingers of your hand!",
-    "researched": true
+    "rule": "Drag the money to your safe box using all the fingers of your hand!"
   },
   {
     "id": "nuts-and-bolts",
@@ -940,8 +881,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Move nuts between the bolts until all the nuts on each bolt are the same colour!\n\nYou can only move nuts onto other nuts of the same colour.",
-    "researched": true
+    "rule": "Move nuts between the bolts until all the nuts on each bolt are the same colour!\n\nYou can only move nuts onto other nuts of the same colour."
   },
   {
     "id": "paint-fight",
@@ -956,8 +896,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Paint the screen with your color! The winner is the one who painted the most after 45 seconds!",
-    "researched": true
+    "rule": "Paint the screen with your color! The winner is the one who painted the most after 45 seconds!"
   },
   {
     "id": "penalty-kicks",
@@ -972,8 +911,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Swipe your finger to dive or to kick the ball! First to 5 win!",
-    "researched": true
+    "rule": "Swipe your finger to dive or to kick the ball! First to 5 win!"
   },
   {
     "id": "pinball",
@@ -988,8 +926,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 55,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Tap left and right to fire the ball right in your opponent goal!",
-    "researched": true
+    "rule": "Tap left and right to fire the ball right in your opponent goal!"
   },
   {
     "id": "ping-pong",
@@ -1004,8 +941,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Use your finger to move the racket and to spin the ball. Get 7 points to win!",
-    "researched": true
+    "rule": "Use your finger to move the racket and to spin the ball. Get 7 points to win!"
   },
   {
     "id": "piranha-rush",
@@ -1020,8 +956,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Run from the piranhas! And watch out for corals!",
-    "researched": true
+    "rule": "Run from the piranhas! And watch out for corals!"
   },
   {
     "id": "pizza-memory",
@@ -1036,8 +971,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell!",
-    "researched": true
+    "rule": "Watch the order and recompose the pizza exactly as you saw it. When you're done, remember to ring the bell!"
   },
   {
     "id": "pool",
@@ -1052,8 +986,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 300,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "A classic! Throw the balls of your color into the holes and finally the black ball!",
-    "researched": true
+    "rule": "A classic! Throw the balls of your color into the holes and finally the black ball!"
   },
   {
     "id": "pop-it",
@@ -1068,8 +1001,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game.",
-    "researched": true
+    "rule": "Players take turns pressing down any number of bubbles in a single row and consecutively. The player who presses down the last bubble loses the game."
   },
   {
     "id": "pull-the-rope",
@@ -1084,8 +1016,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Tap as fast as you can to pull hard! Pull the flag across the line to win!",
-    "researched": true
+    "rule": "Tap as fast as you can to pull hard! Pull the flag across the line to win!"
   },
   {
     "id": "racing-cars",
@@ -1100,8 +1031,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Compete against your opponent and finish first! Move your finger to drive the car.",
-    "researched": true
+    "rule": "Compete against your opponent and finish first! Move your finger to drive the car."
   },
   {
     "id": "rat-race",
@@ -1116,8 +1046,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Press to run! Run away from the cats' paws and collect the pieces of cheese before your opponent!",
-    "researched": true
+    "rule": "Press to run! Run away from the cats' paws and collect the pieces of cheese before your opponent!"
   },
   {
     "id": "reversi",
@@ -1132,8 +1061,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Fill the board with more pieces of your color than the opponents to win!",
-    "researched": true
+    "rule": "Fill the board with more pieces of your color than the opponents to win!"
   },
   {
     "id": "road-dodge",
@@ -1148,8 +1076,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Tap to steer left and right to dodge obstacles on the road",
-    "researched": true
+    "rule": "Tap to steer left and right to dodge obstacles on the road"
   },
   {
     "id": "robot-arena",
@@ -1164,8 +1091,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Survive the obstacles in the deadly robot arena! Dodge lasers, spinning blades and cannonballs!",
-    "researched": true
+    "rule": "Survive the obstacles in the deadly robot arena! Dodge lasers, spinning blades and cannonballs!"
   },
   {
     "id": "rock-paper-scissors",
@@ -1180,8 +1106,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Press the button of your choice before the hand stops. First to 3 wins.",
-    "researched": true
+    "rule": "Press the button of your choice before the hand stops. First to 3 wins."
   },
   {
     "id": "sea-battle",
@@ -1196,8 +1121,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 240,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Place your ships without showing your opponent and take turns guessing your opponent's ship locations",
-    "researched": true
+    "rule": "Place your ships without showing your opponent and take turns guessing your opponent's ship locations"
   },
   {
     "id": "ship-battle",
@@ -1212,8 +1136,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Protect your ship from your opponent's cannon shots! Move your finger to move the shield!",
-    "researched": true
+    "rule": "Protect your ship from your opponent's cannon shots! Move your finger to move the shield!"
   },
   {
     "id": "shuriken",
@@ -1228,8 +1151,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Cut the bamboo canes of your opponent! Grab the shuriken and throw it! Move your finger to add spin to your shot.",
-    "researched": true
+    "rule": "Cut the bamboo canes of your opponent! Grab the shuriken and throw it! Move your finger to add spin to your shot."
   },
   {
     "id": "shut-the-box",
@@ -1244,8 +1166,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Roll the dice, then flip one or more numbered tiles that add up to your roll. Keep playing until no move is possible.",
-    "researched": true
+    "rule": "Roll the dice, then flip one or more numbered tiles that add up to your roll. Keep playing until no move is possible."
   },
   {
     "id": "sliding-puzzle",
@@ -1259,8 +1180,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "This is a classic Sliding Puzzle game. Move the boxes into the correct order.",
-    "researched": true
+    "rule": "This is a classic Sliding Puzzle game. Move the boxes into the correct order."
   },
   {
     "id": "sling-puck",
@@ -1275,8 +1195,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Shoot all pucks into the opponent's side of the board to win",
-    "researched": true
+    "rule": "Shoot all pucks into the opponent's side of the board to win"
   },
   {
     "id": "slot-cars",
@@ -1291,8 +1210,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Tap the screen and race your car round the laps as fast as you can. But be careful, if flames come out of the car, you should slow down in the curves by taking your finger off the screen!",
-    "researched": true
+    "rule": "Tap the screen and race your car round the laps as fast as you can. But be careful, if flames come out of the car, you should slow down in the curves by taking your finger off the screen!"
   },
   {
     "id": "snakes",
@@ -1307,8 +1225,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Don't touch the other player's snake body! Move your finger to change direction and stay alive!",
-    "researched": true
+    "rule": "Don't touch the other player's snake body! Move your finger to change direction and stay alive!"
   },
   {
     "id": "snakes-ladders",
@@ -1323,8 +1240,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 150,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Roll a die to move across the board. Land on a ladder to climb higher, or a snake to slide down. First to reach or pass the last field wins!",
-    "researched": true
+    "rule": "Roll a die to move across the board. Land on a ladder to climb higher, or a snake to slide down. First to reach or pass the last field wins!"
   },
   {
     "id": "throw",
@@ -1339,8 +1255,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Snowball fight! Pull back to aim. Release to throw. Hit your opponent. First to reduce their opponent's health to zero wins!",
-    "researched": true
+    "rule": "Snowball fight! Pull back to aim. Release to throw. Hit your opponent. First to reduce their opponent's health to zero wins!"
   },
   {
     "id": "soccer-pool",
@@ -1355,8 +1270,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Take turns to hit the ball and score.",
-    "researched": true
+    "rule": "Take turns to hit the ball and score."
   },
   {
     "id": "solitaire",
@@ -1370,8 +1284,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "This is a classic Solitaire game. Depending on the selected difficulty, different numbers of cards are revealed.",
-    "researched": true
+    "rule": "This is a classic Solitaire game. Depending on the selected difficulty, different numbers of cards are revealed."
   },
   {
     "id": "spike-attacks",
@@ -1386,8 +1299,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Hide behind the stones so you don't get hit by the spikes.",
-    "researched": true
+    "rule": "Hide behind the stones so you don't get hit by the spikes."
   },
   {
     "id": "spin-war",
@@ -1402,8 +1314,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Push your opponent out of the bowl! Use your finger to move the spinner! 4 points to win!",
-    "researched": true
+    "rule": "Push your opponent out of the bowl! Use your finger to move the spinner! 4 points to win!"
   },
   {
     "id": "stampede",
@@ -1418,8 +1329,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 38,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Look for dangers coming from the left or right and jump to avoid them",
-    "researched": true
+    "rule": "Look for dangers coming from the left or right and jump to avoid them"
   },
   {
     "id": "star-catcher",
@@ -1434,8 +1344,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Catch all the stars and be aware of black holes! First to get 7 stars wins!",
-    "researched": true
+    "rule": "Catch all the stars and be aware of black holes! First to get 7 stars wins!"
   },
   {
     "id": "sticky-tongues",
@@ -1450,8 +1359,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 100,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Use your tongue to catch the dragonfly, and use the joystick to escape from your opponent's blows! Don't miss too many shots or you'll lose the match!",
-    "researched": true
+    "rule": "Use your tongue to catch the dragonfly, and use the joystick to escape from your opponent's blows! Don't miss too many shots or you'll lose the match!"
   },
   {
     "id": "sudoku",
@@ -1465,8 +1373,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Play Sudoku, train your brain and beat your highscore",
-    "researched": true
+    "rule": "Play Sudoku, train your brain and beat your highscore"
   },
   {
     "id": "sumo",
@@ -1481,8 +1388,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Tap as fast as you can to push out your opponent! Stay in the ring!",
-    "researched": true
+    "rule": "Tap as fast as you can to push out your opponent! Stay in the ring!"
   },
   {
     "id": "sword-throwing",
@@ -1497,8 +1403,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Draw your sword and throw it towards the targets of your enemy. Hold it in your hand and move it to parry your opponents throws!",
-    "researched": true
+    "rule": "Draw your sword and throw it towards the targets of your enemy. Hold it in your hand and move it to parry your opponents throws!"
   },
   {
     "id": "tanks",
@@ -1513,8 +1418,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Destroy the enemy tank. Use the left stick to move and the right to shoot!",
-    "researched": true
+    "rule": "Destroy the enemy tank. Use the left stick to move and the right to shoot!"
   },
   {
     "id": "tap-match",
@@ -1528,8 +1432,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Tap to collect cards. Complete sets of 3 to clear cards. You can hold up to 7 cards in your stack, so collect strategically.",
-    "researched": true
+    "rule": "Tap to collect cards. Complete sets of 3 to clear cards. You can hold up to 7 cards in your stack, so collect strategically."
   },
   {
     "id": "target-practice",
@@ -1544,8 +1447,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Shoot targets to score points. Small targets score double. First to 10 points wins. Tap to start, then tap to aim up, then tap to fire.",
-    "researched": true
+    "rule": "Shoot targets to score points. Small targets score double. First to 10 points wins. Tap to start, then tap to aim up, then tap to fire."
   },
   {
     "id": "taxi-race",
@@ -1560,8 +1462,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up.",
-    "researched": true
+    "rule": "Drive your taxi past the other cars or jump over them. Swipe your finger to the left, right or up."
   },
   {
     "id": "tennis",
@@ -1576,8 +1477,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast.",
-    "researched": true
+    "rule": "Click to jump with the player and hit the ball. If you hit it with the center of the tennis racket, the ball will go really fast."
   },
   {
     "id": "the-last-sashimi",
@@ -1592,8 +1492,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "grassTint",
     "mark": "target",
-    "rule": "Eat all before your opponent! First to 15 wins, sashimi is worth 1 point, onigiri is worth 3 point and for every mistake you lose a point!",
-    "researched": true
+    "rule": "Eat all before your opponent! First to 15 wins, sashimi is worth 1 point, onigiri is worth 3 point and for every mistake you lose a point!"
   },
   {
     "id": "tic-tac-toe",
@@ -1608,8 +1507,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Red is cross, blue is circle!",
-    "researched": true
+    "rule": "Red is cross, blue is circle!"
   },
   {
     "id": "traffic-jam",
@@ -1624,8 +1522,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Crash your opponent and be careful not to fall into the water! Use the joystick to steer.",
-    "researched": true
+    "rule": "Crash your opponent and be careful not to fall into the water! Use the joystick to steer."
   },
   {
     "id": "ultimate-ttt",
@@ -1640,8 +1537,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 90,
     "tint": "sunTint",
     "mark": "grid",
-    "rule": "Play on a big board with nine small tic-tac-toe games. Where you place your mark tells the other player where they must play next. Win small boards, then get three small boards in a row to win.",
-    "researched": true
+    "rule": "Play on a big board with nine small tic-tac-toe games. Where you place your mark tells the other player where they must play next. Win small boards, then get three small boards in a row to win."
   },
   {
     "id": "unfair-fishing",
@@ -1656,8 +1552,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 180,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Throw the bait and rewind the reel! First to catch 25 fishes wins!",
-    "researched": true
+    "rule": "Throw the bait and rewind the reel! First to catch 25 fishes wins!"
   },
   {
     "id": "water-game",
@@ -1672,8 +1567,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 165,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "The balls swim in water. Give the balls speed by pressing the buttons. Let the ball fly through the basket. First to 15 wins.",
-    "researched": true
+    "rule": "The balls swim in water. Give the balls speed by pressing the buttons. Let the ball fly through the basket. First to 15 wins."
   },
   {
     "id": "whack-a-mole",
@@ -1688,8 +1582,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 60,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Hit the moles, but only those of your color! The first one that gets to 30 wins!",
-    "researched": true
+    "rule": "Hit the moles, but only those of your color! The first one that gets to 30 wins!"
   },
   {
     "id": "wheelie",
@@ -1705,8 +1598,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 75,
     "tint": "brandTint",
     "mark": "chevron",
-    "rule": "Accelerate your bike to pull up a wheelie. Earn more points the longer you maintain a wheelie.",
-    "researched": true
+    "rule": "Accelerate your bike to pull up a wheelie. Earn more points the longer you maintain a wheelie."
   },
   {
     "id": "brainrot-stack",
@@ -1722,8 +1614,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 45,
     "tint": "p2Tint",
     "mark": "split",
-    "rule": "Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop.",
-    "researched": true
+    "rule": "Take turns dropping brainrots. First player to drop a brainrots off the platform loses, so take care to drag left & right, and tap to rotate before you drop."
   },
   {
     "id": "wrestle",
@@ -1738,8 +1629,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "roundSeconds": 40,
     "tint": "p1Tint",
     "mark": "ring",
-    "rule": "Jump and try not to fall on your head. Try to push your opponent to the ground instead. Watch the wind!",
-    "researched": true
+    "rule": "Jump and try not to fall on your head. Try to push your opponent to the ground instead. Watch the wind!"
   }
 ] as const;
 

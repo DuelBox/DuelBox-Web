@@ -28,7 +28,12 @@ const WAYS = [
 ];
 
 export default function HomePage() {
-  const featured = CATALOGUE.filter((g) => g.researched).slice(0, 12);
+  // The first twelve by name. This used to read `.filter((g) => g.researched)` first, which
+  // selected nothing: `researched` was generated as "has a one-line rule blurb" and was true
+  // for all 108 games while 107 research issues were open (#2514). Dropping the filter changes
+  // no pixel — it never removed a game — and stops the page standing on a claim about research
+  // that the repository cannot make. `docs/research-status.md` records the real state.
+  const featured = CATALOGUE.slice(0, 12);
   return (
     <>
       <section className={styles.hero}>
