@@ -1,0 +1,443 @@
+{
+  "_comment": "Rule 1 name clearance, one entry per catalogue game. Raised by issue #2515: data/catalog.yaml records the reference app's name for every game and nothing compared it to ours, so 89 of 107 shipped names were identical to the reference and no decision was written down anywhere. This file is that decision, per game, and scripts/check-game-names.mjs enforces that it stays complete and honest.",
+  "_status": {
+    "generic": "Name is the ordinary name of a public-domain game or a plain description of the activity. Identical to the reference name is fine; nobody owns it.",
+    "renamed": "We chose a name that differs from the reference. Must actually differ, and the guard checks that.",
+    "pending": "A coined name still identical to the reference app's. This is real exposure and it is NOT cleared. Renaming is a product decision (it moves the slug and breaks existing links), so it is the owner's call and is tracked by #2515 rather than done here.",
+    "original": "No reference game exists — this one was not reimplemented from anything, so there is no name to have copied. Distinct from 'renamed', which records a decision taken; here there was never anything to decide."
+  },
+  "games": {
+    "air-hockey": {
+      "status": "generic",
+      "why": "\"Air Hockey\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "animal-stack": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "archery": {
+      "status": "generic",
+      "why": "\"Archery\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "archery-master": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "backgammon": {
+      "status": "generic",
+      "why": "\"Backgammon\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "ballgames-physics": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Ballgames Physics\". Rule 1 satisfied by not using it."
+    },
+    "basketball": {
+      "status": "generic",
+      "why": "\"Basketball\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "beach-ball": {
+      "status": "generic",
+      "why": "\"Beach Ball\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "blocks": {
+      "status": "generic",
+      "why": "\"Blocks\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "bowling": {
+      "status": "generic",
+      "why": "\"Bowling\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "brainrot-stack": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Brainrot Stack\". Rule 1 satisfied by not using it."
+    },
+    "brick-blast": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "broken-tiles": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "cannon-duel": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "carrom": {
+      "status": "generic",
+      "why": "\"Carrom\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "checkers": {
+      "status": "generic",
+      "why": "\"Checkers\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "chess": {
+      "status": "generic",
+      "why": "\"Chess\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "chicken-jump": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "color-wars": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Color Wars\". Rule 1 satisfied by not using it."
+    },
+    "cornhole": {
+      "status": "generic",
+      "why": "\"Cornhole\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "crabby-volley": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "crash-it": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "cricket": {
+      "status": "original",
+      "why": "An original two-player batting duel. data/catalog.yaml gives it no refName because it reimplements nothing."
+    },
+    "cup-pong": {
+      "status": "generic",
+      "why": "\"Cup Pong\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "darts": {
+      "status": "generic",
+      "why": "\"Darts\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "disco-battle": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "dots-and-boxes": {
+      "status": "generic",
+      "why": "\"Dots and Boxes\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "dung-battle": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "explosive-festival": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "fatal-siege": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "flappy-jump": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "four-in-a-row": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"4 In A Row\". Rule 1 satisfied by not using it."
+    },
+    "frogs-fight": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "frozen-beaks": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "fruit-duel": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "golf-football": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "gravity-run": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "guard-and-thief": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "guess-the-person": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Guess The Person\". Rule 1 satisfied by not using it."
+    },
+    "hammer-hit": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "hand-slap": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "happy-birds": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "happy-hippos": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "hot-potato": {
+      "status": "generic",
+      "why": "\"Hot Potato\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "king-of-the-yard": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "knife-thrower": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "light-fingers": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "ludo": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Ludo\". Rule 1 satisfied by not using it."
+    },
+    "lumber-jack": {
+      "status": "generic",
+      "why": "\"Lumberjack\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "mancala": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Mancala\". Rule 1 satisfied by not using it."
+    },
+    "match": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Find Match\". Rule 1 satisfied by not using it."
+    },
+    "math-quiz": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Math Quiz\". Rule 1 satisfied by not using it."
+    },
+    "maze-paint": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "memory": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Memory\". Rule 1 satisfied by not using it."
+    },
+    "mini-golf": {
+      "status": "generic",
+      "why": "\"Mini Golf\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "mini-soccer": {
+      "status": "generic",
+      "why": "\"Mini Soccer\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "money-grabber": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "nuts-and-bolts": {
+      "status": "generic",
+      "why": "\"Nuts and Bolts\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "paint-fight": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "penalty-kicks": {
+      "status": "generic",
+      "why": "\"Penalty Kicks\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "pinball": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Pinball\". Rule 1 satisfied by not using it."
+    },
+    "ping-pong": {
+      "status": "generic",
+      "why": "\"Ping Pong\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "piranha-rush": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "pizza-memory": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "pool": {
+      "status": "generic",
+      "why": "\"Pool\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "pop-it": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "pull-the-rope": {
+      "status": "generic",
+      "why": "\"Pull the Rope\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "racing-cars": {
+      "status": "generic",
+      "why": "\"Racing Cars\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "rat-race": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "reversi": {
+      "status": "generic",
+      "why": "\"Reversi\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "road-dodge": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "robot-arena": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "rock-paper-scissors": {
+      "status": "generic",
+      "why": "\"Rock Paper Scissors\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "sea-battle": {
+      "status": "generic",
+      "why": "\"Sea Battle\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "ship-battle": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "shuriken": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Shuriken Bamboo\". Rule 1 satisfied by not using it."
+    },
+    "shut-the-box": {
+      "status": "generic",
+      "why": "\"Shut the Box\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "sliding-puzzle": {
+      "status": "generic",
+      "why": "\"Sliding Puzzle\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "sling-puck": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "slot-cars": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "snakes": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Snakes\". Rule 1 satisfied by not using it."
+    },
+    "snakes-ladders": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Snakes & Ladders\". Rule 1 satisfied by not using it."
+    },
+    "soccer-pool": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "solitaire": {
+      "status": "generic",
+      "why": "\"Solitaire\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "spike-attacks": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "spin-war": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "stampede": {
+      "status": "generic",
+      "why": "\"Stampede\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "star-catcher": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "sticky-tongues": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "sudoku": {
+      "status": "generic",
+      "why": "\"Sudoku\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "sumo": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Sumo\". Rule 1 satisfied by not using it."
+    },
+    "sword-throwing": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Sword Thrower\". Rule 1 satisfied by not using it."
+    },
+    "tanks": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "tap-match": {
+      "status": "generic",
+      "why": "\"Tap Match\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "target-practice": {
+      "status": "generic",
+      "why": "\"Target Practice\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "taxi-race": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "tennis": {
+      "status": "generic",
+      "why": "\"Tennis\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "the-last-sashimi": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "throw": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Throw\". Rule 1 satisfied by not using it."
+    },
+    "tic-tac-toe": {
+      "status": "generic",
+      "why": "\"Tic Tac Toe\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "traffic-jam": {
+      "status": "generic",
+      "why": "\"Traffic Jam\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "ultimate-ttt": {
+      "status": "generic",
+      "why": "\"Ultimate Tic Tac Toe\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "unfair-fishing": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "water-game": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "whack-a-mole": {
+      "status": "generic",
+      "why": "\"Whack a Mole\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "wheelie": {
+      "status": "pending",
+      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+    },
+    "wrestle": {
+      "status": "generic",
+      "why": "\"Wrestle\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
+    },
+    "yazy": {
+      "status": "renamed",
+      "why": "Renamed from the reference name \"Yazy\". Rule 1 satisfied by not using it."
+    }
+  }
+}
