@@ -24,9 +24,14 @@ export const manifest: GameManifest = parseGameManifest({
   // Required, and deliberately not optional: the shell shows this before the match and
   // again from the pause menu, so a game without it would advertise nothing to a player
   // holding a keyboard. Written for a player rather than as a spec.
+  // Both lines are written from the player's own chair, because that is now what the game
+  // does: A, D and the arrows each lift the flipper on that side **as that player sits**, and
+  // the far seat reads the table upside down, so its left key lifts the flipper on the right
+  // of the screen. Saying "left" and meaning the screen's left would describe the defect
+  // issue #2476 reported rather than the game.
   controls: {
-    keyboard: 'A and D flip the near seat flippers, the left and right arrows the far seat pair',
-    pointer: 'Touch your own end: the left half lifts your left flipper, the right half the right',
+    keyboard: 'A and D lift the near seat flippers, the arrows the far pair, left key to left hand',
+    pointer: 'Touch your end: the half on your left lifts your left flipper, the other your right',
   },
   tags: ['arcade', 'physics', 'reflex'],
 });
