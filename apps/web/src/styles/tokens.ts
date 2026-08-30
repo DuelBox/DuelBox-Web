@@ -38,10 +38,16 @@ export const colour = {
   success: '#1a7a4d',
 } as const;
 
-/** Maps a seat to its colour set, so no game hardcodes which player is which colour. */
+/**
+ * Maps a seat to its colour set, so no game hardcodes which player is which colour.
+ *
+ * Colours only. Each entry used to carry a `name` as well, which made the palette one of
+ * five places in the shell that named a player — see `lib/seats.ts`, which is now the only
+ * one. A token file is where a colour is decided, not where a character is.
+ */
 export const seatColour = {
-  p1: { base: colour.p1, deep: colour.p1Deep, tint: colour.p1Tint, name: 'Pip' },
-  p2: { base: colour.p2, deep: colour.p2Deep, tint: colour.p2Tint, name: 'Bo' },
+  p1: { base: colour.p1, deep: colour.p1Deep, tint: colour.p1Tint },
+  p2: { base: colour.p2, deep: colour.p2Deep, tint: colour.p2Tint },
 } as const;
 
 export type ColourToken = keyof typeof colour;

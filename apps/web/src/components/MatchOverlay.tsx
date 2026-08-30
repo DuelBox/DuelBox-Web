@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
-import { seatColour } from '@/styles/tokens';
+import type { SeatNames } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
 import styles from './MatchOverlay.module.css';
@@ -23,7 +23,8 @@ export interface MatchOverlayProps {
   /** Carries the per-game control copy the pause menu shows on demand. */
   manifest: GameManifest;
   rounds: number;
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
+  /** What both seats are called, from `lib/seats.ts`. Total, so nothing here falls back. */
+  seatNames: SeatNames;
   /** Matches won by each seat in this sitting, across rematches. */
   record?: { p1: number; p2: number; draws: number } | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
@@ -73,8 +74,8 @@ export function MatchOverlay({
         <Panel heading={`Round ${state.round}`} role="status">
           <Winner outcome={state.roundOutcome} seatNames={seatNames} />
           <p className={styles.detail}>
-            {seatName('p1', seatNames)} {state.roundWins.p1} — {state.roundWins.p2}{' '}
-            {seatName('p2', seatNames)} · first to {Math.ceil(rounds / 2)} takes it
+            {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2} · first to{' '}
+            {Math.ceil(rounds / 2)} takes it
           </p>
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onNextRound} autoFocus>
@@ -93,14 +94,12 @@ export function MatchOverlay({
           <Winner outcome={state.matchOutcome} seatNames={seatNames} />
           {rounds > 1 ? (
             <p className={styles.detail}>
-              {seatName('p1', seatNames)} {state.roundWins.p1} — {state.roundWins.p2}{' '}
-              {seatName('p2', seatNames)}
+              {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2}
             </p>
           ) : null}
           {record && record.p1 + record.p2 + record.draws > 1 ? (
             <p className={styles.record}>
-              Tonight: {seatName('p1', seatNames)} {record.p1} — {record.p2}{' '}
-              {seatName('p2', seatNames)}
+              Tonight: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
               {record.draws > 0 ? `, ${record.draws} drawn` : ''}
             </p>
           ) : null}
@@ -295,23 +294,13 @@ function Panel({
   );
 }
 
-function Winner({
-  outcome,
-  seatNames,
-}: {
-  outcome: SeatId | 'draw' | null;
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
-}) {
+function Winner({ outcome, seatNames }: { outcome: SeatId | 'draw' | null; seatNames: SeatNames }) {
   if (outcome === null) return null;
   if (outcome === 'draw') return <p className={styles.winner}>A draw</p>;
   return (
     <p className={styles.winner}>
       <SeatGlyph seat={outcome} size={28} />
-      {seatName(outcome, seatNames)} wins
+      {seatNames[outcome]} wins
     </p>
   );
-}
-
-function seatName(seat: SeatId, seatNames?: Partial<Record<SeatId, string>>): string {
-  return seatNames?.[seat] ?? seatColour[seat].name;
 }

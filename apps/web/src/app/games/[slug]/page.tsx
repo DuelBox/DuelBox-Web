@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { formatRound } from '@/lib/format';
+import { SEAT_CHARACTERS } from '@/lib/seats';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
 import { CONTROLS } from '@/data/controls';
@@ -43,7 +44,8 @@ const MODE_COPY: Record<string, { title: string; body: string }> = {
   },
   bot: {
     title: 'Play against a bot',
-    body: 'Pip or Bo takes the other seat, at three levels.',
+    // Seat two, always: `botSeatsFor()` hands the bot `p2` and nothing else.
+    body: `${SEAT_CHARACTERS.p2} takes the other seat, at three levels.`,
   },
   solo: {
     title: 'Play solo',
@@ -84,7 +86,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
         <div className={styles.detail}>
           <p className={styles.eyebrow}>
-            {game.category} · about {formatRound(game.roundSeconds)}
+            {game.category} · {formatRound(game.roundSeconds)}
           </p>
           <h1 className={styles.title}>{game.name}</h1>
           {game.rule ? <p className={styles.rule}>{game.rule}</p> : null}

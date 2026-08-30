@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
+import { SEAT_CHARACTERS } from '@/lib/seats';
 import { GameCard } from '@/components/GameCard';
 import styles from './page.module.css';
 
@@ -33,7 +34,10 @@ export default function HomePage() {
     <>
       <section className={styles.hero}>
         <div className="db-wrap">
-          <p className={styles.eyebrow}>No download · No account · Works offline</p>
+          {/* Not "Works offline": there is no service worker, so a page that has not been
+              loaded cannot be opened without a connection (#2445). The privacy page made
+              the same claim and it was wrong there too (#2513). */}
+          <p className={styles.eyebrow}>No download · No account · Runs on your device</p>
           <h1 className={styles.title}>
             {CATALOGUE.length} games
             <br />
@@ -41,14 +45,17 @@ export default function HomePage() {
           </h1>
           <p className={styles.lede}>
             Share one phone, or play from your own device against a friend anywhere. No opponent
-            around? Pip and Bo will take the other seat.
+            around? {SEAT_CHARACTERS.p2} will take the other seat.
           </p>
           <div className={styles.actions}>
             <Link href="/games/" className={styles.primary}>
               Start playing
             </Link>
+            {/* Labelled with the heading of the page it opens. It said "How it works",
+                which is a fifth name for a page the header, the footer and the guide's own
+                h1 all call How to play (#2513). */}
             <Link href="/how-to-play/" className={styles.secondary}>
-              How it works
+              How to play
             </Link>
           </div>
         </div>

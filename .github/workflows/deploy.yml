@@ -64,6 +64,13 @@ jobs:
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: apps/web/out
+          # Without this the upload runs `tar --exclude='.[^/]*'` and throws away every
+          # dot-path the build just wrote — `.well-known/security.txt`, which RFC 9116 makes
+          # the canonical location, and the `.nojekyll` touched three lines above. Both were
+          # generated correctly and neither ever reached the origin: `/security.txt` served
+          # 200 and `/.well-known/security.txt` served 404 (#2513). The default is `false`,
+          # so the omission looked like nothing at all.
+          include-hidden-files: true
 
   deploy:
     needs: build
