@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_BINDINGS, InputManager, InputState } from './input.js';
 import type { KeyBinding, SeatInputState } from './input.js';
 import { SEATS } from './seat.js';
-import { envelopeFor } from './input.js';
+import { envelopeFor, SCALAR_ENVELOPE, quantiseScalar, scalarEnvelopeFor } from './input.js';
 import type { LogicalSize, SeatId } from './seat.js';
 
 const SIZE: LogicalSize = { width: 800, height: 600 };
@@ -1207,5 +1207,180 @@ describe('a game whose split changes mid-match', () => {
 
     input.pointerDown(1, 450, 100);
     expect(input.beginStep(STEP).seat('p2').actionPressed, 'zoned again').toBe(true);
+  });
+});
+
+/**
+ * #2498. The engine has tracked ten concurrent fingers since the beginning and told a game
+ * about none of them.
+ *
+ * Measured before the field existed: five pointers down in one seat's zone and the whole
+ * game-visible surface was `move`, `pointer`, three action edges, two hold scalars and
+ * `pointerCancelled` — one nullable position, no count, and the position was simply whichever
+ * finger moved last. So `sameInputClassOnly: true` bought a game nothing: it could declare
+ * itself touch-only and still be handed one finger.
+ *
+ * These pin the count itself and the one invariant a game may lean on — that it never
+ * disagrees with `pointerActive`.
+ */
+describe('the finger count', () => {
+  it('counts every pointer a seat owns, and drops it only as they lift', () => {
+    const input = new InputManager(SIZE);
+    for (let id = 1; id <= 5; id += 1) input.pointerDown(id, 100 + id * 20, P1_ZONE_Y);
+    expect(input.beginStep(DT).seat('p1').pointerCount).toBe(5);
+
+    // Four lifts leave the seat holding one finger, not none: the count is the reason a game
+    // can now tell "still gripping" from "let go", which `pointerActive` alone could not.
+    for (let id = 1; id <= 4; id += 1) input.pointerUp(id);
+    let state = input.beginStep(DT);
+    expect(state.seat('p1').pointerCount).toBe(1);
+    expect(state.seat('p1').pointerActive).toBe(true);
+
+    input.pointerUp(5);
+    state = input.beginStep(DT);
+    expect(state.seat('p1').pointerCount).toBe(0);
+    expect(state.seat('p1').pointerActive).toBe(false);
+  });
+
+  it('keeps the two seats separate, and a second down for one id does not double-count', () => {
+    const input = new InputManager(SIZE);
+    input.pointerDown(1, 100, P1_ZONE_Y);
+    input.pointerDown(2, 200, P1_ZONE_Y);
+    input.pointerDown(3, 300, P2_ZONE_Y);
+    // The same finger reported down twice is still one finger.
+    input.pointerDown(1, 140, P1_ZONE_Y);
+    const state = input.beginStep(DT);
+    expect(state.seat('p1').pointerCount).toBe(2);
+    expect(state.seat('p2').pointerCount).toBe(1);
+  });
+
+  it('never disagrees with pointerActive, over every gesture that raises either', () => {
+    const input = new InputManager(SIZE);
+    const agree = (label: string): void => {
+      for (const seat of SEATS) {
+        const s = input.state.seat(seat);
+        expect(s.pointerCount > 0, `${label}: ${seat}`).toBe(s.pointerActive);
+      }
+    };
+
+    // A tap that begins and ends between two steps is reported with a position, so it must
+    // be reported with a finger: a game handed somewhere to aim and told nobody is touching
+    // is exactly the contradiction `holdSecondsAtRelease` was added to remove elsewhere.
+    input.pointerDown(1, 100, P1_ZONE_Y);
+    input.pointerUp(1);
+    input.beginStep(DT);
+    expect(input.state.seat('p1').pointerCount).toBe(1);
+    agree('a tap inside one step');
+
+    input.beginStep(DT);
+    expect(input.state.seat('p1').pointerCount).toBe(0);
+    agree('the step after');
+
+    input.pointerDown(2, 100, P1_ZONE_Y);
+    input.pointerDown(3, 160, P1_ZONE_Y);
+    input.beginStep(DT);
+    agree('two fingers down');
+
+    input.pointerCancel(2);
+    input.beginStep(DT);
+    expect(input.state.seat('p1').pointerCount, 'a cancel takes one finger').toBe(1);
+    agree('one of two cancelled');
+
+    input.pointerCancel(3);
+    input.beginStep(DT);
+    expect(input.state.seat('p1').pointerCount).toBe(0);
+    agree('both cancelled');
+
+    input.pointerDown(4, 100, P1_ZONE_Y);
+    input.beginStep(DT);
+    input.clear();
+    input.beginStep(DT);
+    expect(input.state.seat('p1').pointerCount, 'a pause takes them all').toBe(0);
+    agree('after clear');
+  });
+});
+
+/**
+ * #2506. `envelopeFor` levels where a pointer is and nothing else, so a game that lets a
+ * player aim a *scalar* levels it twice — once by inheriting the position lattice and once by
+ * picking a keyboard rate — and the two lattices need not meet.
+ *
+ * The property worth asserting is not that one instrument is no finer than the other. It is
+ * that both reach the **same set of values**, which is what a player can actually express, and
+ * which a win-rate comparison cannot see at any sample size.
+ */
+describe('the scalar envelope', () => {
+  it('derives a lattice from the scalar’s own span, in the scalar’s own units', () => {
+    expect(scalarEnvelopeFor(3.8)).toBeCloseTo(3.8 / 64, 12);
+    // Rule 8: the same fraction whether a game spells its spin in radians or its power in
+    // arbitrary units, so nothing here is a length and nothing is in pixels.
+    expect(scalarEnvelopeFor(400) / 400).toBe(scalarEnvelopeFor(1) / 1);
+    // Sign is not a span. A range written either way round gives one lattice.
+    expect(scalarEnvelopeFor(-3.8)).toBe(scalarEnvelopeFor(3.8));
+    expect(scalarEnvelopeFor(Number.NaN)).toBe(0);
+    expect(SCALAR_ENVELOPE).toBe(1 / 64);
+  });
+
+  it('rounds onto the lattice, and is the identity where there is no lattice to round onto', () => {
+    const cell = scalarEnvelopeFor(3.8);
+    expect(quantiseScalar(0, cell)).toBe(0);
+    expect(quantiseScalar(cell * 3, cell)).toBeCloseTo(cell * 3, 12);
+    expect(quantiseScalar(cell * 2.4, cell)).toBeCloseTo(cell * 2, 12);
+    expect(quantiseScalar(-cell * 2.6, cell)).toBeCloseTo(-cell * 3, 12);
+    // Idempotent, which is what makes it safe to apply at the one place the value is written
+    // rather than having to prove no path applies it twice. A power-of-two cell is exact in
+    // binary, so this is an equality rather than an approximation.
+    expect(quantiseScalar(quantiseScalar(1.2345, cell), cell)).toBe(quantiseScalar(1.2345, cell));
+    // A game that has not sized its envelope yet keeps today's behaviour instead of NaN.
+    expect(quantiseScalar(1.5, 0)).toBe(1.5);
+    expect(quantiseScalar(1.5, -1)).toBe(1.5);
+    expect(quantiseScalar(1.5, Number.NaN)).toBe(1.5);
+    expect(Number.isNaN(quantiseScalar(Number.NaN, cell))).toBe(true);
+  });
+
+  /**
+   * The reason the constant is 1/64 and not something finer.
+   *
+   * Two instruments land on the same set if and only if each one's own increment is no
+   * larger than a cell — then a sweep on either passes through every cell on the way, exactly
+   * as a dragged finger visits every point of the position lattice. Shuriken's real numbers
+   * are used as the case, because they are the ones that were measured.
+   */
+  it('makes two instruments with different increments reach the identical set', () => {
+    const SPAN = 3.8;
+    const cell = scalarEnvelopeFor(SPAN);
+    const pointerStep = 0.021; // 3.5 units of position envelope x SPIN_PER_UNIT 0.006
+    const keyStep = 2.6 / 60; // SPIN_KEY_RATE x the fixed delta
+    expect(pointerStep, 'the finger must not out-run a cell').toBeLessThanOrEqual(cell);
+    expect(keyStep, 'nor may the key').toBeLessThanOrEqual(cell);
+
+    /**
+     * One instrument winding the scalar from rest to its limit, in its own increments.
+     *
+     * The clamp is part of the instrument rather than an afterthought: every aimed scalar in
+     * the collection clamps, so the top of the range is reachable by both however the last
+     * increment happens to land. Without it the comparison fails on nothing but where the
+     * loop was cut off.
+     */
+    const sweep = (step: number, quantise: boolean): Set<string> => {
+      const reached = new Set<string>();
+      const limit = SPAN / 2;
+      for (let raw = 0; ; raw = Math.min(raw + step, limit)) {
+        reached.add((quantise ? quantiseScalar(raw, cell) : raw).toFixed(9));
+        if (raw >= limit) break;
+      }
+      return reached;
+    };
+
+    expect([...sweep(pointerStep, true)].sort()).toEqual([...sweep(keyStep, true)].sort());
+
+    // And the same comparison on the raw scalars is the defect, measured: over the whole
+    // legal range the only spins both instruments could name were zero and the clamp itself.
+    const rawFinger = sweep(pointerStep, false);
+    const rawKey = sweep(keyStep, false);
+    expect(
+      [...rawFinger].filter((v) => rawKey.has(v)).sort(),
+      'un-quantised, the two lattices meet only where they are pinned',
+    ).toEqual(['0.000000000', '1.900000000']);
   });
 });

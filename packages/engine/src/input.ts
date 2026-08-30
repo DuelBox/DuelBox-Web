@@ -34,6 +34,28 @@ export interface SeatInputState {
   pointerY: number;
   /** True while at least one pointer owned by this seat is down. */
   pointerActive: boolean;
+  /**
+   * How many pointers this seat currently owns. 0 exactly when {@link pointerActive} is false.
+   *
+   * The engine has always tracked this — ten concurrent fingers with per-seat ownership, so a
+   * seat stays active until its *last* one lifts — and until #2498 it collapsed the number to
+   * {@link pointerActive} and never let a game see it. That made `sameInputClassOnly` a trap:
+   * a game could declare itself touch-only and still be handed one finger, so the flag bought
+   * the player nothing it took away.
+   *
+   * **Reading this commits a game to `sameInputClassOnly: true`, and a guard enforces that**
+   * (`apps/web/src/data/multi-touch.test.ts`). There is no fair keyboard equivalent of a
+   * finger count and there cannot be one: `docs/keyboard-rollover.md` establishes that a
+   * commodity membrane keyboard guarantees only two or three simultaneous keys, that our two
+   * seats already spend those on a direction and an action, and that a blocked press is
+   * *undetectable from the browser* — so a game could not even degrade when the count it asked
+   * for failed to arrive. Position is the fair multi-finger channel; the count is not.
+   *
+   * Only the count is exposed, not a per-finger list. The engine stores one position per seat
+   * — whichever pointer moved most recently — so a list would be new state rather than a new
+   * view, and it would sit under the same `sameInputClassOnly` ceiling this does.
+   */
+  pointerCount: number;
   /** True for exactly one step: the step on which the action first read as held. */
   actionPressed: boolean;
   /** True while any source — the action key or a pointer — holds the action. */
@@ -82,6 +104,7 @@ function createSeatInputState(): SeatInputState {
     pointerX: 0,
     pointerY: 0,
     pointerActive: false,
+    pointerCount: 0,
     actionPressed: false,
     actionHeld: false,
     actionReleased: false,
@@ -97,6 +120,7 @@ function resetSeatInputState(state: SeatInputState): void {
   state.pointerX = 0;
   state.pointerY = 0;
   state.pointerActive = false;
+  state.pointerCount = 0;
   state.actionPressed = false;
   state.actionHeld = false;
   state.actionReleased = false;
@@ -321,6 +345,78 @@ export const PRECISION_ENVELOPE = 1 / 200;
 /** The lattice spacing for a logical box, in logical units. */
 export function envelopeFor(logical: LogicalSize): number {
   return Math.min(logical.width, logical.height) * PRECISION_ENVELOPE;
+}
+
+/**
+ * The precision envelope for an *aimed scalar* — an angle, a power, a spin.
+ *
+ * {@link PRECISION_ENVELOPE} levels the one quantity the engine owns: where a pointer is. A
+ * game that lets a player aim a scalar derives it two ways and the engine levels neither. The
+ * pointer path inherits the position lattice; the keyboard path is some `KEY_RATE × delta`, a
+ * constant the game picked. Nothing makes those two commensurate, and measured in Shuriken
+ * (#2506) they are not merely unequal but **disjoint**: spin lands on multiples of 0.021 under
+ * a finger and of 0.043333 under a key, and 130 × 0.021 is the first common multiple — 2.73,
+ * past the ±1.9 clamp. Over the whole legal range the only spin both instruments could name
+ * was zero.
+ *
+ * A win-rate comparison cannot see that, which is why `control-parity.test.ts` never did: it
+ * is not a difference in strength but in *what can be expressed*. The test that sees it
+ * compares the **set of reachable values**, and a set comparison cannot pass by luck.
+ *
+ * ## Why a fraction of the span, and why one lattice fixes it
+ *
+ * A scalar has no shorter side to take a two-hundredth of, so the envelope is a fraction of
+ * the scalar's own span — which keeps rule 8: the number means the same thing whether the
+ * game's spin runs to 1.9 or to 400.
+ *
+ * The property that makes both instruments *equal* rather than merely comparable: if every
+ * increment either instrument can apply is no larger than one cell, then a continuous sweep on
+ * either one passes through every cell on its way, so both reach the identical set. That is
+ * exactly why quantising position works — a dragged finger visits every lattice point between
+ * where it started and where it stopped — and it is the obligation this constant carries with
+ * it. **A game's own keyboard rate must be finer than one cell**: `KEY_RATE × fixedDelta <=
+ * scalarEnvelopeFor(span)`, which is a line of arithmetic a game can assert about itself.
+ *
+ * One sixty-fourth, therefore, and it is chosen from the collection rather than from taste.
+ * The five aimed scalars that exist today spell their span in these many key steps —
+ * Shuriken's spin 87, Shuriken's aim 99, Sword Throwing's aim 82, Archery Master's aim 81 and
+ * its draw **70**. The draw is the binding one, so any denominator at or below 70 clears every
+ * game in the catalogue without retuning one of them; 64 is the power of two below it, so the
+ * cell is exact in binary and quantising twice gives what quantising once gave.
+ *
+ * Sixty-four distinct values across an aim is not a small vocabulary — it is four times what
+ * `PRECISION_ENVELOPE` leaves across a play area's short side per hundred units — and it is
+ * the ceiling on what *either* player may name, not a floor under what one of them can.
+ */
+export const SCALAR_ENVELOPE = 1 / 64;
+
+/**
+ * The lattice spacing for an aimed scalar spanning `span`, in that scalar's own units.
+ *
+ * `span` is the full width of the range the player may name — `2 * MAX_SPIN` for a spin that
+ * clamps at ±MAX_SPIN, `1` for a draw in [0, 1]. Sign is ignored so a span written either way
+ * round gives the same lattice.
+ */
+export function scalarEnvelopeFor(span: number): number {
+  if (!Number.isFinite(span)) return 0;
+  return Math.abs(span) * SCALAR_ENVELOPE;
+}
+
+/**
+ * Round an aimed scalar onto a lattice, the way {@link InputManager} rounds a position.
+ *
+ * Applied at the one place a game *writes* the scalar, so the pointer path and the keyboard
+ * path go through it alike and neither can opt out — the same argument that puts `#quantise`
+ * at the one place coordinates enter the engine. Quantising the pointer path alone would move
+ * the gap rather than close it.
+ *
+ * A lattice of zero or worse is the identity, so a game that has not sized its envelope yet
+ * degrades to today's behaviour rather than to `NaN`.
+ */
+export function quantiseScalar(value: number, lattice: number): number {
+  if (!Number.isFinite(value)) return value;
+  if (!Number.isFinite(lattice) || lattice <= 0) return value;
+  return Math.round(value / lattice) * lattice;
 }
 
 export class InputManager {
@@ -582,6 +678,10 @@ export class InputManager {
     // reported now, and a press with no coordinates cannot be aimed.
     const pointerActive = pointerDown || sources.pointerLatched;
     out.pointerActive = pointerActive;
+    // The latched tap counts as the one finger it was, so `pointerCount > 0` and
+    // `pointerActive` can never disagree — a game reading the count must not be told
+    // "no fingers" on the very step it is handed a tap's position.
+    out.pointerCount = pointerDown ? sources.pointerCount : pointerActive ? 1 : 0;
     // The pointer owns position outright; keys never write it.
     out.pointerX = sources.pointerX;
     out.pointerY = sources.pointerY;
