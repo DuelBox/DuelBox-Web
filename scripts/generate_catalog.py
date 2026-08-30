@@ -92,13 +92,24 @@ def main() -> None:
                 "mark": mark,
                 "rule": game.get("rule", ""),
                 "researched": bool(game.get("rule")),
+                # The reference app's own name for this game, carried for rule 1 clearance
+                # (scripts/check-game-names.mjs) and for nothing else. It is deliberately
+                # absent from the TypeScript catalogue above, which is bundled and served:
+                # shipping the names we are trying not to copy would make the problem worse,
+                # not better. This JSON is read by build scripts only.
+                "refName": game.get("refName", ""),
             }
         )
 
     entries.sort(key=lambda e: e["name"])
     categories = sorted({e["category"] for e in entries})
 
-    body = json.dumps(entries, indent=2, ensure_ascii=False)
+    # The TypeScript catalogue is bundled and served, so the reference names are stripped
+    # out of it. Shipping the names we are trying not to copy would make rule 1 worse rather
+    # than better; they are needed only by the build-time clearance guard, which reads the
+    # JSON below. check-game-names.mjs asserts this stays true of the built output.
+    shipped = [{k: v for k, v in e.items() if k != "refName"} for e in entries]
+    body = json.dumps(shipped, indent=2, ensure_ascii=False)
     cats = json.dumps(categories, ensure_ascii=False)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
