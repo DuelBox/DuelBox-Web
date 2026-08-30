@@ -306,11 +306,24 @@ async function main() {
   await writeFile(join(out, 'vercel.json'), renderVercelJson(entries));
   await writeFile(join(out, 'security-headers.conf.txt'), renderServerSnippets(entries));
 
+  /**
+   * Both locations, rendered once.
+   *
+   * `/.well-known/security.txt` is the canonical path in RFC 9116 §3; the root copy is the
+   * legacy location the RFC keeps working, and it is what a host that will not serve a
+   * dot-directory falls back to. Rendered from a single string rather than from two
+   * `Date.now()` calls, so the two files cannot carry `Expires` a millisecond apart and
+   * disagree about when the same document goes stale.
+   *
+   * Getting this far is not the same as being served. GitHub Pages publishes what the
+   * deploy workflow uploads, and `actions/upload-pages-artifact` excludes dot-paths unless
+   * told otherwise — so this directory was written on every build and dropped on every
+   * deploy. `apps/web/src/security/security-txt.test.ts` holds the workflow to it.
+   */
+  const securityTxt = renderSecurityTxt(Date.now());
   await mkdir(join(out, '.well-known'), { recursive: true });
-  await writeFile(join(out, '.well-known', 'security.txt'), renderSecurityTxt(Date.now()));
-  // Served at the root as well: RFC 9116 keeps the legacy location working, and some
-  // hosts refuse to serve a dot-directory at all.
-  await writeFile(join(out, 'security.txt'), renderSecurityTxt(Date.now()));
+  await writeFile(join(out, '.well-known', 'security.txt'), securityTxt);
+  await writeFile(join(out, 'security.txt'), securityTxt);
 
   const widestHeader = Math.max(...entries.map(([name, value]) => name.length + value.length));
   console.log(

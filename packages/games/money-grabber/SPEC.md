@@ -229,8 +229,9 @@ tokens fanned out beside your hand *is* your speed gauge.
 
 Sixteen mirrored pairs of equal value total an even number, so two seats who split the table
 evenly would tie **every time**. That is not a hypothetical: `paint-fight` is recorded in
-`balance-aggregate.test.ts` as unbalanceable because every one of 2000 matches ended 245–245, and
-the tie was hiding a total seat-one advantage rather than proving fairness.
+`balance-aggregate.test.ts` as unbalanceable because every one of 1000 seeds ended 245–245 — the
+sweep played 2000 matches for them, half of which were the other half again — and the tie was
+hiding a total seat-one advantage rather than proving fairness.
 
 So the pile has an odd note in it: one worth 3, at the exact centre of the table, stationary. The
 total is **65**. Once the table is empty, `p1 + p2 = 65`, and an odd sum cannot be a level one —
@@ -492,11 +493,15 @@ with room to spare, and none is more than 0.9 σ from level. The six families me
 run 47.8% to 52.2%, which is what six samples of a thousand look like. **Not one of the 18 000
 matches failed to finish.**
 
-**Be plain about the sample the repository's own guard uses.** `balance-aggregate.test.ts` runs 50
-seeds by default on the family `1000003 + 7919 s`, and on that sample this game reads **54.0%** —
-inside the band, but only just, and 50 seeds resolve ±21 points at three sigma, so that reading on
-its own would be worth very little either way. The same family reads **54.0% at 250 seeds and
-50.7% at 1000**, and the six-family sweep above is the number to believe.
+**Be plain about the sample the repository's own guard uses.** `balance-aggregate.test.ts` runs
+the family `1000003 + 7919 s`, and since #2494 it plays each seed of it once for this game rather
+than twice — this game never reads `context.openingSeat`, so the second arm was the first one
+again — which spends the same budget on **88 seeds** instead of 50 pairs. On that sample the game
+reads **52.3%**, inside the band with ±16.0 points at three sigma. It read 54.0% over the 50
+pairs, and the harness printed "100 decided" beside it when it had 50 independent draws; the share
+did not move for the correction, only the honesty of the denominator and the width of the bar. The
+same family reads **54.0% at 250 seeds and 50.7% at 1000**, and the six-family sweep above is the
+number to believe.
 
 ### Is it 50% by construction, or by sampling? By sampling, and here is why
 

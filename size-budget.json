@@ -1,7 +1,10 @@
 {
-  "_comment": "Gzipped bytes. Rule 11: nothing merges over the size budget. Raising a number here is a decision, not a formality — say why in the commit.",
-  "_shell": "Everything a visitor downloads before choosing a game. Does not grow when a game is added, so it is the number worth defending.",
-  "shellBytes": 286720,
+  "_comment": "Gzipped bytes. Rule 11: nothing merges over the size budget. Raising a number here is a decision, not a formality — say why in the commit. Lowering one because the measurement got more honest is a decision too: see _rederived.",
+  "_shell": "Everything a visitor downloads before choosing a game: the scripts every non-play route loads eagerly, from the build's own manifests. Does not grow when a game is added, so it is the number worth defending. Deferring work off this path into an async chunk now lowers it.",
+  "shellBytes": 151552,
+  "_onDemand": "Everything else a player can pull that is not one game's own chunk: the play route's own scripts, plus anything reached by an import(). Nobody downloads it by arriving. Budgeted so that deferring is neither punished (it used to raise the shell) nor free.",
+  "onDemandBytes": 37888,
   "_game": "One game's own chunk — the marginal cost of the game a player actually picked.",
-  "gameChunkBytes": 12288
+  "gameChunkBytes": 12288,
+  "_rederived": "#2516, measured on main. shellBytes was 286720 against a measured 284876, but that measurement was 'every script that is not a game chunk'. Splitting it by what a browser actually fetches: 150778 shell + 37056 play-route + 97042 pages-router scripts that none of the 223 exported HTML files references and nobody ever downloads. 150778 + 37056 + 97042 = 284876 exactly, so nothing was dropped, only placed. The two budgets leave 774 B and 832 B of headroom — 1606 B in total against the 1844 B the old single budget had, so the honester measurement frees no slack, which is the condition #2516 sets on being fixed at all."
 }

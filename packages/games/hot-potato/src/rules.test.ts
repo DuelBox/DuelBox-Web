@@ -6,6 +6,7 @@ import {
   BOT_PROFILES,
   FLIGHT_SECONDS,
   FUSE_SECONDS,
+  HUMAN_REACTION_SECONDS,
   MAX_SWEEP,
   MIN_BAND,
   SETTLE_SECONDS,
@@ -23,6 +24,7 @@ import {
   startRound,
   step,
   sweepAt,
+  transitSeconds,
   tryThrow,
   winnerOf,
 } from './rules.js';
@@ -35,16 +37,86 @@ function aimAtBand(game: Game): void {
   game.marker = game.bandCentre;
 }
 
-function playOut(p1: BotDifficulty, p2: BotDifficulty, seed: number): Game {
+const TIERS: readonly BotDifficulty[] = ['easy', 'normal', 'hard'];
+
+/**
+ * Puts a lone bot in front of the band it would face after `throws` throws, sweeping at
+ * `MAX_SWEEP` — the fastest the marker ever moves, at the end of a fuse — and reports
+ * whether it ever acts, and whether a throw ever goes.
+ *
+ * `roll` is 1 so `freeze` never blocks: this measures what a tier *can* do, not how often
+ * it chooses to. Four seconds is several passes of the marker at any sweep in the game.
+ */
+function facesBandAfter(
+  tier: BotDifficulty,
+  throws: number,
+): { readonly acted: boolean; readonly thrown: boolean } {
+  const rng = new Rng(9);
+  const game = createGame(rng);
+  game.band = bandAfter(throws);
+  game.bandCentre = 0.5;
+  game.marker = 0;
+  const bot = createBotState();
+  let acted = false;
+  for (let i = 0; i < 60 * 4; i += 1) {
+    if (botThrows(game, bot, BOT_PROFILES[tier], 'p1', STEP, 1)) {
+      acted = true;
+      if (tryThrow(game, 'p1', rng) === 'thrown') return { acted, thrown: true };
+    }
+    game.marker = (game.marker + MAX_SWEEP * STEP) % 1;
+  }
+  return { acted, thrown: false };
+}
+
+/** How often a tier got a throw away, split by how far into the ramp the round was. */
+interface ActionRate {
+  /** Steps spent holding the potato, by throw index. */
+  readonly holding: number[];
+  /** Throws that went, by throw index. */
+  readonly thrown: number[];
+}
+
+function createActionRate(): ActionRate {
+  return { holding: [], thrown: [] };
+}
+
+/** Throws per thousand steps of holding it, over throw indices `from` and later. */
+function ratePerThousand(rate: ActionRate, from: number): number {
+  let holding = 0;
+  let thrown = 0;
+  for (let i = from; i < rate.holding.length; i += 1) {
+    holding += rate.holding[i] ?? 0;
+    thrown += rate.thrown[i] ?? 0;
+  }
+  return holding === 0 ? 0 : (1000 * thrown) / holding;
+}
+
+function playOut(
+  p1: BotDifficulty,
+  p2: BotDifficulty,
+  seed: number,
+  rates?: Readonly<Record<BotDifficulty, ActionRate>>,
+): Game {
   const rng = new Rng(seed);
   const game = createGame(rng);
   const botP1 = createBotState();
   const botP2 = createBotState();
   for (let i = 0; i < 60 * 400 && winnerOf(game) === null; i += 1) {
-    if (botThrows(game, botP1, BOT_PROFILES[p1], 'p1', STEP, rng.float()))
-      tryThrow(game, 'p1', rng);
-    if (botThrows(game, botP2, BOT_PROFILES[p2], 'p2', STEP, rng.float()))
-      tryThrow(game, 'p2', rng);
+    if (rates !== undefined && game.phase === 'holding') {
+      const rate = rates[game.holder === 'p1' ? p1 : p2];
+      rate.holding[game.throws] = (rate.holding[game.throws] ?? 0) + 1;
+    }
+    for (const [seat, tier, bot] of [
+      ['p1', p1, botP1],
+      ['p2', p2, botP2],
+    ] as const) {
+      if (!botThrows(game, bot, BOT_PROFILES[tier], seat, STEP, rng.float())) continue;
+      const at = game.throws;
+      if (tryThrow(game, seat, rng) === 'thrown' && rates !== undefined) {
+        const rate = rates[tier];
+        rate.thrown[at] = (rate.thrown[at] ?? 0) + 1;
+      }
+    }
     step(game, STEP, rng);
   }
   return game;
@@ -274,8 +346,49 @@ describe('the bot', () => {
   });
 
   it('never reacts faster than a person', () => {
-    for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+    for (const tier of TIERS) {
       expect(BOT_PROFILES[tier].reaction, tier).toBeGreaterThan(0.05);
+    }
+  });
+
+  it('never ramps past what a person can act inside', () => {
+    // CLAUDE.md rule 6, stated as arithmetic rather than as a claim. The narrowest window
+    // the game can produce is the floor band swept at the top speed, and it must still be
+    // at least one simple visual reaction long — otherwise the game would be asking a
+    // machine to play it, whatever the bot profiles said.
+    expect(transitSeconds(MIN_BAND, MAX_SWEEP)).toBeGreaterThanOrEqual(HUMAN_REACTION_SECONDS);
+    // And every tier's own window is at least as forgiving as the person's, because `aim`
+    // scales the band and no tier's reaction was shortened to reach it.
+    for (const tier of TIERS) {
+      const profile = BOT_PROFILES[tier];
+      expect(
+        transitSeconds(MIN_BAND * profile.aim, MAX_SWEEP),
+        `${tier} cannot act at the floor`,
+      ).toBeGreaterThan(profile.reaction);
+    }
+  });
+
+  it('can still act at every point in the ramp, at the fastest the marker ever moves', () => {
+    // #2507. The window a player has to act in is `transit = 2 * band * aim / sweep`, and
+    // `band` and `sweep` used to shrink it on two axes at once: band decayed 0.86 a throw
+    // towards 0.055 while sweep climbed towards 1.9. Measured against the old numbers, at
+    // MAX_SWEEP:
+    //
+    //   throw | band   | easy transit | normal | hard
+    //       6 | 0.1214 |     0.192 s  | 0.141  | 0.102
+    //       7 | 0.1044 |     0.165 s  | 0.121  | 0.088
+    //
+    // Every one of those is below its tier's reaction (0.30 / 0.18 / 0.13), so from throw
+    // six for easy and throw seven for normal and hard, no bot could act at all — this
+    // whole assertion failed for every tier from index 6 onwards. Past that point `easy`
+    // and `hard` were the same opponent and the round was decided by who happened to be
+    // holding it, which is the difficulty a player chose quietly expiring.
+    for (let throws = 0; throws <= 12; throws += 1) {
+      for (const tier of TIERS) {
+        const outcome = facesBandAfter(tier, throws);
+        expect(outcome.acted, `${tier} never acts at throw ${String(throws)}`).toBe(true);
+        expect(outcome.thrown, `${tier} never lands a throw at throw ${String(throws)}`).toBe(true);
+      }
     }
   });
 
@@ -294,6 +407,36 @@ describe('the bot', () => {
     expect(bot.watched).toBe(0);
   });
 
+  it('keeps the tiers apart in the last third of a round, not just the first', () => {
+    // A win rate cannot see this and #2504 paid for the lesson, so it is measured directly:
+    // throws that went, per thousand steps of holding the potato, split by how far into the
+    // ramp the round was. Before #2507 every tier's rate fell to **zero** from throw six or
+    // seven, so `easy` and `hard` became literally the same opponent and the round was
+    // decided by who happened to be holding it when the window shut.
+    //
+    // Measured over 240 matches across four pairings, throws 6 and later:
+    //   easy 3.3 · normal 10.3 · hard 29.8 throws per 1000 holding steps.
+    const rates = {
+      easy: createActionRate(),
+      normal: createActionRate(),
+      hard: createActionRate(),
+    } as const;
+    for (let i = 0; i < 24; i += 1) {
+      playOut('easy', 'hard', 3000 + i, rates);
+      playOut('normal', 'normal', 4000 + i, rates);
+      playOut('easy', 'normal', 5000 + i, rates);
+      playOut('hard', 'hard', 6000 + i, rates);
+    }
+
+    const late = { easy: 0, normal: 0, hard: 0 };
+    for (const tier of TIERS) {
+      late[tier] = ratePerThousand(rates[tier], 6);
+      expect(late[tier], `${tier} never acts late in a round`).toBeGreaterThan(0);
+    }
+    expect(late.hard, 'hard is still the strongest late').toBeGreaterThan(late.normal * 1.5);
+    expect(late.normal, 'normal is still ahead of easy late').toBeGreaterThan(late.easy * 1.5);
+  });
+
   it('beats the weaker tier over a series', { timeout: 240_000 }, () => {
     let wins = 0;
     const games = 16;
@@ -302,8 +445,10 @@ describe('the bot', () => {
       const finished = playOut(hardIsP1 ? 'hard' : 'easy', hardIsP1 ? 'easy' : 'hard', 800 + i);
       if (winnerOf(finished) === (hardIsP1 ? 'p1' : 'p2')) wins += 1;
     }
-    // Measured at 100% against easy and 88% against normal over forty matches. The first
-    // hard tier beat normal 100% too, which is a wall rather than an opponent.
+    // Measured over forty matches a pairing, after #2507: hard beats easy 95%, hard beats
+    // normal 90%, normal beats easy 80%. It was 100% and 88% before, but that ladder was
+    // bought by the ramp closing the window on both seats rather than by either playing
+    // better — see the note on BOT_PROFILES.
     expect(wins, `hard won ${String(wins)} of ${String(games)}`).toBeGreaterThan(games * 0.6);
   });
 });

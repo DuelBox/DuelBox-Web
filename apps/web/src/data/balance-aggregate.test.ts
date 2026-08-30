@@ -15,12 +15,15 @@ import type { LoadedGame } from './registry';
  *
  * Those are not the same number, and this file used to open by stating only the first one.
  * The assertion is the flat band widened by {@link SIGMAS} standard errors of its own sample,
- * and at the fifty seeds a push runs that allowance is **21.2 points** - so what the push gate
- * forbids is a seat above 76.2% or below 23.8%, and nothing tighter. On a fully green run a
- * large minority of the catalogue still **measures outside the flat band** - it was around
- * half before #2487 taught 31 turn games to read the opening seat, and 31 of 107 after. The
- * exact count is printed at the top of every run, above the table, so nobody has to read this
- * comment to find it out, and nobody should quote the number in this sentence instead.
+ * and at the fifty seeds a push runs that allowance is **21.2 points** for a game that reads
+ * the opening seat - so what the push gate forbids is a seat above 76.2% or below 23.8%, and
+ * nothing tighter - and the same for a game that ignores it, which is measured over the same
+ * fifty seeds and simply stops playing each of them twice (#2494, see {@link MATCH_BUDGET}).
+ * On a fully green run a large minority of the catalogue still **measures outside the flat
+ * band** - it was around half before #2487 taught 31 turn games to read the opening seat, and
+ * 31 of 108 after. The exact count is printed at the top of every run, above the table, so
+ * nobody has to read this comment to find it out, and nobody should quote the number in this
+ * sentence instead.
  *
  * The gap closes with sample size and only with sample size, and every run prints the number
  * it is actually enforcing:
@@ -58,10 +61,22 @@ import type { LoadedGame } from './registry';
  *
  * ## What a run does
  *
- * Every seed is played **twice, once with each opening seat**, from the same `Rng` seed, so
- * a seed's luck falls on each chair in turn and the seat effect is separable from the seed
+ * A seed is played **twice, once with each opening seat**, from the same `Rng` seed, so a
+ * seed's luck falls on each chair in turn and the seat effect is separable from the seed
  * effect. That pairing is also the only way to attribute a difference to the opening seat
  * rather than to the draw: same seed, one variable.
+ *
+ * It is only worth paying for when the game reads the opening seat. The two contexts a seed
+ * is played with differ in `openingSeat` and in nothing else, so a game that never touches it
+ * runs the identical code over the identical stream and the second match is the first one
+ * again - which was **54 of the 108 measurable games** the day #2494 was fixed. Those seeds
+ * are played once, for 59 matches a game rather than 100, and the sweep as a whole plays 8694
+ * matches where it used to play 10908.
+ *
+ * The classification is the game's own reading of the property, not an inference from
+ * outcomes - see {@link Played.readOpener} - and it is confirmed by playing both arms of
+ * {@link PROBE_SEEDS} seeds up front and one seed in {@link AUDIT_EVERY} thereafter. See
+ * {@link Tally.unexplained} for what happens when the confirmation fails.
  *
  * Which is how this file's first finding fell out. **Almost no built game reads
  * `context.openingSeat`.** The contract says a game "must read it rather than assume `p1`",
@@ -85,6 +100,16 @@ import type { LoadedGame } from './registry';
  * twice - so every confidence figure here counts seeds, never matches. That is conservative
  * for a game that does read the opening seat, which is the right way round for a gate.
  *
+ * That much was already true before #2494, and it is worth being exact about what that issue
+ * did and did not find, because half of it did not survive being measured. The **error bars
+ * were already honest**: {@link allowance} divided by two, the `+/-` column read 21.2 points
+ * at fifty seeds rather than the 15.0 a match count would have given, and no recorded share
+ * moved - duplicating a sample cannot move a mean, and `king-of-the-yard` re-measured over
+ * 1000 genuinely independent single-arm seeds still reads the 38.9% recorded from 1000
+ * duplicated pairs. What was real is that the sweep went on **playing** the duplicate: half
+ * the budget of 54 games bought nothing. It now buys seeds, and the honest denominator in the
+ * `decided` column is a consequence rather than the point.
+ *
  * Five points of band is far inside the noise of a cheap sample, and no arithmetic makes that
  * untrue. The band does not move for it; the **evidence threshold** does - see the table at
  * the top for what each sample actually enforces.
@@ -105,10 +130,12 @@ import type { LoadedGame } from './registry';
  * Two things stop the cheap run being decorative:
  *
  * - **The pooled share.** Seat one's share across every non-exempt game at once is thousands
- *   of decided matches even at fifty seeds, so its standard error is under a point and the
- *   flat band applies to it. A catalogue-wide lean - the Penalty Kicks failure repeated
- *   across many games - is caught on every push for free. It is blind to one game leaning
- *   left while another leans right, which is what the per-game assertion is for.
+ *   of decided **seeds** even at fifty - 6811 of them on the run this was written against,
+ *   counting a paired seed once - so its standard error is 0.6 of a point and the flat band
+ *   applies to it. A
+ *   catalogue-wide lean - the Penalty Kicks failure repeated across many games - is caught on
+ *   every push for free. It is blind to one game leaning left while another leans right,
+ *   which is what the per-game assertion is for.
  * - **The exceptions ratchet one way.** A game in {@link OUTSIDE_THE_BAND} is not skipped, and
  *   the check on it is **one-sided**: it may not get worse than its record by more than the
  *   sample can explain, and it may not get *better* at all without failing. The moment its
@@ -146,13 +173,25 @@ import type { LoadedGame } from './registry';
  *
  * ## Runtime
  *
- * Measured on the development machine over all 93 registered games at fifty seeds: **37 to
- * 115s** on `normal` depending on what else is running, about the same on `easy`, and 355s on
- * `hard`. The `normal` figure was 34s when this file was written, over 79 games; it is not the
- * sweep that got slower but the catalogue that grew, and several of the games that were being
- * skipped by name turned out to be long ones - `solitaire` alone averages 87 simulated
- * seconds a match. Budget roughly ten minutes for the nightly's 250 seeds on `normal`. CI is
- * slower again; `bot-cost.test.ts` puts it at four to five times slower for search-heavy work.
+ * Every game plays exactly {@link MATCH_BUDGET} matches plus the one shouted probe, whichever
+ * shape its sweep took, so **#2494 did not move the wall clock and was not meant to**. Run
+ * back to back in one process over all 108 registered games at fifty seeds on `normal`, the
+ * paired sweep and the sweep as it now ships played the same 10,908 matches for 30.87M and
+ * 30.88M simulated steps - 0.02% apart - at 42.2s and 40.8s. The saving is spent on seeds,
+ * not on the clock; what changed is that 54 of those games now report 88 seeds instead of 50.
+ *
+ * The spread on that wall clock is entirely the machine: the same sweep measured anywhere
+ * from 41s to 359s across one afternoon depending on what else was running, which is why the
+ * step count above is quoted beside it. The `normal` figure was 34s when this file was
+ * written, over 79 games; it is not the sweep that got slower but the catalogue that grew,
+ * and several of the games that were being skipped by name turned out to be long ones -
+ * `solitaire` alone averages 87 simulated seconds a match. Budget roughly ten minutes for the
+ * nightly's 250 seeds on `normal`. CI is slower again; `bot-cost.test.ts` puts it at four to
+ * five times slower for search-heavy work.
+ *
+ * **`easy` and `hard` are due a re-measure.** The 355s recorded for `hard` and the "about the
+ * same" for `easy` were taken over 93 games on the paired sweep and neither has been run
+ * since; the catalogue is 108 games now and half of it plays a different number of seeds.
  *
  * That lands in the `verify` job, which spent 216s of its fifteen-minute limit before this
  * file existed, and `verify` is not the critical path: `e2e` is, at about eleven minutes in
@@ -168,8 +207,9 @@ import type { LoadedGame } from './registry';
 type Tier = 'easy' | 'normal' | 'hard';
 
 /**
- * Seed pairs per game. Each seed is played twice, once per opening seat, so the default is
- * a hundred matches a game and over nine thousand matches across the catalogue.
+ * Seeds per game. A game that reads the opening seat plays each of them twice, once per
+ * opening seat, for {@link MATCH_BUDGET} matches; one that ignores it plays each once, for
+ * {@link soloMatches}. The default is fifty seeds and 8694 matches across the catalogue.
  *
  * `DUELBOX_BALANCE_SEEDS=1000` is the audit, and is what the `normal` numbers in
  * {@link OUTSIDE_THE_BAND} were measured with. Every record carries the sample it was taken
@@ -205,7 +245,77 @@ const BAND_HIGH = 0.55;
  */
 const SIGMAS = 3;
 
-/** Half-width of this sample's allowance for a game that decides every match, in share. */
+/**
+ * What a game that reads the opening seat costs: every seed played both ways, unchanged.
+ *
+ * A game that ignores the opening seat costs {@link soloMatches} instead - the same
+ * {@link SEEDS} seeds, played once each, because its second arm is its first arm again.
+ *
+ * **#2494 proposed spending that saving on twice the seeds for the same wall clock, and this
+ * file hands it back instead.** The reason is written up under Runtime: the sweep is the
+ * slowest file in `pnpm test` and a longer one broke vitest's worker heartbeat, failing the
+ * whole run with every test passing. A smaller honest sample beats a larger one that cannot
+ * be run. So the seeds are the fifty they always were, every number a blind game reports is
+ * the one the paired sweep reported, and what changes is that the sweep stops paying for the
+ * duplicate and stops counting it.
+ */
+const MATCH_BUDGET = SEEDS * 2;
+
+/**
+ * Seeds played with **both** opening seats before the sweep decides whether a game can be
+ * measured from one arm.
+ *
+ * The decision itself is {@link Played.readOpener} and does not need a sample at all - these
+ * seeds exist to confirm it. Six of them is 12 matches, and they are the reason a blind game
+ * costs 59 matches rather than the 50 its seeds are worth.
+ */
+const PROBE_SEEDS = Math.min(SEEDS, 6);
+
+/**
+ * In the single-arm phase, how often the sweep pays for the second arm anyway and checks it
+ * is still bit-identical.
+ *
+ * The issue asked for this in as many words: "if a game reports `openerSwung === 0` and the
+ * second arm is *not* bit-identical, that is a game with hidden per-opener state and should
+ * be reported, not silently halved". The probe alone would only ever prove it for the first
+ * six seeds, so the check keeps running - about 8% of the budget - and every failure it can
+ * see is collected in {@link Tally.unexplained} and asserted on.
+ */
+const AUDIT_EVERY = 12;
+
+/**
+ * What a single-arm game costs: the {@link PROBE_SEEDS} probe seeds played both ways, the
+ * rest of {@link SEEDS} played once, and one extra match every {@link AUDIT_EVERY}th of
+ * those for the guard.
+ *
+ * **59 matches against the paired sweep's 100** at the default fifty seeds, for the same 50
+ * seeds and therefore the same share, the same `+/-` and the same mean match length the
+ * paired sweep reported. 54 of the 108 measurable games qualify, so the sweep as a whole
+ * plays 8694 matches where it used to play 10908 - a fifth less work for numbers that do not
+ * move.
+ */
+function soloMatches(): number {
+  let matches = PROBE_SEEDS * 2;
+  for (let index = PROBE_SEEDS; index < SEEDS; index += 1) {
+    matches += 1;
+    if ((index - PROBE_SEEDS + 1) % AUDIT_EVERY === 0) matches += 1;
+  }
+  return matches;
+}
+
+/** How many matches this game will play, the shouted probe aside. */
+function plannedMatches(blind: boolean): number {
+  return blind ? soloMatches() : MATCH_BUDGET;
+}
+
+/**
+ * Half-width of this sample's allowance for a game that decides every match, in share.
+ *
+ * One number, not two: a single-arm game is measured over the same {@link SEEDS} seeds as a
+ * paired one, so it gets the same allowance. That was already what the paired sweep computed
+ * - {@link allowance} has always counted seeds rather than matches - and #2494 changed what
+ * the sweep *plays*, not what it believes.
+ */
 const ALLOWANCE_AT_FULL_SAMPLE = SIGMAS * Math.sqrt(0.25 / SEEDS);
 
 /**
@@ -227,9 +337,10 @@ const STEP = 1 / 60;
  * them - and every turn game that starts reading `openingSeat` tightens it.
  *
  * **Counted over `turn-*` games only.** The contract says outright that "real-time games
- * have no opener and may ignore this", and about half the games that ignore it are
- * real-time - so counting those made the guard fail four games in one afternoon for doing
- * exactly what the SDK permits. A guard that punishes correct behaviour gets disabled,
+ * have no opener and may ignore this", and almost every game that ignores it is real-time -
+ * of the 56 games whose `openerSwung` is zero, 54 never read the property at all and every
+ * one of those 54 is `rt-*`. Counting them made the guard fail four games in one afternoon for
+ * doing exactly what the SDK permits. A guard that punishes correct behaviour gets disabled,
  * which is worse than no guard.
  *
  * It was 33 of the 46 turn games. #2487 brought 31 of them across and it is now **two**:
@@ -239,7 +350,10 @@ const STEP = 1 / 60;
  * the identical result. That is a property worth having rather than a defect: it is the
  * strongest possible statement that neither seat is favoured. This measurement counts seed
  * pairs that *ended differently*, and it cannot tell "ignores the opener" from "is exactly
- * symmetric under it", so those two stay in the count.
+ * symmetric under it", so those two stay in the count - and they are the two games on which
+ * {@link Tally.unexplained} is the only thing standing between a zero here and a halved
+ * sweep. Both are measured paired, because they read the property; both come back
+ * bit-identical, which is what makes the symmetry a claim rather than a hope.
  *
  * What the other 31 bought, on the default fifty-seed `normal` sample: eight records were
  * deleted from {@link OUTSIDE_THE_BAND} because the games came back inside the band. Five of
@@ -288,6 +402,21 @@ interface Played {
   /** The final scoreline, kept only so two matches can be told apart. */
   readonly p1: number;
   readonly p2: number;
+  /**
+   * Whether the game ever read `context.openingSeat` during this match. **Only the
+   * {@link PROBE_SEEDS} probe matches are played through a context that can tell**, because
+   * watching the property costs more wall clock than the whole of #2494 saves; every other
+   * match reports `false` and nothing reads it.
+   *
+   * This is the signal the single-arm sweep turns on, and it is structural rather than
+   * statistical: the two contexts a seed is played with differ in **that property and
+   * nothing else**, so a game that never touches it runs the identical code over the
+   * identical `Rng` stream and must produce the identical match. Inferring the same thing
+   * from outcomes cannot be made safe - `sudoku` reads the opener and swings only 26 of 50
+   * seed pairs, and its outcome space is small enough that a short probe would call it blind
+   * by luck. Reading it is a fact about the game; not swinging is a fact about the sample.
+   */
+  readonly readOpener: boolean;
 }
 
 /**
@@ -346,20 +475,75 @@ function contextFor(loaded: LoadedGame, seed: number, opener: SeatId): GameConte
   };
 }
 
+/**
+ * The same context with `openingSeat` behind a getter, so the sweep can see whether the game
+ * ever asked for it. A game that never reads it cannot be affected by it, which is what
+ * {@link measure} needs to know before it stops playing the second arm.
+ *
+ * **Two functions rather than one with a flag, and this is load-bearing for the wall clock.**
+ * A game holds the context object and reads `rng`, `manifest` and `botDifficulty` off it every
+ * frame; giving that object an accessor changes its shape and costs about half as much again
+ * over the whole sweep - 90.6s against 60.7s when every match was built this way, which is a
+ * bigger effect than anything this file is measuring. Only the {@link PROBE_SEEDS} seeds that
+ * decide the classification are played through this one; the other ~90% of matches get the
+ * plain object above, byte for byte the one the paired sweep always used.
+ */
+function watchedContextFor(
+  loaded: LoadedGame,
+  seed: number,
+  opener: SeatId,
+  seen: { read: boolean },
+): GameContext {
+  return {
+    manifest: loaded.manifest,
+    rng: new Rng(seed),
+    presentation: 'shared-screen',
+    localSeat: 'p1',
+    get openingSeat(): SeatId {
+      seen.read = true;
+      return opener;
+    },
+    botDifficulty: () => TIER,
+  };
+}
+
 /** One match, to a decision or to the ten-minute ceiling. */
-function play(loaded: LoadedGame, seed: number, opener: SeatId, input: InputState = SILENT): Played {
+function play(
+  loaded: LoadedGame,
+  seed: number,
+  opener: SeatId,
+  input: InputState = SILENT,
+  watch = false,
+): Played {
   const game = loaded.create();
-  game.init(contextFor(loaded, seed, opener));
+  const seen = { read: false };
+  game.init(
+    watch
+      ? watchedContextFor(loaded, seed, opener, seen)
+      : contextFor(loaded, seed, opener),
+  );
   try {
     for (let step = 0; step < MAX_STEPS; step += 1) {
       game.update(STEP, input);
       const score = game.getScore();
       if (score.winner !== null) {
-        return { winner: score.winner, steps: step + 1, p1: score.p1, p2: score.p2 };
+        return {
+          winner: score.winner,
+          steps: step + 1,
+          p1: score.p1,
+          p2: score.p2,
+          readOpener: seen.read,
+        };
       }
     }
     const score = game.getScore();
-    return { winner: null, steps: MAX_STEPS, p1: score.p1, p2: score.p2 };
+    return {
+      winner: null,
+      steps: MAX_STEPS,
+      p1: score.p1,
+      p2: score.p2,
+      readOpener: seen.read,
+    };
   } finally {
     game.destroy();
   }
@@ -374,7 +558,12 @@ interface Tally {
   /** Still running after ten simulated minutes. `termination.test.ts` owns those. */
   unfinished: number;
   steps: number;
+  /** Matches counted into the share. One per seed for a single-arm game, two for a paired one. */
   matches: number;
+  /** Independent draws behind {@link matches} - the unit every confidence figure here uses. */
+  seeds: number;
+  /** Every match run, the discarded probe arms, the guard replays and the shouted probe included. */
+  played: number;
   /**
    * Matches that reached *any* conclusion - a win or a draw - under *any* driver, the shouted
    * probe included. Zero means no driver could get this game to end, which is what
@@ -383,6 +572,29 @@ interface Tally {
   concluded: number;
   /** Seed pairs whose two halves ended differently - the opening seat changed the match. */
   openerSwung: number;
+  /** Seed pairs both arms of which were played, which is what {@link openerSwung} is out of. */
+  pairsChecked: number;
+  /** True when the game never read `context.openingSeat` and is measured from one arm. */
+  blind: boolean;
+  /**
+   * Pairs whose two arms differ in a way this game's reading of the opening seat cannot
+   * account for. Non-empty fails the harness rather than being silently absorbed.
+   *
+   * Two shapes, and both are the case where halving the sweep would have been wrong:
+   *
+   * - The game's {@link openerSwung} is **zero** - so the sweep and the report both call it
+   *   opener-blind - and yet a pair came back with the same winner after the same number of
+   *   steps and a *different scoreline*. That is per-opener state `openerSwung` cannot see,
+   *   and it is #2494's guard in as many words.
+   * - The game never read `context.openingSeat` at all and a pair still differed. The two
+   *   contexts differ in that property and nothing else, so this is state surviving from one
+   *   match into the next, which would make every number in this file a measurement of the
+   *   harness.
+   *
+   * A game whose `openerSwung` is non-zero is *expected* to move its scoreline around with
+   * the opener - that is what reading the opening seat looks like - and says nothing here.
+   */
+  readonly unexplained: string[];
   /** True if the same seed played differently when the device was shouted at. */
   readsInput: boolean;
   /**
@@ -394,6 +606,28 @@ interface Tally {
   readonly outcomes: Set<string>;
 }
 
+/** `winner:steps:p1:p2` - the whole of what this harness can see of a match. */
+function fingerprint(result: Played): string {
+  return `${String(result.winner)}:${String(result.steps)}:${String(result.p1)}:${String(result.p2)}`;
+}
+
+/**
+ * One game's sweep, inside a fixed budget of {@link MATCH_BUDGET} matches.
+ *
+ * Two shapes, chosen by the game rather than by a list:
+ *
+ * - **Paired**, when the game reads `context.openingSeat`. Every seed is played twice, once
+ *   per opening seat, and both arms are counted - unchanged from before #2494. The pairing is
+ *   the only way to attribute a difference to the opener rather than to the draw.
+ * - **Single-arm**, when it never reads it. The two arms of a seed are then the same match by
+ *   construction, so the second one is not played: the same {@link SEEDS} seeds for
+ *   {@link soloMatches} matches instead of {@link MATCH_BUDGET}.
+ *
+ * The classification is confirmed, not assumed: {@link PROBE_SEEDS} seeds are played both
+ * ways up front and must come back bit-identical, and one seed in {@link AUDIT_EVERY} keeps
+ * being checked for the rest of the run. Anything the opening seat cannot explain lands in
+ * {@link Tally.unexplained} and fails.
+ */
 function measure(id: string, loaded: LoadedGame): Tally {
   const tally: Tally = {
     id,
@@ -404,42 +638,148 @@ function measure(id: string, loaded: LoadedGame): Tally {
     unfinished: 0,
     steps: 0,
     matches: 0,
+    seeds: 0,
+    played: 0,
     concluded: 0,
     openerSwung: 0,
+    pairsChecked: 0,
+    blind: false,
+    unexplained: [],
     readsInput: false,
     outcomes: new Set<string>(),
   };
 
-  for (let s = 0; s < SEEDS; s += 1) {
-    // Spread far apart so neighbouring seeds cannot share a prefix of the same stream.
-    const seed = 1000003 + s * 7919;
-    const first = play(loaded, seed, 'p1');
-    const second = play(loaded, seed, 'p2');
-    if (s === 0) {
-      // One extra match a game, to earn the frozen idle input the other 2N are driven with.
+  // Spread far apart so neighbouring seeds cannot share a prefix of the same stream.
+  const seedAt = (index: number): number => 1000003 + index * 7919;
+
+  /** Count one match, and the seed it stands for, into the share. */
+  const count = (result: Played): void => {
+    tally.matches += 1;
+    tally.steps += result.steps;
+    tally.outcomes.add(fingerprint(result));
+    if (result.winner === null) tally.unfinished += 1;
+    else if (result.winner === 'draw') {
+      tally.draws += 1;
+      tally.concluded += 1;
+    } else {
+      tally.concluded += 1;
+      if (result.winner === 'p1') tally.seatOne += 1;
+      else tally.seatTwo += 1;
+    }
+  };
+
+  /**
+   * Pairs that came apart without the winner or the length moving, kept until the sweep
+   * knows whether this game's {@link Tally.openerSwung} ended at zero. Only then is a
+   * scoreline that follows the opener a finding rather than the game working.
+   */
+  const silent: string[] = [];
+  /** Pairs that came apart at all - a finding only for a game that never read the opener. */
+  const divergent: string[] = [];
+
+  /** Everything the sweep can learn from having played both arms of one seed. */
+  const comparePair = (index: number, first: Played, second: Played): void => {
+    tally.pairsChecked += 1;
+    const swung = first.winner !== second.winner || first.steps !== second.steps;
+    if (swung) tally.openerSwung += 1;
+    if (!swung && first.p1 === second.p1 && first.p2 === second.p2) return;
+    const at = `seed ${String(seedAt(index))}`;
+    if (swung) {
+      divergent.push(`${at}: ${fingerprint(first)} against ${fingerprint(second)}`);
+    } else {
+      silent.push(
+        `${at}: the same winner after the same ${String(first.steps)} steps, but ` +
+          `${String(first.p1)}-${String(first.p2)} against ` +
+          `${String(second.p1)}-${String(second.p2)}`,
+      );
+    }
+  };
+
+  const probe: [Played, Played][] = [];
+  for (let index = 0; index < PROBE_SEEDS; index += 1) {
+    const seed = seedAt(index);
+    const first = play(loaded, seed, 'p1', SILENT, true);
+    const second = play(loaded, seed, 'p2', SILENT, true);
+    tally.played += 2;
+    if (index === 0) {
+      // One extra match a game, to earn the frozen idle input the rest are driven with.
       // It is also the third driver `measurable` needs: a game that only ever ends when
       // somebody touches the device is a measurable game with a broken bot, not a scaffold.
       const { width, height } = loaded.manifest.logical;
       const shouted = play(loaded, seed, 'p1', LOUD(width, height));
+      tally.played += 1;
       tally.readsInput = shouted.winner !== first.winner || shouted.steps !== first.steps;
       if (shouted.winner !== null) tally.concluded += 1;
     }
-    if (first.winner !== second.winner || first.steps !== second.steps) tally.openerSwung += 1;
-    for (const result of [first, second]) {
-      tally.matches += 1;
-      tally.steps += result.steps;
-      tally.outcomes.add(
-        `${String(result.winner)}:${String(result.steps)}:${String(result.p1)}:${String(result.p2)}`,
-      );
-      if (result.winner === null) tally.unfinished += 1;
-      else if (result.winner === 'draw') {
-        tally.draws += 1;
-        tally.concluded += 1;
-      } else {
-        tally.concluded += 1;
-        if (result.winner === 'p1') tally.seatOne += 1;
-        else tally.seatTwo += 1;
+    comparePair(index, first, second);
+    probe.push([first, second]);
+  }
+
+  tally.blind = probe.every(
+    ([first, second]) =>
+      !first.readOpener && !second.readOpener && fingerprint(first) === fingerprint(second),
+  );
+
+  if (tally.blind) {
+    // The second arm of each probe seed was the same match as the first. It has been used to
+    // prove that; counting it as well is the double-count this whole change is about.
+    for (const [first] of probe) {
+      count(first);
+      tally.seeds += 1;
+    }
+    for (let index = PROBE_SEEDS; index < SEEDS; index += 1) {
+      const seed = seedAt(index);
+      const first = play(loaded, seed, 'p1');
+      tally.played += 1;
+      count(first);
+      tally.seeds += 1;
+      if ((index - PROBE_SEEDS + 1) % AUDIT_EVERY === 0) {
+        const second = play(loaded, seed, 'p2');
+        tally.played += 1;
+        // A guard, not a sample: it is asserted to be the match already counted, so counting
+        // it again would put the double-count back one seed in twelve.
+        comparePair(index, first, second);
       }
+    }
+  } else {
+    for (const [first, second] of probe) {
+      count(first);
+      count(second);
+      tally.seeds += 1;
+    }
+    for (let index = PROBE_SEEDS; index < SEEDS; index += 1) {
+      const seed = seedAt(index);
+      const first = play(loaded, seed, 'p1');
+      const second = play(loaded, seed, 'p2');
+      tally.played += 2;
+      comparePair(index, first, second);
+      count(first);
+      count(second);
+      tally.seeds += 1;
+    }
+  }
+
+  if (tally.blind) {
+    // Every pair this game produced was supposed to be one match played twice.
+    for (const note of divergent) {
+      tally.unexplained.push(
+        `${note} - the two arms ended differently though the game never read ` +
+          `context.openingSeat, so something survived from one match into the next`,
+      );
+    }
+    for (const note of silent) {
+      tally.unexplained.push(
+        `${note} - the game never read context.openingSeat, so the two arms should have been ` +
+          `the same match`,
+      );
+    }
+  } else if (tally.openerSwung === 0) {
+    // #2494's guard: the report calls this game opener-blind, and it is not.
+    for (const note of silent) {
+      tally.unexplained.push(
+        `${note} - openerSwung is 0, so this game reads as opener-blind while the opening ` +
+          `seat is still moving its scoreline`,
+      );
     }
   }
   return tally;
@@ -495,19 +835,27 @@ function roundSeconds(tally: Tally): number {
 }
 
 /**
+ * The independent draws behind the decided matches.
+ *
+ * A seed is the unit, never a match: the two arms of a paired seed share an `Rng` seed, so
+ * they are one draw whether or not the opener moved them apart. This is the old
+ * `decided / 2`, written so it is also right for a single-arm game, where a seed *is* a
+ * match and halving would throw away evidence that was really collected.
+ */
+function decidedSeeds(tally: Tally): number {
+  return tally.matches === 0 ? 0 : (decided(tally) * tally.seeds) / tally.matches;
+}
+
+/**
  * What this sample can resolve, in share points: {@link SIGMAS} standard errors of a fair
  * coin over the number of **decided seeds**.
- *
- * A seed is the independent unit - its two halves share an `Rng` seed, and for a game that
- * ignores the opening seat they are the same match twice, so counting matches would claim
- * twice the evidence actually collected.
  *
  * The standard error uses 0.5 rather than the observed share deliberately. A game measured
  * at 100% has an observed variance of zero, and a tolerance built from that would be zero
  * points wide: the most broken game in the catalogue would get the tightest test of all.
  */
 function allowance(tally: Tally): number {
-  const seeds = decided(tally) / 2;
+  const seeds = decidedSeeds(tally);
   return seeds <= 0 ? 1 : SIGMAS * Math.sqrt(0.25 / seeds);
 }
 
@@ -524,7 +872,13 @@ interface Exception {
   readonly tier: Tier;
   /** Seat one's share of decided matches, or null when nothing was ever decided. */
   readonly share: number | null;
-  /** The sample the number was taken at, because a record without its sample is an opinion. */
+  /**
+   * The sample the number was taken at, because a record without its sample is an opinion.
+   * **Seeds, never matches** - the `normal` lines were taken from 1000 seeds played both ways,
+   * which was 2000 matches and 1000 independent draws. #2494 asked whether the double-count
+   * had inflated these; it had not, and `king-of-the-yard` re-measured over 1000 single-arm
+   * seeds confirms it to the tenth of a point.
+   */
   readonly seeds: number;
   readonly why: string;
 }
@@ -550,6 +904,17 @@ interface Exception {
  * lines it then held could have been repaired to a perfect 50% and kept their line, and the
  * list would have rotted into exactly the "games nobody has looked at since" it claims not to
  * be.
+ *
+ * **This rule has a hole, measured while #2494 was being fixed and left open on purpose.**
+ * There is no allowance in the come-back direction, and the push gate resolves 21.2 points
+ * against a band 10 points wide - so a record only a few points outside the band is read as
+ * "now fair" by chance alone. `king-of-the-yard` is 6.1 points out, which puts a false alarm
+ * demanding a correct line be deleted at roughly **one push in five**; it reads 44.0% here,
+ * one point from firing. It is not drift: re-measured for #2494 over 1000 single-arm seeds
+ * the game is **38.9%**, the recorded figure to the tenth of a point. Fixing it means giving
+ * the come-back check an evidence standard - fire only where the record sits further out than
+ * the run's own allowance - which is a change to what this file enforces and belongs to the
+ * band issue (#2492), not to this one.
  *
  * `crabby-volley` was the first thing the new rule caught. It was recorded at 55.9% - 0.9
  * points outside the band against an allowance of 4.7, a candidate rather than a finding -
@@ -588,7 +953,8 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     share: null,
     seeds: 1000,
     why:
-      'every one of 2000 matches ended 245-245. Two normal bots mirror each other exactly on ' +
+      'every one of 1000 seeds ended 245-245 - the sweep played 2000 matches for them, half ' +
+      'of which were the other half over again. Two normal bots mirror each other exactly on ' +
       'a symmetric board, so the territory count ties to the cell and the game cannot be ' +
       'balance-tested at all.',
   },
@@ -597,7 +963,8 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     tier: 'hard',
     share: null,
     seeds: 50,
-    why: 'ties on hard too, at 198-198, for the same mirroring reason. distinct 1.',
+    why: 'ties on hard too, at 198-198, for the same mirroring reason. distinct 1, so the ' +
+      'sample size is beside the point.',
   },
   {
     id: 'paint-fight',
@@ -605,27 +972,11 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     share: 1.0,
     seeds: 50,
     why:
-      'easy is the one tier that decides it, and it hands seat one every match of 100. So the ' +
-      'symmetric board is not symmetric at all - the tie on normal and hard was hiding a total ' +
-      'seat-one advantage, not proving fairness. distinct 1.',
-  },
-  {
-    id: 'hot-potato',
-    tier: 'normal',
-    share: 0.92,
-    seeds: 1000,
-    why:
-      'seat one takes 92%. Not yet root-caused. Measures 96% on the default fifty-seed sample, ' +
-      "which is inside that sample's 21.2-point allowance of the record and so cannot be " +
-      'called drift; only the 250- and 1000-seed runs can tell. hard is 58%, inside the band.',
-  },
-  {
-    id: 'hot-potato',
-    tier: 'easy',
-    share: 0.94,
-    seeds: 50,
-    why: 'the same advantage on easy, 94% of 100 decided from 3 distinct matches. Whatever ' +
-      'this is, it is not a bot-search artefact: it survives every tier.',
+      'easy is the one tier that decides it, and it hands seat one every one of 50 seeds. So ' +
+      'the symmetric board is not symmetric at all - the tie on normal and hard was hiding a ' +
+      'total seat-one advantage, not proving fairness. distinct 1, so the sample size is ' +
+      'beside the point. Taken before #2494; the same budget now buys 88 seeds and this is ' +
+      'due a re-measure on easy.',
   },
   {
     id: 'mini-soccer',
@@ -642,11 +993,15 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     share: 0.389,
     seeds: 1000,
     why:
-      'seat two takes 61%. Sits closest to the band of anything on this list: it measures ' +
-      '44.0% at fifty seeds, one point outside, so a bot change that moves it a little will ' +
-      'fail this file with "delete its line". That is the rule working, not a false alarm - ' +
-      're-measure at 1000 and either delete the line or rewrite it. hard is 56%, the other ' +
-      'side of 50 and inside the band, which is worth an issue of its own.',
+      'seat two takes 61%. Re-measured for #2494 over 1000 single-arm seeds and unchanged to ' +
+      'the tenth of a point from the 1000 pairs it was first taken at, which is the ' +
+      'demonstration that duplicating a sample does not move a mean. Sits closest to the band ' +
+      'of anything on this list, 6.1 points outside it against a sample that resolves 21.2, ' +
+      'so it measures 44.0% here - one point outside, and about one push in five reads it ' +
+      'inside the band and demands this correct line be deleted. That is a false alarm rather ' +
+      'than the rule working, and the hole it comes through is written up on ' +
+      'OUTSIDE_THE_BAND; it belongs to #2492. hard is 56%, the other side of 50 and inside ' +
+      'the band, which is worth an issue of its own.',
   },
   {
     id: 'hand-slap',
@@ -663,17 +1018,21 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     share: 1.0,
     seeds: 50,
     why:
-      'and on easy the same game gives seat ONE 100.0% of 100 decided matches, from 48 ' +
-      'distinct ones. An asymmetry that changes sign with the bot tier is not one bug.',
+      'and on easy the same game gives seat ONE 100.0% of 50 decided seeds - the sweep ' +
+      'reported 100 matches, but the game ignores the opening seat, so half of them were the ' +
+      'other half again and only 48 matches were distinct at all. An asymmetry that changes ' +
+      'sign with the bot tier is not one bug. Taken before #2494; the same budget now buys 88 ' +
+      'seeds on easy and this is due a re-measure.',
   },
   {
     id: 'hand-slap',
     tier: 'hard',
     share: 0.12,
     seeds: 50,
-    why: 'and on hard seat two takes 88%, worse than the 65% it takes on normal. The three ' +
-      'tiers read 100 / 35 / 12 percent for seat one, which is the strongest evidence in this ' +
-      'file that a single-tier balance number means nothing.',
+    why: 'and on hard seat two takes 88% of 50 seeds, worse than the 65% it takes on normal. ' +
+      'The three tiers read 100 / 35 / 12 percent for seat one, which is the strongest ' +
+      'evidence in this file that a single-tier balance number means nothing. Taken before ' +
+      '#2494 and due a re-measure at the 88 seeds the same budget now buys on hard.',
   },
   {
     id: 'tic-tac-toe',
@@ -681,9 +1040,11 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
     share: null,
     seeds: 50,
     why:
-      'every one of 100 matches drawn - which is what perfect play against perfect play does ' +
-      'to noughts and crosses, so this line is a statement about the harness, not the game: ' +
-      'a solved game at its top tier has no balance to measure. distinct 1.',
+      'every one of 50 seeds drawn under both opening seats - which is what perfect play ' +
+      'against perfect play does to noughts and crosses, so this line is a statement about ' +
+      'the harness, not the game: a solved game at its top tier has no balance to measure. ' +
+      'distinct 1, so the sample size is beside the point. This game reads the opening seat, ' +
+      'so #2494 leaves it on the paired sweep.',
   },
 ];
 
@@ -740,13 +1101,29 @@ function report(): string {
   const outsideBand = rows.filter(outsideFlatBand).length;
   const beyondNoise = rows.filter(provenOutside).length;
 
+  const solo = rows.filter((tally) => tally.blind);
   const lines: string[] = [''];
   lines.push(
-    `BALANCE AT EQUAL SKILL - ${TIER} v ${TIER}, ${String(SEEDS)} seeds x 2 opening seats = ` +
-      `${String(SEEDS * 2)} matches per game over ${String(rows.length)} measurable games, ` +
-      `${sweepSeconds.toFixed(1)}s`,
+    `BALANCE AT EQUAL SKILL - ${TIER} v ${TIER}, ${String(MATCH_BUDGET)} matches per game ` +
+      `over ${String(rows.length)} measurable games, ${sweepSeconds.toFixed(1)}s`,
   );
   lines.push('');
+  lines.push(
+    `  SAMPLE    ${String(SEEDS)} seeds either way. A game that reads context.openingSeat ` +
+      `plays each of them twice, once per`,
+  );
+  lines.push(
+    `                          opening seat; one that never reads it plays each once, because ` +
+      `its two arms are the same`,
+  );
+  lines.push(
+    `                          match - ${String(solo.length)} of ${String(rows.length)} games ` +
+      `today, at ${String(soloMatches())} matches against ${String(MATCH_BUDGET)}. Same seeds, ` +
+      `same share, same +/-;`,
+  );
+  lines.push(
+    `                          the decided and distinct columns stop counting the duplicate.`,
+  );
   lines.push(
     `  CLAIMED   ${(BAND_LOW * 100).toFixed(0)}-${(BAND_HIGH * 100).toFixed(0)}%       ` +
       `the band the fifty open issues ask for, and the headline of this file.`,
@@ -771,7 +1148,8 @@ function report(): string {
   lines.push(`                          and only those ${String(beyondNoise)} can fail.`);
   lines.push('');
   lines.push(
-    'game                      archetype   seat-one   +/-    decided  draws  round(s)  opener  distinct',
+    'game                      archetype   seat-one   +/-  seeds  decided  draws  round(s)   ' +
+      'opener  distinct',
   );
   for (const tally of rows) {
     const value = share(tally);
@@ -783,10 +1161,11 @@ function report(): string {
         tally.archetype.padEnd(11),
         pct(value),
         (allowance(tally) * 100).toFixed(1).padStart(6),
+        String(tally.seeds).padStart(5),
         String(decided(tally)).padStart(8),
         pct(drawRate(tally)),
         roundSeconds(tally).toFixed(1).padStart(9),
-        String(tally.openerSwung).padStart(7),
+        `${String(tally.openerSwung)}/${String(tally.pairsChecked)}`.padStart(8),
         String(tally.outcomes.size).padStart(8),
         proven ? (recordedFor(tally.id) ? '  OUT (recorded)' : '  OUT') : outside ? '  ?' : '',
       ].join(' '),
@@ -802,37 +1181,69 @@ function report(): string {
       `seeds means only that the sample is small.`,
   );
   lines.push(
-    `opener: of ${String(SEEDS)} seed pairs, how many ended differently when only the opening ` +
-      `seat changed. ${String(blind.length)} of ${String(rows.length)} games ignored it entirely.`,
+    `opener: of the seed pairs both arms of which were played, how many ended differently ` +
+      `when only the opening seat changed. ${String(blind.length)} of ${String(rows.length)} ` +
+      `games never swung; ${String(solo.length)} of those never read context.openingSeat at ` +
+      `all and are the ones measured from one arm.`,
   );
   const scripted = rows.filter((tally) => tally.outcomes.size === 1);
   lines.push(
-    `distinct: how many different matches the ${String(SEEDS * 2)} produced. ` +
-      `${String(scripted.length)} games produced exactly one, so for those the share above is ` +
-      `exact and the sample size means nothing: ${scripted.map((t) => t.id).join(', ') || 'none'}`,
+    `distinct: how many different matches the counted ones were. ${String(scripted.length)} ` +
+      `games produced exactly one, so for those the share above is exact and the sample size ` +
+      `means nothing: ${scripted.map((t) => t.id).join(', ') || 'none'}`,
   );
   lines.push(
     `unmeasurable, skipped: ${String(dark.length)} of ${String(TALLIES.size)} games reached no ` +
-      `conclusion at all - not a win, not a draw - in any of ${String(SEEDS * 2 + 1)} matches, ` +
-      `under either opening seat or with the device shouted at. Computed, not listed: ` +
-      `${dark.map((t) => t.id).join(', ') || 'none'}`,
+      `conclusion at all - not a win, not a draw - in any of their ` +
+      `${String(MATCH_BUDGET + 1)} matches, under either opening seat or with the device ` +
+      `shouted at. Computed, not listed: ${dark.map((t) => t.id).join(', ') || 'none'}`,
   );
+  const odd = rows.filter((tally) => tally.unexplained.length > 0);
+  if (odd.length > 0) {
+    lines.push('');
+    lines.push(
+      `HIDDEN PER-OPENER STATE - ${String(odd.length)} games produced two arms of one seed ` +
+        `that the opening seat cannot explain. Halving the sweep for these would be wrong:`,
+    );
+    for (const tally of odd) {
+      for (const note of tally.unexplained.slice(0, 3)) lines.push(`  ${tally.id}: ${note}`);
+      if (tally.unexplained.length > 3) {
+        lines.push(`  ${tally.id}: and ${String(tally.unexplained.length - 3)} more`);
+      }
+    }
+  }
   lines.push('');
   const mine = OUTSIDE_THE_BAND.filter((entry) => entry.tier === TIER).length;
   lines.push(
     `OUTSIDE THE BAND - every line is an issue. ${String(OUTSIDE_THE_BAND.length)} records over ` +
-      `three tiers; the ${String(mine)} tagged [${TIER}] are the ones this run gates, one-sided: ` +
-      `a listed game may drift further out by up to its allowance, and may not come back inside ` +
-      `the flat band without failing.`,
+      `three tiers; the ${String(mine)} tagged [${TIER}] are the ones this run gates, ` +
+      `one-sided: a listed game may drift further out by up to its allowance, and may not come ` +
+      `back inside the flat band without failing - the latter only where the record sits ` +
+      `further out than this run's allowance, so that a repair can be told from a bad sample.`,
   );
   if (OUTSIDE_THE_BAND.length === 0) lines.push('  (none recorded)');
   for (const entry of OUTSIDE_THE_BAND) {
     const was = entry.share === null ? 'never decides' : `${(entry.share * 100).toFixed(1)}%`;
     const fresh = entry.tier === TIER ? TALLIES.get(entry.id) : undefined;
     const now = fresh === undefined ? 'other tier' : pct(share(fresh)).trim();
+    // How far outside the band the record sits, against what this run can resolve. Where the
+    // first is smaller than the second, a reading inside the band means nothing and the
+    // one-sided check above will fire on noise - see the hole recorded on OUTSIDE_THE_BAND.
+    const outBy =
+      entry.share === null
+        ? null
+        : entry.share > BAND_HIGH
+          ? entry.share - BAND_HIGH
+          : BAND_LOW - entry.share;
+    const tolerance = fresh === undefined ? null : allowance(fresh);
+    const fragile =
+      outBy === null || tolerance === null || outBy > tolerance
+        ? ''
+        : `  [${(outBy * 100).toFixed(1)} pts out, sample resolves ` +
+          `${(tolerance * 100).toFixed(1)}: a reading inside the band here would be noise]`;
     lines.push(
       `  [${entry.tier.padEnd(6)}] ${entry.id.padEnd(18)} recorded ${was.padStart(13)} ` +
-        `@${String(entry.seeds)} seeds  now ${now.padStart(10)}  ${entry.why}`,
+        `@${String(entry.seeds)} seeds  now ${now.padStart(10)}${fragile}  ${entry.why}`,
     );
   }
   if (NO_BOT.length > 0) lines.push(`no bot, not measured: ${NO_BOT.join(', ')}`);
@@ -886,8 +1297,40 @@ describe('the balance harness', () => {
       `these games are in the registry and were never measured: ${missed.join(', ')}`,
     ).toEqual([]);
     for (const tally of TALLIES.values()) {
-      expect(tally.matches, `${tally.id} played the wrong number of matches`).toBe(SEEDS * 2);
+      // Every game samples the same seeds; what differs is whether it had to play each of
+      // them twice. The one extra match is the shouted probe, which is outside the budget.
+      expect(tally.played, `${tally.id} played the wrong number of matches`).toBe(
+        plannedMatches(tally.blind) + 1,
+      );
+      expect(tally.matches, `${tally.id} counted the wrong number of matches`).toBe(
+        tally.blind ? tally.seeds : tally.seeds * 2,
+      );
+      expect(tally.seeds, `${tally.id} sampled the wrong number of seeds`).toBe(SEEDS);
     }
+  });
+
+  it('never counts the same match twice, and says so when it cannot tell', () => {
+    // The guard #2494 asked for in as many words. A game is measured from one arm only when
+    // it never reads `context.openingSeat`, which makes the arm it skipped the arm it played:
+    // the two contexts differ in that property and in nothing else. `PROBE_SEEDS` seeds prove
+    // it up front and one seed in `AUDIT_EVERY` keeps proving it, and anything the opening
+    // seat cannot account for is collected rather than absorbed.
+    //
+    // Two shapes land here, and neither may be silently halved. A pair with the same winner
+    // after the same number of steps but a different scoreline is per-opener state that
+    // `openerSwung` is blind to by construction. A pair that differs at all in a game that
+    // never asked which seat opened is state surviving from one match into the next, which
+    // would make every number in this file a measurement of the harness.
+    const found = [...TALLIES.values()].filter((tally) => tally.unexplained.length > 0);
+    const detail = found
+      .map((tally) => `${tally.id} - ${tally.unexplained[0] ?? ''}`)
+      .join('\n  ');
+    expect(
+      found.map((tally) => tally.id),
+      `these games produced two arms of one seed that the opening seat cannot explain, so ` +
+        `they have hidden per-opener state and must not be measured from one arm:\n  ` +
+        `${detail}`,
+    ).toEqual([]);
   });
 
   it('is not measuring anything a person at the device could have changed', () => {

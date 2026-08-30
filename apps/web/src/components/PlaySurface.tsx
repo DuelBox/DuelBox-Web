@@ -12,7 +12,7 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
-import { seatColour } from '@/styles/tokens';
+import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio } from '@/lib/audio';
 import {
@@ -310,7 +310,7 @@ export function PlaySurface({ slug }: { slug: string }) {
                 start(offer);
               }}
             >
-              {offer === 'friend' ? 'Play together here' : `Play against ${seatColour.p2.name}`}
+              {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
             </button>
           ))}
         </div>
@@ -319,15 +319,23 @@ export function PlaySurface({ slug }: { slug: string }) {
     );
   }
 
-  const seatNames: Partial<Record<SeatId, string>> =
-    mode === 'bot' ? { p2: `${seatColour.p2.name} (bot)` } : { p2: 'Player two' };
+  /**
+   * What the two seats are called this match.
+   *
+   * Derived from the same `botSeats` map the game host is handed, so the scoreboard, the
+   * result screen and the simulation cannot disagree about who is a bot. The shell used to
+   * write a *partial* override here — seat two only — and leave seat one to whatever
+   * fallback each component happened to carry, which is how the HUD came to read
+   * "Pip vs Player two" (#2513).
+   */
+  const seatNames = seatNamesFor(botSeats);
 
   const hudProps = {
     state: match,
     rounds: rules.rounds ?? 1,
     activeSeat,
     seatNames,
-    botSeats: mode === 'bot' ? { p2: true } : undefined,
+    botSeats,
   };
 
   return (

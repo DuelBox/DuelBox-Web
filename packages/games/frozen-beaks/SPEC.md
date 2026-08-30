@@ -489,19 +489,23 @@ two seat orders.
 
 ### Against the repository's own harness
 
-`apps/web/src/data/balance-aggregate.test.ts` measures every game at `normal` over 50 seed
-pairs with a frozen idle input. Replicated exactly against this game: **42.0% of 100 decided
-matches, no draws, none unfinished, 34.7 s a match**, `openerSwung` 0, `readsInput` false,
-`distinct` 49.
+`apps/web/src/data/balance-aggregate.test.ts` measures every game at `normal` with a frozen
+idle input. This game never reads `context.openingSeat`, so since #2494 the harness plays each
+seed once instead of twice and spends the same budget on **88 seeds**. Replicated exactly
+against this game: **53.4% of 88 decided matches, no draws, none unfinished, 33.2 s a match**,
+`openerSwung` 0, `readsInput` false, `distinct` 88.
 
-42.0% is three points outside the flat 45–55% claim and well inside the 21.2-point allowance
-that sample gets, so it passes — but it is worth being exact about why the reading is loose.
-A real-time game ignores the opening seat, so the harness's two matches per seed are the
-same match and the effective sample is **50, not 100**: three sigma is 21 points and a
-reading anywhere from 30% to 70% would be indistinguishable from fair. Run on the same seed
-family at 600 seeds the game reads **46.9% / 52.2% / 50.5%** at the three tiers, all inside
-the flat band, which agrees with the 1500-seed table above. The 42.0% is the sample, not the
-game.
+That fixed a reading this section carried for exactly the reason it set out here. The harness
+used to report **42.0% of 100 decided matches, `distinct` 49** — 50 seeds played twice, so 49
+of the 100 were the other 51 again and the effective sample was **50, not 100**. The 42.0%
+itself was never wrong; a duplicated sample cannot move a mean. What was wrong was the "100",
+and what it cost was the seeds the second arm could have bought: three sigma over 50 seeds is
+21.2 points and a reading anywhere from 30% to 70% would have been indistinguishable from
+fair, against 16.0 points over the 88 seeds the same budget now buys.
+
+And the prediction held. Run on the same seed family at 600 seeds the game reads **46.9% /
+52.2% / 50.5%** at the three tiers, all inside the flat band, agreeing with the 1500-seed
+table above; the 88-seed sweep now reads 53.4%. The 42.0% was the sample, not the game.
 
 `openerSwung` is 0 because a real-time game has no opener — the SDK contract says so
 outright ("Real-time games have no opener and may ignore this"). Both birds start on
