@@ -42,7 +42,35 @@ Only `frame-ancestors` is left to the header files, because a meta tag cannot ex
 The reasoning, including the two approaches that failed on size first, is at the top of
 [`scripts/emit-host-config.mjs`](../scripts/emit-host-config.mjs).
 
-## Two hosts, one artefact
+## What this project actually deploys to
+
+**GitHub Pages**, via `actions/deploy-pages` in `.github/workflows/deploy.yml`. That matters
+more than it looks, because **Pages serves no custom response headers at all**, so most of
+the set generated above is written, CI-checked, and then discarded by the host.
+
+What survives, and what does not:
+
+| | on GitHub Pages |
+|---|---|
+| Content-Security-Policy | **served** — it travels in each page's `<meta http-equiv>` |
+| HSTS | **served**, but by Pages itself on a `github.io` domain, not by us |
+| `frame-ancestors` | **not served** — a meta tag cannot express it |
+| COOP, COEP, CORP | **not served** |
+| Permissions-Policy | **not served** |
+| `X-Frame-Options`, `X-Content-Type-Options` | **not served** |
+
+So `_headers` and `vercel.json` are real and correct and nobody reads them today. The
+strongest half of the policy does apply, because it was deliberately built to need no host
+configuration — but any threat model that assumes COOP, CORP or `frame-ancestors` is in
+force is assuming something this deployment does not provide. Issue #2481 tracks the choice
+between moving to a host that reads `_headers` — Cloudflare Pages and Netlify both do, both
+free — and accepting the gap deliberately.
+
+`scripts/check-headers.mjs` checks the *artefact*, not the origin. It cannot tell you a
+header reached a browser; only `curl -sI` against the live origin can, which is why the
+verification step below exists.
+
+## Two hosts that would serve the whole set
 
 ### Cloudflare Pages
 
@@ -68,9 +96,6 @@ Or connect the repository with build command `pnpm build` and publish directory
 
 - **Vercel** — `npx vercel deploy --prebuilt` after pointing the output directory at
   `apps/web/out`, or connect the repo. Reads `vercel.json`.
-- **GitHub Pages** — push `apps/web/out` to `gh-pages`. Pages serves no custom headers at
-  all, which is exactly the case the meta-tag policy exists for: the CSP still applies, and
-  HSTS is provided by Pages itself on a `github.io` domain.
 - **S3 + CloudFront, or any bucket** — upload the directory, set the index document to
   `index.html`, and paste the CloudFront response-headers policy from
   `security-headers.conf.txt`.

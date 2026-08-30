@@ -10,6 +10,20 @@
  * This reads the *emitted artefact*, not the source it was emitted from. Asserting that
  * `security-headers.mjs` contains what `security-headers.mjs` contains would pass happily
  * on a build where `emit-host-config.mjs` never ran.
+ *
+ * ## What it cannot tell you
+ *
+ * That a header reached a browser. It checks that the files say the right thing, and this
+ * project deploys to **GitHub Pages, which serves no custom response headers at all** — so
+ * `_headers` and `vercel.json` are generated, checked here, and then discarded by the host.
+ * Of the set below only the CSP survives, because it travels in each page's `<meta>` tag,
+ * and HSTS, which Pages adds itself on a `github.io` domain. `frame-ancestors`, COOP, COEP,
+ * CORP and Permissions-Policy do not.
+ *
+ * That is worth stating where the check lives, because a green step named "check headers"
+ * reads like a live-site guarantee and is not one. Only `curl -sI` against the origin can
+ * say that, which is the verification step in `docs/deploy.md`. Issue #2481 tracks the
+ * choice between moving to a host that reads `_headers` and accepting the gap knowingly.
  */
 
 import { readFile, readdir } from 'node:fs/promises';
