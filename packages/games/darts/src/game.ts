@@ -152,6 +152,19 @@ export class DartsGame implements Game {
     }
     this.#flip.retarget(this.#shouldRotate());
     this.#flip.step(fixedDeltaSeconds);
+
+    // Input **edges** are read here, above the phase switch, and not down with the aiming
+    // code that acts on them.
+    //
+    // `pointerCancelled` is true for exactly one step — the engine clears it on the next —
+    // and the phases below return early. A cancel raised while a dart was in the air was
+    // therefore over before the game next looked at the seat, and was silently dropped
+    // (#2505). Reading it up here means every phase *observes* the edge and chooses to
+    // ignore it, rather than never being offered it; the alternative, latching the bit
+    // until somebody reads it, would change its meaning from "this step" to "since you
+    // last looked" for every game in the catalogue.
+    this.#readCancel(input);
+
     if (this.#matchWinner !== null) return;
 
     if (this.#settleSteps > 0) {
@@ -283,8 +296,39 @@ export class DartsGame implements Game {
     return this.#stuck.length;
   }
 
+  /** Whether an aim has been made this turn, which is what a throw needs and a cancel drops. */
+  get hasAimed(): boolean {
+    return this.#aimed;
+  }
+
+  get aimX(): number {
+    return this.#aim.x;
+  }
+
+  get aimY(): number {
+    return this.#aim.y;
+  }
+
   #stateOf(seat: SeatId): SeatState {
     return seat === 'p1' ? this.#p1 : this.#p2;
+  }
+
+  /**
+   * A gesture taken away rather than let go: abandon the aim it was carrying.
+   *
+   * Per `docs/input-idiom.md` a cancel is the opposite of a release — it never arrives on
+   * the same step as one — so nothing is committed and the reticle goes back to centre.
+   * The next dart has to be aimed afresh, instead of inheriting a gesture that the player
+   * never finished making and the game believes ended normally.
+   *
+   * A dart already committed is not recalled: it left the hand before the cancel.
+   */
+  #readCancel(input: InputState): void {
+    if (!input.seat(this.#active).pointerCancelled) return;
+    this.#aimed = false;
+    this.#pointerAiming = false;
+    this.#aim.x = 0;
+    this.#aim.y = 0;
   }
 
   #land(): void {
