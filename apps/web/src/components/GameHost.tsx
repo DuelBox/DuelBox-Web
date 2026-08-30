@@ -26,6 +26,7 @@ import {
   type GameManifest,
   type MatchPhase,
 } from '@duelbox/game-sdk';
+import { audio } from '@/lib/audio';
 import styles from './GameHost.module.css';
 
 /**
@@ -356,6 +357,9 @@ export function GameHost({
         renderer.beginFrame();
         game.render(renderer, alpha);
         renderer.endFrame();
+        // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
+        // sound from inside `update()` stays allocation-free (rule 5).
+        audio().flush();
       },
     });
     loopRef.current = loop;

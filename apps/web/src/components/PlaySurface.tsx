@@ -14,6 +14,7 @@ import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
 import { seatColour } from '@/styles/tokens';
 import { readSetup, writeSetup } from '@/lib/last-mode';
+import { armAudio } from '@/lib/audio';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
@@ -59,6 +60,22 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [getTrace, setGetTrace] = useState<(() => string) | null>(null);
   useEffect(() => {
     setRecording(new URLSearchParams(globalThis.location.search).get('trace') === '1');
+  }, []);
+
+  /**
+   * Armed here rather than in `GameHost`, and the difference is the whole point.
+   *
+   * `GameHost` mounts only *after* Start is pressed, so by the time it could attach a
+   * listener the gesture that should have unlocked audio has already happened, and the
+   * first match plays in silence — which is the failure #167 describes, reached from the
+   * other side. The play page mounts before Start, so the Start tap is itself the
+   * unlocking gesture and nobody is ever asked for permission.
+   *
+   * Idempotent, and `armAudio` also re-arms after iOS suspends the context for a
+   * backgrounded tab or a phone call.
+   */
+  useEffect(() => {
+    armAudio();
   }, []);
   // The running head-to-head for this sitting. A pair that plays five in a row wants to
   // know the score across all five, not just the last one.
