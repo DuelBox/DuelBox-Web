@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
+import { categorySlug } from '@/lib/categories';
 import { formatRound } from '@/lib/format';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { absoluteUrl } from '@/lib/site';
@@ -151,16 +152,32 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {related.length > 0 ? (
-        <section className={styles.related}>
-          <h2 className={styles.relatedTitle}>More {game.category.toLowerCase()} games</h2>
+      {/*
+        The heading is a link, so the six related games below it are a sample of a category
+        rather than the end of the road: the hub has the rest (#200).
+
+        It sits *outside* the grid's guard, and that is the whole of it. Rhythm, Stealth,
+        Deduction and Racing & Trails hold one game each, so on those four pages `related`
+        is empty — and while the link lived inside the guard those four hubs had no inbound
+        link from anywhere on the site. The footer carries the six largest only, and the
+        catalogue's category chips are filter buttons rather than links, so the sitemap knew
+        about four pages that no reader could reach, which is exactly what `SiteFooter.tsx`
+        says the hubs exist to avoid.
+      */}
+      <section className={styles.related}>
+        <h2 className={styles.relatedTitle}>
+          <Link href={`/games/category/${categorySlug(game.category)}/`}>
+            {related.length > 0 ? 'More' : 'All'} {game.category.toLowerCase()} games
+          </Link>
+        </h2>
+        {related.length > 0 ? (
           <div className={styles.grid}>
             {related.map((other) => (
               <GameCard key={other.id} game={other} />
             ))}
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
     </div>
   );
 }

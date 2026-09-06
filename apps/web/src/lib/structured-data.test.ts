@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogueEntry } from '../data/catalogue.generated';
-import { serialiseJsonLd, videoGameJsonLd } from './structured-data';
+import { collectionPageJsonLd, serialiseJsonLd, videoGameJsonLd } from './structured-data';
 
 const PAGE_URL = 'https://duelbox.github.io/DuelBox-Web/games/air-hockey/';
 
@@ -72,6 +72,48 @@ describe('the VideoGame block', () => {
     expect(playModeFor(['friend', 'solo'])).toEqual(['MultiPlayer', 'SinglePlayer']);
     expect(playModeFor(['friend', 'bot', 'solo'])).toEqual(['MultiPlayer', 'SinglePlayer']);
     expect(playModeFor(['solo'])).toEqual(['SinglePlayer']);
+  });
+});
+
+describe('the CollectionPage block', () => {
+  const HUB_URL = 'https://duelbox.github.io/DuelBox-Web/games/category/sports/';
+  const page = {
+    name: 'Two-player sports games',
+    description: 'Two player sports games on one phone.',
+    url: HUB_URL,
+  };
+  const items = [
+    { name: 'Air Hockey', url: 'https://duelbox.github.io/DuelBox-Web/games/air-hockey/' },
+    { name: 'Bowling', url: 'https://duelbox.github.io/DuelBox-Web/games/bowling/' },
+  ];
+
+  it('describes the page rather than the games on it', () => {
+    expect(collectionPageJsonLd(page, items)).toMatchObject({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Two-player sports games',
+      description: 'Two player sports games on one phone.',
+      url: HUB_URL,
+    });
+  });
+
+  it('numbers the list, because the order is the part the markup does not carry', () => {
+    const block = collectionPageJsonLd(page, items);
+    expect(block['mainEntity']).toEqual({
+      '@type': 'ItemList',
+      numberOfItems: 2,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Air Hockey', url: items[0]?.url },
+        { '@type': 'ListItem', position: 2, name: 'Bowling', url: items[1]?.url },
+      ],
+    });
+  });
+
+  it('counts what it lists, so an empty category cannot claim otherwise', () => {
+    expect(collectionPageJsonLd(page, [])['mainEntity']).toMatchObject({
+      numberOfItems: 0,
+      itemListElement: [],
+    });
   });
 });
 
