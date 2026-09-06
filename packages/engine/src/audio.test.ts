@@ -20,8 +20,84 @@ import { Rng } from './rng.js';
  * in exactly that runtime, because that is the runtime the static export is built in.
  */
 
+interface Automation {
+  readonly kind: 'set' | 'linear';
+  readonly value: number;
+  readonly time: number;
+}
+
+/**
+ * A parameter that models its automation timeline rather than just remembering a number.
+ *
+ * The ducking tests are entirely about the difference between a ramp and a jump, and a fake
+ * whose `value` is whatever was last assigned cannot tell those apart — both end at the same
+ * number. This one keeps the event list a real `AudioParam` keeps and computes the value at
+ * any time from it, so a test can look at the gain part-way through a ramp and see a value
+ * that is neither end of it.
+ *
+ * It also reproduces the one genuinely surprising behaviour of the real thing:
+ * `cancelScheduledValues` drops the events at or after the cancel time and reverts to the
+ * last one *before* it, rather than holding what the ramp had reached. Code that reads the
+ * parameter after cancelling reads the value the ramp started from, and the fake has to be
+ * unhelpful in the same way or the test proves nothing.
+ */
 class FakeParam implements AudioParamLike {
-  value = 1;
+  /** Direct assignments to `.value`. A duck that increments this has stepped, i.e. clicked. */
+  steps = 0;
+  readonly events: Automation[] = [];
+  #constant = 1;
+  readonly #clock: () => number;
+
+  constructor(clock: () => number = () => 0) {
+    this.#clock = clock;
+  }
+
+  get value(): number {
+    return this.valueAt(this.#clock());
+  }
+
+  set value(next: number) {
+    this.steps += 1;
+    this.events.length = 0;
+    this.#constant = next;
+  }
+
+  setValueAtTime(value: number, startTime: number): unknown {
+    this.events.push({ kind: 'set', value, time: startTime });
+    return this;
+  }
+
+  linearRampToValueAtTime(value: number, endTime: number): unknown {
+    this.events.push({ kind: 'linear', value, time: endTime });
+    return this;
+  }
+
+  cancelScheduledValues(startTime: number): unknown {
+    const kept = this.events.filter((event) => event.time < startTime);
+    this.events.length = 0;
+    for (const event of kept) this.events.push(event);
+    return this;
+  }
+
+  /** The value the parameter has at `time`, automation and all. */
+  valueAt(time: number): number {
+    let current = this.#constant;
+    let lastTime = Number.NEGATIVE_INFINITY;
+    for (const event of this.events) {
+      if (event.time <= time) {
+        current = event.value;
+        lastTime = event.time;
+        continue;
+      }
+      if (event.kind === 'set') break; // a step in the future has not happened yet
+      // Inside a ramp: interpolate from the event before it to this one.
+      if (!Number.isFinite(lastTime)) return event.value;
+      const span = event.time - lastTime;
+      if (span <= 0) return event.value;
+      return current + (event.value - current) * ((time - lastTime) / span);
+    }
+    return current;
+  }
 }
 
 class FakeNode implements AudioNodeLike {
@@ -38,7 +114,14 @@ class FakeNode implements AudioNodeLike {
 }
 
 class FakeGain extends FakeNode implements GainNodeLike {
-  readonly gain = new FakeParam();
+  readonly gain: FakeParam;
+
+  /** The clock comes from the context, because automation is scheduled against that clock
+   * and a parameter that could not read it would have nothing to interpolate along. */
+  constructor(clock: () => number) {
+    super();
+    this.gain = new FakeParam(clock);
+  }
 }
 
 class FakeBuffer implements AudioBufferLike {
@@ -47,13 +130,14 @@ class FakeBuffer implements AudioBufferLike {
 
 class FakeSource extends FakeNode implements AudioBufferSourceNodeLike {
   buffer: AudioBufferLike | null = null;
-  readonly playbackRate = new FakeParam();
+  readonly playbackRate: FakeParam;
   starts = 0;
   readonly #log: string[];
 
-  constructor(log: string[]) {
+  constructor(log: string[], clock: () => number) {
     super();
     this.#log = log;
+    this.playbackRate = new FakeParam(clock);
   }
 
   start(): void {
@@ -82,6 +166,8 @@ class FakeContext implements AudioContextLike {
   resumeCalls = 0;
   closeCalls = 0;
   readonly #settling: Promise<void>[] = [];
+  /** One closure, shared by every node this context makes, rather than one per node. */
+  readonly #clock = (): number => this.currentTime;
 
   resume(): Promise<void> {
     this.resumeCalls += 1;
@@ -104,14 +190,14 @@ class FakeContext implements AudioContextLike {
 
   createGain(): GainNodeLike {
     this.log.push('createGain');
-    const gain = new FakeGain();
+    const gain = new FakeGain(this.#clock);
     this.gains.push(gain);
     return gain;
   }
 
   createBufferSource(): AudioBufferSourceNodeLike {
     this.log.push('createBufferSource');
-    const source = new FakeSource(this.log);
+    const source = new FakeSource(this.log, this.#clock);
     this.sources.push(source);
     return source;
   }
@@ -610,6 +696,261 @@ describe('the sound surface', () => {
     const before = context.sources.length;
     audio.flush();
     expect(context.sources.length).toBe(before);
+  });
+});
+
+/**
+ * Ducking, for #172.
+ *
+ * Three things are being asserted throughout and each of them is a bug that has shipped in
+ * somebody's game: that the level *moves* rather than jumps, because a step on a gain node
+ * is an audible click; that overlapping ducks are counted, because a countdown that ends
+ * while an announcement is still speaking must not take the announcement's duck with it;
+ * and that a duck and a mute never disagree, because a duck that un-mutes is the worst
+ * possible way to find out the two were written independently.
+ */
+describe('ducking', () => {
+  it('ramps down rather than jumping', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    // A real context clock is nowhere near zero by the time a match is running.
+    context.currentTime = 4;
+    const stepsBefore = master.gain.steps;
+
+    audio.duck();
+
+    expect(audio.ducked).toBe(true);
+    // At the instant the duck is taken the level has not moved at all, and a millisecond
+    // later it is on its way without having arrived. A jump would be at 0.25 in both places.
+    expect(master.gain.valueAt(4)).toBe(1);
+    const justAfter = master.gain.valueAt(4.001);
+    expect(justAfter).toBeLessThan(1);
+    expect(justAfter).toBeGreaterThan(0.25);
+    // Arrived, and staying: a ramp that keeps going is a fade, not a duck.
+    expect(master.gain.valueAt(5)).toBeCloseTo(0.25, 6);
+    expect(master.gain.valueAt(60)).toBeCloseTo(0.25, 6);
+    // Nothing was assigned to the parameter directly, which is the only way to click.
+    expect(master.gain.steps).toBe(stepsBefore);
+  });
+
+  it('ramps back up when the duck is released', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.duck();
+    context.currentTime = 3;
+
+    audio.unduck();
+
+    expect(audio.ducked).toBe(false);
+    expect(master.gain.valueAt(3)).toBeCloseTo(0.25, 6);
+    const justAfter = master.gain.valueAt(3.001);
+    expect(justAfter).toBeGreaterThan(0.25);
+    expect(justAfter).toBeLessThan(1);
+    expect(master.gain.valueAt(4)).toBeCloseTo(1, 6);
+  });
+
+  it('counts ducks, so one release does not undo the other', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+
+    audio.duck(); // the countdown
+    context.currentTime = 1;
+    audio.duck(); // an announcement over the top of it
+    context.currentTime = 2;
+
+    audio.unduck(); // the countdown finishes first
+    expect(audio.ducked).toBe(true);
+    // The announcement is still speaking. The match stays down.
+    expect(master.gain.valueAt(4)).toBeCloseTo(0.25, 6);
+
+    context.currentTime = 3;
+    audio.unduck();
+    expect(audio.ducked).toBe(false);
+    expect(master.gain.valueAt(6)).toBeCloseTo(1, 6);
+  });
+
+  it('holds the deepest duck while more than one is held', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+
+    audio.duck(0.5);
+    context.currentTime = 1;
+    audio.duck(0.1);
+    expect(master.gain.valueAt(2)).toBeCloseTo(0.1, 6);
+
+    context.currentTime = 2;
+    audio.unduck();
+    // Back to the outer duck's depth, not back to full: something is still holding it.
+    expect(master.gain.valueAt(3)).toBeCloseTo(0.5, 6);
+
+    context.currentTime = 3;
+    audio.unduck();
+    expect(master.gain.valueAt(4)).toBeCloseTo(1, 6);
+  });
+
+  it('takes a second duck from where the first ramp had got to', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+
+    audio.duck(0.5);
+    context.currentTime = 0.03; // half way down the first ramp
+    const midway = master.gain.value;
+    expect(midway).toBeLessThan(1);
+    expect(midway).toBeGreaterThan(0.5);
+
+    audio.duck(0.25);
+
+    // Cancelling scheduled automation reverts a parameter to the last event *before* the
+    // cancel — 1, here — rather than holding what the ramp had reached. Reading the level
+    // after cancelling instead of before it would pin that 1, and the match would jump back
+    // to full volume for a fraction of a second in the middle of what it is ducking for.
+    expect(master.gain.valueAt(0.03)).toBeCloseTo(midway, 6);
+    expect(master.gain.valueAt(1)).toBeCloseTo(0.25, 6);
+  });
+
+  it('cannot be left owing a duck by a release with nothing held', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+
+    audio.unduck();
+    audio.unduck();
+    expect(audio.ducked).toBe(false);
+    expect(master.gain.valueAt(1)).toBe(1);
+
+    // A counter that had gone to -2 would swallow the next two announcements whole.
+    audio.duck();
+    expect(audio.ducked).toBe(true);
+    expect(master.gain.valueAt(1)).toBeCloseTo(0.25, 6);
+  });
+
+  it('does not un-mute when a duck is taken while muted', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.setMuted(true);
+
+    audio.duck();
+
+    expect(audio.ducked).toBe(true);
+    expect(audio.muted).toBe(true);
+    // Not at any point along the ramp, not just at the end of it.
+    for (const time of [0, 0.001, 0.03, 0.06, 5]) {
+      expect(master.gain.valueAt(time)).toBe(0);
+    }
+  });
+
+  it('comes back ducked when the mute is lifted, not back to full', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.duck();
+    audio.setMuted(true);
+    expect(master.gain.valueAt(5)).toBe(0);
+
+    audio.setMuted(false);
+
+    // Whatever the duck was making room for is still going. Unmuting must not put the
+    // match back on top of it.
+    expect(master.gain.valueAt(5)).toBeCloseTo(0.25, 6);
+    audio.unduck();
+    expect(master.gain.valueAt(60)).toBeCloseTo(1, 6);
+  });
+
+  it('lets a mute taken mid-ramp win outright', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.duck();
+    context.currentTime = 0.03;
+
+    audio.setMuted(true);
+
+    expect(master.gain.valueAt(0.03)).toBe(0);
+    // The duck's ramp does not carry on underneath the mute and put the level back up.
+    expect(master.gain.valueAt(1)).toBe(0);
+  });
+
+  it('leaves the level the player chose alone', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.setMasterGain(0.6);
+
+    audio.duck(0.5);
+
+    expect(audio.masterGain).toBe(0.6);
+    expect(master.gain.valueAt(1)).toBeCloseTo(0.3, 6);
+    // The slider still works while ducked, and lands under the duck rather than over it.
+    audio.setMasterGain(0.4);
+    expect(master.gain.valueAt(1)).toBeCloseTo(0.2, 6);
+
+    audio.unduck();
+    expect(master.gain.valueAt(2)).toBeCloseTo(0.4, 6);
+  });
+
+  it('holds down what is already playing as well as what starts during it', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+    audio.register('tick', new FakeBuffer(0.05));
+
+    audio.play('tick');
+    audio.flush();
+    audio.duck();
+    audio.play('tick');
+    audio.flush();
+
+    // Both voices hang off the one node the duck moved, which is why this is a master
+    // concern: nothing has to be found and adjusted after the fact, and a sound started a
+    // frame after the duck is already at the ducked level rather than starting loud.
+    const voices = context.gains.slice(1);
+    expect(voices.length).toBe(2);
+    for (const voice of voices) expect(voice.connectedTo).toBe(master);
+    expect(master.gain.valueAt(1)).toBeCloseTo(0.25, 6);
+  });
+
+  it('clamps the amount, so no caller can duck the match louder', async () => {
+    const { audio, context } = await withUnlock();
+    const master = context.gains[0]!;
+
+    audio.duck(4);
+    expect(master.gain.valueAt(1)).toBeCloseTo(1, 6);
+
+    audio.unduck();
+    audio.duck(Number.NaN);
+    expect(master.gain.valueAt(2)).toBe(0);
+  });
+
+  it('applies a duck taken before there is a context at all', () => {
+    const { audio, context } = setup();
+
+    audio.duck();
+
+    // Nothing to write to yet, and nothing thrown: a countdown can start before the first
+    // gesture has built the graph.
+    expect(context.gains.length).toBe(0);
+    audio.context();
+    expect(context.gains[0]!.gain.valueAt(0)).toBeCloseTo(0.25, 6);
+  });
+
+  it('touches no node, however many times it is called', async () => {
+    const { audio, context } = await withUnlock();
+    const logBefore = context.log.length;
+    const gainsBefore = context.gains.length;
+
+    for (let i = 0; i < 200; i += 1) {
+      context.currentTime = i;
+      audio.duck();
+      audio.unduck();
+    }
+
+    // A duck is a value on one parameter. Nothing is created, connected or replaced.
+    expect(context.log.length).toBe(logBefore);
+    expect(context.gains.length).toBe(gainsBefore);
+    expect(audio.ducked).toBe(false);
+  });
+
+  it('lets go of every duck when the system is disposed', async () => {
+    const { audio } = await withUnlock();
+    audio.duck();
+    audio.dispose();
+    // The node it was applied to is gone; claiming to be ducking it would be a fiction.
+    expect(audio.ducked).toBe(false);
   });
 });
 
