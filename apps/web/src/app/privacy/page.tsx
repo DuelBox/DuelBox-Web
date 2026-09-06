@@ -17,9 +17,12 @@ export const metadata: Metadata = {
  * Three of those claims were not descriptions of anything (#2513), and each was wrong in
  * the direction of claiming *more* than the product does:
  *
- * - **"Scores and settings"**. Nothing stores a score. `lib/last-mode.ts` writes one key,
- *   `duelbox:last-mode`, holding the mode, bot tier and match length last chosen per game,
- *   and there is no other call to `localStorage` in the product.
+ * - **"Scores and settings"**. Nothing stores a score. At the time there was one key,
+ *   `duelbox:last-mode`, holding the mode, bot tier and match length last chosen per game.
+ *   There are now four — the setup, favourites, recent games and settings — and every one
+ *   of them is written through `lib/local-store.ts`, the only module in the product that
+ *   calls `localStorage`. The section below lists all four, and `privacy-claims.test.ts`
+ *   fails the moment a second writer appears, so the list cannot fall behind quietly.
  * - **"works with no connection at all"**. True of a page already open, and only that:
  *   there is no service worker, so a reload with the network down fails (#2445). A privacy
  *   page is the wrong place to promise a feature that is on the backlog.
@@ -35,7 +38,7 @@ export default function PrivacyPage() {
     <div className="db-wrap">
       <header className={styles.head}>
         <h1>Privacy</h1>
-        <p className={styles.updated}>Last updated 30 August 2026</p>
+        <p className={styles.updated}>Last updated 6 September 2026</p>
       </header>
 
       <div className={styles.prose}>
@@ -52,16 +55,28 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          One thing: what you last chose for each game — whether you played a friend or a bot, how
-          hard the bot tries, and how many rounds make a match. It is kept in your browser&apos;s
-          own storage under a single key, so that reopening a game offers you the same setup rather
-          than starting from the defaults every time.
+          Four things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
+        <ul>
+          <li>
+            What you last chose for each game — whether you played a friend or a bot, how hard the
+            bot tries, and how many rounds make a match — so that reopening a game offers you the
+            same setup rather than starting from the defaults every time.
+          </li>
+          <li>The games you have marked as favourites.</li>
+          <li>The last eight games you played.</li>
+          <li>Your settings: whether sound is muted, the volume, and whether vibration is on.</li>
+        </ul>
         <p>
           Scores are not part of it. No result of any match is written down anywhere, on your device
           or ours — a running tally is held in memory while you play and is gone when you close the
-          tab. Clearing your browser&apos;s site data removes the setup too, and nothing else
-          remembers it.
+          tab.
+        </p>
+        <p>
+          All of it is yours to move or remove. The settings page lets you export the lot as a file,
+          import one you exported before, or erase everything in one press; clearing your
+          browser&apos;s site data removes it too, and nothing else remembers it.
         </p>
 
         <h2>Cookies</h2>

@@ -5,6 +5,7 @@ import type { SeatId } from '@duelbox/engine';
 import type { MatchState } from '@duelbox/game-sdk';
 import type { SeatNames } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
+import { SoundToggle } from './SoundToggle';
 import styles from './MatchHud.module.css';
 
 /**
@@ -94,16 +95,31 @@ export function MatchHud({
         right
       />
 
-      {onPause && canPause && !flipped ? (
-        <button
-          type="button"
-          className={styles.pause}
-          onClick={onPause}
-          aria-label="Pause the match"
-        >
-          ❚❚
-        </button>
-      ) : null}
+      {flipped ? null : (
+        /*
+         * The match's own controls, on the upright copy only: the far copy is decorative
+         * and hidden from assistive technology, and a second mute there would be a button
+         * a screen reader could not reach and an eye could not tell from the first.
+         *
+         * The mute lives here as well as in the site header because on a phone the header
+         * hides it, and #171 asks for it within one tap of any screen — and a match on a
+         * phone is the screen with the sound. It stays through every phase, unlike the
+         * pause, which only shows while there is something to pause.
+         */
+        <div className={styles.controls}>
+          <SoundToggle className={styles.sound} />
+          {onPause && canPause ? (
+            <button
+              type="button"
+              className={styles.pause}
+              onClick={onPause}
+              aria-label="Pause the match"
+            >
+              ❚❚
+            </button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

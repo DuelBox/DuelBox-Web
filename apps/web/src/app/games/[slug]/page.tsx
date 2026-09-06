@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { formatRound } from '@/lib/format';
 import { SEAT_CHARACTERS } from '@/lib/seats';
+import { absoluteUrl } from '@/lib/site';
+import { serialiseJsonLd, videoGameJsonLd } from '@/lib/structured-data';
+import { FavouriteButton } from '@/components/FavouriteButton';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
 import { TileSprite } from '@/components/TileSprite';
@@ -31,10 +34,14 @@ export async function generateMetadata({
   const game = find(slug);
   if (!game) return { title: 'Game not found' };
   const description = game.rule || `${game.name} — a two-player game you can play in the browser.`;
+  const title = `${game.name} — DuelBox`;
+  const url = absoluteUrl(`/games/${game.slug}/`);
   return {
     title: game.name,
     description,
-    openGraph: { title: `${game.name} — DuelBox`, description },
+    alternates: { canonical: url },
+    openGraph: { title, description, url },
+    twitter: { card: 'summary', title, description },
   };
 }
 
@@ -74,6 +81,18 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="db-wrap">
+      {/*
+        The schema.org description of this game, for search engines (#198). A JSON-LD block
+        is data, not code: no browser executes it, so the page's CSP is not what gates it.
+        `scripts/emit-host-config.mjs` hashes every src-less script it finds in the export,
+        this one included, and the hash it adds to `script-src` is harmless.
+      */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serialiseJsonLd(videoGameJsonLd(game, absoluteUrl(`/games/${game.slug}/`))),
+        }}
+      />
       <TileSprite games={[game, ...related]} />
       <nav className={styles.crumbs} aria-label="Breadcrumb">
         <Link href="/games/">All games</Link>
@@ -111,6 +130,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
               <Link href={`/play/${game.slug}/`} className={styles.play}>
                 Play {game.name}
               </Link>
+              <FavouriteButton slug={game.slug} name={game.name} className={styles.favourite} />
               <dl className={styles.controls}>
                 <dt>On a keyboard</dt>
                 <dd>{controls.keyboard}</dd>

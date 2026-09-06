@@ -1,0 +1,35 @@
+/*
+ * A square the size of the touch target, drawn like the HUD's pause button so the two read
+ * as one family when they sit side by side in a match.
+ *
+ * Muted is carried by the glyph's shape — a crossed-out speaker — and by the border going
+ * dashed, as well as by the tint. Colour is never the only signal (CLAUDE.md rule 7), and
+ * a 17px emoji on a phone in sunlight is mostly shape anyway.
+ */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--db-touch-target);
+  min-height: var(--db-touch-target);
+  padding: 0;
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+  font-size: var(--db-text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+  border-style: dashed;
+  background: var(--db-surface);
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    border-color: var(--db-brand);
+  }
+}

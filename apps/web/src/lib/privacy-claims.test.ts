@@ -34,12 +34,17 @@ function sources(dir: string, found: string[] = []): string[] {
 
 describe('what the privacy page says about storage', () => {
   it('is checkable, because only one module writes to storage', () => {
-    // The claim "one key" is only worth making while it is true. If a second writer
-    // appears, the page has to be rewritten before this passes again.
+    // The page lists what is kept and says every key starts with `duelbox:`. That is a
+    // claim about the whole product, and it is only checkable while there is one place
+    // the product writes: every store — setup, favourites, recent games, settings — goes
+    // through `lib/local-store.ts`, so a new key means a new store built on it, and a
+    // store built on it can be found by reading one file's importers. A second writer
+    // would mean a key the page might not know about, and the page has to be rewritten
+    // — or the writer moved behind the funnel — before this passes again.
     const writers = sources(web).filter((path) =>
       /localStorage\.setItem|sessionStorage|indexedDB/.test(readFileSync(path, 'utf8')),
     );
-    expect(writers.map((path) => relative(web, path))).toEqual(['lib/last-mode.ts']);
+    expect(writers.map((path) => relative(web, path))).toEqual(['lib/local-store.ts']);
   });
 
   it('does not claim a score is kept', () => {
