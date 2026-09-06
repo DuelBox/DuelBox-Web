@@ -143,6 +143,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
+      "friend",
+      "bot",
       "solo"
     ],
     "roundSeconds": 90,
@@ -802,6 +804,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
+      "friend",
+      "bot",
       "solo"
     ],
     "roundSeconds": 45,
@@ -814,14 +818,14 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "slug": "memory-match",
     "name": "Memory Match",
     "category": "Memory",
-    "archetype": "rt-split",
+    "archetype": "turn-board",
     "modes": [
       "friend",
       "bot"
     ],
     "roundSeconds": 60,
-    "tint": "p2Tint",
-    "mark": "split",
+    "tint": "sunTint",
+    "mark": "grid",
     "rule": "Sixteen cards face down in eight pairs. Turn two over, and a pair is yours and keeps the turn, so a player who remembers can clear the table in one visit. Most pairs wins."
   },
   {
@@ -876,7 +880,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
-      "solo"
+      "friend",
+      "bot"
     ],
     "roundSeconds": 90,
     "tint": "sunTint",
@@ -1175,7 +1180,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
-      "solo"
+      "friend",
+      "bot"
     ],
     "roundSeconds": 90,
     "tint": "sunTint",
@@ -1279,6 +1285,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
+      "friend",
+      "bot",
       "solo"
     ],
     "roundSeconds": 90,
@@ -1368,6 +1376,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
+      "friend",
+      "bot",
       "solo"
     ],
     "roundSeconds": 90,
@@ -1427,7 +1437,8 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "category": "Solo",
     "archetype": "turn-board",
     "modes": [
-      "solo"
+      "friend",
+      "bot"
     ],
     "roundSeconds": 90,
     "tint": "sunTint",
@@ -1592,8 +1603,7 @@ export const CATALOGUE: readonly CatalogueEntry[] = [
     "archetype": "rt-race",
     "modes": [
       "friend",
-      "bot",
-      "solo"
+      "bot"
     ],
     "roundSeconds": 75,
     "tint": "brandTint",

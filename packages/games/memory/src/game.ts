@@ -201,7 +201,14 @@ export class MemoryMatchGame implements Game {
     this.#tally.p2 = 0;
     this.#options.timeExpired = false;
     this.#winner = null;
-    this.#active = 'p1';
+    // The shell's opener, never a literal `p1`. The SDK rotates who opens across the
+    // rounds of a best-of (#2466), and a game that starts whoever it likes makes that
+    // rotation reach nothing — the second round opens with the same seat as the first and
+    // the advantage of going first never changes hands. This read `'p1'` unconditionally,
+    // and the check that exists to catch exactly that is scoped to `turn-*` archetypes
+    // while `data/catalog.yaml` filed this game as `rt-split` (#2531). Two wrong facts,
+    // one of them hiding the other.
+    this.#active = context.openingSeat;
     this.#first = -1;
     this.#second = -1;
     this.#hideSteps = 0;
