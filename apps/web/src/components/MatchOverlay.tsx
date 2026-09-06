@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
+import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
@@ -25,8 +26,20 @@ export interface MatchOverlayProps {
   rounds: number;
   /** What both seats are called, from `lib/seats.ts`. Total, so nothing here falls back. */
   seatNames: SeatNames;
-  /** Matches won by each seat in this sitting, across rematches. */
-  record?: { p1: number; p2: number; draws: number } | undefined;
+  /**
+   * Matches each seat has won at this game, all of them, from `lib/head-to-head.ts` —
+   * *including* the match this panel is announcing.
+   *
+   * It used to be the tally for one sitting and the line above it said "Tonight", which
+   * stopped being true the moment the record outlived the tab (#160). It arrives already
+   * carrying the current result rather than a commit later, so the first paint of the
+   * result panel is the paint with the final numbers on it.
+   *
+   * It is also the record against *this* match's opponent. A bot's wins are the bot's, and
+   * the store keeps them apart from the two seats' own head-to-head, so the names beside
+   * these numbers are the names of whoever actually won them.
+   */
+  record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
   onResume: () => void;
@@ -97,9 +110,14 @@ export function MatchOverlay({
               {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2}
             </p>
           ) : null}
-          {record && record.p1 + record.p2 + record.draws > 1 ? (
+          {/* From the first finished match rather than the second: the number is worth
+              showing as soon as there is one, now that it is a record kept across
+              sittings rather than a count of tonight's rematches. The match on screen is
+              already in it, so a settled match always has something here and the line
+              cannot appear a frame after the buttons it sits above. */}
+          {record && record.p1 + record.p2 + record.draws > 0 ? (
             <p className={styles.record}>
-              Tonight: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
+              All time in {manifest.name}: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
               {record.draws > 0 ? `, ${record.draws} drawn` : ''}
             </p>
           ) : null}

@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useId, useState, type ChangeEvent } from 'react';
+import type { SeatId } from '@duelbox/engine';
 import { clearFavourites, FAVOURITES_KEY } from '@/lib/favourites';
 import { hapticsSupported, vibrate } from '@/lib/haptics';
+import { clearRecord, HEAD_TO_HEAD_KEY, mostPlayed, type GameRecord } from '@/lib/head-to-head';
 import { LAST_MODE_KEY } from '@/lib/last-mode';
 import {
   exportPlayerData,
@@ -10,6 +12,12 @@ import {
   playerDataSummary,
   resetPlayerData,
 } from '@/lib/player-data';
+import {
+  MAX_NAME_LENGTH,
+  PLAYER_NAMES_KEY,
+  readPlayerNames,
+  writePlayerName,
+} from '@/lib/player-names';
 import { clearRecent, RECENT_KEY } from '@/lib/recent';
 import { SETTINGS_KEY, type Settings } from '@/lib/settings';
 import { notifySettingsChanged, useSettings } from './SoundToggle';
@@ -22,7 +30,10 @@ import styles from './SettingsPanel.module.css';
  * and the motor the moment they change — no save button, because a save button is a
  * second thing to press and a state in which the page disagrees with the device. The
  * third section is what the site keeps about the player, with the counts beside the
- * buttons so "erase everything" names what it is about to erase (#2448).
+ * buttons so "erase everything" names what it is about to erase (#2448). That section now
+ * also holds the two things a pair own rather than merely accumulate: what they are called
+ * (#161) and the head-to-head record they have built up (#160, #162), each with a way to
+ * clear it that does not take the rest with it.
  *
  * Everything read from storage is read in an effect and never during render: the page
  * is statically exported, so the first paint shows the defaults and the stored values
@@ -33,7 +44,34 @@ import styles from './SettingsPanel.module.css';
 
 type Summary = ReturnType<typeof playerDataSummary>;
 
-const EMPTY_SUMMARY: Summary = { favourites: 0, recent: 0, hasSettings: false, games: 0 };
+const EMPTY_SUMMARY: Summary = {
+  favourites: 0,
+  recent: 0,
+  hasSettings: false,
+  games: 0,
+  matches: 0,
+};
+
+/** How many games the record lists here. Enough to recognise a habit, not a second catalogue. */
+const MOST_PLAYED = 5;
+
+/**
+ * A slug as a title.
+ *
+ * The catalogue's display names are deliberately not in this bundle — no client component
+ * imports `catalogue.generated.ts`, and the settings page is shell code every visitor
+ * downloads — so the route slug is turned back into words here. "tic-tac-toe" is a game a
+ * player recognises as "tic tac toe"; the stylesheet capitalises the first letter.
+ *
+ * The first letter and no others. `text-transform: capitalize` capitalises every word, so
+ * seven playable games rendered here under a name the catalogue never uses — "Whack A Mole"
+ * against its own page's "Whack a Mole", and the same for Dots and Boxes, Guard and Thief,
+ * King of the Yard, Nuts and Bolts, Pull the Rope and Shut the Box. Sentence case is not
+ * the catalogue's spelling either, but it never invents a capital the game does not have.
+ */
+function titleOf(slug: string): string {
+  return slug.replace(/-/g, ' ');
+}
 
 const EXPORT_FILENAME = 'duelbox-player-data.json';
 
@@ -53,6 +91,8 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   [FAVOURITES_KEY]: 'your favourites',
   [RECENT_KEY]: 'your recently played games',
   [SETTINGS_KEY]: 'your settings',
+  [HEAD_TO_HEAD_KEY]: 'your head-to-head record',
+  [PLAYER_NAMES_KEY]: 'the names you chose for the two seats',
 };
 
 /** "a, b and c" — a sentence, because the status line is read aloud as one. */
@@ -74,25 +114,36 @@ export function SettingsPanel() {
   const [settings, update] = useSettings();
   const [supported, setSupported] = useState(false);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
+  const [played, setPlayed] = useState<readonly { slug: string; record: GameRecord }[]>([]);
+  const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
   const [status, setStatus] = useState('');
 
-  const refreshSummary = useCallback(() => {
+  /**
+   * Everything on this page that comes from storage, re-read together.
+   *
+   * One function rather than three, because every caller wants all of it: an import, an
+   * erase and a clear each change more than one of them, and a page that refreshed two of
+   * three would show a record beside a count that disagreed with it.
+   */
+  const refresh = useCallback(() => {
     setSummary(playerDataSummary());
+    setPlayed(mostPlayed(MOST_PLAYED));
+    setNames(readPlayerNames());
   }, []);
 
   useEffect(() => {
     setSupported(hapticsSupported());
-    refreshSummary();
-  }, [refreshSummary]);
+    refresh();
+  }, [refresh]);
 
   // The counts include whether the settings have been changed from the defaults, so a
   // change to any of them is a change to the summary too.
   const change = useCallback(
     (patch: Partial<Settings>) => {
       update(patch);
-      refreshSummary();
+      refresh();
     },
-    [update, refreshSummary],
+    [update, refresh],
   );
 
   const tryHaptics = useCallback(() => {
@@ -103,15 +154,39 @@ export function SettingsPanel() {
 
   const clearRecentPlayed = useCallback(() => {
     clearRecent();
-    refreshSummary();
+    refresh();
     setStatus('Recently played cleared.');
-  }, [refreshSummary]);
+  }, [refresh]);
 
   const clearFavs = useCallback(() => {
     clearFavourites();
-    refreshSummary();
+    refresh();
     setStatus('Favourites cleared.');
-  }, [refreshSummary]);
+  }, [refresh]);
+
+  const clearHeadToHead = useCallback(() => {
+    clearRecord();
+    refresh();
+    setStatus('The head-to-head record is cleared. Both of you are back on nothing.');
+  }, [refresh]);
+
+  /**
+   * A name, written on every keystroke and settled on blur.
+   *
+   * The field holds what is being typed and storage holds the tidied version of it, which
+   * is why the two are separate: feeding the tidied value straight back into the field
+   * would eat the space in the middle of "Ada B" as it was typed. On blur the field shows
+   * what was actually stored, so a player sees the trim rather than discovering it on the
+   * scoreboard later.
+   */
+  const changeName = useCallback((seat: SeatId, value: string) => {
+    setNames((previous) => ({ ...previous, [seat]: value }));
+    writePlayerName(seat, value);
+  }, []);
+
+  const settleNames = useCallback(() => {
+    setNames(readPlayerNames());
+  }, []);
 
   const exportData = useCallback(() => {
     const blob = new Blob([exportPlayerData()], { type: 'application/json' });
@@ -150,22 +225,22 @@ export function SettingsPanel() {
           // Imported values are written raw and read back sanitised, so every control on
           // the page re-reads rather than trusting what the file said.
           notifySettingsChanged();
-          refreshSummary();
+          refresh();
           setStatus(describeImport(result.imported));
         })
         .catch(() => {
           setStatus('That file could not be read.');
         });
     },
-    [refreshSummary],
+    [refresh],
   );
 
   const resetAll = useCallback(() => {
     resetPlayerData();
     notifySettingsChanged();
-    refreshSummary();
+    refresh();
     setStatus('Everything DuelBox kept on this device has been erased.');
-  }, [refreshSummary]);
+  }, [refresh]);
 
   const percent = Math.round(settings.volume * 100);
   const volumeId = `${id}-volume`;
@@ -266,16 +341,49 @@ export function SettingsPanel() {
             <dd>{summary.games}</dd>
           </div>
           <div className={styles.count}>
+            <dt>Matches recorded</dt>
+            <dd>{summary.matches}</dd>
+          </div>
+          <div className={styles.count}>
             <dt>Settings</dt>
             <dd>{summary.hasSettings ? 'Changed' : 'Defaults'}</dd>
           </div>
         </dl>
+
+        {/* #161. Two fields rather than a screen of their own: naming yourselves is
+            something a pair do once, on the page that already holds everything else this
+            device remembers about them. */}
+        <h3 className={styles.subhead}>What you are called</h3>
+        <p className={styles.note}>
+          The names on the scoreboard during a match, on this device and nowhere else. Leave one
+          empty and that seat keeps its own name.
+        </p>
+        <NameField
+          id={`${id}-p1`}
+          label="Name for the near seat"
+          value={names.p1 ?? ''}
+          onChange={changeName}
+          onSettle={settleNames}
+          seat="p1"
+        />
+        <NameField
+          id={`${id}-p2`}
+          label="Name for the far seat"
+          value={names.p2 ?? ''}
+          onChange={changeName}
+          onSettle={settleNames}
+          seat="p2"
+        />
+
         <div className={styles.actions}>
           <button type="button" className={styles.button} onClick={clearRecentPlayed}>
             Clear recently played
           </button>
           <button type="button" className={styles.button} onClick={clearFavs}>
             Clear favourites
+          </button>
+          <button type="button" className={styles.button} onClick={clearHeadToHead}>
+            Clear the record
           </button>
           <button type="button" className={styles.button} onClick={exportData}>
             Export
@@ -298,6 +406,47 @@ export function SettingsPanel() {
             Reset everything
           </button>
         </div>
+
+        {/*
+          Last in the section, and rendered whether or not there is anything in it.
+
+          `played` is empty until the mount effect has read storage, so while this block sat
+          mid-section a pair with a record watched a heading and up to five rows — about two
+          hundred pixels — appear above the buttons one frame after the page had painted
+          them, moving every control in the section down. It is the largest jump on the
+          page, and the same stylesheet already guards against a far smaller one (`.status`
+          holds its height while empty). Below everything else, the only thing it can move
+          is the status line, which reserves its own height; and the heading and its legend
+          are in the exported HTML either way, so what arrives after hydration is rows
+          rather than structure.
+        */}
+        <h3 className={styles.subhead}>Most played</h3>
+        {/* The convention, on screen rather than only in the markup: the visible tally is
+            `aria-hidden`, so without this line the sighted reader was the one who could not
+            tell whose three wins those were, between two fields named for the two seats. */}
+        <p className={styles.note}>
+          Wins, losses and draws are the near seat&apos;s, bot matches included.
+        </p>
+        {played.length > 0 ? (
+          <ul className={styles.games}>
+            {played.map((entry) => (
+              <li key={entry.slug}>
+                <span className={styles.game}>{titleOf(entry.slug)}</span>
+                {/* Spelled out for a screen reader, which would otherwise be handed
+                    "3W 2L 1D" to say aloud. */}
+                <span className={styles.tally} aria-hidden="true">
+                  {entry.record.p1}W {entry.record.p2}L {entry.record.draws}D
+                </span>
+                <span className="db-visually-hidden">
+                  the near seat has won {entry.record.p1}, lost {entry.record.p2} and drawn{' '}
+                  {entry.record.draws}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.note}>Nothing yet. Finish a match and it appears here.</p>
+        )}
       </section>
 
       {/* Always rendered, even empty: a live region that appears along with its first
@@ -305,6 +454,52 @@ export function SettingsPanel() {
       <p className={styles.status} role="status" aria-live="polite">
         {status}
       </p>
+    </div>
+  );
+}
+
+/**
+ * One seat's name.
+ *
+ * A plain text field, capped in the markup as well as in the store: `maxLength` stops the
+ * thirteenth character being typed at all, which is a kinder way to say "twelve" than
+ * silently dropping it on the way to storage. Autocomplete and spellcheck are off — a
+ * browser offering a saved postal address here, or underlining a nickname in red, is
+ * answering a question nobody asked.
+ */
+function NameField({
+  id,
+  label,
+  seat,
+  value,
+  onChange,
+  onSettle,
+}: {
+  id: string;
+  label: string;
+  seat: SeatId;
+  value: string;
+  onChange: (seat: SeatId, value: string) => void;
+  onSettle: () => void;
+}) {
+  return (
+    <div className={styles.row}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="text"
+        className={styles.text}
+        value={value}
+        maxLength={MAX_NAME_LENGTH}
+        autoComplete="off"
+        spellCheck={false}
+        onChange={(event) => {
+          onChange(seat, event.currentTarget.value);
+        }}
+        onBlur={onSettle}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import {
   initialMatchState,
@@ -13,6 +13,15 @@ import {
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
+import {
+  addOutcome,
+  EMPTY_TALLY,
+  readGameRecord,
+  recordResult,
+  type Opponent,
+  type Tally,
+} from '@/lib/head-to-head';
+import { readPlayerNames } from '@/lib/player-names';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio } from '@/lib/audio';
 import { vibrate } from '@/lib/haptics';
@@ -79,9 +88,6 @@ export function PlaySurface({ slug }: { slug: string }) {
   useEffect(() => {
     armAudio();
   }, []);
-  // The running head-to-head for this sitting. A pair that plays five in a row wants to
-  // know the score across all five, not just the last one.
-  const [record, setRecord] = useState({ p1: 0, p2: 0, draws: 0 });
   // A new seed per match keeps a rematch from replaying the previous one exactly.
   const [seed, setSeed] = useState(1);
 
@@ -94,9 +100,61 @@ export function PlaySurface({ slug }: { slug: string }) {
    * defaults render, and the remembered choice replaces them a frame later.
    */
   const [setup, setSetup] = useState<MatchSetup>(DEFAULT_SETUP);
+  /** What the two people here call themselves, if they have said (#161). */
+  const [chosenNames, setChosenNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
+  // Two reads of this device's storage, in one effect because they are one thing: what
+  // this browser already knows about this game before anybody presses Start.
   useEffect(() => {
     setSetup(readSetup(slug));
+    setChosenNames(readPlayerNames());
   }, [slug]);
+
+  /**
+   * Which seats a bot holds this match, and how hard it tries.
+   *
+   * Memoised because its identity has to be stable for the life of a match: it sits in
+   * the game host's setup-effect dependencies, and when this was written inline it was a
+   * fresh object on every render — the first countdown frame tore the game down and
+   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
+   * change while a match is running: the tier is only offered before one starts.
+   */
+  const botSeats = useMemo(
+    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
+    [mode, setup.difficulty],
+  );
+
+  /**
+   * Who is in the far seat, which is the record this match belongs on.
+   *
+   * Derived from the same `botSeats` map the game host is handed rather than from `mode`
+   * again, so "who is a bot" is decided once per match. A bot's wins are not the far
+   * player's wins, and the store keeps the two apart — see `lib/head-to-head.ts`.
+   */
+  const opponent: Opponent = botSeats === undefined ? 'friend' : 'bot';
+
+  /**
+   * The head-to-head at this game *before* the match now on screen, from storage.
+   *
+   * It was the tally for one sitting, held here and nowhere else, so five matches on
+   * Tuesday were gone by Wednesday and gone the moment anybody reloaded (#160). The store
+   * is the source now, and this state exists only so nothing has to read storage during a
+   * render.
+   *
+   * Deliberately the record *before* this match rather than after it. A passive effect
+   * runs after the commit that showed the result, so a screen fed from one painted the
+   * score as it stood before the match the players had just watched end — and on the very
+   * first match at a game it painted with no record line at all and then inserted one
+   * above the Rematch button a frame later, under a thumb already on its way there. What
+   * the panel is handed is this plus the outcome the match machine has already settled,
+   * which is known during the same render.
+   *
+   * Re-read whenever the match changes — a new `seed` is a new match — so the match after
+   * this one starts from what the store now holds.
+   */
+  const [recordBefore, setRecordBefore] = useState<Tally>(EMPTY_TALLY);
+  useEffect(() => {
+    setRecordBefore(readGameRecord(slug, opponent));
+  }, [slug, opponent, seed]);
 
   /**
    * The seven games built so far settle their own rounds and report a winner, so the
@@ -146,7 +204,6 @@ export function PlaySurface({ slug }: { slug: string }) {
     };
   }, [match.phase]);
 
-  // Counted once per match, when the machine enters its terminal phase.
   /**
    * Stop the browser's own pull-to-refresh while a match is running.
    *
@@ -170,15 +227,30 @@ export function PlaySurface({ slug }: { slug: string }) {
     };
   }, [match.phase]);
 
+  /**
+   * The seed of the match already written down, so a match is counted exactly once.
+   *
+   * A seed identifies a match here: one is drawn on Start and another on every rematch.
+   * This effect used to add one to the tally from its previous value on every entry into
+   * `match-over`, which is a shape that counts twice as soon as anything re-runs it — a
+   * remount, a Fast Refresh, a dependency added later — and a double count is invisible
+   * precisely because both numbers look plausible. A ref rather than state: writing it
+   * must not cause the render that would run this effect again.
+   */
+  const counted = useRef(0);
   useEffect(() => {
     if (match.phase !== 'match-over') return;
     const outcome = match.matchOutcome;
-    setRecord((previous) => ({
-      p1: previous.p1 + (outcome === 'p1' ? 1 : 0),
-      p2: previous.p2 + (outcome === 'p2' ? 1 : 0),
-      draws: previous.draws + (outcome === 'draw' ? 1 : 0),
-    }));
-  }, [match.phase, match.matchOutcome]);
+    // A match the machine ends with no outcome at all is not a result to record. It is
+    // also not reachable today, and recording a phantom draw if it ever became reachable
+    // is worse than recording nothing.
+    if (outcome === null || counted.current === seed) return;
+    counted.current = seed;
+    // Write only. What the result screen shows is `addOutcome` applied to the same tally
+    // this call is about to write, from the same function, so the two cannot be different
+    // arithmetic — and the panel does not have to wait for a second commit to be right.
+    recordResult(slug, outcome, opponent);
+  }, [match.phase, match.matchOutcome, seed, slug, opponent]);
 
   /**
    * A buzz when a round ends and another when the match does (#135).
@@ -261,20 +333,6 @@ export function PlaySurface({ slug }: { slug: string }) {
     [slug],
   );
 
-  /**
-   * Which seats a bot holds this match, and how hard it tries.
-   *
-   * Memoised because its identity has to be stable for the life of a match: it sits in
-   * the game host's setup-effect dependencies, and when this was written inline it was a
-   * fresh object on every render — the first countdown frame tore the game down and
-   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
-   * change while a match is running: the tier is only offered before one starts.
-   */
-  const botSeats = useMemo(
-    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
-    [mode, setup.difficulty],
-  );
-
   const nextGame = useMemo(() => suggestNextGame(slug), [slug]);
 
   if (loadState === 'error') {
@@ -346,8 +404,24 @@ export function PlaySurface({ slug }: { slug: string }) {
    * write a *partial* override here — seat two only — and leave seat one to whatever
    * fallback each component happened to carry, which is how the HUD came to read
    * "Pip vs Player two" (#2513).
+   *
+   * A name the pair chose for themselves replaces the seat's own, and `seatNamesFor` still
+   * marks the seat if a bot is in it — so naming the far seat and then playing the bot
+   * shows the bot marked rather than the player's name on it.
    */
-  const seatNames = seatNamesFor(botSeats);
+  const seatNames = seatNamesFor(botSeats, chosenNames);
+
+  /**
+   * The record the result screen shows: what the store held when this match began, plus
+   * the match itself once the machine has settled it.
+   *
+   * Computed here rather than read back after the write, so the first paint of the result
+   * panel already carries the final numbers — see `recordBefore` above.
+   */
+  const record =
+    match.phase === 'match-over' && match.matchOutcome !== null
+      ? addOutcome(recordBefore, match.matchOutcome)
+      : recordBefore;
 
   const hudProps = {
     state: match,

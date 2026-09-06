@@ -139,13 +139,18 @@
   }
 }
 
+/* The head-to-head, which now names the game it is the record for and so is long enough
+   to wrap on a narrow phone. A pill that wraps is still a pill; one that overflows the
+   panel is a line a player cannot read, hence the max-width. */
 .record {
+  max-width: 100%;
   padding: var(--db-space-2) var(--db-space-3);
   background: var(--db-surface);
   border-radius: var(--db-radius-pill);
   font-family: var(--db-font-mono);
   font-size: var(--db-text-sm);
   font-variant-numeric: tabular-nums;
+  line-height: 1.5;
 }
 
 .back {

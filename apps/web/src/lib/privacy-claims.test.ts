@@ -36,11 +36,16 @@ describe('what the privacy page says about storage', () => {
   it('is checkable, because only one module writes to storage', () => {
     // The page lists what is kept and says every key starts with `duelbox:`. That is a
     // claim about the whole product, and it is only checkable while there is one place
-    // the product writes: every store — setup, favourites, recent games, settings — goes
-    // through `lib/local-store.ts`, so a new key means a new store built on it, and a
-    // store built on it can be found by reading one file's importers. A second writer
-    // would mean a key the page might not know about, and the page has to be rewritten
-    // — or the writer moved behind the funnel — before this passes again.
+    // the product writes: every store goes through `lib/local-store.ts`, so a new key
+    // means a new store built on it, and a store built on it can be found by reading one
+    // file's importers. A second writer would mean a key the page might not know about,
+    // and the page has to be rewritten — or the writer moved behind the funnel — before
+    // this passes again.
+    //
+    // Deliberately "every store" rather than a list of them. This comment named four —
+    // setup, favourites, recent games, settings — and stayed at four through the batch
+    // that added the head-to-head record and the chosen seat names, in the one file whose
+    // whole job is keeping the storage claims current.
     const writers = sources(web).filter((path) =>
       /localStorage\.setItem|sessionStorage|indexedDB/.test(readFileSync(path, 'utf8')),
     );

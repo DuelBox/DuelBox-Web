@@ -22,8 +22,10 @@
  */
 
 import { FAVOURITES_KEY, readFavourites } from './favourites';
+import { HEAD_TO_HEAD_KEY, readRecord } from './head-to-head';
 import { LAST_MODE_KEY, rememberedGames } from './last-mode';
 import { isRecord, readJson, readVersioned, removeJson, writeJson } from './local-store';
+import { PLAYER_NAMES_KEY } from './player-names';
 import { readRecent, RECENT_KEY } from './recent';
 import { SETTINGS_KEY } from './settings';
 
@@ -33,12 +35,21 @@ export const PLAYER_DATA_FORMAT = 'duelbox-player-data';
 /** The version of the envelope, not of any store inside it. Each store versions itself. */
 export const PLAYER_DATA_VERSION = 1;
 
-/** Every key the site writes. Erase removes exactly these; import accepts nothing else. */
+/**
+ * Every key the site writes. Erase removes exactly these; import accepts nothing else.
+ *
+ * The head-to-head record and the two names are in here for the reason the file exists: a
+ * player who moves to another device and finds their favourites but not the record of
+ * every match they have played would have been handed the smaller half of their data,
+ * and a record that did not travel is the obvious gap in "all of it is yours to move".
+ */
 export const PLAYER_DATA_KEYS: readonly string[] = [
   LAST_MODE_KEY,
   FAVOURITES_KEY,
   RECENT_KEY,
   SETTINGS_KEY,
+  HEAD_TO_HEAD_KEY,
+  PLAYER_NAMES_KEY,
 ];
 
 /** The settings store's own version, checked here only to count it as present. */
@@ -48,7 +59,9 @@ const SETTINGS_VERSION = 1;
  * Everything stored, as a JSON document the player can save and bring back.
  *
  * Only keys that hold something are included, so an export from a fresh browser is an
- * empty `data` object rather than four nulls. Indented, because the player may open it.
+ * empty `data` object rather than a null for each key — written that way rather than as a
+ * count, because the count has already gone from four to six once. Indented, because the
+ * player may open it.
  */
 export function exportPlayerData(): string {
   const data: Record<string, unknown> = {};
@@ -119,19 +132,24 @@ export function resetPlayerData(): void {
 /**
  * What the settings page shows beside the erase button, so the player knows what "all of
  * it" means before pressing. Counts, not contents: `games` is the number of games with a
- * remembered setup, and `hasSettings` is whether anything has been changed from the
- * defaults at all.
+ * remembered setup, `hasSettings` is whether anything has been changed from the defaults
+ * at all, and `matches` is how many finished matches the record holds — summed across
+ * every game and across both kinds of opponent, because "42 matches" is a thing a pair can
+ * picture before pressing erase and a per-game breakdown is not. The bot's matches count
+ * here for the same reason: they are stored on this device, so erasing removes them.
  */
 export function playerDataSummary(): {
   favourites: number;
   recent: number;
   hasSettings: boolean;
   games: number;
+  matches: number;
 } {
   return {
     favourites: readFavourites().length,
     recent: readRecent().length,
     hasSettings: readVersioned(SETTINGS_KEY, SETTINGS_VERSION) !== null,
     games: rememberedGames().length,
+    matches: readRecord().matches,
   };
 }
