@@ -30,8 +30,19 @@ const ALL_ENGINES = process.env.DUELBOX_ALL_ENGINES === '1';
  * These run on Chromium alone. Everything else — anything touching pointers, keys, layout,
  * viewport insets, the canvas or the page lifecycle — runs on every engine, because that
  * is where engines differ.
+ *
+ * `category-hubs.spec.ts` qualifies on the same reading as `smoke.spec.ts`: it asks a hub
+ * for its heading, its prose, its canonical URL, the number of cards in its grid, a footer
+ * link, and — one game page per category — whether anything on the site links the hub at
+ * all. It never touches a pointer, a key or the canvas. Listing it here is what
+ * keeps eighteen static pages from costing the verify job nine repeat test-runs — the
+ * budget CLAUDE.md records as already having been overspent once.
+ *
+ * `record.spec.ts` deliberately is NOT here, and it is the useful contrast: it plays a
+ * match to its end, so it exercises the canvas, the loop and the page lifecycle, which is
+ * exactly the code that differs between engines.
  */
-const CONTENT_ONLY = ['**/smoke.spec.ts'];
+const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -72,7 +83,8 @@ export default defineConfig({
      *
      * One engine, because none of it can plausibly differ between them: it asserts what
      * the static build contains, not how a browser lays it out or handles a touch. Running
-     * it on four projects was 27 of the suite's 300 test-runs re-confirming the same HTML.
+     * it on four projects was 27 of the suite's 300 test-runs re-confirming the same HTML,
+     * and the category hubs would have added nine more of the same.
      */
     // Two people sharing one phone is the primary case, so it is tested, not assumed.
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: CONTENT_ONLY },

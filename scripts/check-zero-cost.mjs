@@ -201,12 +201,56 @@ async function checkSessionBudget() {
 /** Every game page is in the served HTML, not fetched by the client. */
 async function checkPagesArePrerendered() {
   const property = 'Every game page is in view-source';
+
+  // The expected counts are read out of the catalogue rather than written down here. A
+  // literal goes stale the day a game is added and nothing says so: this check asked for
+  // "107 games plus the catalogue index itself" and a total of 108 while the catalogue
+  // held 108 games, so it was already a page of slack before anything else touched it.
+  const catalogue = await readFile(
+    join(root, 'apps', 'web', 'src', 'data', 'catalogue.generated.ts'),
+    'utf8',
+  );
+  const games = [...catalogue.matchAll(/"slug":\s*"[a-z0-9-]+"/g)].length;
+  const categories = /export const CATEGORIES[^=]*=\s*\[([^\]]*)\]/.exec(catalogue);
+  const hubs = categories === null ? 0 : [...categories[1].matchAll(/"[^"]+"/g)].length;
+  if (games === 0 || hubs === 0) {
+    fail(
+      property,
+      'catalogue.generated.ts did not parse, so the page counts below would prove nothing',
+    );
+    return;
+  }
+
+  // Two different kinds of page live under out/games/ since the category hubs of #200
+  // landed, and they are counted apart because they fail apart. Against a single total,
+  // eighteen missing game pages would be covered exactly by the eighteen hubs that
+  // replaced them, and a guard a wrong build can satisfy is not guarding anything.
   const pages = await walk(join(out, 'games'), (p) => p.endsWith('index.html'));
-  // 107 games plus the catalogue index itself.
-  if (pages.length < 108) {
-    fail(property, `only ${String(pages.length)} pre-rendered game pages found, expected 108`);
-  } else {
-    console.log(`  pre-rendered pages: ${String(pages.length)}`);
+  const hubRoot = join(out, 'games', 'category');
+  const hubPages = pages.filter((p) => p.startsWith(hubRoot));
+  const gamePages = pages.filter((p) => !p.startsWith(hubRoot));
+
+  // Exactly, not at least. A page more than the catalogue accounts for means the export
+  // and the catalogue disagree about what this site contains, which is worth the same
+  // failure as a page missing.
+  if (gamePages.length !== games + 1) {
+    fail(
+      property,
+      `${String(gamePages.length)} pre-rendered game pages found, expected ${String(games + 1)}` +
+        ` — one for each of the ${String(games)} games in the catalogue, plus /games/ itself`,
+    );
+  }
+  if (hubPages.length !== hubs) {
+    fail(
+      property,
+      `${String(hubPages.length)} pre-rendered category hubs found, expected ${String(hubs)}` +
+        ` — one for each category the catalogue names`,
+    );
+  }
+  if (gamePages.length === games + 1 && hubPages.length === hubs) {
+    console.log(
+      `  pre-rendered pages: ${String(games)} games + /games/ + ${String(hubs)} category hubs`,
+    );
   }
 }
 
