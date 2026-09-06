@@ -70,6 +70,21 @@ const DEFAULT_QUEUE_CAPACITY = 32;
 /** Default spread for {@link AudioSystem.playVaried}, in cents: a fifth of a semitone. */
 const DEFAULT_CENTS = 40;
 
+/**
+ * How far a duck drops the match by default: to a quarter, about 12 dB down.
+ *
+ * Far enough that a spoken announcement or a countdown sits clearly on top, not so far
+ * that the match sounds paused — the player should still hear the ball being hit under
+ * the voice, because a match that goes silent reads as a stall.
+ */
+const DEFAULT_DUCK_AMOUNT = 0.25;
+
+/** Down fast, up slow. A duck that arrives late has already lost the first word of what it
+ * was making room for; a release that snaps back draws attention to itself. Both are short
+ * enough to be under any reasonable countdown beat. */
+const DUCK_ATTACK_SECONDS = 0.06;
+const DUCK_RELEASE_SECONDS = 0.25;
+
 const CENTS_PER_OCTAVE = 1200;
 
 /**
@@ -82,9 +97,31 @@ const CENTS_PER_OCTAVE = 1200;
  */
 export type AudioState = 'suspended' | 'running' | 'closed' | 'interrupted';
 
-/** The one property of an `AudioParam` this module writes. */
+/**
+ * The parts of an `AudioParam` this module uses: the value, and the three automation calls
+ * a click-free change needs.
+ *
+ * Writing `value` is a step, and a step on a gain node is a discontinuity in the waveform,
+ * which is heard as a click. That is acceptable for the volume slider and for mute, where
+ * the player asked for the change and is expecting it. It is not acceptable for a duck,
+ * which happens on its own several times a match — see {@link AudioSystem.duck}.
+ *
+ * The three methods are the widely supported subset. `cancelAndHoldAtTime` would be a
+ * better fit than `cancelScheduledValues` and is deliberately not used: it is the newest
+ * of these calls, Safari still exposes it under a prefix, and the pin-then-ramp sequence
+ * below gets the same result from calls every engine has had for a decade.
+ */
 export interface AudioParamLike {
   value: number;
+  /** Pins an explicit value at a time, which is what a following ramp interpolates from. */
+  setValueAtTime(value: number, startTime: number): unknown;
+  linearRampToValueAtTime(value: number, endTime: number): unknown;
+  /**
+   * Drops every scheduled event at or after `startTime`. Note what it does *not* do: it
+   * does not hold the value the timeline had reached, it reverts to the last event before
+   * `startTime`. Read the parameter before calling this, never after.
+   */
+  cancelScheduledValues(startTime: number): unknown;
 }
 
 /** Declared structurally, exactly as the renderer declares its canvas context, so a test
@@ -259,6 +296,18 @@ export class AudioSystem {
    * node is single-use by specification, the buffer behind it is not. */
   #silence: AudioBufferLike | undefined = undefined;
 
+  /**
+   * The ducks currently held, deepest-first only by accident — the effective level is the
+   * smallest of them, so the order in here does not matter to the level, only to which one
+   * a release takes off.
+   *
+   * A plain array rather than one of the preallocated buffers above because ducking happens
+   * at the edges of a match — a countdown starting, an announcement ending — and never
+   * inside a step, so CLAUDE.md rule 5 is not in play; and after the first couple of pushes
+   * the backing store is already large enough that a duck/unduck pair allocates nothing.
+   */
+  readonly #ducks: number[] = [];
+
   #masterGain: number;
   #muted: boolean;
   #unlocked = false;
@@ -314,9 +363,19 @@ export class AudioSystem {
     return this.#muted;
   }
 
-  /** The level a mute is hiding, so unmuting restores what the player chose. */
+  /**
+   * The level a mute is hiding, so unmuting restores what the player chose.
+   *
+   * A duck does not change it either: this is the player's setting, not the level the
+   * output happens to be at this instant.
+   */
   get masterGain(): number {
     return this.#masterGain;
+  }
+
+  /** True while at least one duck is held. */
+  get ducked(): boolean {
+    return this.#ducks.length > 0;
   }
 
   /** Sounds queued by `play()` and not yet flushed. */
@@ -391,7 +450,9 @@ export class AudioSystem {
       return undefined;
     }
     const master = context.createGain();
-    master.gain.value = this.#muted ? 0 : this.#masterGain;
+    // Whatever the state already is, not just the volume: a duck taken before the first
+    // gesture — a countdown that starts the moment the shell loads — is still held here.
+    master.gain.value = this.#targetGain();
     master.connect(context.destination);
     this.#context = context;
     this.#master = master;
@@ -451,6 +512,49 @@ export class AudioSystem {
   toggleMuted(): boolean {
     this.setMuted(!this.#muted);
     return this.#muted;
+  }
+
+  /**
+   * Hold the match down to `amount` of its level so something else can be heard over it.
+   *
+   * This is for a countdown and for an announcement — the two moments where a player has to
+   * catch a specific sound while a match is making its usual noise. It is applied to the
+   * master node rather than per voice, which is what makes it cover everything already
+   * playing as well as everything started while it is held, at the cost of one parameter
+   * ramp rather than one per voice.
+   *
+   * **Held, not set.** Every `duck()` must be paired with an {@link AudioSystem.unduck},
+   * and the level only returns when the last one is released; a countdown that ends while
+   * an announcement is still speaking must not take the announcement's duck away with it.
+   * While more than one is held the deepest wins, so nothing a caller does can make the
+   * match louder than another caller has asked for.
+   *
+   * Releases are matched last-in-first-out. That is exactly right when ducks nest, and
+   * conservative when they merely overlap: releasing the outer one first leaves the level
+   * at the inner one's depth for a moment. Quieter than strictly necessary, never louder
+   * while something is still being said over it, which is the direction to err in.
+   *
+   * `amount` is the fraction to duck *to*, clamped to [0, 1] — 1 is no duck at all and 0 is
+   * silence. It is not a subtraction, so `duck(0.25)` means a quarter of whatever the
+   * player's volume is, not a quarter off it.
+   */
+  duck(amount = DEFAULT_DUCK_AMOUNT): void {
+    this.#ducks.push(clampGain(amount));
+    this.#applyMasterGain(DUCK_ATTACK_SECONDS);
+  }
+
+  /**
+   * Release one duck. Returns the level once the last one is gone.
+   *
+   * A release with nothing held does nothing, rather than counting down past zero. A duck
+   * released twice — a countdown that is cancelled and then also finishes — must not leave
+   * the system owing a duck, because the debt would be paid by the *next* announcement,
+   * which would then not duck at all and would be the one nobody can hear.
+   */
+  unduck(): void {
+    if (this.#ducks.length === 0) return;
+    this.#ducks.pop();
+    this.#applyMasterGain(DUCK_RELEASE_SECONDS);
   }
 
   /**
@@ -548,6 +652,9 @@ export class AudioSystem {
       this.#watchingVisibility = false;
     }
     this.#pendingCount = 0;
+    // Nothing is holding anything down any more; reporting otherwise would outlive the node
+    // the duck was ever applied to.
+    this.#ducks.length = 0;
     const context = this.#context;
     this.#context = undefined;
     this.#master = undefined;
@@ -659,10 +766,57 @@ export class AudioSystem {
     }
   }
 
-  #applyMasterGain(): void {
+  /**
+   * The level the master node should be at right now: what the player chose, silenced by a
+   * mute and held down by whichever duck is deepest.
+   *
+   * Mute wins over everything, which is what makes a duck taken while muted harmless — it
+   * changes the number this returns not at all, and so cannot turn the sound back on.
+   */
+  #targetGain(): number {
+    if (this.#muted) return 0;
+    let factor = 1;
+    for (let i = 0; i < this.#ducks.length; i += 1) {
+      const amount = this.#ducks[i]!; // i < length
+      if (amount < factor) factor = amount;
+    }
+    return this.#masterGain * factor;
+  }
+
+  /**
+   * Put the master node at {@link AudioSystem.#targetGain}, either at once or over a ramp.
+   *
+   * At once is right for the slider and for mute: the player asked, and a level that
+   * slides in after them feels broken. Over a ramp is right for a duck, which nobody asked
+   * for and which happens several times a match — see {@link AudioParamLike}.
+   *
+   * The ramp is scheduled against the context's own clock, which is the only clock this
+   * package is allowed to read, and the reason ducking works at all in a test with no DOM.
+   */
+  #applyMasterGain(rampSeconds = 0): void {
     const master = this.#master;
-    if (master === undefined) return;
-    master.gain.value = this.#muted ? 0 : this.#masterGain;
+    const context = this.#context;
+    // Both are set together, so this is one condition wearing two hats: before the first
+    // gesture there is nothing to write to, and the state is applied when the node is built.
+    if (master === undefined || context === undefined) return;
+    const gain = master.gain;
+    const target = this.#targetGain();
+    const now = context.currentTime;
+    // Read first. `cancelScheduledValues` reverts to the last event *before* now rather
+    // than holding what the ramp had reached, so a value read after it is the value this
+    // duck started from — pinning that would jump the level back up before ducking again.
+    const current = gain.value;
+    // Nothing in flight may survive: a duck's ramp carrying on past a mute would put the
+    // level back up a fifth of a second after the player silenced it.
+    gain.cancelScheduledValues(now);
+    if (rampSeconds <= 0) {
+      gain.value = target;
+      return;
+    }
+    // A ramp has no start value of its own — it interpolates from the previous event — so
+    // where it starts from has to be said out loud.
+    gain.setValueAtTime(current, now);
+    gain.linearRampToValueAtTime(target, now + rampSeconds);
   }
 
   /** An idle slot, or the busiest one's nearest neighbour: the voice ending soonest is the

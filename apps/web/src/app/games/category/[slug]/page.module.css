@@ -1,0 +1,79 @@
+/* Deliberately close to the game page's crumbs: the two routes sit at the same depth and
+   a reader arriving from a search result should not have to learn a second layout. */
+.crumbs {
+  display: flex;
+  gap: var(--db-space-2);
+  padding-block: var(--db-space-5) var(--db-space-4);
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}
+
+.head {
+  padding-bottom: var(--db-space-5);
+}
+
+.title {
+  font-size: var(--db-text-2xl);
+}
+
+/* The one paragraph the page exists for, so it is set at reading width rather than across
+   the full grid — a line of 90 characters is where a paragraph stops being read. */
+.blurb {
+  margin-top: var(--db-space-3);
+  max-width: 40rem;
+  font-size: var(--db-text-lg);
+  color: var(--db-body);
+}
+
+.count {
+  margin-top: var(--db-space-3);
+  color: var(--db-muted);
+  font-size: var(--db-text-sm);
+}
+
+/* Matches the catalogue's per-category section headings, so a reader who arrives from a
+   search result and one who arrives from /games/ are looking at the same furniture. */
+.gridTitle {
+  margin-bottom: var(--db-space-3);
+  font-size: var(--db-text-xl);
+}
+
+/* Prose, so it is set as prose. It was an eyebrow — 12px, uppercase, letter-spaced,
+   `--db-faint` — which is 2.6:1 on this page's white and fails AA at that size; and the
+   eyebrow treatment is for a two-word label, whereas this is a whole sentence generated
+   from the round lengths of the games below it. `--db-muted` at `--db-text-sm` is 4.65:1
+   and matches `.count`, which is the other meta line on the page. */
+.rounds {
+  margin-bottom: var(--db-space-4);
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--db-space-4);
+}
+
+.back {
+  margin-top: var(--db-space-7);
+}
+
+/* A control rather than a line of prose, so it clears the touch target on a phone where it
+   is the way back out of a page somebody landed on from a search result. */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-5);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  color: var(--db-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  border-color: var(--db-brand);
+  color: var(--db-brand);
+}

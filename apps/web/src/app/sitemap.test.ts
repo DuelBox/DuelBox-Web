@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOGUE } from '../data/catalogue.generated';
+import { CATALOGUE, CATEGORIES } from '../data/catalogue.generated';
 import { PLAYABLE } from '../data/registry';
+import { CATEGORY_HUBS } from '../lib/categories';
 import { SITE_URL, absoluteUrl } from '../lib/site';
 import robots from './robots';
 import sitemap from './sitemap';
@@ -50,6 +51,27 @@ describe('the sitemap', () => {
     }
   });
 
+  it('lists a hub for every category exactly once', () => {
+    // The hubs are only worth building if a crawler is told they exist (#200), and the
+    // count is checked against the catalogue's own category list rather than against
+    // CATEGORY_HUBS, so a nineteenth category with no page written for it fails here.
+    expect(CATEGORY_HUBS).toHaveLength(CATEGORIES.length);
+    for (const hub of CATEGORY_HUBS) {
+      const page = `${SITE_URL}/games/category/${hub.slug}/`;
+      expect(
+        urls.filter((url) => url === page),
+        hub.category,
+      ).toHaveLength(1);
+    }
+  });
+
+  it('ranks a hub above the game pages it links to and below the catalogue', () => {
+    const priorityOf = (url: string) => entries.find((entry) => entry.url === url)?.priority;
+    const hub = `${SITE_URL}/games/category/${CATEGORY_HUBS[0]?.slug ?? ''}/`;
+    expect(priorityOf(hub)).toBeLessThan(priorityOf(`${SITE_URL}/games/`) ?? 0);
+    expect(priorityOf(hub)).toBeGreaterThan(priorityOf(`${SITE_URL}/games/chess/`) ?? 0);
+  });
+
   it('lists a play route for every playable game and for nothing else', () => {
     const play = urls.filter((url) => url.startsWith(`${SITE_URL}/play/`)).sort();
     expect(play).toEqual(PLAYABLE.map((slug) => `${SITE_URL}/play/${slug}/`).sort());
@@ -57,7 +79,9 @@ describe('the sitemap', () => {
 
   it('lists nothing else, and nothing twice', () => {
     expect(new Set(urls).size).toBe(urls.length);
-    expect(urls).toHaveLength(STATIC_ROUTES.length + CATALOGUE.length + PLAYABLE.length);
+    expect(urls).toHaveLength(
+      STATIC_ROUTES.length + CATEGORY_HUBS.length + CATALOGUE.length + PLAYABLE.length,
+    );
   });
 
   it('dates every entry', () => {

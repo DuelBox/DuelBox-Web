@@ -84,6 +84,22 @@
   margin-bottom: var(--db-space-4);
 }
 
+/* The heading is the way to the category hub, so it has to look like a way somewhere.
+   Left to the global link rule it was brand-coloured text and nothing else — colour as the
+   only signal, which rule 7 rules out for anything a player has to act on, and which is
+   invisible in greyscale and to a reader with no second heading to compare it against. The
+   underline is the signal; the brand colour arrives on hover as confirmation rather than as
+   the whole message. */
+.relatedTitle a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.relatedTitle a:hover {
+  color: var(--db-brand);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));

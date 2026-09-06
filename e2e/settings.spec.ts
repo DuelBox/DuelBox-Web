@@ -3,6 +3,20 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 /**
+ * A destructive button, pressed the two times it now takes.
+ *
+ * The first press arms it and the label becomes "Press again to …", so the second press
+ * cannot be found under the original name — which is the whole point of the control and
+ * the reason this helper exists rather than two `.click()` calls (#160).
+ */
+async function confirmPress(page: Page, label: string): Promise<void> {
+  await page.getByRole('button', { name: label, exact: true }).click();
+  await page
+    .getByRole('button', { name: `Press again to ${label.toLowerCase()}`, exact: true })
+    .click();
+}
+
+/**
  * The settings page (#91), in a real browser against the static build.
  *
  * The stores are unit-tested in `apps/web/src/lib`; what these cover is the wiring the
@@ -90,7 +104,7 @@ test.describe('the settings page', () => {
     const recent = page.locator('dl div', { hasText: 'Recently played' }).locator('dd');
     await expect(recent).toHaveText('1');
 
-    await page.getByRole('button', { name: 'Clear recently played' }).click();
+    await confirmPress(page, 'Clear recently played');
     await expect(recent).toHaveText('0');
     await expect(page.getByRole('status')).toContainText('Recently played cleared');
 
@@ -117,7 +131,7 @@ test.describe('the settings page', () => {
       data: { 'duelbox:settings': { muted: true } },
     });
 
-    await page.getByRole('button', { name: 'Reset everything' }).click();
+    await confirmPress(page, 'Reset everything');
     await expect(page.getByRole('status')).toContainText('erased');
     // The controls read the defaults again without a reload ...
     await expect(mute(page)).toHaveAttribute('aria-checked', 'false');

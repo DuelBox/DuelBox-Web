@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import type { MetadataRoute } from 'next';
 import { CATALOGUE } from '../data/catalogue.generated';
 import { PLAYABLE } from '../data/registry';
+import { CATEGORY_HUBS } from '../lib/categories';
 import { absoluteUrl } from '../lib/site';
 
 /**
@@ -64,6 +65,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: absoluteUrl('/how-to-play/'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
     { url: absoluteUrl('/privacy/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
     { url: absoluteUrl('/terms/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
+    // The category hubs (#200). Above every game page and below the catalogue: a hub is the
+    // page that answers a search for a whole genre, and it is the one that then hands the
+    // crawler the games in it. From `CATEGORY_HUBS` rather than from the catalogue's
+    // `CATEGORIES`, so the sitemap can only list a category that has a page written for it.
+    ...CATEGORY_HUBS.map((hub): Entry => ({
+      url: absoluteUrl(`/games/category/${hub.slug}/`),
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.85,
+    })),
     // The catalogue page is the one that earns search traffic: it carries the rule, the
     // controls and the related games, where the play route is a shell that fills itself in
     // on the client. A page whose game is not built yet still exists and still ranks, but

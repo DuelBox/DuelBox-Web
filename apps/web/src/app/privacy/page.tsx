@@ -19,10 +19,18 @@ export const metadata: Metadata = {
  *
  * - **"Scores and settings"**. Nothing stores a score. At the time there was one key,
  *   `duelbox:last-mode`, holding the mode, bot tier and match length last chosen per game.
- *   There are now four — the setup, favourites, recent games and settings — and every one
- *   of them is written through `lib/local-store.ts`, the only module in the product that
- *   calls `localStorage`. The section below lists all four, and `privacy-claims.test.ts`
- *   fails the moment a second writer appears, so the list cannot fall behind quietly.
+ *   There are now six — the setup, favourites, recent games, settings, the head-to-head
+ *   record and the two names — and every one of them is written through
+ *   `lib/local-store.ts`, the only module in the product that calls `localStorage`. The
+ *   section below lists all six, and `privacy-claims.test.ts` fails the moment a second
+ *   writer appears, so the list cannot fall behind quietly.
+ *
+ *   The head-to-head (#160, #162) is the one to read carefully, because it is the closest
+ *   the product has come to keeping a result: it is a count of matches won, lost and drawn
+ *   per game, and it is still not a score. No match's score, no date, no opponent and no
+ *   individual result is written down — a tally of six wins does not say which six, or
+ *   when, or by how much. The sentence below says so, and it is a description of
+ *   `lib/head-to-head.ts` rather than a promise about it.
  * - **"works with no connection at all"**. True of a page already open, and only that:
  *   there is no service worker, so a reload with the network down fails (#2445). A privacy
  *   page is the wrong place to promise a feature that is on the backlog.
@@ -55,7 +63,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Four things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Six things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -67,11 +75,21 @@ export default function PrivacyPage() {
           <li>The games you have marked as favourites.</li>
           <li>The last eight games you played.</li>
           <li>Your settings: whether sound is muted, the volume, and whether vibration is on.</li>
+          <li>
+            The head-to-head between the two seats, game by game: how many matches each seat has won
+            and how many ended level, counted only when a match is played to the end. The settings
+            page shows it and clears it.
+          </li>
+          <li>
+            The two names you type for the seats, if you type any. They are shown on this device and
+            never leave it.
+          </li>
         </ul>
         <p>
           Scores are not part of it. No result of any match is written down anywhere, on your device
           or ours — a running tally is held in memory while you play and is gone when you close the
-          tab.
+          tab. The head-to-head above is a count of matches, not a record of any of them: it knows
+          you have won six and not which six, when, or by how much.
         </p>
         <p>
           All of it is yours to move or remove. The settings page lets you export the lot as a file,

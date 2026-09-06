@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
+import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
+import { PLAYER_NAMES_KEY, readPlayerNames, writePlayerName } from './player-names';
 import {
   exportPlayerData,
   importPlayerData,
@@ -54,11 +56,22 @@ function populate(): void {
   recordPlayed('pool');
   recordPlayed('chess');
   writeSettings({ muted: true, volume: 0.5 });
+  recordResult('chess', 'p1', 'friend');
+  recordResult('chess', 'draw', 'friend');
+  recordResult('pool', 'p2', 'friend');
+  writePlayerName('p1', 'Ada');
 }
 
 describe('the keys', () => {
   it('cover every store, and nothing else', () => {
-    expect(PLAYER_DATA_KEYS).toEqual([LAST_MODE_KEY, FAVOURITES_KEY, RECENT_KEY, SETTINGS_KEY]);
+    expect(PLAYER_DATA_KEYS).toEqual([
+      LAST_MODE_KEY,
+      FAVOURITES_KEY,
+      RECENT_KEY,
+      SETTINGS_KEY,
+      HEAD_TO_HEAD_KEY,
+      PLAYER_NAMES_KEY,
+    ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
 });
@@ -82,6 +95,12 @@ describe('exporting', () => {
         [FAVOURITES_KEY]: { version: 1, slugs: ['chess', 'ludo'] },
         [RECENT_KEY]: { version: 1, slugs: ['chess', 'pool'] },
         [SETTINGS_KEY]: { version: 1, muted: true, volume: 0.5, haptics: false },
+        [HEAD_TO_HEAD_KEY]: {
+          version: 1,
+          games: { chess: { p1: 1, p2: 0, draws: 1 }, pool: { p1: 0, p2: 1, draws: 0 } },
+          bots: {},
+        },
+        [PLAYER_NAMES_KEY]: { version: 1, p1: 'Ada' },
       },
     });
   });
@@ -121,6 +140,10 @@ describe('importing', () => {
     expect(readFavourites()).toEqual(['chess', 'ludo']);
     expect(readRecent()).toEqual(['chess', 'pool']);
     expect(readSettings()).toEqual({ muted: true, volume: 0.5, haptics: false });
+    // The record travels with everything else (#2448): a pair who move to a new phone
+    // keep the score they have been keeping against each other.
+    expect(readGameRecord('chess', 'friend')).toEqual({ p1: 1, p2: 0, draws: 1, played: 2 });
+    expect(readPlayerNames()).toEqual({ p1: 'Ada' });
   });
 
   it('refuses text that is not JSON, with a reason', () => {
@@ -205,6 +228,8 @@ describe('erasing', () => {
     expect(readFavourites()).toEqual([]);
     expect(readRecent()).toEqual([]);
     expect(readSettings()).toEqual(DEFAULT_SETTINGS);
+    expect(readGameRecord('chess', 'friend').played).toBe(0);
+    expect(readPlayerNames()).toEqual({});
   });
 
   it('is safe with nothing stored and with no storage at all', () => {
@@ -229,6 +254,7 @@ describe('the summary', () => {
       recent: 0,
       hasSettings: false,
       games: 0,
+      matches: 0,
     });
   });
 
@@ -239,7 +265,27 @@ describe('the summary', () => {
       recent: 2,
       hasSettings: true,
       games: 2,
+      matches: 3,
     });
+  });
+
+  it('counts matches across every game, not per game', () => {
+    // Three at chess and one at pool is four matches played, and that is the number a
+    // pair recognises as "how much of this is ours".
+    recordResult('chess', 'p1', 'friend');
+    recordResult('chess', 'p2', 'friend');
+    recordResult('chess', 'draw', 'friend');
+    recordResult('pool', 'p1', 'friend');
+    expect(playerDataSummary().matches).toBe(4);
+  });
+
+  it('counts a match against the bot, because erasing removes that one too', () => {
+    // The head-to-head between the two seats leaves the bot's matches out, and this
+    // number deliberately does not: it sits beside the button that erases everything
+    // stored here, so it has to describe everything stored here.
+    recordResult('chess', 'p1', 'friend');
+    recordResult('crash-it', 'p2', 'bot');
+    expect(playerDataSummary().matches).toBe(2);
   });
 
   it('counts a game whose setup was remembered before it was versioned', () => {

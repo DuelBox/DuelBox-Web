@@ -42,6 +42,47 @@ export function videoGameJsonLd(game: CatalogueEntry, url: string): Record<strin
   };
 }
 
+/** One entry in a listing: what it is called and where the page about it lives. */
+export interface CollectionItem {
+  readonly name: string;
+  readonly url: string;
+}
+
+/**
+ * The schema.org description of one category hub — a page that is a list of games (#200).
+ *
+ * `CollectionPage` rather than a second `VideoGame`, because that is what the page is: it
+ * describes a set, and the games in the set have their own pages carrying their own
+ * `VideoGame` blocks. Restating a game's genre and play modes here would give a search
+ * engine two descriptions of the same thing to reconcile, and the weaker one is this one.
+ *
+ * The `ItemList` inside it is ordered, so `itemListElement` carries a `position`. That is
+ * not decoration: an unordered list of URLs is what a crawler can already see in the
+ * markup, and the ordering is the only thing this block adds over the links themselves.
+ */
+export function collectionPageJsonLd(
+  page: { readonly name: string; readonly description: string; readonly url: string },
+  items: readonly CollectionItem[],
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: page.name,
+    description: page.description,
+    url: page.url,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: items.length,
+      itemListElement: items.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        url: item.url,
+      })),
+    },
+  };
+}
+
 /**
  * JSON for embedding inside a `<script>` element.
  *

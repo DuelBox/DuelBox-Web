@@ -190,6 +190,65 @@
   font: inherit;
 }
 
+/* A heading inside a section, for the two groups the data section grew: the names and the
+   record. Smaller than the section's own h2 — it divides a section rather than starting
+   one. */
+.subhead {
+  margin-block: var(--db-space-4) var(--db-space-1);
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-lg);
+  font-weight: 600;
+}
+
+/* Sized for a thumb like every other control here, and short: the names it holds are
+   twelve characters, so a field the width of the page would be promising room that the
+   store will not honour. */
+.text {
+  flex: 0 1 12rem;
+  min-width: 0;
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-3);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+}
+
+.games {
+  display: grid;
+  gap: var(--db-space-2);
+  margin: 0 0 var(--db-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.games li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--db-space-3);
+  padding-bottom: var(--db-space-2);
+  border-bottom: 1px solid var(--db-hairline);
+}
+
+/* The slug is stored lowercase and hyphenated; this is what turns it back into a title
+   without shipping the catalogue's names to a page that does not otherwise need them.
+
+   The first letter only. `capitalize` capitalises every word, which turned "whack-a-mole"
+   into "Whack A Mole" — a name the site uses nowhere else, on a list whose whole job is to
+   be recognised. See `titleOf` in the component for the seven games it got wrong. */
+.game::first-letter {
+  text-transform: uppercase;
+}
+
+.tally {
+  color: var(--db-body);
+  font-family: var(--db-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Holds its height while empty, so the page does not jump when it first speaks. */
 .status {
   min-height: 1.6em;
