@@ -118,9 +118,30 @@
   cursor: pointer;
 }
 
+/*
+ * The mute and the pause, as one flex item.
+ *
+ * One item rather than two so the row's arithmetic does not change: at 320px the seats
+ * have about 56px each once the round label and the pause have taken theirs, and a second
+ * 48px control in the row would leave them 28. Below 30rem the pair stacks instead — the
+ * HUD grows by one control's height, which portrait has to spare and width does not — and
+ * in the short landscape class below it goes back to a row, because there the column's
+ * height is the scarce axis and its width is not.
+ */
+.controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-2);
+}
+
 @media (max-width: 30rem) {
   .name {
     display: none;
+  }
+
+  .controls {
+    flex-direction: column;
   }
 }
 
@@ -201,8 +222,17 @@
     flex-direction: row;
   }
 
+  /* Side by side, so the column is exactly as tall with the mute as it was without it —
+     the bottom edge that the padding above was measured against. Width is the axis a
+     landscape phone has to spare. */
+  .controls {
+    flex-direction: row;
+    gap: var(--db-space-1);
+  }
+
   /* A smaller target, but still a real one: the web minimum is 44px. */
-  .pause {
+  .pause,
+  .controls .sound {
     min-width: 44px;
     min-height: 44px;
   }

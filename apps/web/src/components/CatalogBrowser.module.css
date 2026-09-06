@@ -1,0 +1,253 @@
+/*
+ * The catalogue's controls and rows.
+ *
+ * Every control here meets the touch-target token, because the catalogue is the screen a
+ * pair scrolls with a thumb before every match. Chosen states differ by shape as well as
+ * by colour — a tick on a pressed chip, a filled star against an outline — so the choice
+ * reads in greyscale (CLAUDE.md rule 7).
+ */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-3);
+  margin-bottom: var(--db-space-4);
+}
+
+.search {
+  flex: 1 1 14rem;
+  min-width: 0;
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-4);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+  /* Safari draws a search field as a rounded system control that ignores the border and
+     the height; asking for none lets the field above match the select beside it. */
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.search::placeholder {
+  color: var(--db-faint);
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  font-size: var(--db-text-sm);
+  font-weight: 600;
+  color: var(--db-muted);
+}
+
+.select {
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-3);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+}
+
+/*
+ * The chips wrap rather than scroll. A row that scrolls sideways hides most of the
+ * eighteen categories on a phone, and `e2e/safe-area.spec.ts` walks every button on this
+ * route and fails one that sits past the viewport's edge — which is exactly what a chip
+ * scrolled out of view is.
+ */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-2);
+  margin-bottom: var(--db-space-6);
+}
+
+.chip {
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-4);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius-pill);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--db-brand);
+  background: var(--db-brand-tint);
+  color: var(--db-ink);
+  font-weight: 700;
+}
+
+/* The tick that marks a chosen chip. It is in the markup and `aria-hidden`, not a
+   `::before`, because generated content joins the accessible name — see CatalogBrowser.tsx.
+   Hidden rather than absent when the chip is off, so pressing one does not change its
+   width and the row of chips never reflows under a thumb. */
+.tick {
+  margin-right: var(--db-space-1);
+}
+
+.chip[aria-pressed='false'] .tick {
+  visibility: hidden;
+}
+
+.chipClear {
+  border-style: dashed;
+  color: var(--db-brand);
+}
+
+/* The secondary buttons: clear the recent row, clear a search that found nothing. */
+.button {
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-4);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .chip:hover,
+  .button:hover {
+    border-color: var(--db-brand);
+  }
+}
+
+.section {
+  margin-bottom: var(--db-space-7);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-3);
+  font-size: var(--db-text-xl);
+  margin-bottom: var(--db-space-4);
+}
+
+.sectionCount {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+  font-weight: 700;
+  color: var(--db-muted);
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-pill);
+  padding: 2px 8px;
+}
+
+/* A row heading with an action beside it: "Recently played" and its Clear button. */
+.rowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--db-space-3);
+  margin-bottom: var(--db-space-4);
+}
+
+.rowHead .sectionTitle {
+  margin-bottom: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--db-space-4);
+}
+
+/*
+ * A card and its star.
+ *
+ * The card is a link, so the star cannot be inside it. The overlay is a box laid exactly
+ * over the tile — inset by the card's own padding, square because the tile is — that lets
+ * every press through to the link except the ones on the star. `aspect-ratio` on an
+ * absolutely positioned box with both horizontal insets set gives it the tile's height
+ * without knowing the tile's width.
+ */
+.slot {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: var(--db-space-2) var(--db-space-2) auto;
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+}
+
+/* A full touch target, of which only the disc in the middle is drawn: a 48px opaque
+   button in the corner of a tile that is often 136px wide would be a third of the art. */
+.star {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--db-touch-target);
+  height: var(--db-touch-target);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--db-muted);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.starGlyph {
+  display: grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  background: var(--db-paper);
+  border: 1px solid var(--db-border);
+  box-shadow: var(--db-shadow-sm);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.star[aria-pressed='true'] {
+  color: var(--db-brand-deep);
+}
+
+.star[aria-pressed='true'] .starGlyph {
+  background: var(--db-brand-tint);
+  border-color: var(--db-brand);
+}
+
+/* A search that found nothing is not a dead end: a way back, and three games to try. */
+.empty {
+  padding: var(--db-space-6) var(--db-space-4);
+  text-align: center;
+  border: 2px dashed var(--db-border);
+  border-radius: var(--db-radius-lg);
+}
+
+.emptyTitle {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-xl);
+  margin-bottom: var(--db-space-4);
+  /* The player's own words, which may be one long one. */
+  overflow-wrap: anywhere;
+}
+
+.emptyHint {
+  margin-top: var(--db-space-6);
+  margin-bottom: var(--db-space-4);
+  color: var(--db-muted);
+}
+
+.empty .grid {
+  max-width: 32rem;
+  margin-inline: auto;
+  text-align: left;
+}

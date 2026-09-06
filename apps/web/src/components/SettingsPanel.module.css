@@ -1,0 +1,212 @@
+/*
+ * The settings page's controls, sized for a thumb before a mouse.
+ *
+ * Every control meets the touch-target token, including the native range and file inputs,
+ * which browsers draw shorter than that: a slider a player cannot catch on the first try
+ * is a slider they set by accident. Mobile first and one column throughout, with a row
+ * that wraps rather than a breakpoint — a label and its control side by side where they
+ * fit and stacked where they do not, which is what a 320px screen needs from an "Import"
+ * row with a file chooser in it.
+ */
+.panel {
+  max-width: 46rem;
+  padding-bottom: var(--db-space-7);
+}
+
+.section {
+  padding-block: var(--db-space-5);
+  border-top: 1px solid var(--db-hairline);
+}
+
+.section h2 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-2xl);
+  margin-bottom: var(--db-space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--db-space-3);
+  min-height: var(--db-touch-target);
+  padding-block: var(--db-space-2);
+}
+
+.label {
+  font-weight: 600;
+  color: var(--db-ink);
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  min-height: var(--db-touch-target);
+  min-width: var(--db-touch-target);
+  padding: 0 var(--db-space-3);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius-pill);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* On differs by border, tint, weight and the word itself, so it reads in greyscale. */
+.switch[aria-checked='true'] {
+  border-color: var(--db-brand);
+  background: var(--db-brand-tint);
+  color: var(--db-ink);
+}
+
+.track {
+  position: relative;
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: var(--db-radius-pill);
+  background: var(--db-faint);
+  transition: background-color var(--db-duration-fast) var(--db-ease);
+}
+
+.thumb {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--db-radius-pill);
+  background: var(--db-paper);
+  transition: transform var(--db-duration-fast) var(--db-ease);
+}
+
+.switch[aria-checked='true'] .track {
+  background: var(--db-brand);
+}
+
+.switch[aria-checked='true'] .thumb {
+  transform: translateX(1rem);
+}
+
+/* Wide enough for either word, so the button does not change width when it is pressed. */
+.word {
+  min-width: 2.2em;
+  text-align: left;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-3);
+  flex: 1 1 12rem;
+  max-width: 22rem;
+}
+
+.range {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--db-touch-target);
+  margin: 0;
+  accent-color: var(--db-brand);
+}
+
+.value {
+  min-width: 3.5ch;
+  text-align: right;
+  font-family: var(--db-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  max-width: 46rem;
+  margin-block: var(--db-space-2) var(--db-space-3);
+  color: var(--db-muted);
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--db-space-3);
+  margin: 0 0 var(--db-space-4);
+}
+
+.count {
+  padding: var(--db-space-3);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-surface);
+}
+
+.count dt {
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}
+
+.count dd {
+  margin: var(--db-space-1) 0 0;
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-3);
+  margin-bottom: var(--db-space-3);
+}
+
+.button {
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-4);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:disabled {
+  color: var(--db-faint);
+  cursor: not-allowed;
+}
+
+/* Erase is the one control here a player cannot undo. It says so in its colour and its
+   border, and it sits in a row of its own, away from the buttons a thumb might have
+   meant. */
+.danger {
+  border-color: var(--db-danger);
+  color: var(--db-danger);
+}
+
+.file {
+  min-height: var(--db-touch-target);
+  max-width: 100%;
+  font: inherit;
+}
+
+/* Holds its height while empty, so the page does not jump when it first speaks. */
+.status {
+  min-height: 1.6em;
+  margin-top: var(--db-space-3);
+  color: var(--db-body);
+}
+
+@media (hover: hover) {
+  .button:not(:disabled):hover,
+  .switch:hover {
+    border-color: var(--db-brand);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .thumb {
+    transition: none;
+  }
+}

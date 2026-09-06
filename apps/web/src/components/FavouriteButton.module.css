@@ -1,0 +1,36 @@
+/* The star on a game's page. On and off differ by the glyph's shape as well as by tint. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-4);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button[aria-pressed='true'] {
+  border-color: var(--db-brand);
+  background: var(--db-brand-tint);
+  color: var(--db-ink);
+}
+
+.glyph {
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+.button[aria-pressed='true'] .glyph {
+  color: var(--db-brand-deep);
+}
+
+@media (hover: hover) {
+  .button:hover {
+    border-color: var(--db-brand);
+  }
+}

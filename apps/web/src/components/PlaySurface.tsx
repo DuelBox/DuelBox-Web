@@ -15,6 +15,8 @@ import { GAME_NAMES } from '@/data/game-names.generated';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio } from '@/lib/audio';
+import { vibrate } from '@/lib/haptics';
+import { recordPlayed } from '@/lib/recent';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
@@ -178,6 +180,20 @@ export function PlaySurface({ slug }: { slug: string }) {
     }));
   }, [match.phase, match.matchOutcome]);
 
+  /**
+   * A buzz when a round ends and another when the match does (#135).
+   *
+   * Inert until the player turns vibration on: `vibrate` checks the setting and the device
+   * before it does anything and returns quietly when either says no, so on the default
+   * install this costs one settings read per phase change and nothing else. A draw gets
+   * the short tap rather than the win pattern — the phone is lying between two people who
+   * both just failed to win, and celebrating at them is the wrong note.
+   */
+  useEffect(() => {
+    if (match.phase === 'round-over') vibrate('score');
+    else if (match.phase === 'match-over') vibrate(match.matchOutcome === 'draw' ? 'tap' : 'win');
+  }, [match.phase, match.matchOutcome]);
+
   const handleTick = useCallback((dt: number) => {
     send({ kind: 'tick', seconds: dt });
   }, []);
@@ -196,6 +212,9 @@ export function PlaySurface({ slug }: { slug: string }) {
       // pre-selects what you last chose, it does not start it.
       writeSetup(slug, { mode: chosen });
       setSetup((previous) => ({ ...previous, mode: chosen }));
+      // Counted as played from the moment a mode is chosen rather than when the match
+      // ends, because a pair who quit halfway through still played it (#87).
+      recordPlayed(slug);
       setMode(chosen);
       setActiveSeat(null);
       const next = seed + 1;
