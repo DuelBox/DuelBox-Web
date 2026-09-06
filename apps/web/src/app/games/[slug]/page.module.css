@@ -108,6 +108,13 @@
   filter: brightness(1.05);
 }
 
+/* The favourite star, beside the call to action on the same line while both fit. */
+.favourite {
+  margin-top: var(--db-space-4);
+  margin-left: var(--db-space-3);
+  vertical-align: top;
+}
+
 /* Controls per seat, from the game's own manifest — the same words the play page uses. */
 .controls {
   margin-top: var(--db-space-5);

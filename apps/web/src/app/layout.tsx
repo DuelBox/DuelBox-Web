@@ -2,9 +2,14 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
+  // The address every relative metadata URL resolves against, base path included: Next joins
+  // the two paths rather than replacing one, so `/games/chess/` becomes
+  // `/DuelBox-Web/games/chess/` and not a route the origin has never served.
+  metadataBase: new URL(`${SITE_URL}/`),
   title: {
     default: 'DuelBox — 108 games for two players',
     template: '%s — DuelBox',
@@ -16,6 +21,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'DuelBox',
+    title: 'DuelBox — 108 games for two players',
+    description: 'Share one screen, play across two devices, or take on a bot.',
+  },
+  twitter: {
+    card: 'summary',
     title: 'DuelBox — 108 games for two players',
     description: 'Share one screen, play across two devices, or take on a bot.',
   },

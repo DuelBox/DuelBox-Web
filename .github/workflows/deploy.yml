@@ -53,6 +53,8 @@ jobs:
         run: pnpm build
         env:
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          # The sitemap and every canonical URL are built from this, so they name the Pages origin.
+          NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
       - name: Stop Pages mangling the export
         # Without this, Pages runs the output through Jekyll, which silently drops every path
