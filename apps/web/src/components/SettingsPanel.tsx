@@ -242,6 +242,14 @@ export function SettingsPanel() {
     setStatus('Everything DuelBox kept on this device has been erased.');
   }, [refresh]);
 
+  /**
+   * Which destructive button is waiting for its second press, by label.
+   *
+   * One piece of state rather than one per button, so arming a second disarms the first
+   * and two buttons can never both be a press away from erasing something.
+   */
+  const [armed, setArmed] = useState('');
+
   const percent = Math.round(settings.volume * 100);
   const volumeId = `${id}-volume`;
   const importId = `${id}-import`;
@@ -376,15 +384,19 @@ export function SettingsPanel() {
         />
 
         <div className={styles.actions}>
-          <button type="button" className={styles.button} onClick={clearRecentPlayed}>
-            Clear recently played
-          </button>
-          <button type="button" className={styles.button} onClick={clearFavs}>
-            Clear favourites
-          </button>
-          <button type="button" className={styles.button} onClick={clearHeadToHead}>
-            Clear the record
-          </button>
+          <Confirm
+            label="Clear recently played"
+            armed={armed}
+            onArm={setArmed}
+            onConfirm={clearRecentPlayed}
+          />
+          <Confirm label="Clear favourites" armed={armed} onArm={setArmed} onConfirm={clearFavs} />
+          <Confirm
+            label="Clear the record"
+            armed={armed}
+            onArm={setArmed}
+            onConfirm={clearHeadToHead}
+          />
           <button type="button" className={styles.button} onClick={exportData}>
             Export
           </button>
@@ -402,9 +414,13 @@ export function SettingsPanel() {
           />
         </div>
         <div className={styles.actions}>
-          <button type="button" className={`${styles.button} ${styles.danger}`} onClick={resetAll}>
-            Reset everything
-          </button>
+          <Confirm
+            label="Reset everything"
+            className={styles.danger}
+            armed={armed}
+            onArm={setArmed}
+            onConfirm={resetAll}
+          />
         </div>
 
         {/*
@@ -501,6 +517,62 @@ function NameField({
         onBlur={onSettle}
       />
     </div>
+  );
+}
+
+/**
+ * A destructive action that takes two presses.
+ *
+ * #160 asks for the record's reset to require explicit confirmation, and the same
+ * argument covers the other three: every one of these erases something a pair built up
+ * over an evening, none of it is recoverable, and all four sat one stray press from
+ * gone — "Reset everything" most of all, which takes the favourites, the record, the
+ * names and the settings together.
+ *
+ * Two presses on the button itself rather than a dialog. `window.confirm` blocks the page
+ * and looks like the browser rather than the site; a modal is a focus trap, an overlay and
+ * an escape key to get right, which is a great deal of shell budget for a question with
+ * two words in it. The label changing to "Press again to …" is the whole mechanism: it
+ * says what the next press does, it is the same control the player is already pointing at,
+ * and it cannot be dismissed by accident because the only thing that arms it is a press.
+ *
+ * `aria-live` on the label means a screen reader hears the label change rather than
+ * silently arming, and moving focus away disarms — so a player who tabs off and comes
+ * back does not find a button that is still one press from erasing their evening.
+ */
+function Confirm({
+  label,
+  className,
+  armed,
+  onArm,
+  onConfirm,
+}: {
+  label: string;
+  className?: string | undefined;
+  armed: string;
+  onArm: (label: string) => void;
+  onConfirm: () => void;
+}) {
+  const isArmed = armed === label;
+  return (
+    <button
+      type="button"
+      className={className === undefined ? styles.button : `${styles.button} ${className}`}
+      aria-live="polite"
+      onBlur={() => {
+        if (isArmed) onArm('');
+      }}
+      onClick={() => {
+        if (!isArmed) {
+          onArm(label);
+          return;
+        }
+        onArm('');
+        onConfirm();
+      }}
+    >
+      {isArmed ? `Press again to ${label.toLowerCase()}` : label}
+    </button>
   );
 }
 

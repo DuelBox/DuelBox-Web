@@ -2,6 +2,20 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 /**
+ * A destructive button, pressed the two times it now takes.
+ *
+ * The first press arms it and the label becomes "Press again to …", so the second press
+ * cannot be found under the original name — which is the whole point of the control and
+ * the reason this helper exists rather than two `.click()` calls (#160).
+ */
+async function confirmPress(page: Page, label: string): Promise<void> {
+  await page.getByRole('button', { name: label, exact: true }).click();
+  await page
+    .getByRole('button', { name: `Press again to ${label.toLowerCase()}`, exact: true })
+    .click();
+}
+
+/**
  * The head-to-head record (#160, #162) and the names beside it (#161), in a real browser.
  *
  * The store is unit-tested in `apps/web/src/lib/head-to-head.test.ts`, including the rule
@@ -86,7 +100,7 @@ test.describe('the head-to-head record', () => {
     // names are deliberately not in the settings page's bundle.
     await expect(page.getByText('crash it', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Clear the record' }).click();
+    await confirmPress(page, 'Clear the record');
     await expect(matches).toHaveText('0');
     await expect(page.getByRole('status')).toContainText('cleared');
 
