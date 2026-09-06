@@ -116,9 +116,9 @@ export default function HowToPlayPage() {
           <div className={styles.card}>
             <h3>No accounts, no data</h3>
             <p>
-              There is nothing to sign up for and nothing to log in to. The only thing kept on your
-              device is what you last chose for a game — the mode, the bot level and the match
-              length. Scores are not saved anywhere.
+              There is nothing to sign up for and nothing to log in to. What is kept on your device
+              is what you last chose for a game, your favourites, your recent games and your
+              settings — and none of it leaves the device. Scores are not saved anywhere.
             </p>
           </div>
           <div className={styles.card}>

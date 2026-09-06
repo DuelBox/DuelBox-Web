@@ -1,4 +1,5 @@
 import { AudioSystem } from '@duelbox/engine';
+import { readSettings, type Settings } from './settings';
 
 /**
  * The shell's one audio system.
@@ -10,12 +11,36 @@ import { AudioSystem } from '@duelbox/engine';
  * One per tab is the right number. A second context does not get a second permission — the
  * autoplay policy is granted per document — so two systems would mean one unlocked and one
  * silently suspended, which is the confusing half of the bug this exists to avoid.
+ *
+ * Built with the stored settings, so a mute chosen yesterday holds today (#171). The
+ * alternative — construct silent-by-default and apply the settings from an effect — has a
+ * gap between the first flush and that effect in which a muted player hears the countdown,
+ * and the countdown is the first sound of every match. Reading storage here is safe for
+ * the same reason the construction is: nothing calls `audio()` until a component has
+ * mounted, so the build machine never reaches this line.
  */
 let system: AudioSystem | null = null;
 
 export function audio(): AudioSystem {
-  system ??= new AudioSystem();
+  if (system === null) {
+    const settings = readSettings();
+    system = new AudioSystem({ muted: settings.muted, masterGain: settings.volume });
+  }
   return system;
+}
+
+/**
+ * Pushes settings into the running system, for the control that just changed them.
+ *
+ * The argument is there so a control can hand over the value `writeSettings` returned
+ * rather than reading storage a second time; left out, it reads what is stored. Both the
+ * mute and the level are applied every time, because a control that changed one has no
+ * way to know the other did not change in another tab.
+ */
+export function applySoundSettings(settings: Settings = readSettings()): void {
+  const a = audio();
+  a.setMuted(settings.muted);
+  a.setMasterGain(settings.volume);
 }
 
 /**
