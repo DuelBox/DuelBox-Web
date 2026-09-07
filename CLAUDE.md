@@ -2,7 +2,8 @@
 
 A browser collection of two-player mini-games played by two people on one device
 in one tab. Original implementations of game genres that are free to reimplement.
-No accounts. Offline-capable.
+No accounts. Once a page has loaded it needs no network at all; coming back to it
+does, because there is no service worker (#2445).
 
 Read `docs/reference-analysis.md` before touching engine, input, or SDK code — it
 records what the reference app actually does and why our architecture is shaped
@@ -118,9 +119,61 @@ tick, and a balance harness whose headline promised a band it did not enforce.
 The React hook rules, enforced by nothing at all, were the sixth.
 `Canvas2DRenderer.setReducedMotion` — the whole of reduced motion for a board, and
 the one part of it that reaches all forty-five flip-owning games — had no test of
-any kind until 7 September 2026. That is the seventh. **The count lives here.** A
-file that finds the next one adds it to this list rather than numbering it where it
-was found, which is how two files came to claim a different sixth.
+any kind until 7 September 2026. That is the seventh. The **eighth** is the sentence
+this file opened with until the same day: README.md line 4 and CLAUDE.md line 5 both
+called the product "offline-capable" while the repository contains no service worker
+of any kind, and the only file that mentioned one was
+`apps/web/src/lib/privacy-claims.test.ts`, asserting that none exists — a check
+written for the privacy page when #2513 corrected it for making exactly this claim,
+and aimed for ever afterwards at the one file that had already stopped making it. So
+the guard existed, ran on every push, and could not fail on the two files a reader
+opens first. It is the first entry here that is a claim rather than a check, and it
+is the same failure: something believed to be held that nothing held.
+`apps/web/src/lib/offline-claims.test.ts` now reads every file that describes this
+product — this one included — against whether a service worker exists, and fails
+whichever of the two has drifted from the other. The **ninth** was found the same day
+and is the same shape one file over: `app/layout.tsx` promised a match played "across
+two devices" in the `description`, the `og:description` and the Twitter card — the
+object all 223 exported pages inherit unless they set their own — while `PlayMode` is
+`'friend' | 'bot'` and there is no pairing route, no signalling and no transport
+behind it. The same batch that rewrote the landing page took that exact claim out of
+the hero and out of one of three cards offering it as a way to play, corrected the
+catalogue page's version of it, and left the `<meta>` tag underneath the landing page
+saying it still, so the page contradicted itself in the only copy a search engine
+reads. Beside it the description counted "a hundred and seven" games two lines under a
+title that says 108. Neither could fail: the offline guard added in that same batch
+reads `layout.tsx` on every push and looked straight past both, because a guard aimed
+at one claim is not a guard on the file. `app/metadata-claims.test.ts` holds the count
+against `CATALOGUE.length` and the mode wording against the `PlayMode` union, in both
+directions. **The count lives here.** A file
+that finds the next one adds it to this list rather than numbering it where it was
+found, which is how two files came to claim a different sixth.
+
+The **tenth** is the privacy page's list of what this product stores, and it is the first
+one where the docstring naming the guard was written by the same hand as the guard. The page
+opens "Six things, all kept in your browser's own storage" over a list of exactly six, and
+the comment above it said the section "lists all six, and `privacy-claims.test.ts` fails the
+moment a second writer appears, so the list cannot fall behind quietly". Both halves were
+true and the pairing was wrong: the test held the *funnel* — every store goes through
+`lib/local-store.ts`, so the keys are findable — and never the *list*, and a funnel a new
+store passes through by construction is a guard that cannot notice one. The tournament
+(#157) put a seventh key under `duelbox:` through that very module, `exportPlayerData` walks
+all seven, and a pair who started a tournament and pressed Export downloaded a store the
+page's exhaustive list did not mention — while the landing copy one click away advertised
+exactly that persistence. The list is now counted against `PLAYER_DATA_KEYS`, in the number
+the page states as well as in the bullets, so a key that travels in a player's export and is
+not named on that page fails on every push.
+
+Three smaller versions of the same shape were found beside it and are recorded here rather
+than numbered, because none of them was ever false: `metadata-claims.test.ts`'s list of
+cross-device phrasings did not contain the most prominent one this repository had used, so
+pasting the exact sentence #102 deleted back into the hero left it silent — it is now held
+against every deleted sentence verbatim; its self-check "on the real reader" compared two
+hard-coded lists to each other and could not fail; and the count that "lives here" lived in
+`app/layout.tsx` alone while four statements of it in `docs/` still said 107, two of them in
+files the same batch had open. What generalises is not any of the three. It is that a guard
+written beside the thing it guards is tested against the defect that prompted it and nothing
+else, so **the sentence to distrust is the one in the docstring, not the one in the code**.
 
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute

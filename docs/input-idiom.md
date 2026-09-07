@@ -144,7 +144,7 @@ that is not an edge case.
 
 The fix is one line in `#applySeat`: a cancelled step raises `pointerCancelled` and
 suppresses `actionReleased`, on that step and on every later one — the release does not
-arrive a step late instead. So the shot stops being fired in all 107 games without a line
+arrive a step late instead. So the shot stops being fired in all 108 games without a line
 of game code changing, and `actionReleased` now means *the player let go* and nothing
 else. The pointer is null on the cancel step, and a press that had not been read yet is
 dropped with the rest of the gesture, so a tap-to-commit board does not play the move the

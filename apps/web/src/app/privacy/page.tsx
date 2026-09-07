@@ -19,11 +19,17 @@ export const metadata: Metadata = {
  *
  * - **"Scores and settings"**. Nothing stores a score. At the time there was one key,
  *   `duelbox:last-mode`, holding the mode, bot tier and match length last chosen per game.
- *   There are now six — the setup, favourites, recent games, settings, the head-to-head
- *   record and the two names — and every one of them is written through
- *   `lib/local-store.ts`, the only module in the product that calls `localStorage`. The
- *   section below lists all six, and `privacy-claims.test.ts` fails the moment a second
- *   writer appears, so the list cannot fall behind quietly.
+ *   There are now seven — the setup, favourites, recent games, settings, the head-to-head
+ *   record, the two names and a tournament in progress — and every one of them is written
+ *   through `lib/local-store.ts`, the only module in the product that calls `localStorage`.
+ *
+ *   The section below lists all seven, and it fell behind at six the day the tournament
+ *   (#157) added the seventh: `privacy-claims.test.ts` was watching the *funnel*, so a new
+ *   store built on `local-store.ts` — which is every store, by construction — arrived
+ *   without disturbing it, and the docstring here went on saying the list could not fall
+ *   behind quietly. It now counts the items against `PLAYER_DATA_KEYS`, which is the same
+ *   list export, import and erase walk, so a key that travels in an export and is not named
+ *   here fails on every push. That is CLAUDE.md's tenth entry.
  *
  *   The head-to-head (#160, #162) is the one to read carefully, because it is the closest
  *   the product has come to keeping a result: it is a count of matches won, lost and drawn
@@ -63,7 +69,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Six things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Seven things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -84,12 +90,20 @@ export default function PrivacyPage() {
             The two names you type for the seats, if you type any. They are shown on this device and
             never leave it.
           </li>
+          <li>
+            A tournament you have started, while it lasts: which games were drawn, in what order,
+            which side took each one that has been played, and whether you are playing each other or
+            a bot. It is written down so that a tournament survives closing the tab — every leg is a
+            different page — and it is erased the moment you finish or leave it.
+          </li>
         </ul>
         <p>
-          Scores are not part of it. No result of any match is written down anywhere, on your device
+          Scores are not part of it. No match&apos;s score is written down anywhere, on your device
           or ours — a running tally is held in memory while you play and is gone when you close the
           tab. The head-to-head above is a count of matches, not a record of any of them: it knows
-          you have won six and not which six, when, or by how much.
+          you have won six and not which six, when, or by how much. A tournament in progress is the
+          one thing here that remembers who won a particular game, because a line-up nobody can
+          score is not a tournament, and it goes when the tournament does.
         </p>
         <p>
           All of it is yours to move or remove. The settings page lets you export the lot as a file,

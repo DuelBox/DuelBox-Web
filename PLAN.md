@@ -112,7 +112,9 @@ match state exactly across rotation, resize, and fold.
 
 The catalog is one flat scroll of 107 cards with no search, no categories, and no
 filters. Ours gets search, category filters, sort, favourites, recently played,
-animated card previews, per-game indexable pages, offline play, and installability.
+animated card previews and per-game indexable pages. Offline play and installability
+are the M3 line below and are not built yet — #191 to #196 and #2445 own them, and
+nothing in the product may claim either until they land.
 
 ## Milestones
 

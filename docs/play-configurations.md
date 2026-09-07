@@ -2,7 +2,7 @@
 
 Single-player against a bot, two players sharing a device, and two players on separate
 devices are three different products wearing the same games. Deciding the rules once is
-what stops each of the 107 growing its own answer.
+what stops each of the 108 growing its own answer.
 
 | | **Solo** | **Together** | **Remote** |
 |---|---|---|---|
@@ -11,14 +11,16 @@ what stops each of the 107 growing its own answer.
 | Rotation | Never | Turns to face whoever has the move | Never |
 | Input | Whole device is yours | Split by the seat divider | Whole device is yours |
 | Netcode | None | None | Peer-to-peer, lockstep |
-| Works offline | Yes | Yes | No — needs the signalling handshake |
+| Plays with the network off, once loaded | Yes | Yes | No — needs the signalling handshake |
 | Costs us | Nothing | Nothing | Signalling only, on a free tier |
 | Manifest gate | `modes: ['bot']` | `modes: ['friend']` | `presentations: ['single-seat']` |
 
-Two of the three cost nothing to run and work with the network off. That is not an
-accident of implementation, it is the product: the simulation is on the player's device in
-every configuration, and remote play differs only in where the *other* player's inputs
-come from.
+Two of the three cost nothing to run and, once loaded, work with the network off. That is
+not an accident of implementation, it is the product: the simulation is on the player's
+device in every configuration, and remote play differs only in where the *other* player's
+inputs come from. A loaded page is the whole of it, in all three columns: there is no
+service worker, so opening the site fresh needs a connection whichever way you are playing
+(#2445).
 
 ## Where the choice is made
 
