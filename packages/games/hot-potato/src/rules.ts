@@ -78,10 +78,16 @@ export function otherOf(seat: SeatId): SeatId {
   return seat === 'p1' ? 'p2' : 'p1';
 }
 
-export function createGame(rng: Rng): Game {
+/**
+ * A fresh match.
+ *
+ * `opener` is the seat that holds the potato first, and it comes from
+ * `context.openingSeat` rather than from here - see {@link resetGame}.
+ */
+export function createGame(rng: Rng, opener: SeatId = 'p1'): Game {
   const game: Game = {
     phase: 'holding',
-    holder: 'p1',
+    holder: opener,
     fuse: FUSE_SECONDS,
     flight: 0,
     settle: 0,
@@ -92,15 +98,26 @@ export function createGame(rng: Rng): Game {
     caught: null,
     rounds: { p1: 0, p2: 0 },
   };
-  resetGame(game, rng);
+  resetGame(game, rng, opener);
   return game;
 }
 
-export function resetGame(game: Game, rng: Rng): void {
+/**
+ * Reset in place, with `opener` holding the potato first.
+ *
+ * Round one's holder decides the whole match, and starting every match from a literal
+ * `p1` was this game's entire seat bias. Two equal bots make the same number of throws in
+ * a fuse - five on `easy`, seven on `normal` - and an odd count means the seat that did
+ * *not* start is the one caught. The loser opens the next round, so the catch alternates,
+ * and {@link TARGET_ROUNDS} is odd: the seat that opened round one wins 3-2, every time.
+ * The shell already alternates the opening seat between the rounds of a best-of, so this
+ * reads it rather than assuming it.
+ */
+export function resetGame(game: Game, rng: Rng, opener: SeatId = 'p1'): void {
   game.rounds.p1 = 0;
   game.rounds.p2 = 0;
   game.caught = null;
-  startRound(game, 'p1', rng);
+  startRound(game, opener, rng);
 }
 
 export function startRound(game: Game, holder: SeatId, rng: Rng): void {
@@ -185,7 +202,13 @@ export function step(game: Game, fixedDeltaSeconds: number, rng: Rng): StepResul
     game.settle -= fixedDeltaSeconds;
     if (game.settle <= 0 && winnerOf(game) === null) {
       // Whoever was caught starts the next round, which gives them the throw first.
-      startRound(game, game.caught ?? 'p1', rng);
+      //
+      // The fallback is `game.holder` rather than a literal `p1`. Settling is only ever
+      // entered by a catch, so `caught` is never actually null here - but a seat written
+      // as a constant is not covariant under the half-turn, and the mirror test in
+      // `rules.test.ts` reaches this line with `caught` unset and fails on it. Every seat
+      // in this function now comes from the board rather than from the alphabet.
+      startRound(game, game.caught ?? game.holder, rng);
     }
     return 'playing';
   }

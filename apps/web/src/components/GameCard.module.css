@@ -29,19 +29,32 @@
   gap: 4px;
 }
 
+/*
+ * The two seat marks differ by SHAPE as well as by colour, because rule 7 says colour is
+ * never the only signal — and this is the catalogue's own seat signal, on every card.
+ *
+ * They were two identical 7px circles separated only by `background` until #2518. The
+ * greyscale harness covers the games and does not look at the shell, so a rule the whole
+ * product is held to was broken in the one place a player sees first.
+ *
+ * Disc and rounded square, matching `SeatGlyph.tsx` exactly — Pip is a disc, Bo is a
+ * rounded square — so the catalogue and the match use one visual language. Done in CSS
+ * rather than by rendering 108 pairs of inline SVG, which the shell has no bytes for.
+ */
 .seats i {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
   display: block;
 }
 
 .p1 {
   background: var(--db-p1);
+  border-radius: 50%;
 }
 
 .p2 {
   background: var(--db-p2);
+  border-radius: 2px;
 }
 
 .name {

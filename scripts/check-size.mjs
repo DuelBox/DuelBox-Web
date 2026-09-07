@@ -14,6 +14,52 @@
  *
  * Gzipped, because that is what crosses the wire.
  */
+/**
+ * ## Notes for whoever is next over the shell budget
+ *
+ * Three things were learned the expensive way on 29 August 2026, while getting the audio
+ * subsystem's 4.1 KB back under the line. Two are techniques that work and one is a trap.
+ *
+ * ### The trap: `"sideEffects": false`
+ *
+ * Adding it to `@duelbox/engine` and `@duelbox/game-sdk` is an *accurate* declaration —
+ * neither package has a top-level statement outside a declaration, so nothing is lost by
+ * dropping an unused module — and it appears to save 0.9 KB of shell. **It makes players
+ * worse off.** Measured:
+ *
+ * | | shell | total | tic-tac-toe | sudoku | solitaire |
+ * |---|---|---|---|---|---|
+ * | without | 280.0 KB | 759.7 KB | 2.9 KB | 6.2 KB | 6.0 KB |
+ * | with | 279.1 KB | 874.1 KB | 4.8 KB | 8.2 KB | 8.0 KB |
+ *
+ * It moves engine code out of the shared chunk and inlines a copy into each of the 108
+ * game chunks. A player downloads shell + one game, so they pay about 1 KB more while the
+ * budgeted number improves. Watch the **total** as well as the shell: a change that moves
+ * the shell down and the total up by a hundred kilobytes has not saved anything.
+ *
+ * ### A frozen table ships its prose to every visitor
+ *
+ * `Object.freeze` is a call, so no bundler can prove the statement droppable, so a
+ * `const TABLE = Object.freeze({...})` ships **even when nothing imports it**. A
+ * documentation table read only by tests — ten cues with a sentence of English each — was
+ * costing 600 bytes that way. `/*#__PURE__*\/ Object.freeze({...})` fixes it and is
+ * understood by webpack, Rollup, esbuild and SWC alike. Worth grepping for; it recurs.
+ *
+ * ### A client component that derives a value from a build-time table ships the table
+ *
+ * `PlaySurface` looked up one display name from `GAME_NAMES` and so carried all 108 of
+ * them, 1.4 KB, into every visitor's bundle. The play route is statically exported per
+ * slug and the lookup depended on nothing else, so the server already had the answer.
+ * `game-names.generated.ts` records the same mistake one level out, with `CATALOGUE`.
+ * The fix is always the same: compute it on the server, pass the answer as a prop.
+ *
+ * ### And one thing that looks obvious and is not
+ *
+ * `apps/web/src/data/controls.ts` imports the whole 43.9 KB catalogue to build an id→slug
+ * map. It costs nothing: its only consumer is `app/games/[slug]/page.tsx`, a server
+ * component, whose client chunk is 510 bytes. Measure the built chunk before you refactor
+ * anything — several candidates here look wasteful in the source and ship no bytes at all.
+ */
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -91,8 +137,19 @@ for (const [slug, file] of [...gameChunks].sort()) {
 // this rather than the total across all chunks — the total grows with every game added
 // and nobody ever downloads more than one of them, so it would punish the wrong thing.
 const gameChunkFiles = new Set(gameChunks.values());
+
+// The service worker is measured on its own line. It is not part of "what a visitor must
+// have before they can choose a game": it is registered on `load`, fetched off the critical
+// path by a browser that is already showing the page, and on the visit after this one it is
+// the reason the shell costs nothing at all. Adding it to the number it exists to reduce
+// would be arithmetic that punishes the fix. It is still budgeted — see size-budget.json —
+// because a worker that quietly grows into a framework is exactly the drift this file is
+// for, and because a missing file must fail rather than score zero.
+const workerFile = join(OUT, 'sw.js');
+const workerBytes = files.includes(workerFile) ? (sizes.get(workerFile) ?? 0) : null;
+
 const shellBytes = files
-  .filter((file) => !gameChunkFiles.has(file))
+  .filter((file) => !gameChunkFiles.has(file) && file !== workerFile)
   .reduce((sum, file) => sum + (sizes.get(file) ?? 0), 0);
 
 console.log(
@@ -115,6 +172,23 @@ if (unsplit.length > 0) {
 
 if (shellBytes > BUDGET.shellBytes) {
   failures.push(`the shell is ${kb(shellBytes)}, over the ${kb(BUDGET.shellBytes)} budget`);
+}
+
+if (workerBytes === null) {
+  failures.push(
+    'apps/web/out/sw.js is missing — the site claims to be offline-capable in CLAUDE.md, in ' +
+      'ADR 0002 and on the privacy page, and without this file that claim is false the moment ' +
+      'a tab is closed',
+  );
+} else {
+  console.log(
+    `check-size: service worker ${kb(workerBytes)} (budget ${kb(BUDGET.serviceWorkerBytes)})`,
+  );
+  if (workerBytes > BUDGET.serviceWorkerBytes) {
+    failures.push(
+      `sw.js is ${kb(workerBytes)}, over the ${kb(BUDGET.serviceWorkerBytes)} service-worker budget`,
+    );
+  }
 }
 
 if (failures.length > 0) {

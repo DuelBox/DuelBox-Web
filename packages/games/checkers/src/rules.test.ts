@@ -4,6 +4,7 @@ import type { SeatId } from '@duelbox/engine';
 import {
   BLUNDER_CHANCE,
   BOARD_SIZE,
+  IDLE_PLIES_DRAW,
   PIECES_PER_SEAT,
   SEARCH_DEPTH,
   SLOT_COUNT,
@@ -467,17 +468,64 @@ describe('the bot', () => {
 
 describe('a whole game', () => {
   it('always terminates', { timeout: SERIES_TIMEOUT_MS }, () => {
-    for (const seed of [2, 8, 17]) {
-      const game = playOut('normal', 'normal', seed, 400);
-      // Either somebody won, or four hundred plies passed without one — which is a real
-      // outcome in checkers rather than a hang, and the shell's round timer settles it.
-      const decided = winnerOf(game);
-      const stillLegal = legalMoves(buffer, game);
-      expect(
-        decided !== null || stillLegal > 0,
-        `seed ${String(seed)} reached a position with no winner and no move`,
-      ).toBe(true);
+    // This used to accept "four hundred plies passed without a winner" as a real outcome
+    // settled by the shell's round timer. Nothing in the simulation reads that timer, and
+    // once the bot became covariant under the half turn (see the mirror suite) the two
+    // seats shuffled six kings in step for as long as they were asked to: 84 matches in
+    // 100 were still running after ten simulated minutes. The forty-move rule ends them,
+    // so this asserts the real thing now — a result, every time.
+    for (const seed of [2, 8, 17, 41, 96]) {
+      const game = playOut('normal', 'normal', seed, 600);
+      expect(winnerOf(game), `seed ${String(seed)} did not finish`).not.toBeNull();
     }
+  });
+
+  it('calls forty moves without a capture or a man move a draw', () => {
+    // Two lone kings on opposite corners of the long diagonal: neither can be taken and
+    // neither move is progress, which is exactly the position the rule exists for.
+    const game = empty();
+    put(game, 0, 1, 'p1', 'king');
+    put(game, 7, 6, 'p2', 'king');
+    game.toMove = 'p1';
+    expect(winnerOf(game)).toBeNull();
+    const rng = new Rng(7);
+    for (let ply = 0; ply < IDLE_PLIES_DRAW; ply += 1) {
+      expect(winnerOf(game), `decided early, on ply ${String(ply)}`).toBeNull();
+      const move = bestMove(game, rng, 'normal');
+      expect(move, `no move on ply ${String(ply)}`).not.toBeNull();
+      if (move === null) break;
+      applyMove(game, move.from, move.to);
+      expect(game.idlePlies, 'a king move is never progress').toBe(ply + 1);
+    }
+    expect(winnerOf(game)).toBe('draw');
+  });
+
+  it('treats a capture and a man move as progress, and a crowning as a man move', () => {
+    const game = empty();
+    const man = put(game, 5, 2, 'p1', 'man');
+    put(game, 0, 1, 'p1', 'king');
+    put(game, 7, 6, 'p2', 'king');
+    game.toMove = 'p1';
+    game.idlePlies = 30;
+    applyMove(game, man, slotAt(4, 1));
+    expect(game.idlePlies, 'a man move resets the counter').toBe(0);
+
+    const crowning = empty();
+    const nearly = put(crowning, 1, 2, 'p1', 'man');
+    put(crowning, 7, 6, 'p2', 'king');
+    crowning.toMove = 'p1';
+    crowning.idlePlies = 60;
+    applyMove(crowning, nearly, slotAt(0, 1));
+    expect(crowning.slots[slotAt(0, 1)]?.kind).toBe('king');
+    expect(crowning.idlePlies, 'the move that crowns is still a man move').toBe(0);
+
+    const jumping = empty();
+    const jumper = put(jumping, 4, 3, 'p1', 'king');
+    put(jumping, 3, 2, 'p2', 'man');
+    jumping.toMove = 'p1';
+    jumping.idlePlies = 70;
+    applyMove(jumping, jumper, slotAt(2, 1));
+    expect(jumping.idlePlies, 'a capture resets the counter').toBe(0);
   });
 
   it('never lets a seat move twice except in a chain', { timeout: SERIES_TIMEOUT_MS }, () => {
@@ -534,4 +582,255 @@ describe('seats', () => {
     expect(otherOf('p1')).toBe('p2');
     expect(otherOf('p2')).toBe('p1');
   });
+});
+
+/* ------------------------------------------------------------------ the mirror */
+
+/**
+ * The half turn, and the one property that makes the two seats the same player.
+ *
+ * Written before the fix it gates, because a win-rate ladder cannot see any of what is
+ * below. Checkers measured **58.0% for seat one** on the balance harness (#2502) under
+ * *either* opening seat — the number did not move at all when the game started reading
+ * `context.openingSeat`, which is what ruled first-mover advantage out and pointed here.
+ *
+ * The board is thirty-two dark squares, row-major from the top. Rotating it half a turn
+ * maps row/column `(r, c)` to `(7 - r, 7 - c)`, and that is exactly `slot -> 31 - slot`:
+ * the dark squares are closed under it, which is the only reason a mirror this cheap is
+ * available. Mirroring a position means moving every piece to `31 - slot`, swapping which
+ * seat owns it, and swapping who is to move. Do that and you have the identical game seen
+ * from the other chair, so **every** answer must come back mirrored: the same move list in
+ * the same order, the same score, the same bot decision at every tier.
+ *
+ * Two things were not covariant, and neither could have been found by counting wins.
+ *
+ * 1. **Move ordering favoured one direction of travel.** `legalMoves` walked slots in
+ *    board order and `movesFrom` walked one fixed list of global diagonals, so the mirrored
+ *    position generated the *reverse* of the mirrored list rather than the mirrored list —
+ *    289 of 400 random positions. Every tie downstream is broken by `score > bestScore`,
+ *    which keeps the first-listed move, so seat one preferred to advance its foremost piece
+ *    and seat two its rearmost. Both lists are now kept in the moving seat's own frame.
+ * 2. **`evaluate` was not covariant, on the position every match starts from.** The
+ *    advance bonus was `0.4` per row, which is not a binary fraction, and a position and
+ *    its mirror sum the same two dozen multiples of it in opposite orders. The opening
+ *    board scored `+7.105427357601002e-15` from one seat and the negative of that from the
+ *    other — the same `-0`-shaped defect already found in Chess. 610 of 800 evaluations
+ *    disagreed. The scale is integral now, so the sum is exact in any order.
+ *
+ * With both repaired the whole match is covariant, and seat balance stops being a
+ * measurement and becomes a proof: a match from a `p1` opener and the match from a `p2`
+ * opener on the same seed are *the same match seen from the other chair*, so seat one's
+ * share is exactly 50% at every tier and every sample. That is the last test in this file.
+ */
+
+/** The half turn on a slot index. Its own inverse. */
+function mirrorSlot(slot: number): number {
+  return SLOT_COUNT - 1 - slot;
+}
+
+/** `from` seen from the other chair, written into `to`. */
+function mirrorInto(from: Readonly<Game>, to: Game): void {
+  for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+    const piece = from.slots[slot];
+    to.slots[mirrorSlot(slot)] =
+      piece === null || piece === undefined
+        ? null
+        : { seat: otherOf(piece.seat), kind: piece.kind };
+  }
+  to.toMove = otherOf(from.toMove);
+  to.chain = from.chain < 0 ? -1 : mirrorSlot(from.chain);
+  to.idlePlies = from.idlePlies;
+}
+
+/**
+ * A reachable position, reached by playing random legal moves from the opening.
+ *
+ * Random *legal* rather than random pieces on random squares: a fabricated board can be
+ * unreachable, and an unreachable board is a weaker witness than one the game can actually
+ * produce. The ply count sweeps openings, middlegames and endgames.
+ */
+function reachable(seed: number, plies: number): Game {
+  const game = createGame();
+  const rng = new Rng(seed);
+  const moves: Move[] = new Array<Move>(64);
+  for (let ply = 0; ply < plies; ply += 1) {
+    if (winnerOf(game) !== null) break;
+    const count = legalMoves(moves, game);
+    if (count === 0) break;
+    const move = moves[rng.int(0, count)];
+    if (move === undefined) break;
+    applyMove(game, move.from, move.to);
+  }
+  return game;
+}
+
+describe('the half turn', () => {
+  it('is its own inverse, and closes over the dark squares', () => {
+    for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+      expect(mirrorSlot(mirrorSlot(slot))).toBe(slot);
+      // The geometric statement the index arithmetic is standing in for.
+      expect(slotAt(BOARD_SIZE - 1 - rowOf(slot), BOARD_SIZE - 1 - columnOf(slot))).toBe(
+        mirrorSlot(slot),
+      );
+    }
+  });
+
+  it('turns the opening position into itself', () => {
+    // Three rows each with two empty rows between, so the opening board is fixed by the
+    // half turn: mirror it and you get the same board back, not a different one. That is
+    // why an unfair opening cannot hide in the setup, and why everything below is about
+    // the search rather than the position.
+    const start = createGame();
+    const other = createGame();
+    mirrorInto(start, other);
+    const describe1 = (game: Readonly<Game>): string =>
+      game.slots.map((piece) => (piece === null ? '.' : `${piece.seat}${piece.kind[0]}`)).join(' ');
+    expect(describe1(other)).toBe(describe1(start));
+    expect(other.toMove).toBe(otherOf(start.toMove));
+  });
+
+  it('generates the mirrored moves in the mirrored order', { timeout: SERIES_TIMEOUT_MS }, () => {
+    const other = createGame();
+    const mine: Move[] = new Array<Move>(64);
+    const theirs: Move[] = new Array<Move>(64);
+    for (let seed = 1; seed <= 400; seed += 1) {
+      const game = reachable(seed * 7919, seed % 40);
+      mirrorInto(game, other);
+      const count = legalMoves(mine, game);
+      expect(legalMoves(theirs, other), `seed ${String(seed)} generated a different count`).toBe(
+        count,
+      );
+      for (let i = 0; i < count; i += 1) {
+        const a = mine[i];
+        const b = theirs[i];
+        expect(b?.from, `seed ${String(seed)} move ${String(i)}`).toBe(mirrorSlot(a?.from ?? -1));
+        expect(b?.to, `seed ${String(seed)} move ${String(i)}`).toBe(mirrorSlot(a?.to ?? -1));
+        expect(b?.captured).toBe(a?.captured === -1 ? -1 : mirrorSlot(a?.captured ?? -1));
+      }
+    }
+  });
+
+  it('scores a position and its mirror identically', { timeout: SERIES_TIMEOUT_MS }, () => {
+    const other = createGame();
+    for (let seed = 1; seed <= 400; seed += 1) {
+      const game = reachable(seed * 7919, seed % 40);
+      mirrorInto(game, other);
+      for (const seat of ['p1', 'p2'] as SeatId[]) {
+        // `Object.is`, not `toBe`-on-numbers-by-eye: `0` and `-0` compare equal with `===`
+        // and are the whole finding in Chess. A strict `score > best` can tell them apart.
+        const mine = evaluate(game, seat);
+        const theirs = evaluate(other, otherOf(seat));
+        expect(
+          Object.is(mine, theirs),
+          `seed ${String(seed)} scored ${String(mine)} from ${seat} and ${String(theirs)} from its mirror`,
+        ).toBe(true);
+      }
+      expect(winnerOf(other)).toBe(
+        winnerOf(game) === null || winnerOf(game) === 'draw'
+          ? winnerOf(game)
+          : otherOf(winnerOf(game) as SeatId),
+      );
+    }
+  });
+
+  it('scores in whole numbers, so a sum is exact in any order', () => {
+    const other = createGame();
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const game = reachable(seed * 104_729, seed % 50);
+      mirrorInto(game, other);
+      for (const board of [game, other]) {
+        for (const seat of ['p1', 'p2'] as SeatId[]) {
+          expect(Number.isInteger(evaluate(board, seat))).toBe(true);
+        }
+      }
+    }
+    // The witness that started this: the opening board is worth exactly nothing to either
+    // seat, and used to be worth plus and minus seven femto-points instead.
+    expect(Object.is(evaluate(createGame(), 'p1'), 0)).toBe(true);
+    expect(Object.is(evaluate(createGame(), 'p2'), 0)).toBe(true);
+  });
+
+  it(
+    'makes every bot at every tier choose the mirrored move',
+    { timeout: SERIES_TIMEOUT_MS },
+    () => {
+      const other = createGame();
+      for (let seed = 1; seed <= 400; seed += 1) {
+        const game = reachable(seed * 7919, seed % 40);
+        mirrorInto(game, other);
+        for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+          // The same seed on both sides: a bot that saw a different stream would be a
+          // different bot, and the question here is only about the board.
+          const mine = bestMove(game, new Rng(99), tier);
+          const theirs = bestMove(other, new Rng(99), tier);
+          if (mine === null) {
+            expect(theirs, `seed ${String(seed)} ${tier}`).toBeNull();
+            continue;
+          }
+          expect(theirs?.from, `seed ${String(seed)} ${tier} broke the mirror`).toBe(
+            mirrorSlot(mine.from),
+          );
+          expect(theirs?.to, `seed ${String(seed)} ${tier} broke the mirror`).toBe(
+            mirrorSlot(mine.to),
+          );
+        }
+      }
+    },
+  );
+
+  /**
+   * The end of the argument, one test per tier.
+   *
+   * Every seed is played twice from the same `Rng` seed, once opened by each seat, exactly
+   * as the balance harness does it — and because the whole simulation is covariant the
+   * second match *is* the first seen from the other chair. So seat one's share is 50% by
+   * construction rather than by measurement, and no sample size can change it. Recorded
+   * here so the claim is falsifiable in this file rather than only in a forty-minute sweep.
+   *
+   * Split per tier, and `hard` given fewer seeds than the other two, because a depth-five
+   * search over a whole match is the most expensive thing in this package: all three tiers
+   * in one test ran 37 s locally, which is past the sixty seconds that costs the whole
+   * suite a birpc worker timeout once CI's four-to-five times is applied.
+   */
+  it.each([
+    ['easy', 12],
+    ['normal', 12],
+    ['hard', 3],
+  ] as const)(
+    'plays a whole %s match to the mirrored result',
+    { timeout: SERIES_TIMEOUT_MS },
+    (tier, seeds) => {
+      let seatOne = 0;
+      let decided = 0;
+      for (let seed = 0; seed < seeds; seed += 1) {
+        const results: (SeatId | 'draw' | null)[] = [];
+        for (const opener of ['p1', 'p2'] as SeatId[]) {
+          const game = createGame();
+          resetGame(game, opener);
+          const rng = new Rng(1_000_003 + seed * 7919);
+          for (let ply = 0; ply < 600 && winnerOf(game) === null; ply += 1) {
+            const move = bestMove(game, rng, tier);
+            if (move === null) break;
+            applyMove(game, move.from, move.to);
+          }
+          results.push(winnerOf(game));
+        }
+        const first = results[0] ?? null;
+        const second = results[1] ?? null;
+        expect(first, `${tier} seed ${String(seed)} never finished`).not.toBeNull();
+        if (first === null) continue;
+        // The two halves of a seed are mirror images, so their winners must be opposites.
+        expect(
+          second,
+          `${tier} seed ${String(seed)}: ${String(first)} opening p1, ${String(second)} opening p2`,
+        ).toBe(first === 'draw' ? 'draw' : otherOf(first));
+        if (first === 'draw') continue;
+        decided += 2;
+        seatOne += first === 'p1' ? 1 : 0;
+        seatOne += second === 'p1' ? 1 : 0;
+      }
+      if (decided === 0) return;
+      expect(seatOne / decided, `${tier} leaned to a seat`).toBe(0.5);
+    },
+  );
 });

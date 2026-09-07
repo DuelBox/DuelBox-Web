@@ -4,18 +4,39 @@
 # host serves it. This publishes to GitHub Pages because that needs no account the repository
 # does not already have.
 #
-# One thing Pages cannot do: custom response headers. `scripts/emit-host-config.mjs` generates a
-# full set — CSP, COEP, COOP, HSTS, Permissions-Policy — into `_headers` (Cloudflare Pages and
-# Netlify read that natively), into `vercel.json`, and into an nginx block. Pages ignores all
-# three and serves its own defaults instead. That is a real downgrade, and issue #2367's
-# iframe/postMessage hardening in particular assumes those headers are present. Moving to
-# Cloudflare Pages, Netlify or Vercel later restores them and needs nothing from this repository
-# except deleting this file — the build output is identical, which is the point of a static export.
+# One thing Pages cannot do: custom response headers. It ignores `_headers`, `vercel.json` and
+# every server block `scripts/emit-host-config.mjs` writes, so the full generated set — HSTS,
+# COOP, COEP, CORP, Permissions-Policy, X-Content-Type-Options, X-Frame-Options — reaches no
+# visitor at all.
+#
+# That used to be written down here and nowhere else, which meant nothing executed it and #2367
+# and #218 were both built on a header set nobody serves (#2481). It is now data:
+# `scripts/header-delivery.mjs` classifies every generated header by how it can be delivered,
+# `scripts/check-headers.mjs` fails the build if one is added without a classification, and the
+# served-versus-discarded table prints on every build. `apps/web/src/security/header-delivery.test.ts`
+# runs the same assertions on every push. **Change the deploy target and that check goes red**,
+# because it reads this file and compares what it finds against the declared target — so this
+# comment cannot go stale the way the last one did.
+#
+# Two things survive a header-less host and are delivered in the markup instead: the hashed CSP
+# and `<meta name="referrer">`. Framing is mitigated — not fixed — by the frame guard in
+# `apps/web/src/app/frame-guard.ts`. Moving to Cloudflare Pages, Netlify or Vercel restores the
+# real set and needs nothing from this repository except deleting this file and updating
+# `DEPLOY_TARGET` — the build output is identical, which is the point of a static export.
 name: Deploy
 
+# Triggered by CI *finishing*, not by the push. Until #2511 this fired on the same push as
+# `ci.yml`, and since the deploy takes 2-4 minutes against CI's 10-18, every push published
+# the site roughly ten minutes before anyone knew whether the tests had passed - and a red CI
+# neither blocked the deploy nor undid it. The gate was real, thorough, and wired to nothing.
+#
+# `workflow_run` is the only mechanism that orders two workflows. Branch protection cannot do
+# it here, because the deploy fires on a push rather than on a merge.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
     branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 # One deployment at a time, and never cancel one half-done: a partially uploaded site is worse
@@ -31,9 +52,22 @@ permissions:
 
 jobs:
   build:
+    # Publish only what passed. `workflow_run` fires on *completion*, success or not, so the
+    # conclusion has to be checked explicitly - without this line the trigger change would
+    # look right and change nothing, which is the failure this repository keeps finding.
+    # A manual dispatch is allowed through deliberately, so a rollback is not gated on a
+    # green run of the commit being rolled back to.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # `workflow_run` checks out the default branch's tip by default, NOT the commit CI
+          # actually tested. On a busy branch that would publish a commit nothing verified -
+          # the same bug in a new place. Pin to the SHA that produced the green run.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         # Deliberately no `version:` — package.json pins `packageManager`, and passing both makes

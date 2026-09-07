@@ -8,11 +8,11 @@ import type {
   AudioListenerOptions,
   AudioNodeLike,
   AudioParamLike,
+  AudioSampleBuffer,
   AudioState,
   AudioTarget,
   GainNodeLike,
 } from './audio.js';
-import { Rng } from './rng.js';
 
 /**
  * Everything here runs in Node, where there is no `AudioContext`, no `document` and no
@@ -43,6 +43,32 @@ class FakeGain extends FakeNode implements GainNodeLike {
 
 class FakeBuffer implements AudioBufferLike {
   constructor(readonly duration: number) {}
+}
+
+/**
+ * A writable buffer, which is what `createBuffer` now hands back: everything this product
+ * plays is synthesised into one of these rather than decoded from a file.
+ */
+class FakeSampleBuffer implements AudioSampleBuffer {
+  readonly #channels: Float32Array[];
+
+  constructor(
+    channels: number,
+    readonly length: number,
+    readonly sampleRate: number,
+  ) {
+    this.#channels = Array.from({ length: channels }, () => new Float32Array(length));
+  }
+
+  get duration(): number {
+    return this.length / this.sampleRate;
+  }
+
+  getChannelData(channel: number): Float32Array {
+    const data = this.#channels[channel];
+    if (data === undefined) throw new RangeError(`no channel ${String(channel)}`);
+    return data;
+  }
 }
 
 class FakeSource extends FakeNode implements AudioBufferSourceNodeLike {
@@ -116,13 +142,9 @@ class FakeContext implements AudioContextLike {
     return source;
   }
 
-  createBuffer(channels: number, length: number, sampleRate: number): AudioBufferLike {
+  createBuffer(channels: number, length: number, sampleRate: number): AudioSampleBuffer {
     this.log.push(`createBuffer:${String(channels)}x${String(length)}@${String(sampleRate)}`);
-    return new FakeBuffer(length / sampleRate);
-  }
-
-  decodeAudioData(encoded: ArrayBuffer): Promise<AudioBufferLike> {
-    return Promise.resolve(new FakeBuffer(encoded.byteLength / 1000));
+    return new FakeSampleBuffer(channels, length, sampleRate);
   }
 
   /** Let every outstanding resume() settle, as the browser would a tick later. */
@@ -559,13 +581,6 @@ describe('the sound surface', () => {
     expect(context.sources[context.sources.length - 1]!.buffer?.duration).toBe(0.2);
   });
 
-  it('decodes and registers encoded bytes', async () => {
-    const { audio } = await withUnlock();
-    expect(audio.has('theme')).toBe(false);
-    await audio.load('theme', new ArrayBuffer(500));
-    expect(audio.has('theme')).toBe(true);
-  });
-
   it('carries the master gain and the mute on one node', async () => {
     const { audio, context } = await withUnlock();
     const master = context.gains[0]!;
@@ -578,7 +593,7 @@ describe('the sound surface', () => {
     expect(master.gain.value).toBe(0);
     // The level the player chose survives the mute.
     expect(audio.masterGain).toBe(0.5);
-    expect(audio.toggleMuted()).toBe(false);
+    audio.setMuted(false);
     expect(master.gain.value).toBe(0.5);
 
     audio.setMasterGain(9);
@@ -658,52 +673,6 @@ describe('play allocation discipline', () => {
     expect(audio.pending).toBe(4);
     audio.flush();
     expect(audio.pending).toBe(0);
-  });
-});
-
-describe('playVaried', () => {
-  it('takes its pitch from the seeded generator, never from the wall', async () => {
-    const first = await withUnlock();
-    const second = await withUnlock();
-    first.audio.register('tick', new FakeBuffer(0.05));
-    second.audio.register('tick', new FakeBuffer(0.05));
-
-    const firstRng = new Rng(1234);
-    const secondRng = new Rng(1234);
-    for (let i = 0; i < 8; i += 1) {
-      first.audio.playVaried('tick', firstRng);
-      second.audio.playVaried('tick', secondRng);
-    }
-    first.audio.flush();
-    second.audio.flush();
-
-    const rates = (harness: Harness): number[] =>
-      harness.context.sources.slice(1).map((source) => source.playbackRate.value);
-    expect(rates(first)).toEqual(rates(second));
-    for (const rate of rates(first)) {
-      expect(rate).toBeGreaterThanOrEqual(2 ** (-40 / 1200));
-      expect(rate).toBeLessThanOrEqual(2 ** (40 / 1200));
-    }
-    // Varied, not constant: a sound fired eight times must not be eight identical copies.
-    expect(new Set(rates(first)).size).toBeGreaterThan(1);
-  });
-
-  it('draws once per call whatever the device is doing', async () => {
-    // The draw must not depend on mute, on the unlock, or on whether the name is even
-    // registered. If it did, two devices in a cross-device match would fall out of step
-    // over audio — which is exactly the class of bug rule 4 exists to prevent.
-    const loud = await withUnlock();
-    loud.audio.register('tick', new FakeBuffer(0.05));
-    const muted = setup({ muted: true }); // never unlocked, nothing registered
-
-    const loudRng = new Rng(99);
-    const mutedRng = new Rng(99);
-    for (let i = 0; i < 16; i += 1) {
-      loud.audio.playVaried('tick', loudRng);
-      expect(muted.audio.playVaried('tick', mutedRng)).toBe(false);
-    }
-
-    expect(mutedRng.save()).toEqual(loudRng.save());
   });
 });
 

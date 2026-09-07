@@ -50,6 +50,32 @@ const ASSET_EXTENSIONS = new Set([
 /** Required on every entry. A licence nobody can check is not a licence. */
 const REQUIRED_FIELDS = ['source', 'licence', 'author'];
 
+/**
+ * Audio is a special case: it is not licensed here, it is **refused**.
+ *
+ * DuelBox synthesises every sound it makes — oscillators, noise and envelopes, rendered
+ * into buffers at runtime by `packages/engine/src/synth.ts`. There is no `decodeAudioData`
+ * anywhere in the engine, so a committed audio file could not be played even if somebody
+ * added one; what it would do is put a provenance question back into a repository that had
+ * removed the whole category, and add a licence entry for somebody to keep current for
+ * ever after.
+ *
+ * So the rule is stronger than rule 3 for this one class of file: a licence entry does not
+ * make an audio file acceptable. If a sound is genuinely needed and genuinely cannot be
+ * synthesised, that is a decision to argue on an issue and record here — not something to
+ * arrive by way of a manifest entry nobody reviewed.
+ */
+const SYNTHESISED_ONLY = new Set([
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.aac',
+  '.flac',
+  '.opus',
+  '.weba',
+]);
+
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8' })
   .split('\0')
   .filter(Boolean);
@@ -75,6 +101,14 @@ function manifestsFor(file) {
 }
 
 const failures = [];
+
+const audio = tracked.filter((file) => SYNTHESISED_ONLY.has(extname(file).toLowerCase()));
+for (const file of audio) {
+  failures.push(
+    `${file} — this product ships no audio files at all; sound is synthesised in ` +
+      'packages/engine/src/synth.ts. A licence entry does not make this one acceptable.',
+  );
+}
 
 for (const asset of assets) {
   const manifests = manifestsFor(asset);
@@ -123,6 +157,9 @@ for (const asset of assets) {
   }
 }
 
+console.log(
+  `check-asset-licenses: ${String(audio.length)} audio file(s) tracked, of a permitted 0`,
+);
 console.log(
   `check-asset-licenses: ${String(assets.length)} asset file(s) tracked` +
     (assets.length === 0

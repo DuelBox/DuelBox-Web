@@ -38,9 +38,17 @@ export {
   toWorld,
   toScreen,
   seatForPoint,
+  zoneSplitFor,
   PointerOwnership,
 } from './seat.js';
-export type { SeatId, Presentation, SeatView, LogicalSize, ZoneSplit } from './seat.js';
+export type {
+  SeatId,
+  Presentation,
+  SeatView,
+  LogicalSize,
+  ZoneSplit,
+  DeclaredZoneSplit,
+} from './seat.js';
 
 export { GridCursor } from './cursor.js';
 export type { GridCursorOptions } from './cursor.js';
@@ -111,6 +119,21 @@ export type {
   AudioNodeLike,
   AudioParamLike,
   AudioBufferLike,
+  AudioSampleBuffer,
   AudioBufferSourceNodeLike,
   GainNodeLike,
 } from './audio.js';
+
+export { renderRecipe, seedFromName, voice, OFFLINE_SAMPLE_RATE } from './synth.js';
+export type { SynthRecipe, SynthTarget, SynthVoice, Waveform } from './synth.js';
+
+export {
+  EngineSoundBus,
+  RecordingSoundBus,
+  SILENT_BUS,
+  SOUND_EVENTS,
+  SOUND_EVENT_SPECS,
+  SOUND_RECIPES,
+  registerSoundBank,
+} from './sound-events.js';
+export type { SoundBus, SoundEvent, SoundEventSource, SoundEventSpec } from './sound-events.js';

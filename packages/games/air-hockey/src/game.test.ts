@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Rng, vec2 } from '@duelbox/engine';
-import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
+import { RecordingSoundBus, Rng, SOUND_EVENTS, vec2 } from '@duelbox/engine';
+import type { SeatId, SoundBus, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { AirHockeyGame, MATCH_SECONDS, SERVE_STEPS } from './game.js';
 import { manifest } from './manifest.js';
@@ -53,6 +53,7 @@ function makeContext(
   seed: number,
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
+  audio?: SoundBus,
 ): GameContext {
   return {
     manifest,
@@ -63,6 +64,9 @@ function makeContext(
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
+    // Omitted entirely when there is none, rather than passed as `undefined`: that is the
+    // shape every other game's test double already has, and it must keep compiling.
+    ...(audio ? { audio } : {}),
   };
 }
 
@@ -416,5 +420,150 @@ describe('the backstop clock', () => {
     const later = new RecordingRenderer();
     game.render(later, 0);
     expect(filled(later), 'and it shortens as the match runs').toBeLessThan(before);
+  });
+});
+
+/**
+ * Air Hockey is the first game wired to the sound bus, and the pattern the other 106 will
+ * follow, so what is checked here is the pattern rather than the noise.
+ *
+ * The load-bearing one is the last: **the match must step identically with a bus and
+ * without one.** Sound is presentation. A game whose simulation changes when somebody
+ * plugs in headphones cannot be replayed, cannot be balanced, and cannot be played across
+ * two devices — and the failure would be silent, because every existing test runs without
+ * a bus and would go on passing.
+ */
+describe('AirHockeyGame sound cues', () => {
+  /** Both seats played by the hardest bot, which produces plenty of every kind of event. */
+  function playWithBus(seed: number, steps: number): RecordingSoundBus {
+    const bus = new RecordingSoundBus();
+    const game = new AirHockeyGame();
+    game.init(makeContext(seed, 'hard', 'hard', bus));
+    const input = new ScriptedInput();
+    for (let i = 0; i < steps && game.getScore().winner === null; i += 1) {
+      game.update(STEP, input);
+    }
+    return bus;
+  }
+
+  it('says only things that are in the vocabulary', () => {
+    const bus = playWithBus(4711, 6_000);
+    expect(bus.events.length).toBeGreaterThan(0);
+    for (const event of bus.distinct()) {
+      expect(SOUND_EVENTS).toContain(event);
+    }
+  });
+
+  it('makes all four of the cues a puck game has', () => {
+    const bus = playWithBus(4711, 6_000);
+    expect(bus.distinct().sort()).toEqual(['bounce', 'hit', 'launch', 'score'].sort());
+  });
+
+  it('leaves the match cues to the shell', () => {
+    // A game that beeped its own countdown would be the bug CLAUDE.md names: "a bespoke
+    // version of any of those inside a game package".
+    const bus = playWithBus(4711, 6_000);
+    for (const shellCue of ['countdown', 'start', 'pause', 'win'] as const) {
+      expect(bus.count(shellCue)).toBe(0);
+    }
+  });
+
+  it('says launch when the puck is served, and draws the flare in the same step', () => {
+    const bus = new RecordingSoundBus();
+    const game = new AirHockeyGame();
+    game.init(makeContext(19, null, null, bus));
+    const input = new ScriptedInput();
+    for (let i = 0; i < SERVE_STEPS; i += 1) game.update(STEP, input);
+
+    expect(bus.count('launch')).toBe(1);
+    const renderer = new RecordingRenderer();
+    game.render(renderer, 0);
+    const flare = renderer.calls.filter(
+      (call) => call.op === 'line' && call.args[5] === 'rgba(233, 240, 252, 0.9)',
+    );
+    expect(flare, 'the serve is seen as well as heard').toHaveLength(1);
+  });
+
+  it('says hit with the striking seat, and rings the contact', () => {
+    const bus = new RecordingSoundBus();
+    const game = new AirHockeyGame();
+    game.init(makeContext(19, null, null, bus));
+    const input = new ScriptedInput();
+    // p1 parks its mallet on the centre line of its own half, where a serve toward p1
+    // must arrive. Nothing about the bot is involved, so the contact is not a coincidence.
+    input.point('p1', TABLE.width / 2, TABLE.height * 0.62);
+    for (let i = 0; i < 400 && bus.count('hit') === 0; i += 1) game.update(STEP, input);
+
+    expect(bus.count('hit')).toBeGreaterThan(0);
+    const first = bus.events.indexOf('hit');
+    expect(bus.seats[first]).toBe('p1');
+    expect(bus.intensities[first]).toBeGreaterThan(0);
+    expect(bus.intensities[first]).toBeLessThanOrEqual(1);
+
+    const renderer = new RecordingRenderer();
+    game.render(renderer, 0);
+    const ring = renderer.calls.filter(
+      (call) => call.op === 'strokeCircle' && call.args[4] === 'rgba(233, 240, 252, 0.9)',
+    );
+    expect(ring.length, 'the hit is seen as well as heard').toBeGreaterThan(0);
+  });
+
+  it('says bounce with no seat, because a rail belongs to nobody, and lights the rail', () => {
+    const bus = playWithBus(4711, 6_000);
+    const first = bus.events.indexOf('bounce');
+    expect(first).toBeGreaterThanOrEqual(0);
+    expect(bus.seats[first]).toBeNull();
+
+    // Replayed to the step the rebound happens on, so the marker can be caught on screen.
+    const replay = new RecordingSoundBus();
+    const game = new AirHockeyGame();
+    game.init(makeContext(4711, 'hard', 'hard', replay));
+    const input = new ScriptedInput();
+    for (let i = 0; i < 6_000 && replay.count('bounce') === 0; i += 1) game.update(STEP, input);
+    expect(replay.count('bounce')).toBe(1);
+
+    const renderer = new RecordingRenderer();
+    game.render(renderer, 0);
+    const bar = renderer.calls.filter(
+      (call) => call.op === 'rect' && call.args[4] === 'rgba(233, 240, 252, 0.9)',
+    );
+    expect(bar, 'the rebound is seen as well as heard').toHaveLength(1);
+  });
+
+  it('gives a harder hit a louder cue', () => {
+    const bus = playWithBus(4711, 6_000);
+    const hits: number[] = [];
+    for (let i = 0; i < bus.events.length; i += 1) {
+      if (bus.events[i] === 'hit') hits.push(bus.intensities[i]!);
+    }
+    expect(hits.length).toBeGreaterThan(4);
+    // Not all the same number, or intensity is decoration rather than information.
+    expect(new Set(hits).size).toBeGreaterThan(1);
+    for (const intensity of hits) {
+      expect(intensity).toBeGreaterThanOrEqual(0);
+      expect(intensity).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('steps the identical match with a bus and without one', () => {
+    function play(audio?: SoundBus): { score: string; puck: string } {
+      const game = new AirHockeyGame();
+      game.init(makeContext(4711, 'hard', 'hard', audio));
+      const input = new ScriptedInput();
+      for (let i = 0; i < 6_000 && game.getScore().winner === null; i += 1) {
+        game.update(STEP, input);
+      }
+      const score = game.getScore();
+      const puck = game.puck;
+      return {
+        score: `${String(score.p1)}-${String(score.p2)}-${String(score.winner)}`,
+        // Full precision on purpose: rounding here would hide exactly the kind of tiny
+        // divergence that compounds over a match.
+        puck: [puck.x, puck.y, puck.vx, puck.vy].map((n) => n.toExponential(17)).join(','),
+      };
+    }
+    const silent = play();
+    const heard = play(new RecordingSoundBus());
+    expect(heard).toEqual(silent);
   });
 });

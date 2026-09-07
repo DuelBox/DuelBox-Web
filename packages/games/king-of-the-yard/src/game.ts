@@ -45,9 +45,27 @@ export class KingOfTheYardGame implements Game {
   #position: Position;
   readonly #botP1State: BotState = createBotState();
   readonly #botP2State: BotState = createBotState();
-  readonly #heading = { x: 0, y: 0 };
+  /**
+   * One heading per seat, decided before either seat moves.
+   *
+   * There used to be a single scratch vector, and a single vector is all a game needs when
+   * the seats are resolved one after the other — which is exactly what was wrong. See
+   * {@link update}.
+   */
+  readonly #headingP1 = { x: 0, y: 0 };
+  readonly #headingP2 = { x: 0, y: 0 };
 
   #rng = new Rng(1);
+  /**
+   * A generator per seat, and one for the yard.
+   *
+   * Both bots used to draw their wobble from the same stream, in seat order, so seat one
+   * took the earlier value of every pair for the whole match. The same sharing measured 1.4
+   * points of win rate in Star Catcher and is called out in Sling Puck's own notes; here the
+   * two seats decide on the *same step* rather than alternately, so it is a standing bias
+   * rather than an occasional one.
+   */
+  #botRng: Record<SeatId, Rng> = { p1: new Rng(1), p2: new Rng(2) };
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
   #winner: SeatId | null = null;
@@ -68,6 +86,7 @@ export class KingOfTheYardGame implements Game {
 
   init(context: GameContext): void {
     this.#rng = context.rng;
+    this.#botRng = { p1: new Rng(context.rng.next() | 0), p2: new Rng(context.rng.next() | 0) };
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#winner = null;
@@ -77,12 +96,30 @@ export class KingOfTheYardGame implements Game {
     resetBotState(this.#botP2State);
   }
 
+  /**
+   * One step: **both seats read the yard, then both seats move.**
+   *
+   * The order used to be heading-p1, move-p1, heading-p2, move-p2, and that one line of
+   * sequencing was worth **ten points** of seat balance — 39.7% for seat one over a
+   * thousand seeds with it, 50.3% without it. This is a chase: a bot's
+   * whole decision is where the other player is. Resolved in seat order, seat two aimed at
+   * where seat one had *already moved to this step* while seat one aimed at where seat two
+   * had been at the end of the last one — half a step of extra freshness, every step, for
+   * one seat only. That is information a person at the glass does not have, which makes it
+   * a rule 6 violation as well as an unfair one, and it is invisible to anything that looks
+   * at the rules module: the rules are symmetric and were never the problem.
+   *
+   * Both seats now decide against the same board, so neither can see the other's move
+   * before making its own. Real-time seats are simultaneous or they are not equal.
+   */
   update(fixedDeltaSeconds: number, input: InputState): void {
     if (this.#winner !== null) return;
     if (this.#flashSteps > 0) this.#flashSteps -= 1;
 
-    this.#driveSeat('p1', this.#botP1, this.#botP1State, input, fixedDeltaSeconds);
-    this.#driveSeat('p2', this.#botP2, this.#botP2State, input, fixedDeltaSeconds);
+    this.#readSeat('p1', this.#botP1, this.#botP1State, this.#headingP1, input, fixedDeltaSeconds);
+    this.#readSeat('p2', this.#botP2, this.#botP2State, this.#headingP2, input, fixedDeltaSeconds);
+    move(this.#position, 'p1', this.#headingP1.x, this.#headingP1.y, fixedDeltaSeconds);
+    move(this.#position, 'p2', this.#headingP2.x, this.#headingP2.y, fixedDeltaSeconds);
 
     const what = step(this.#position, fixedDeltaSeconds, this.#rng);
     if (what === 'stolen' || what === 'taken') this.#flashSteps = STEAL_FLASH_STEPS;
@@ -120,30 +157,35 @@ export class KingOfTheYardGame implements Game {
     this.#winner = null;
   }
 
-  #driveSeat(
+  /**
+   * Where a seat wants to go this step, written into `out`. Nothing is moved here.
+   *
+   * The split from moving is the whole point — see {@link update}.
+   */
+  #readSeat(
     seat: SeatId,
     difficulty: BotDifficulty | null,
     bot: BotState,
+    out: { x: number; y: number },
     input: InputState,
     dt: number,
   ): void {
     if (difficulty !== null) {
       botHeading(
-        this.#heading,
+        out,
         this.#position,
         bot,
         seat,
         BOT_PROFILES[difficulty],
         dt,
-        this.#rng.float(),
+        this.#botRng[seat].float(),
       );
-      move(this.#position, seat, this.#heading.x, this.#heading.y, dt);
       return;
     }
 
     const seatInput = input.seat(seat);
-    let dx = seatInput.move.x;
-    let dy = seatInput.move.y;
+    out.x = seatInput.move.x;
+    out.y = seatInput.move.y;
 
     // A finger is a direction from the player, so the yard is driven the same way it is
     // read: point where you want to go.
@@ -153,11 +195,10 @@ export class KingOfTheYardGame implements Game {
       const gapX = pointer.x - me.x;
       const gapY = pointer.y - me.y;
       if (Math.hypot(gapX, gapY) > DRAG_DEADZONE) {
-        dx = gapX;
-        dy = gapY;
+        out.x = gapX;
+        out.y = gapY;
       }
     }
-    move(this.#position, seat, dx, dy, dt);
   }
 
   #drawYard(renderer: Renderer): void {

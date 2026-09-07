@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { InputManager, InputView, Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
+import {
+  DEFAULT_BINDINGS,
+  InputManager,
+  InputView,
+  Rng,
+  SEAT_PALETTE,
+  vec2,
+} from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -75,6 +82,7 @@ class ScriptedInput implements InputState {
   /** A finger on the glass at a point in logical units. */
   point(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -86,6 +94,7 @@ class ScriptedInput implements InputState {
   /** The finger comes off, which is what plays the shot. */
   lift(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionHeld = false;
     target.actionReleased = true;
@@ -93,6 +102,7 @@ class ScriptedInput implements InputState {
 
   hold(seat: SeatId, seconds: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionHeld = true;
     target.actionReleased = false;
@@ -101,6 +111,7 @@ class ScriptedInput implements InputState {
 
   release(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = false;
     target.actionReleased = true;
     target.holdSeconds = 0;
@@ -112,6 +123,7 @@ class ScriptedInput implements InputState {
 
   quiet(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.move.x = 0;
     target.move.y = 0;
     target.pointer = null;
@@ -119,6 +131,22 @@ class ScriptedInput implements InputState {
     target.actionHeld = false;
     target.actionReleased = false;
     target.holdSeconds = 0;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, the action is not held, and there is **no release** — a cancel and a
+   * release are opposite events since #2480.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionPressed = false;
+    target.actionHeld = false;
+    target.actionReleased = false;
+    target.holdSeconds = 0;
+    target.holdSecondsAtRelease = 0;
+    target.pointerCancelled = true;
   }
 
   #of(seat: SeatId): MutableSeatInput {
@@ -650,6 +678,53 @@ describe('the finger', () => {
   });
 });
 
+describe('a cancelled gesture', () => {
+  it('abandons the shot rather than freezing it', () => {
+    const game = new SoccerPoolGame();
+    game.init(contextFor(101));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    expect(game.power, 'the hold loaded the shot').toBeCloseTo(1, 5);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.power, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+  });
+
+  it('does not play the abandoned shot on the next, unrelated release', () => {
+    const game = new SoccerPoolGame();
+    game.init(contextFor(103));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    input.cancel('p1');
+    game.update(STEP, input);
+
+    input.quiet('p1');
+    game.update(STEP, input);
+    input.release('p1');
+    game.update(STEP, input);
+    expect(game.match.phase, 'nothing was struck').toBe('aiming');
+  });
+
+  it('keeps the aim: a cancel drops the charge and nothing else', () => {
+    const game = new SoccerPoolGame();
+    game.init(contextFor(107));
+    const input = new ScriptedInput();
+    input.steer('p1', 1);
+    for (let i = 0; i < 10; i += 1) game.update(STEP, input);
+    input.quiet('p1');
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    const aimed = game.aimAngle;
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.aimAngle, 'the aim does not move because a phone call arrived').toBe(aimed);
+  });
+});
+
 describe('the controls the manifest promises', () => {
   const KEYS = {
     p1: { left: 'KeyA', right: 'KeyD', action: 'Space' },
@@ -739,6 +814,28 @@ describe('the controls the manifest promises', () => {
     manager.pointerUp(1);
     game.update(STEP, view.sync(manager.beginStep(STEP)));
     expect(game.match.phase).toBe('rolling');
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('lets the boot down instead of freezing it', () => {
+    // `InputManager.clear()` with no `onPause` is a real path, not a hypothetical: the shell
+    // calls it on a released modifier chord and on a lost window, before any pause is
+    // requested. The key never receives its key-up and `clear` deletes the release edge too,
+    // so before #2501 the charge froze in total silence and the next release struck it.
+    const game = new SoccerPoolGame();
+    game.init(contextFor(211));
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.action);
+    for (let i = 0; i < 20; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.power, 'the key loaded the shot').toBeGreaterThan(0);
+
+    manager.clear();
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.power, 'a window taken away leaves nothing behind').toBe(0);
+    expect(game.match.phase, 'and nothing was struck').toBe('aiming');
   });
 });
 

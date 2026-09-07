@@ -157,17 +157,67 @@ export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
  * test failure should name. Everything the site asks is answered in slug terms, and both
  * spellings are accepted so a stale link cannot 404.
  */
-const ID_BY_SLUG: ReadonlyMap<string, string> = new Map(Object.entries(GAME_IDS));
+/**
+ * The eighteen slugs whose package id is spelled differently. The other ninety are their
+ * own id and need no entry.
+ *
+ * Written out rather than read from `GAME_IDS`, and the reason is size. `resolve` is the
+ * one thing in this file a **client** component calls — `PlaySurface` loads a game — so
+ * whatever `resolve` touches ships to every visitor. Reading the full slug-to-id map
+ * carried all 108 pairs into the browser, 0.7 KB gzipped, so that eighteen of them could
+ * be looked up. `LOADERS` already holds the other ninety answers as its own keys.
+ *
+ * `slug-aliases.test.ts` checks this table against `GAME_IDS` in both directions, so it
+ * cannot drift: a game renamed in the catalogue and not here fails there rather than 404ing
+ * in production. That test runs in Node, where the full map costs nothing.
+ */
+const SLUG_ALIASES: Readonly<Record<string, string>> = {
+  'ball-games': 'ballgames-physics',
+  'colour-wars': 'color-wars',
+  'dice-yatzy': 'yazy',
+  'drop-four': 'four-in-a-row',
+  'guess-who': 'guess-the-person',
+  'ludo-dash': 'ludo',
+  lumberjack: 'lumber-jack',
+  'mancala-pits': 'mancala',
+  'match-rush': 'match',
+  'math-duel': 'math-quiz',
+  'memory-match': 'memory',
+  'pinball-duel': 'pinball',
+  'snake-clash': 'snakes',
+  'snakes-and-ladders': 'snakes-ladders',
+  'snowball-throw': 'throw',
+  'sumo-push': 'sumo',
+  'ultimate-tic-tac-toe': 'ultimate-ttt',
+  'wobble-stack': 'brainrot-stack',
+};
 
-/** The package id behind a slug, or the argument unchanged if it is already one. */
+/**
+ * The package id behind a slug, or the argument unchanged if it is already one.
+ *
+ * Asks `LOADERS` first, which answers for every game whose slug *is* its id and for an id
+ * passed in directly, and falls back to the alias table for the eighteen that differ.
+ * Same answer for every input as the full map gave; a fifth of the bytes.
+ */
 function resolve(slugOrId: string): string {
-  return ID_BY_SLUG.get(slugOrId) ?? slugOrId;
+  if (slugOrId in LOADERS) return slugOrId;
+  return SLUG_ALIASES[slugOrId] ?? slugOrId;
 }
 
-/** Slugs that are actually playable today, for the catalogue to mark and the router to build. */
-export const PLAYABLE: readonly string[] = Object.entries(GAME_IDS)
+/**
+ * Slugs that are actually playable today, for the catalogue to mark and the router to build.
+ *
+ * `/*#__PURE__*\/` because this is read only by server components — the play route's
+ * `generateStaticParams`, the how-to-play count — and a bundler cannot otherwise prove a
+ * `.filter().map()` chain is safe to drop, so the whole of `GAME_IDS` rode into the client
+ * behind it. See the notes at the top of `scripts/check-size.mjs`.
+ */
+export const PLAYABLE: readonly string[] = /*#__PURE__*/ Object.entries(GAME_IDS)
   .filter(([, id]) => id in LOADERS)
   .map(([slug]) => slug);
+
+/** The alias table, for the drift guard in `slug-aliases.test.ts` and nothing else. */
+export const SLUG_ALIASES_FOR_TEST = SLUG_ALIASES;
 
 export function isPlayable(slugOrId: string): boolean {
   return resolve(slugOrId) in LOADERS;

@@ -61,7 +61,73 @@ readable rate rather than flickering sixty times a second.
 ## Determinism
 
 The crown's drop position and the coin that settles a total tie come from the seeded RNG;
-everything else is the fixed delta. A match replays identically from its seed.
+everything else is the fixed delta. A match replays identically from its seed. **Each bot has
+its own generator**, seeded from the match RNG — shared, the seat polled first would take the
+earlier value of every pair, and here the two seats decide on the same step rather than
+alternately, so that would be a standing bias rather than an occasional one.
+
+There is no opening seat. This is a real-time game and the SDK's contract says outright that
+real-time games may ignore `context.openingSeat`; both halves of every seed pair come out
+identical, which the balance harness reports and does not fail.
+
+## Seat balance
+
+The yard is one square with the two seats side by side, so swapping them is the reflection
+`x -> 900 - x`; `y` is untouched. Both starting positions, the walls, the crown's drop column
+and the movement clamp are all fixed by that reflection, so if every rule were covariant under
+it the game would be fair by construction. **The balance harness recorded it at 38.9% for seat
+one over a thousand seeds**, and three rules were not covariant. None of them was in the rules
+module's arithmetic, which is why nothing in `rules.test.ts` could see the largest of them.
+
+**The two seats were resolved one after the other.** `game.ts` ran heading-p1, move-p1,
+heading-p2, move-p2. A chase is nothing but "where is the other player", so seat two was aiming
+at where seat one had *already moved to this step* while seat one aimed at where seat two had
+been at the end of the last one — half a step of extra freshness, every step, for one seat.
+That is information a person at the glass does not have, so it is a rule 6 breach as well as an
+unfair one. Both seats now read the yard, and only then do both move. **Worth ten points**,
+measured by putting it back: 39.7% against 50.3% over a thousand seeds. `rules.test.ts`'s own
+`play` helper had always read both headings before moving either player, which is exactly why
+every test in that file passed while the shipped game did the other thing; `game.test.ts` now
+asserts the property directly — a human seat's input on step N may not reach the bot seat's
+position until step N + 1.
+
+**The chaser's velocity estimate started from the top-left corner.** `lastTargetX/Y` were
+initialised to `0`, and `0` is a point in board coordinates. The first frame of every chase
+differenced the prey's position against it and called the result a velocity: about 1700 units a
+second at a `normal` reaction, pointing at increasing `x` and `y`, which the bot then led by a
+quarter of a second. A wrong answer with a fixed compass bearing is a seat bias in a mirrored
+yard, and nothing cleared the stale reading between chases either, so it fired again every time
+a bot lost the crown it had been wearing. `BotState.tracking` now records *whom* the bot has
+been watching, and one observation is treated as a position rather than as a velocity. **Worth
+3.3 points**: 46.7% with it back.
+
+**The wearer picked its escape corner against the yard's midline.** `chaser.x < 450` does not
+change sign under the reflection, where `chaser.x - me.x` does — and the crown is dropped on
+`x = 450` every single match, so the chaser stands on that knife edge by construction rather
+than by coincidence. It is now "the far side from the chaser", with a third case: level on an
+axis means no preference on that axis, because zero is the fixed point of the antisymmetric
+quantity and any corner chosen there could only be chosen in absolute board terms. **Worth 1.2
+points**: 51.2% with it back.
+
+The wobble is the one thing here that cannot be covariant and does not need to be: a mirrored
+heading needs the *negated* angular error, so the mirror suite feeds `1 - roll`, which is
+exactly `-misjudgement(roll, spread)`. Over a seeded stream the two are the same distribution.
+For the same reason this game's balance stays a **measurement** rather than becoming a proof —
+the two bots wobble on separate streams and a chase amplifies a last-bit difference into a
+different match — so the tests assert three sigma of the sample rather than an exact half.
+
+Re-measured on the balance harness, seat one's share of decided matches:
+
+| seeds | easy | normal | hard |
+|---|---|---|---|
+| 50 | 48.0 % | 44.0 % | 50.0 % |
+| 250 (nightly) | 49.2 % | 51.6 % | 50.4 % |
+| 1000 (the record's sample) | 47.1 % | 50.3 % | 53.1 % |
+
+Three sigma at a thousand seeds is 4.7 points, so all three tiers are inside the 45–55 band at
+the sample the 38.9 % record was taken at, and the game's line has been deleted from the
+harness's `OUTSIDE_THE_BAND`. The 44.0 % at fifty seeds is the same fifty-seed figure the
+deleted record itself quoted, and it is noise: three sigma at fifty seeds is 21.2 points.
 
 ## The bot
 
@@ -79,7 +145,8 @@ sees only what is on the screen.
 **`lead` is the interesting one.** Chasing where somebody *is* means always arriving where
 they were, so a good chaser cuts the corner and a poor one follows the tail. The bot
 estimates the wearer's motion from where they were when it last looked — which is exactly
-the information a person has.
+the information a person has. **One look is a position, not a velocity**, and saying so was
+worth 3.3 points of seat balance: see **Seat balance**.
 
 **It commits to a heading between decisions.** Re-choosing every step would average the
 wobble to zero and make the tiers meaningless. That is a mistake this codebase has now made

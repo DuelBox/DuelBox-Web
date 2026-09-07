@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
+import { InputManager, InputView, Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -79,6 +79,24 @@ class ScriptedInput implements InputState {
     const target = this.#of(seat);
     target.actionReleased = false;
     target.actionHeld = false;
+    target.pointerCancelled = false;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, the action is not held, and — the whole point of #2480 — there is no
+   * release. The engine-driven test below asserts this hand-built record matches the real
+   * one, because a scripted input that lies is how sea battle's long-press stayed dead.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionHeld = false;
+    target.actionPressed = false;
+    target.actionReleased = false;
+    target.holdSeconds = 0;
+    target.holdSecondsAtRelease = 0;
+    target.pointerCancelled = true;
   }
 
   steer(seat: SeatId, x: number): void {
@@ -266,6 +284,79 @@ describe('aiming with a keyboard', () => {
     game.update(STEP, input);
     game.onPause();
     expect(game.power, 'nobody comes back to a cue half drawn').toBe(0);
+  });
+});
+
+describe('a cancelled gesture', () => {
+  it('abandons the draw rather than freezing it', () => {
+    const game = new PoolGame();
+    game.init(makeContext(37));
+    const input = new ScriptedInput();
+    const cue = cueBall(game.position);
+    input.point('p1', cue.x - PULL_FOR_FULL_POWER * 0.6, cue.y);
+    game.update(STEP, input);
+    expect(game.power, 'the pull loaded the cue').toBeGreaterThan(0.5);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.power, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+  });
+
+  it('does not fire the abandoned shot on the next, unrelated release', () => {
+    const game = new PoolGame();
+    game.init(makeContext(41));
+    const input = new ScriptedInput();
+    const cue = cueBall(game.position);
+    input.point('p1', cue.x - PULL_FOR_FULL_POWER, cue.y);
+    game.update(STEP, input);
+    input.cancel('p1');
+    game.update(STEP, input);
+
+    // A fresh tap that builds no power at all. Before the fix the frozen power was still
+    // standing, so this released a full-blooded shot the player never aimed.
+    input.quiet('p1');
+    game.update(STEP, input);
+    input.release('p1');
+    game.update(STEP, input);
+    expect(game.position.phase, 'nothing was struck').toBe('aiming');
+  });
+
+  it('keeps the aim: a cancel drops the charge and nothing else', () => {
+    const game = new PoolGame();
+    game.init(makeContext(43));
+    const input = new ScriptedInput();
+    const cue = cueBall(game.position);
+    input.point('p1', cue.x - PULL_FOR_FULL_POWER * 0.6, cue.y + PULL_FOR_FULL_POWER * 0.6);
+    game.update(STEP, input);
+    const aimed = game.aimAngle;
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.aimAngle, 'the reticle does not move because a phone call arrived').toBe(aimed);
+  });
+
+  it('abandons the draw when the engine itself reports the cancel', () => {
+    // Driven through the real InputManager rather than a literal, so the record the game
+    // reads is the one the browser produces and not one this file made up.
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+    const game = new PoolGame();
+    game.init(makeContext(47));
+    const cue = cueBall(game.position);
+
+    manager.pointerDown(1, cue.x - PULL_FOR_FULL_POWER * 0.6, cue.y);
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.power, 'the pull loaded the cue').toBeGreaterThan(0.5);
+
+    manager.pointerCancel(1);
+    const cancelled = view.sync(manager.beginStep(STEP));
+    expect(cancelled.seat('p1').pointerCancelled, 'the engine says the gesture was taken').toBe(
+      true,
+    );
+    expect(cancelled.seat('p1').actionReleased, 'a cancel is never a release').toBe(false);
+    game.update(STEP, cancelled);
+    expect(game.power).toBe(0);
+    expect(game.position.phase).toBe('aiming');
   });
 });
 

@@ -107,15 +107,44 @@ accepts instructions from any page that embeds us.
 against an allowlist, never trust `event.source`, and treat the message payload with the
 same suspicion as a peer's.
 
+**And the framing half of it does not have the headers it assumes.** `X-Frame-Options` and
+CSP `frame-ancestors` are both generated and both discarded — the site deploys to GitHub
+Pages, which serves no custom response headers, and neither control has a meta equivalent
+(#2481). So today *any* page can frame *any* route here. The stand-in is `FRAME_GUARD` in
+`apps/web/src/app/frame-guard.ts`: an inline script that hides a framed document before it
+paints, so there is nothing to overlay and nothing to click. It is a mitigation of
+clickjacking and nothing more — it does not run in an `<iframe sandbox>` without
+`allow-scripts`, which is the iframe an attacker writes, and the page is loaded either way.
+An origin allowlist for framing is not expressible in script at all; it needs the header,
+which needs a host that serves one. `scripts/header-delivery.mjs` holds the classification
+and the build fails if a header is added without one.
+
 ### 6. Third-party runtime dependencies
 
-We fetch three typefaces from Google's CDN on every cold load. That is a request to
-someone else's server on the critical path, and it sends every visitor's IP and
-User-Agent there.
+There are none. We used to fetch three typefaces from Google's CDN on every cold load — a
+request to someone else's server on the critical path, sending every visitor's IP and
+User-Agent there on the way to a page that otherwise collects nothing.
 
-**Not mitigated.** #187 covers self-hosting them. Play survives a blocked font, so this is
-a privacy and availability issue rather than a functional one — but "offline-capable" is a
-product claim, and today it is not quite true.
+**Mitigated.** The typefaces are self-hosted (`apps/web/src/styles/fonts/*.woff2`, linked
+from `layout.tsx`), and `scripts/check-zero-cost.mjs` fails the build on any network call
+from the shell, the SDK, the engine or a game.
+
+Three things had gone stale around this and were fixed together, which is worth recording
+because the pattern is more dangerous than the original dependency was:
+
+- This section still said "Not mitigated" long after the fonts were brought in-house.
+- `e2e/offline.spec.ts` still **excluded** `fonts.(gstatic|googleapis).com` from its
+  blocked-request assertion. That exemption was written for a dependency that no longer
+  existed, and while it stood, the one test that would have caught a Google font link
+  coming back was the one test that could not see it.
+- `checkNoNetworkInGameplay` scanned only three directories under `packages/`, and filtered
+  on `extname(p) === '.ts'` — so `apps/web/src` was never scanned at all and no `.tsx` file
+  anywhere was, which is every React component in the repository. A `fetch` in a component
+  passed the build. It now scans the shell and `packages/ui` as well, matches `.tsx`, and
+  looks for `RTCPeerConnection` — which requirement 5 below has always implied.
+
+An exemption outliving its reason is not neutral. It is a hole in the guard that would have
+caught the thing coming back.
 
 ## What the architecture removes
 

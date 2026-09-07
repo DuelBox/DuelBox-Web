@@ -7,6 +7,7 @@ import type { GameManifest, MatchState } from '@duelbox/game-sdk';
 import { seatColour } from '@/styles/tokens';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
+import { SoundToggle } from './SoundToggle';
 import styles from './MatchOverlay.module.css';
 
 /**
@@ -61,6 +62,10 @@ export function MatchOverlay({
             <button type="button" className={styles.primary} onClick={onResume} autoFocus>
               Resume
             </button>
+            {/* The product's only sound control. Here because pause is already where a
+                pair stops to change something, and because a control beside the score is
+                one either player can hit reaching across a shared device. */}
+            <SoundToggle className={styles.secondary} />
             <button type="button" className={styles.secondary} onClick={onQuit}>
               Quit match
             </button>

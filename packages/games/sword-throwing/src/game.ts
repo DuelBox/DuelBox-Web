@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, SeatId, Vec2 } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -176,6 +177,18 @@ export class SwordThrowingGame implements Game {
     }
 
     const seatInput = input.seat(seat);
+
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    //
+    // There is no charge here, so `#pointerAiming` is all that goes — and with it the
+    // release branch that would otherwise throw this sword at whatever the abandoned drag
+    // left the sight on. The aim stays: it commits nothing on its own now, this game
+    // already carries it from one attempt to the next, and swinging the sight for an
+    // interruption the player did not cause punishes them twice (#2501).
+    if (actionAbandoned(seatInput)) this.#pointerAiming = false;
+
     const pointer = seatInput.pointer;
     if (pointer !== null) {
       toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flipped);

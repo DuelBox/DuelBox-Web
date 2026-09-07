@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import {
   initialMatchState,
@@ -10,10 +10,12 @@ import {
   type MatchEvent,
   type MatchRules,
 } from '@duelbox/game-sdk';
-import { PLAYABLE, loadGame } from '@/data/registry';
-import { GAME_NAMES } from '@/data/game-names.generated';
+import { loadGame } from '@/data/registry';
+import type { NextGame } from '@/data/next-game';
 import { seatColour } from '@/styles/tokens';
 import { readSetup, writeSetup } from '@/lib/last-mode';
+import { armAudio, emitCue } from '@/lib/audio';
+import { matchCue } from '@/lib/match-cues';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
@@ -40,7 +42,11 @@ type Mode = PlayMode;
  * the HUD, the pause menu, the result screen and the rematch all come from here, so the
  * hundred-and-eighth game inherits them for free and the first seven cannot drift apart.
  */
-export function PlaySurface({ slug }: { slug: string }) {
+/**
+ * @param nextGame resolved by the server page, not looked up here. See
+ *   `data/next-game.ts` — deriving it in the browser shipped all 108 display names.
+ */
+export function PlaySurface({ slug, nextGame }: { slug: string; nextGame?: NextGame | undefined }) {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [manifest, setManifest] = useState<GameManifest | null>(null);
   const [create, setCreate] = useState<(() => Game) | null>(null);
@@ -113,6 +119,32 @@ export function PlaySurface({ slug }: { slug: string }) {
       cancelled = true;
     };
   }, [slug]);
+
+  /**
+   * Arm the unlock here, on the play page, rather than in `GameHost`.
+   *
+   * The difference is the whole point. `GameHost` mounts only *after* Start is pressed, so
+   * by the time it could attach a listener the gesture that should have unlocked audio has
+   * already happened and the first match would be silent — exactly the failure #167
+   * describes, arrived at from the other direction. This page mounts before Start, so the
+   * Start tap is itself the unlocking gesture and nothing ever asks the player for one.
+   */
+  useEffect(() => {
+    armAudio();
+  }, []);
+
+  /**
+   * The four match cues, raised from the transition rather than from the phase.
+   *
+   * A ref rather than another piece of state: this reads the previous value and must not
+   * cause a render of its own, and the machine is the authority on what happened.
+   */
+  const previousMatch = useRef(match);
+  useEffect(() => {
+    const cue = matchCue(previousMatch.current, match);
+    previousMatch.current = match;
+    if (cue !== null) emitCue(cue);
+  }, [match]);
 
   // Escape pauses and resumes. The host deliberately never swallows it.
   useEffect(() => {
@@ -239,8 +271,6 @@ export function PlaySurface({ slug }: { slug: string }) {
     [mode, setup.difficulty],
   );
 
-  const nextGame = useMemo(() => suggestNextGame(slug), [slug]);
-
   if (loadState === 'error') {
     return (
       <div className={styles.state} role="alert">
@@ -366,18 +396,4 @@ export function PlaySurface({ slug }: { slug: string }) {
       <MatchHud {...hudProps} onPause={handlePauseRequest} />
     </div>
   );
-}
-
-/**
- * Something to play next, so a result screen is never a dead end. Deterministic — the
- * slug picks it — because a suggestion that changes on every render reads as a glitch.
- */
-function suggestNextGame(slug: string): { slug: string; name: string } | undefined {
-  const others = PLAYABLE.filter((candidate) => candidate !== slug);
-  const first = others[0];
-  if (first === undefined) return undefined;
-  let hash = 0;
-  for (let i = 0; i < slug.length; i += 1) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
-  const pick = others[hash % others.length] ?? first;
-  return { slug: pick, name: GAME_NAMES[pick] ?? pick.replace(/-/g, ' ') };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from './catalogue.generated';
-import { CONTROLS } from './controls';
+import { CONTROLS, MANIFESTS } from './controls';
 import { LOADERS_FOR_TEST, PLAYABLE, isPlayable, loadGame } from './registry';
 
 /**
@@ -91,6 +91,46 @@ describe('the routes the site builds', () => {
 
   it('name no game twice', () => {
     expect(new Set(PLAYABLE).size).toBe(PLAYABLE.length);
+  });
+});
+
+/**
+ * The registry can only get shorter quietly, and everything else here would let it.
+ *
+ * Every assertion above is written as `entry.id in LOADERS_FOR_TEST ? check : skip`, which is
+ * the right shape while games are still being built - a catalogue row with no package yet is
+ * not a routing bug. But it means a registry that *loses* entries does not fail any of them.
+ * It shrinks the sample and they all pass, more cheaply than before.
+ *
+ * That is not hypothetical. #2497 records a tree operation that stripped `registry.ts` of its
+ * entries while the manifests survived, and six guards in this directory build their cases
+ * with `it.each(entries)` over the registry - so they went on reporting green over a shorter
+ * list. Vitest does fail loudly on a *fully* empty `it.each` ("No test found in suite"),
+ * which was checked rather than assumed; it is the partial loss that says nothing.
+ *
+ * Two assertions close it, and neither duplicates `catalogue-agrees.test.ts` - that file asks
+ * whether every catalogue row has a *manifest*, and reads `controls.ts`. This asks whether
+ * every manifest has a *loader*, and reads `registry.ts`. The gap between those two files is
+ * exactly where a stripped registry hides.
+ */
+describe('the registry itself', () => {
+  it('has a loader for every game the shell can already describe', () => {
+    const orphaned = MANIFESTS.filter((manifest) => !(manifest.id in LOADERS_FOR_TEST)).map(
+      (manifest) => manifest.id,
+    );
+    expect(
+      orphaned,
+      `these have a manifest the shell reads but no loader to play them: ${orphaned.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('registers every game, and the count only goes up', () => {
+    // A ratchet rather than an equality, for the same reason `MEASURED_MIN` in
+    // balance-aggregate.test.ts is one: a harness that goes red every time somebody
+    // scaffolds a package gets edited rather than read. Losing a game is the case worth
+    // failing on. Raise this when the catalogue grows.
+    const registered = Object.keys(LOADERS_FOR_TEST).length;
+    expect(registered, `the registry is down to ${registered} games`).toBeGreaterThanOrEqual(107);
   });
 });
 

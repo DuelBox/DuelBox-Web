@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -157,6 +158,16 @@ export class PoolGame implements Game {
    * you pulled is how hard you hit it — the same thing the object itself suggests.
    */
   #updateAim(fixedDeltaSeconds: number, seatInput: ReturnType<InputState['seat']>): void {
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing is fired — but without this the power the pull had built would simply stay
+    // where it was, and the next release, from a gesture that aimed at nothing, would fire
+    // it. The charge goes; the aim is left where it is, because it is a standing setting
+    // this game carries from one shot to the next and an interruption must not also move it.
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#resetAim();
+
     const cue = cueBall(this.#position);
     const pointer = seatInput.pointer;
 

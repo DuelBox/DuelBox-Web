@@ -3,5 +3,7 @@
   "_shell": "Everything a visitor downloads before choosing a game. Does not grow when a game is added, so it is the number worth defending.",
   "shellBytes": 286720,
   "_game": "One game's own chunk — the marginal cost of the game a player actually picked.",
-  "gameChunkBytes": 12288
+  "gameChunkBytes": 12288,
+  "_serviceWorker": "sw.js, budgeted on its own line rather than folded into the shell. It is not part of what a visitor must have before choosing a game — it is fetched after load, off the critical path, by a browser that is already showing the page — and on the second visit it is what makes the shell cost zero. Counting it against the number it exists to eliminate would measure the wrong thing. It is still budgeted, because 'not in the shell' is not 'unmeasured': this is a ratchet, and a worker that grows into a framework has to say so here. The emitted file is the source with its comments stripped — the reasoning lives in apps/web/public/sw.js, where it costs nobody anything — so 3 KB is roughly 50% headroom over the 2.1 KB it ships today, not a number chosen to fit.",
+  "serviceWorkerBytes": 3072
 }

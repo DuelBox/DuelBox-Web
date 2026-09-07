@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
+import {
+  DEFAULT_BINDINGS,
+  InputManager,
+  InputView,
+  Rng,
+  SEAT_PALETTE,
+  vec2,
+} from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
@@ -51,6 +58,7 @@ class ScriptedInput implements InputState {
 
   point(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -58,6 +66,7 @@ class ScriptedInput implements InputState {
 
   lift(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionHeld = false;
     target.actionReleased = true;
@@ -65,6 +74,7 @@ class ScriptedInput implements InputState {
 
   hold(seat: SeatId, seconds: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = true;
     target.actionReleased = false;
     target.holdSeconds = seconds;
@@ -72,12 +82,29 @@ class ScriptedInput implements InputState {
 
   release(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = false;
     target.actionReleased = true;
   }
 
   steer(seat: SeatId, x: number): void {
     this.#of(seat).move.x = x;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, the action is not held, and there is **no release** — a cancel and a
+   * release are opposite events since #2480.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionPressed = false;
+    target.actionHeld = false;
+    target.actionReleased = false;
+    target.holdSeconds = 0;
+    target.holdSecondsAtRelease = 0;
+    target.pointerCancelled = true;
   }
 
   #of(seat: SeatId): MutableSeatInput {
@@ -228,6 +255,66 @@ describe('aiming', () => {
   });
 });
 
+describe('a cancelled gesture', () => {
+  it('abandons the run-up rather than freezing it', () => {
+    const game = new BowlingGame();
+    game.init(makeContext(101));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    expect(game.power, 'the hold built the run-up').toBeCloseTo(1, 5);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.power, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+  });
+
+  it('does not bowl the abandoned ball on the next, unrelated release', () => {
+    const game = new BowlingGame();
+    game.init(makeContext(103));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    input.cancel('p1');
+    game.update(STEP, input);
+
+    input.release('p1');
+    game.update(STEP, input);
+    expect(game.position.phase, 'nothing was bowled').toBe('aiming');
+  });
+
+  it('drops the drag anchor, so the next drag is not measured from the abandoned one', () => {
+    const game = new BowlingGame();
+    game.init(makeContext(109));
+    const input = new ScriptedInput();
+    input.point('p1', LANE_WIDTH / 2 - DRAG_RANGE / 2, FOUL_LINE_Y + 40);
+    game.update(STEP, input);
+    input.cancel('p1');
+    game.update(STEP, input);
+
+    // A fresh press somewhere else. With the old anchor still standing the aim would jump
+    // to whatever the abandoned gesture had reached.
+    input.point('p1', LANE_WIDTH / 2, FOUL_LINE_Y + 40);
+    game.update(STEP, input);
+    expect(game.aimAngle, 'a fresh press is a fresh anchor').toBe(0);
+  });
+
+  it('keeps the aim: a cancel drops the charge and nothing else', () => {
+    const game = new BowlingGame();
+    game.init(makeContext(107));
+    const input = new ScriptedInput();
+    input.steer('p1', 1);
+    for (let i = 0; i < 10; i += 1) game.update(STEP, input);
+    input.steer('p1', 0);
+    const aimed = game.aimAngle;
+    expect(aimed, 'the keys steered').not.toBe(0);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.aimAngle, 'the aim does not move because a phone call arrived').toBe(aimed);
+  });
+});
+
 describe('a ball', () => {
   it('holds the pins up for a beat before counting them', () => {
     // Watching what you knocked down is most of the point of bowling, so the rack is left
@@ -259,6 +346,28 @@ describe('a ball', () => {
     }
     expect(sawTheStillFrame, 'the lane did settle').toBe(true);
     expect(game.position.rollsP1.length, 'and then it is counted').toBe(1);
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('lets the run-up down instead of freezing it', () => {
+    // `InputManager.clear()` with no `onPause` is a real path, not a hypothetical: the shell
+    // calls it on a released modifier chord and on a lost window, before any pause is
+    // requested. The key never receives its key-up and `clear` deletes the release edge too,
+    // so before #2501 the charge froze in total silence and the next release bowled it.
+    const game = new BowlingGame();
+    game.init(makeContext(211));
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.action);
+    for (let i = 0; i < 20; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.power, 'the key built a run-up').toBeGreaterThan(0);
+
+    manager.clear();
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.power, 'a window taken away leaves nothing behind').toBe(0);
+    expect(game.position.phase, 'and nothing was bowled').toBe('aiming');
   });
 });
 

@@ -1,5 +1,3 @@
-import type { Rng } from './rng.js';
-
 /**
  * Sound, and the one gesture that is allowed to start it.
  *
@@ -67,11 +65,6 @@ const DEFAULT_MAX_VOICES = 12;
 /** Sounds one simulation step may ask for. A step that wants more than this is a bug. */
 const DEFAULT_QUEUE_CAPACITY = 32;
 
-/** Default spread for {@link AudioSystem.playVaried}, in cents: a fifth of a semitone. */
-const DEFAULT_CENTS = 40;
-
-const CENTS_PER_OCTAVE = 1200;
-
 /**
  * The states an implementation may report.
  *
@@ -103,6 +96,20 @@ export interface AudioBufferLike {
   readonly duration: number;
 }
 
+/**
+ * A buffer whose samples can be written.
+ *
+ * Separate from {@link AudioBufferLike} because playing a sound needs only its length,
+ * while *making* one needs somewhere to put the numbers. Everything DuelBox plays is
+ * synthesised into one of these at registration time — the product ships no audio files
+ * at all — so this is the only door sound gets in through. See `synth.ts`.
+ */
+export interface AudioSampleBuffer extends AudioBufferLike {
+  readonly length: number;
+  readonly sampleRate: number;
+  getChannelData(channel: number): Float32Array;
+}
+
 export interface AudioBufferSourceNodeLike extends AudioNodeLike {
   buffer: AudioBufferLike | null;
   readonly playbackRate: AudioParamLike;
@@ -110,6 +117,15 @@ export interface AudioBufferSourceNodeLike extends AudioNodeLike {
   stop(when?: number): void;
 }
 
+/**
+ * What this module needs from a Web Audio context — and deliberately no more.
+ *
+ * There is **no `decodeAudioData`**. DuelBox synthesises every sound it makes and ships no
+ * `.wav`, `.mp3` or `.opus` at all (see `synth.ts`), so a decode path would be dead weight
+ * in a bundle every visitor downloads *and* a standing invitation to add the first audio
+ * file — which is a rule 1 argument about provenance and a rule 3 licence entry nobody
+ * wants to have. Narrowing the interface is how that stays a decision rather than a habit.
+ */
 export interface AudioContextLike {
   readonly state: AudioState;
   /** The context's own clock, in seconds. Used only to retire voices, never by a game. */
@@ -124,9 +140,7 @@ export interface AudioContextLike {
   close(): Promise<void> | undefined;
   createGain(): GainNodeLike;
   createBufferSource(): AudioBufferSourceNodeLike;
-  createBuffer(channels: number, length: number, sampleRate: number): AudioBufferLike;
-  /** Detaches `encoded`; the caller must not reuse the buffer afterwards. */
-  decodeAudioData(encoded: ArrayBuffer): Promise<AudioBufferLike>;
+  createBuffer(channels: number, length: number, sampleRate: number): AudioSampleBuffer;
 }
 
 /** Nothing here reads the event, so it is typed as the unknown it is treated as. */
@@ -416,22 +430,6 @@ export class AudioSystem {
     this.#index.set(name, slot);
   }
 
-  /**
-   * Decode encoded bytes and register the result. Decoding works on a suspended context,
-   * so this can run while the shell is still waiting for its first gesture — which is the
-   * point: by the time the player taps Start, the sounds are already in memory.
-   *
-   * Resolves false if this runtime has no audio at all. Rejects if the bytes will not
-   * decode, which is a build problem and should be loud.
-   */
-  async load(name: string, encoded: ArrayBuffer, gain = 1): Promise<boolean> {
-    const context = this.context();
-    if (context === undefined) return false;
-    const buffer = await context.decodeAudioData(encoded);
-    this.register(name, buffer, gain);
-    return true;
-  }
-
   has(name: string): boolean {
     return this.#index.has(name);
   }
@@ -442,15 +440,17 @@ export class AudioSystem {
     this.#applyMasterGain();
   }
 
+  /**
+   * Mute or unmute. The level a mute is hiding is remembered, so unmuting restores it.
+   *
+   * There is deliberately no `toggleMuted` beside this. It existed, nothing called it —
+   * the shell's control reads a persisted preference and sets an explicit value, which is
+   * what you want when two tabs and two devices can each hold an opinion — and an unused
+   * method on a class cannot be minified away, so it shipped to every visitor for nothing.
+   */
   setMuted(muted: boolean): void {
     this.#muted = muted;
     this.#applyMasterGain();
-  }
-
-  /** Returns the new state, so a button can render from the return value. */
-  toggleMuted(): boolean {
-    this.setMuted(!this.#muted);
-    return this.#muted;
   }
 
   /**
@@ -482,24 +482,6 @@ export class AudioSystem {
     this.#queueRate[count] = rate;
     this.#pendingCount = count + 1;
     return true;
-  }
-
-  /**
-   * As {@link AudioSystem.play}, with the pitch nudged by up to `cents` either way so that
-   * a sound fired forty times in a match does not sound like forty copies of one recording.
-   *
-   * The randomness is a seeded {@link Rng} because it must be (CLAUDE.md rule 4), and two
-   * details keep it honest:
-   *
-   * - Hand it a generator dedicated to presentation, not the one the simulation draws
-   *   from. Sound must never be able to move the gameplay stream.
-   * - The draw happens before anything can return early, so a muted device, a locked
-   *   context and a device playing at full volume all advance the generator identically.
-   *   Anything else and two devices in a cross-device match would diverge over audio.
-   */
-  playVaried(name: string, rng: Rng, cents = DEFAULT_CENTS, gain = 1): boolean {
-    const offset = (rng.float() * 2 - 1) * cents;
-    return this.play(name, gain, 2 ** (offset / CENTS_PER_OCTAVE));
   }
 
   /**

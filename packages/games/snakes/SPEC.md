@@ -107,7 +107,21 @@ divides a shared board into two pointer zones, so each player owns half the scre
 player whose snake is in the far half could not point ahead of it. A relative drag works
 from anywhere in your own half, which is the only place a thumb can be.
 
-On a keyboard, A and D steer the left snake and the arrow keys the right. There is no stop.
+On a keyboard, A and D steer the near seat's snake and the arrow keys the far seat's. There
+is no stop.
+
+**The manifest never says "the left snake"** (#2488). It used to, and it was false within
+seconds of the countdown: seat one only *spawns* at a quarter of the way across, both snakes
+roam the whole arena, and they swap sides constantly — so a player who read the control line
+before the match found their snake on the other side in the middle of it. A seat-naming
+guard cannot catch that, and `apps/web/src/data/controls.test.ts` passes the old line
+correctly: it does qualify a seat noun with a direction, and no regular expression can tell
+"true at t = 0" from "false at t = 3".
+
+So the line names two things that do not move: the **seat**, by where the person is sitting,
+and the **snake**, by its colour and its shape together — the ringed red head for seat one,
+the barred blue body for seat two. Rule 7 already requires that shape to exist, so this
+describes what the player can actually see rather than where something happened to start.
 
 A new touch takes a fresh origin even when the seat's pointer never went null — a second
 finger can take over mid-drag, and measuring from the old origin would lurch the snake.

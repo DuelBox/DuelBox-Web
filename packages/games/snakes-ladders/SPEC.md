@@ -183,11 +183,11 @@ snakes are marked in each seat's own shape precisely so that the information the
 uses is information a person has too (rule 6). It never rerolls, never sees a die before it
 is rolled, and never touches the dice.
 
-| | Blunder rate | Foresight | What it actually does |
-|---|---|---|---|
-| easy | 0.80 | 0 | Four turns in five it grabs a die without looking at where it goes. |
-| normal | 0.20 | 0 | Takes the die that leaves it furthest along, ladders and snakes included. |
-| hard | 0 | 0.7 | The same, plus what the square it lands on exposes it to next turn. |
+| | Blunder rate | Foresight | Aim error | What it actually does |
+|---|---|---|---|---|
+| easy | 0.80 | 0 | 2.6 squares | Four turns in five it grabs a die without looking at where it goes. |
+| normal | 0.20 | 0 | 1.3 squares | Takes the die that leaves it furthest along, ladders and snakes included. |
+| hard | 0 | 0.7 | 0.8 squares | The same, plus what the square it lands on exposes it to next turn. |
 
 `foresight` weights `outlook(field)`: the average over all thirty-six pairs of dice of the
 better of the two landings from that field — which is exactly the choice the player will
@@ -195,32 +195,84 @@ face next turn. It is what tells the hard tier to stop one short of the ladder a
 than one short of the snake at 47, and it correctly stops fearing a snake that has already
 had it.
 
-The blunder roll is drawn even at a rate of zero, so the three tiers consume the seeded
-stream the same way when they agree, and a difference between two traces means a different
-*decision* rather than a different dice sequence.
+The blunder roll and the two aim draws are taken even at a rate of zero, so the three tiers
+consume the seeded stream the same way when they agree, and a difference between two traces
+means a different *decision* rather than a different dice sequence.
 
-### Measured, over 400 matches a pairing
+### The aim error, and why a bot has one (#2477)
+
+The tap this game is built around is "take me there": a finger anywhere but a die box picks
+the die whose landing — or whose snake or ladder destination — is nearest it. The bot used to
+skip the gesture and hand back an index, which is **perfect precision in reaching for a
+choice**. Rule 6 forbids a bot information a human cannot get, and the fairness section of
+CLAUDE.md forbids any input family aiming finer than another. A bot is an input family.
+
+So the *decision* is untouched — `wantedDie` still reads the board exactly as well as it did
+— and only the reaching is made fallible. The tier works out the square it wants to be on,
+its finger comes down a slip of squares away from it, and `aimedDie` plays whichever die
+that tap asks for, through the same nearer-of-landing-and-arrival metric `#dieFor` uses. The
+slip is one seeded `misjudgement` draw per axis, in **squares**, which is the unit
+`boardColumn` and `boardRow` are already in — nothing here knows how wide a square is drawn,
+which is rule 8.
+
+Measured over a thousand positions a tier, blunders excluded and same-destination turns
+skipped, the finger asks for the die the tier did not mean:
+
+| | Mis-taps |
+|---|---|
+| easy | 27.5% |
+| normal | 13.0% |
+| hard | 5.9% |
+
+Two dice with the same destination — 19% of turns — cannot be mis-tapped at all, and that is
+right: there is nothing there to get wrong. Nor can a tier mis-tap onto something illegal;
+both dice are always legal, so a miss is always a legal move, exactly as a human's is.
+
+### Measured, over 400 seeds a pairing, **both seat orders**
+
+Every seed is played twice, once from each chair, and the two averaged (#2489). Before that
+fix every number in this table was measured with the first-named tier in seat one, so each
+one carried the first-mover edge the next section measures — a tier gap plus a chair gap,
+with nothing in it to say how much of each.
 
 | | Win rate for the row | Average turns |
 |---|---|---|
-| hard v easy | **84.5%** | 18.0 |
-| normal v easy | 79.5% | 19.1 |
-| hard v normal | 65.8% | 17.0 |
-| easy v easy | 51.2% | 25.2 |
-| normal v normal | 53.5% | 17.8 |
-| hard v hard | 55.0% | 16.1 |
+| hard v easy | **81.5%** | 19.7 |
+| normal v easy | 74.3% | 22.1 |
+| hard v normal | 63.1% | 18.2 |
+| easy v easy (seat one) | 50.7% | 27.4 |
+| normal v normal (seat one) | 55.0% | 19.6 |
+| hard v hard (seat one) | 55.8% | 17.1 |
 
 The tiers are strongly ordered, which is worth noting because the sibling dice game could
 not manage it: Ludo Dash tops out at a 60/40 edge because two thirds of its turns have only
 one legal move. Here 81% of turns are a genuine choice, so difficulty has something to act
 on nearly every turn.
 
-**The seat that rolls first has an edge**, and the mirror matches are how it shows: 51.2% at
-easy, 53.5% at normal, 55.0% at hard. It grows with skill because better play shortens the
-race, and in a race whoever arrives first wins. It is the same order as moving first in
-Checkers, and it is small next to the 84.5% a hard tier takes off an easy one — the tier,
-not the seat order, decides a match. Nothing in the SDK rotates who opens across a rematch;
-that is a catalogue-wide gap rather than this game's, and it is noted at the end.
+**What moved, and why.** The old table read 84.5 / 79.5 / 65.8. Two changes are in the
+difference and they pull opposite ways:
+
+| | Old, seat one only | Both orders, old bot | Both orders, with the aim |
+|---|---|---|---|
+| hard v easy | 84.5% | 82.0% | 81.5% |
+| normal v easy | 79.5% | 77.8% | 74.3% |
+| hard v normal | 65.8% | 61.9% | 63.1% |
+
+Averaging the chairs takes 1.7 to 3.9 points off every pairing, which is the first-mover
+edge coming out of numbers that should never have contained it. The aim error then costs
+`normal` more than either neighbour, because a blunder and a mis-tap cannot both spoil the
+same turn: `easy` is already not looking four turns in five, so its finger has little left
+to ruin, while `normal` looks 80% of the time and `hard` always. That is arithmetic rather
+than a preference, and it is why `hard v normal` goes *up* while `normal v easy` goes down.
+
+**The seat that rolls first has an edge**, and the mirror matches are how it shows: 50.7% at
+easy, 55.0% at normal, 55.8% at hard, measured with `seatOneRate` rather than `winRate` —
+averaging the two orders of a mirror pairing returns 50% by construction and would report
+the edge as absent rather than as measured. It grows with skill because better play shortens
+the race, and in a race whoever arrives first wins. It is the same order as moving first in
+Checkers, and it is small next to the 81.5% a hard tier takes off an easy one — the tier, not
+the seat order, decides a match. The SDK now alternates who opens across the rounds of a
+best-of and `resetPosition` reads it (#2466, #2487), so it washes out over a match.
 
 ## Presentations
 
@@ -250,9 +302,12 @@ always upright. The rules and the simulation are byte-identical; only the rotati
   reads it (#2487), so the first-mover edge measured above washes out over a match instead of
   landing on the same chair every time. The balance harness measures seat one at **50.0%** of
   100 decided matches at 50 seeds × both opening seats on `normal`, and all 50 seed pairs end
-  differently when only the opening seat changes. What is still open is #2489: the bot ladder
-  above was measured from one seat order and so carries the first-mover edge inside its tier
-  numbers.
+  differently when only the opening seat changes.
+- ~~**A tier number that is really a tier number plus a chair number.**~~ **Answered.** #2489:
+  the bot ladder above was measured from one seat order and so carried the first-mover edge
+  inside every tier number it published. `winRate` now plays each seed from both chairs and
+  averages, `seatOneRate` measures the chair on its own, and the table above says which of
+  the two moved each number.
 - **Interaction between the players.** There is none: two tokens race up one board and never
   affect each other. Every mechanism that would add some — bumping, blocking, stealing a die
   — either breaks the termination proof or takes a decision away from the person whose turn

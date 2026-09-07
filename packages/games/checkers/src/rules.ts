@@ -42,6 +42,13 @@ export interface Game {
    * so the same seat moves again and only that one piece may move.
    */
   chain: number;
+  /**
+   * Plies since the last capture or man move — the forty-move rule's counter.
+   *
+   * See {@link IDLE_PLIES_DRAW}. A man move is progress because a man can only go forward
+   * and must eventually crown or be taken; a king move on its own is not progress at all.
+   */
+  idlePlies: number;
 }
 
 export function otherOf(seat: SeatId): SeatId {
@@ -94,6 +101,7 @@ export function createGame(): Game {
     slots: new Array<Slot>(SLOT_COUNT).fill(null),
     toMove: 'p1',
     chain: -1,
+    idlePlies: 0,
   };
   resetGame(game);
   return game;
@@ -115,14 +123,29 @@ export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   }
   game.toMove = opener;
   game.chain = -1;
+  game.idlePlies = 0;
 }
 
-/** The four diagonal steps, as row/column deltas. */
+/**
+ * The four diagonal steps, **in the moving seat's own frame**.
+ *
+ * Each entry is `[ahead, across]` as the mover sees the board, and a global row/column
+ * delta is `[ahead * f, across * f]` where `f` is {@link forwardOf} — so a given entry is
+ * the same side of the board to whichever seat is moving, once the board is turned round.
+ * Written the obvious
+ * way — one fixed list of global deltas, walked in the same order for both seats — move
+ * generation is *not* covariant under the half turn that maps one seat's board onto the
+ * other's: mirroring a position reverses the generated list rather than mirroring it, and
+ * everything downstream that breaks a tie by taking the first-listed move then prefers one
+ * seat's direction of travel over the other's. That was worth 8 points of seat balance
+ * (#2502). Keeping the order in the mover's frame is what makes the two seats the same
+ * player facing opposite ways.
+ */
 const DIAGONALS: readonly (readonly [number, number])[] = [
-  [-1, -1],
-  [-1, 1],
-  [1, -1],
   [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
 ];
 
 export interface Move {
@@ -161,7 +184,10 @@ export function movesFrom(out: Move[], count: number, game: Game, slot: number):
   const column = columnOf(slot);
   let next = count;
 
-  for (const [dr, dc] of DIAGONALS) {
+  const facing = forwardOf(piece.seat);
+  for (const [ahead, across] of DIAGONALS) {
+    const dr = ahead * facing;
+    const dc = across * facing;
     if (!canTravel(piece, dr)) continue;
 
     const stepSlot = slotAt(row + dr, column + dc);
@@ -206,7 +232,13 @@ export function legalMoves(out: Move[], game: Game): number {
     return kept;
   }
 
-  for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+  // Walked from the mover's own back rank forward, for the same reason the diagonals are
+  // kept in the mover's frame: slot order is board order, and board order runs towards one
+  // seat and away from the other. Ascending for p2, whose back rank is row 0; descending
+  // for p1, whose back rank is row 7.
+  const ascending = forwardOf(seat) === 1;
+  for (let i = 0; i < SLOT_COUNT; i += 1) {
+    const slot = ascending ? i : SLOT_COUNT - 1 - i;
     const piece = game.slots[slot];
     if (piece === null || piece === undefined || piece.seat !== seat) continue;
     count = movesFrom(out, count, game, slot);
@@ -260,6 +292,9 @@ export function applyMove(game: Game, from: number, to: number): boolean {
   const piece = game.slots[from];
   if (piece === null || piece === undefined) return false;
 
+  // Counted before the piece is crowned, because a crowning move is a man move.
+  game.idlePlies = chosen.captured >= 0 || piece.kind === 'man' ? 0 : game.idlePlies + 1;
+
   game.slots[from] = null;
   game.slots[to] = piece;
   if (chosen.captured >= 0) game.slots[chosen.captured] = null;
@@ -311,11 +346,34 @@ export function tallyOf(game: Game): Tally {
 }
 
 /**
+ * Forty moves each without a capture or a man move, and the game is a draw.
+ *
+ * This is the standard forty-move rule, and until #2502 this game did not have it: the
+ * SPEC's "not specified here" section said a long endgame would be "settled by the shell's
+ * round timer instead", and nothing in the simulation ends a match on that timer. Nothing
+ * ended it at all.
+ *
+ * It was invisible while the bot was lopsided. A search whose tie-break quietly favoured
+ * one seat's direction of travel is a search the two seats do not share, and two different
+ * players break a shuffle sooner or later. Making the two seats the same player — which is
+ * the whole of the seat-balance fix — made them shuffle in step: six kings, 944 plies with
+ * no capture and no man move, one position reached thirty-one times, and 84 matches in 100
+ * still running after ten simulated minutes. So the rule that was missing had been load-
+ * bearing on an accident, and this is it stated outright.
+ *
+ * Forty moves per seat is eighty plies, which is the tournament figure for English
+ * draughts. A man move counts as progress because a man cannot go backwards and so must
+ * crown or be taken; a king shuffling between two squares is not progress by any reading.
+ */
+export const IDLE_PLIES_DRAW = 80;
+
+/**
  * Who has won, or null while the game is live.
  *
  * A seat loses when it has no pieces **or no legal move**. Being stalemated is a loss in
  * checkers rather than a draw, which is not obvious and is the sort of thing a player
- * only discovers by being on the wrong end of it.
+ * only discovers by being on the wrong end of it. A game that stops making progress is a
+ * draw — see {@link IDLE_PLIES_DRAW}.
  */
 export function winnerOf(game: Game): SeatId | 'draw' | null {
   let p1 = 0;
@@ -329,6 +387,7 @@ export function winnerOf(game: Game): SeatId | 'draw' | null {
   if (p1 === 0) return 'p2';
   if (p2 === 0) return 'p1';
   if (legalMoves(legalScratch, game) === 0) return otherOf(game.toMove);
+  if (game.idlePlies >= IDLE_PLIES_DRAW) return 'draw';
   return null;
 }
 
@@ -346,9 +405,29 @@ export const SEARCH_DEPTH: Readonly<Record<BotDifficulty, number>> = Object.free
   hard: 5,
 });
 
-/** A king is worth appreciably more than a man, because it is. */
-const MAN_VALUE = 10;
-const KING_VALUE = 17;
+/**
+ * Piece values, in fifths of a man.
+ *
+ * **Every term here is a whole number, and that is the point.** The scale used to be
+ * `man = 10`, `king = 17`, two fifths of a point per row advanced and one point for the
+ * edge — and two fifths is `0.4`, which has no exact binary representation. Two dozen
+ * multiples of it, summed in slot order, land a few times `Number.EPSILON` away from the
+ * true total, and *which* way they land depends on the order the terms were added in. A
+ * position and its half-turn mirror sum the identical terms in opposite orders, so the
+ * opening position scored `+7.1e-15` from one seat and `-7.1e-15` from the other: the same
+ * `-0`-shaped defect this repository has already found in Chess, on the position every
+ * match starts from. Downstream, `score > bestScore` is a strict comparison, so a
+ * fifteenth-decimal-place difference is enough to pick a different move for one seat.
+ *
+ * Scaling by five removes the fraction rather than papering over it, and integer sums are
+ * exact in any order at these magnitudes. The ratios, and therefore the bot, are unchanged.
+ */
+const MAN_VALUE = 50;
+const KING_VALUE = 85;
+/** Per row a man has advanced towards its crown — a twenty-fifth of a man, as before. */
+const ADVANCE_VALUE = 2;
+/** For a piece on a file it can never be captured from — a tenth of a man, as before. */
+const EDGE_VALUE = 5;
 
 /**
  * Score a position from `seat`'s point of view.
@@ -356,6 +435,8 @@ const KING_VALUE = 17;
  * Material dominates, as it should. Two positional terms carry the rest: advancing a man
  * is worth a little because it is progress towards a crown, and a piece on the edge is
  * worth a little more because it can never be captured there.
+ *
+ * The result is always a whole number — see {@link MAN_VALUE}.
  */
 export function evaluate(game: Game, seat: SeatId): number {
   let score = 0;
@@ -368,10 +449,10 @@ export function evaluate(game: Game, seat: SeatId): number {
       // How far this man has come, in rows, towards its crown.
       const row = rowOf(slot);
       const advanced = piece.seat === 'p1' ? BOARD_SIZE - 1 - row : row;
-      value += advanced * 0.4;
+      value += advanced * ADVANCE_VALUE;
     }
     const column = columnOf(slot);
-    if (column === 0 || column === BOARD_SIZE - 1) value += 1;
+    if (column === 0 || column === BOARD_SIZE - 1) value += EDGE_VALUE;
     score += sign * value;
   }
   return score;
@@ -399,6 +480,7 @@ function copyInto(target: Game, source: Game): void {
   }
   target.toMove = source.toMove;
   target.chain = source.chain;
+  target.idlePlies = source.idlePlies;
 }
 
 function search(

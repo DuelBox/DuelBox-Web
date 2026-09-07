@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Rng, set, vec2 } from '@duelbox/engine';
+import { DEFAULT_BINDINGS, InputManager, InputView, Rng, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { ShurikenGame } from './game.js';
@@ -44,6 +44,7 @@ class FakeInput implements InputState {
       seat.actionPressed = false;
       seat.actionHeld = false;
       seat.actionReleased = false;
+      seat.pointerCancelled = false;
     }
   }
 }
@@ -145,6 +146,24 @@ function lift(input: FakeInput, seat: SeatId): void {
   target.pointer = null;
   target.actionHeld = false;
   target.actionReleased = true;
+}
+
+/**
+ * The gesture taken away rather than let go: a system edge-swipe, palm rejection, a pause.
+ *
+ * Mirrors `InputManager.#applySeat` exactly (`packages/engine/src/input.ts`): the pointer is
+ * gone, no edge is reported at all, and the release the lift would otherwise have produced
+ * is *suppressed* — a cancel and a release can never both be true.
+ */
+function cancel(input: FakeInput, seat: SeatId): void {
+  const target = seat === 'p1' ? input.p1 : input.p2;
+  target.pointer = null;
+  target.actionPressed = false;
+  target.actionHeld = false;
+  target.actionReleased = false;
+  target.holdSeconds = 0;
+  target.holdSecondsAtRelease = 0;
+  target.pointerCancelled = true;
 }
 
 /** Throw with the keys: hold a direction for a while, then press. */
@@ -350,6 +369,131 @@ describe('playing with a thumb alone', () => {
       turns += 1;
     }
     expect(game.state.throws).toBeGreaterThan(4);
+  });
+});
+
+describe('a cancelled gesture', () => {
+  let game: ShurikenGame;
+  let input: FakeInput;
+
+  /** A finger arriving and sweeping right: an aim off to the side, and spin wound on. */
+  function windUp(seat: SeatId): void {
+    touch(input, seat, THROW_X, THROW_Y - 300);
+    step(game, input);
+    for (let i = 1; i <= 20; i += 1) {
+      touch(input, seat, THROW_X + i * 12, THROW_Y - 300);
+      step(game, input);
+    }
+  }
+
+  beforeEach(() => {
+    game = new ShurikenGame();
+    input = new FakeInput();
+    game.init(makeContext(null, null));
+  });
+
+  it('throws nothing on the step the gesture is taken away', () => {
+    windUp('p1');
+    cancel(input, 'p1');
+    step(game, input);
+    expect(game.state.phase, 'a cancel commits nothing').toBe('aiming');
+    expect(game.state.throws).toBe(0);
+  });
+
+  it('winds the spin back off, because spin is a charge and not an aim', () => {
+    // The distinction the whole fix turns on. Spin is wound up by the gesture and spent by
+    // the throw, so an abandoned gesture must not leave it on the blade for whatever throw
+    // comes next; the aim is where the throw points and is carried between attempts.
+    windUp('p1');
+    expect(game.state.spin, 'the sweep must have wound spin on').toBeGreaterThan(0.5);
+    cancel(input, 'p1');
+    step(game, input);
+    expect(game.state.spin, 'an abandoned charge must not survive').toBe(0);
+  });
+
+  it('keeps the aim, which commits nothing on its own', () => {
+    windUp('p1');
+    const aimed = game.state.aim;
+    expect(aimed).toBeGreaterThan(0.2);
+    cancel(input, 'p1');
+    step(game, input);
+    expect(game.state.aim, 'the cancel swung the sight').toBe(aimed);
+  });
+
+  it('does not throw on the next release, whatever made it', () => {
+    // The headline. A cancel abandons: whatever release arrives next — a second finger
+    // lifting, a key coming up — must not throw the blade the interruption left armed. In
+    // a two-seat game that throw is the other player's turn spent for them.
+    windUp('p1');
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    input.p1.actionReleased = true;
+    step(game, input, 2);
+    expect(game.state.phase, 'a release must not commit an abandoned gesture').toBe('aiming');
+    expect(game.state.throws).toBe(0);
+  });
+
+  it('leaves the keyboard, which was never cancelled, able to throw', () => {
+    // `#pointerAiming` frozen true makes the keyboard's press-to-commit branch unreachable
+    // for the rest of the turn: the interruption costs the player their turn as well as
+    // their gesture.
+    windUp('p1');
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    input.p1.actionPressed = true;
+    step(game, input);
+    expect(game.state.phase, 'the keyboard must still be able to throw').toBe('flying');
+  });
+
+  it('keeps a gesture that has not ended: a cancelled second finger is not a lift', () => {
+    // The engine raises the bit for *any* cancelled pointer, not only the last one down,
+    // and keeps `actionHeld` true while another finger is still on the glass. That is the
+    // guard: the action has not ended, so nothing of it is dropped.
+    windUp('p1');
+    const wound = game.state.spin;
+    const aimed = game.state.aim;
+    touch(input, 'p1', THROW_X + 240, THROW_Y - 300);
+    input.p1.pointerCancelled = true;
+    step(game, input);
+    expect(game.state.spin, 'a live gesture must not be abandoned').toBe(wound);
+    expect(game.state.aim).toBe(aimed);
+    input.p1.pointerCancelled = false;
+    lift(input, 'p1');
+    step(game, input);
+    expect(game.state.phase, 'the surviving finger still commits on its own lift').toBe('flying');
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('leaves the wound spin standing, because no gesture was in progress', () => {
+    // The counterpart of the pointer test above, and a characterisation rather than a fix.
+    // A *sweep* winds spin inside a press-and-drag, so a cancelled sweep abandons it. The
+    // keys wind the same number with no action held at all — there is no gesture, so there
+    // is nothing to abandon, and `InputManager.clear()` correctly raises no cancellation
+    // for a seat that was only steering. The spin is a setting the player left set, the
+    // sight likewise, and the next press throws exactly one blade with both. Nothing in
+    // `game.ts` changed for this.
+    const game = new ShurikenGame();
+    game.init(makeContext(null, null));
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.down);
+    for (let i = 0; i < 30; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    const wound = game.state.spin;
+    expect(Math.abs(wound), 'the keys wound spin on').toBeGreaterThan(0);
+
+    manager.clear();
+    const cleared = view.sync(manager.beginStep(STEP));
+    expect(cleared.seat('p1').pointerCancelled, 'steering is not a gesture').toBe(false);
+    game.update(STEP, cleared);
+    expect(game.state.spin, 'so the setting is left alone').toBe(wound);
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.action);
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.state.phase, 'and the next press throws').toBe('flying');
   });
 });
 

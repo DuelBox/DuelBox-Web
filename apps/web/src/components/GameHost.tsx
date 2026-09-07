@@ -16,6 +16,8 @@ import {
   NO_INSETS,
   viewportToLogical,
   vec2,
+  zoneSplitFor,
+  type Presentation,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
@@ -27,6 +29,7 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import styles from './GameHost.module.css';
+import { audio, soundBus } from '@/lib/audio';
 
 /**
  * Runs one game on a canvas.
@@ -78,6 +81,34 @@ export interface GameHostProps {
    * up would either re-render the shell sixty times a second or hand it something stale.
    */
   onTraceReady?: (getTrace: () => string) => void;
+}
+
+/**
+ * The split the shell puts the pointer surface on, for a manifest, a presentation and
+ * whoever currently has the move.
+ *
+ * A game with turns owns the whole pointer surface; only a real-time game on a shared
+ * screen has zones. That was a serious bug once, and it hid behind a test that aimed only
+ * where it worked: a turn-based board **rotates to face whoever is to move**, so its far
+ * side sits in the other seat's zone — every tap aimed there was attributed to a player
+ * whose turn it was not, and dropped. In Tic Tac Toe the far row of cells could not be
+ * reached by touch at all. Ten shared-board games had the same hole.
+ *
+ * `getActiveSeat` is the honest discriminator rather than the manifest's `zoneSplit`:
+ * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs its
+ * zones exactly as much as Tic Tac Toe needed to lose them.
+ *
+ * The rule itself lives in the engine, in {@link zoneSplitFor}, because the input fuzzer
+ * has to reach the identical answer — it had its own copy, and for eleven real-time games
+ * the two copies disagreed (#2479). Exported so that agreement can be *asserted* rather
+ * than assumed; the shell has no other reason to name it.
+ */
+export function hostZoneSplit(
+  manifest: GameManifest,
+  presentation: Presentation,
+  activeSeat: SeatId | null,
+): ZoneSplit {
+  return zoneSplitFor(presentation, manifest.zoneSplit, activeSeat);
 }
 
 export function GameHost({
@@ -137,25 +168,15 @@ export function GameHost({
     motion.addEventListener('change', onMotionChange);
     const inputView = new InputView();
     const game = createGame();
-    /**
-     * A game with turns owns the whole pointer surface; only a real-time game has zones.
-     *
-     * This was a serious bug, and it hid behind a test that aimed only where it worked.
-     * A turn-based board **rotates to face whoever is to move**, so its far side sits in
-     * the other seat's zone — and every tap aimed there was attributed to a player whose
-     * turn it was not, and dropped. In Tic Tac Toe the far row of cells could not be
-     * reached by touch at all. Ten shared-board games had the same hole.
-     *
-     * `getActiveSeat` is the honest discriminator rather than the manifest's `zoneSplit`:
-     * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs
-     * its zones exactly as much as Tic Tac Toe needed to lose them.
-     */
+    // See {@link hostZoneSplit}: a game with turns owns the whole surface, a real-time
+    // game on a shared screen gets a zone each, and single-seat has no divider at all.
+    //
     // Read from the *live* value rather than from whether the method exists. The contract
     // has always said returning null means "no turns right now", and a game can mean it
     // for part of its life: Sea Battle has both players lay out their fleets at the same
     // time, each on their own half, and only then starts taking turns at a shared grid.
-    const zonedSplit: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
-    const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
+    const splitFor = (seat: SeatId | null): ZoneSplit =>
+      hostZoneSplit(manifest, presentation, seat);
 
     const initialSeat = game.getActiveSeat?.() ?? null;
     const manager = new InputManager(logical, {
@@ -176,6 +197,9 @@ export function GameHost({
       localSeat,
       openingSeat,
       botDifficulty: (seat) => botDifficulty?.[seat] ?? null,
+      // The one bus for the tab. Optional on the contract and absent in every headless
+      // test, which is what keeps a game's simulation independent of its output device.
+      audio: soundBus(),
     };
     game.init(gameContext);
 
@@ -355,6 +379,11 @@ export function GameHost({
       render(alpha) {
         renderer.beginFrame();
         game.render(renderer, alpha);
+        // Queued cues reach the audio graph once a frame, from here, outside the fixed
+        // step. That is what keeps playing a sound during `update()` allocation-free
+        // (rule 5): the step writes three numbers into a preallocated queue, and the node
+        // work — which has to allocate, since a buffer source is single-use — happens here.
+        audio().flush();
         renderer.endFrame();
       },
     });

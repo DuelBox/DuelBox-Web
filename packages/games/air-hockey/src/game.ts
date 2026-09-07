@@ -1,5 +1,5 @@
 import { SEAT_PALETTE, vec2 } from '@duelbox/engine';
-import type { Rng, SeatId, Vec2 } from '@duelbox/engine';
+import type { Rng, SeatId, SoundBus, Vec2 } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
   Game,
@@ -12,6 +12,7 @@ import type {
 import type { Body, BotDifficulty } from './rules.js';
 import {
   MALLET_RADIUS,
+  MAX_PUCK_SPEED,
   PUCK_RADIUS,
   TABLE,
   botTarget,
@@ -62,6 +63,32 @@ const COLOUR_SERVE = 'rgba(233, 240, 252, 0.38)';
 const BORDER = 10;
 const GOAL_BAR = 16;
 
+/**
+ * Steps an impact marker stays on screen: a sixth of a second at the fixed rate.
+ *
+ * Every sound this game makes has one of these beside it, which is issue #180's whole
+ * requirement — no cue may be carried by audio alone. A player with the sound off, a
+ * player on a muted phone and a Deaf player all see the same events the sound describes.
+ *
+ * The markers **appear and disappear at a fixed size**. Nothing expands, travels or
+ * pulses, so there is nothing here for `prefers-reduced-motion` to reduce — which matters
+ * because a game may not read the device (rule 10), so the only reduced-motion-safe marker
+ * is one that is safe by construction rather than by branching.
+ */
+const FLASH_STEPS = 10;
+
+/** Wall a rebound came off, as a small integer so a step never allocates to record one. */
+const WALL_NONE = 0;
+const WALL_LEFT = 1;
+const WALL_RIGHT = 2;
+const WALL_TOP = 3;
+const WALL_BOTTOM = 4;
+
+/** Quietest an impact may be. A glancing touch still happened, and still gets a sound. */
+const MIN_IMPACT = 0.3;
+
+const COLOUR_FLASH = 'rgba(233, 240, 252, 0.9)';
+
 interface MutableScore {
   p1: number;
   p2: number;
@@ -89,10 +116,29 @@ export class AirHockeyGame implements Game {
   }
 
   #context: GameContext | null = null;
+  /**
+   * Held directly rather than reached through the context on every collision.
+   *
+   * `undefined` in every headless test, every balance run and every replay — sound is
+   * presentation and the simulation may not depend on it. `?.` at each call site is what
+   * makes that true rather than merely intended, and it allocates nothing.
+   */
+  #audio: SoundBus | undefined = undefined;
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
   #serveCountdown = 0;
   #serveToward: SeatId = 'p1';
+
+  /** Impact marker: steps left, and where the mallet met the puck. */
+  #impactSteps = 0;
+  #impactX = 0;
+  #impactY = 0;
+  /** Rebound marker: steps left, which wall, and where along it. */
+  #wallSteps = 0;
+  #wallSide = WALL_NONE;
+  #wallAt = 0;
+  /** Serve marker: steps left on the flare drawn where the puck was released. */
+  #serveSteps = 0;
 
   #prevPuckX = 0;
   #prevPuckY = 0;
@@ -118,6 +164,11 @@ export class AirHockeyGame implements Game {
 
   init(context: GameContext): void {
     this.#context = context;
+    this.#audio = context.audio;
+    this.#impactSteps = 0;
+    this.#wallSteps = 0;
+    this.#wallSide = WALL_NONE;
+    this.#serveSteps = 0;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#score.p1 = 0;
@@ -160,6 +211,12 @@ export class AirHockeyGame implements Game {
     this.#prevP2X = this.#malletP2.x;
     this.#prevP2Y = this.#malletP2.y;
 
+    // Markers first, so a cue raised this step lasts its full length. Counting down
+    // afterwards would silently cost every marker one of its frames.
+    if (this.#impactSteps > 0) this.#impactSteps -= 1;
+    if (this.#wallSteps > 0) this.#wallSteps -= 1;
+    if (this.#serveSteps > 0) this.#serveSteps -= 1;
+
     const rng = context.rng;
     this.#driveMallet('p1', this.#malletP1, this.#botP1, input, fixedDeltaSeconds, rng);
     this.#driveMallet('p2', this.#malletP2, this.#botP2, input, fixedDeltaSeconds, rng);
@@ -171,10 +228,19 @@ export class AirHockeyGame implements Game {
         const towards = this.#serveToward === 'p1' ? 1 : -1;
         this.#puck.vx = Math.sin(spread) * SERVE_SPEED;
         this.#puck.vy = Math.cos(spread) * SERVE_SPEED * towards;
+        // The puck has just been let go. Nobody caused it, so the cue carries no seat.
+        this.#serveSteps = FLASH_STEPS;
+        this.#audio?.emit('launch', 0.7);
       }
       return;
     }
 
+    // Signs kept so a rebound can be told from ordinary travel. `stepPuck` reports goals
+    // and nothing else, and reading the wall out of it here rather than changing its
+    // return type keeps the rules file — which the balance harness and the bot both drive
+    // — exactly as it was.
+    const wasVx = this.#puck.vx;
+    const wasVy = this.#puck.vy;
     const scored = stepPuck(this.#puck, TABLE, fixedDeltaSeconds);
     if (scored !== 'none') {
       if (scored === 'p1') {
@@ -183,14 +249,16 @@ export class AirHockeyGame implements Game {
         this.#score.p2 += 1;
       }
       this.#score.winner = resolve(this.#condition, this.#score);
+      this.#audio?.emit('score', 1, scored);
       // The seat that conceded receives the next serve.
       this.#serveToward = scored === 'p1' ? 'p2' : 'p1';
       this.#resetPuck();
       return;
     }
+    this.#reportRebound(wasVx, wasVy);
 
-    collidePuckMallet(this.#puck, this.#malletP1);
-    collidePuckMallet(this.#puck, this.#malletP2);
+    if (collidePuckMallet(this.#puck, this.#malletP1)) this.#reportImpact('p1');
+    if (collidePuckMallet(this.#puck, this.#malletP2)) this.#reportImpact('p2');
   }
 
   render(renderer: Renderer, alpha: number): void {
@@ -245,6 +313,66 @@ export class AirHockeyGame implements Game {
     const puckY = this.#prevPuckY + (this.#puck.y - this.#prevPuckY) * alpha;
     renderer.circle(puckX, puckY, PUCK_RADIUS, COLOUR_PUCK);
     renderer.strokeCircle(puckX, puckY, PUCK_RADIUS - 5, 3, COLOUR_INK);
+
+    this.#drawCues(renderer, centreX, centreY, width, height);
+  }
+
+  /**
+   * The visible half of every sound this game makes.
+   *
+   * Issue #180 asks that no cue be audio-only, and the cheapest way to keep that true is
+   * for the marker and the sound to be raised by the same line of code — which is what
+   * `#reportImpact`, `#reportRebound` and the serve branch do. This just draws what they
+   * raised. `apps/web/src/data/audio-cues.test.ts` plays a match, collects every cue that
+   * comes out, and fails if one of them has no marker named here.
+   *
+   * Nothing below moves. Each marker is a fixed shape that is either drawn or not, which
+   * is what makes it safe under `prefers-reduced-motion` without the game reading the
+   * device — which it may not do (rule 10).
+   */
+  #drawCues(
+    renderer: Renderer,
+    centreX: number,
+    centreY: number,
+    width: number,
+    height: number,
+  ): void {
+    // A struck puck: a ring around where the mallet met it.
+    if (this.#impactSteps > 0) {
+      renderer.strokeCircle(this.#impactX, this.#impactY, PUCK_RADIUS + 16, 5, COLOUR_FLASH);
+    }
+
+    // A rebound: a short bright length of the rail it came off, centred on the contact.
+    if (this.#wallSteps > 0) {
+      const span = 120;
+      const thickness = 8;
+      // Slid back inside the table when the contact was near a corner, rather than
+      // hanging off the end of the rail it is supposed to be marking.
+      const along = (extent: number): number =>
+        Math.max(0, Math.min(extent - span, this.#wallAt - span / 2));
+      switch (this.#wallSide) {
+        case WALL_LEFT:
+          renderer.rect(0, along(height), thickness, span, COLOUR_FLASH);
+          break;
+        case WALL_RIGHT:
+          renderer.rect(width - thickness, along(height), thickness, span, COLOUR_FLASH);
+          break;
+        case WALL_TOP:
+          renderer.rect(along(width), 0, span, thickness, COLOUR_FLASH);
+          break;
+        case WALL_BOTTOM:
+          renderer.rect(along(width), height - thickness, span, thickness, COLOUR_FLASH);
+          break;
+        default:
+          break;
+      }
+    }
+
+    // A serve: a flare on the centre spot the puck has just left.
+    if (this.#serveSteps > 0) {
+      renderer.strokeCircle(centreX, centreY, PUCK_RADIUS + 10, 5, COLOUR_FLASH);
+      renderer.line(centreX - 46, centreY, centreX + 46, centreY, 4, COLOUR_FLASH);
+    }
   }
 
   onPause(): void {
@@ -269,8 +397,60 @@ export class AirHockeyGame implements Game {
 
   destroy(): void {
     this.#context = null;
+    this.#audio = undefined;
     this.#botP1 = null;
     this.#botP2 = null;
+  }
+
+  /**
+   * A mallet met the puck: raise the marker and say so.
+   *
+   * The seat goes with the cue, because the engine pitches the two seats apart — sound is
+   * the one channel with no colour in it, so rule 7's "every player-owned element also
+   * differs by shape, pattern or label" needs its own answer here.
+   */
+  #reportImpact(seat: SeatId): void {
+    this.#impactSteps = FLASH_STEPS;
+    this.#impactX = this.#puck.x;
+    this.#impactY = this.#puck.y;
+    const speed = Math.hypot(this.#puck.vx, this.#puck.vy);
+    const force = speed / MAX_PUCK_SPEED;
+    this.#audio?.emit('hit', force < MIN_IMPACT ? MIN_IMPACT : force > 1 ? 1 : force, seat);
+  }
+
+  /**
+   * Report a rebound off the world, if the step produced one.
+   *
+   * A wall is the only thing in this game that can reverse a component of the puck's
+   * velocity; friction and the speed cap both scale it and never flip it. So a sign change
+   * across the step *is* a rebound, and which component changed says which wall.
+   */
+  #reportRebound(wasVx: number, wasVy: number): void {
+    const vx = this.#puck.vx;
+    const vy = this.#puck.vy;
+    let side = WALL_NONE;
+    let at = 0;
+    if (wasVx > 0 && vx < 0) {
+      side = WALL_RIGHT;
+      at = this.#puck.y;
+    } else if (wasVx < 0 && vx > 0) {
+      side = WALL_LEFT;
+      at = this.#puck.y;
+    } else if (wasVy > 0 && vy < 0) {
+      side = WALL_BOTTOM;
+      at = this.#puck.x;
+    } else if (wasVy < 0 && vy > 0) {
+      side = WALL_TOP;
+      at = this.#puck.x;
+    }
+    if (side === WALL_NONE) return;
+    this.#wallSteps = FLASH_STEPS;
+    this.#wallSide = side;
+    this.#wallAt = at;
+    const speed = Math.hypot(vx, vy);
+    const force = speed / MAX_PUCK_SPEED;
+    // Nobody chose this one, so it carries no seat: a rail belongs to the table.
+    this.#audio?.emit('bounce', force > 1 ? 1 : force);
   }
 
   #driveMallet(

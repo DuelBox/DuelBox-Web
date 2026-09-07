@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Rng, set, vec2 } from '@duelbox/engine';
+import { DEFAULT_BINDINGS, InputManager, InputView, Rng, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { AIM_CENTRE_X, AIM_CENTRE_Y, AIM_RADIUS, DartsGame } from './game.js';
@@ -35,8 +35,10 @@ class FakeInput implements InputState {
     set(this.p2.move, 0, 0);
     this.p1.pointer = null;
     this.p1.actionPressed = false;
+    this.p1.pointerCancelled = false;
     this.p2.pointer = null;
     this.p2.actionPressed = false;
+    this.p2.pointerCancelled = false;
   }
 }
 
@@ -139,6 +141,24 @@ function release(input: FakeInput, seat: SeatId): void {
   target.actionReleased = true;
 }
 
+/**
+ * The gesture taken away rather than let go: a system edge-swipe, palm rejection, a pause.
+ *
+ * Mirrors `InputManager.#applySeat` exactly (`packages/engine/src/input.ts`): the pointer is
+ * gone, no edge is reported at all, and the release the lift would otherwise have produced
+ * is *suppressed* — a cancel and a release can never both be true.
+ */
+function cancel(input: FakeInput, seat: SeatId): void {
+  const target = seat === 'p1' ? input.p1 : input.p2;
+  target.pointer = null;
+  target.actionPressed = false;
+  target.actionHeld = false;
+  target.actionReleased = false;
+  target.holdSeconds = 0;
+  target.holdSecondsAtRelease = 0;
+  target.pointerCancelled = true;
+}
+
 function step(game: DartsGame, input: FakeInput, times = 1): void {
   for (let i = 0; i < times; i += 1) game.update(STEP, input);
 }
@@ -222,6 +242,81 @@ describe('taking turns', () => {
   });
 });
 
+describe('a cancelled gesture', () => {
+  let game: DartsGame;
+  let input: FakeInput;
+
+  beforeEach(() => {
+    game = new DartsGame();
+    input = new FakeInput();
+    game.init(makeContext(null, null));
+  });
+
+  it('throws nothing on the step the gesture is taken away', () => {
+    aimAt(input, 'p1', 0.6, -0.3);
+    step(game, input, 3);
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    step(game, input, 30);
+    expect(game.dartsThrownThisTurn, 'a cancel commits nothing').toBe(0);
+  });
+
+  it('leaves nothing of the abandoned gesture behind', () => {
+    // `#pointerAiming` exists only while a finger is on the glass. Frozen true by a cancel,
+    // the keyboard's press-to-commit branch is unreachable for the rest of the turn — the
+    // player's interruption costs them their darts as well as their gesture.
+    aimAt(input, 'p1', 0.6, -0.3);
+    step(game, input, 3);
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    input.p1.actionPressed = true;
+    step(game, input, 30);
+    expect(game.dartsThrownThisTurn, 'the keyboard must still be able to throw').toBe(1);
+  });
+
+  it('does not throw at the abandoned aim on the next release', () => {
+    // The headline. A cancel abandons: it ends and it commits nothing, so whatever release
+    // arrives next — a second finger lifting, a key coming up — must not fire the dart the
+    // interruption left armed. In a two-seat game that dart is the other player's gain.
+    aimAt(input, 'p1', 0.6, -0.3);
+    step(game, input, 3);
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    input.p1.actionReleased = true;
+    step(game, input, 30);
+    expect(game.dartsThrownThisTurn, 'a release must not commit an abandoned gesture').toBe(0);
+  });
+
+  it('keeps the aim, so the throw the player does make goes where they pointed', () => {
+    // The aim commits nothing on its own once the gesture is gone, and this game already
+    // carries it from one dart to the next. Moving the reticle because the system took the
+    // finger away would punish the player twice for an interruption they did not cause.
+    const uninterrupted = new DartsGame();
+    const control = new FakeInput();
+    uninterrupted.init(makeContext(null, null));
+    aimAt(control, 'p1', 0.6, -0.3);
+    step(uninterrupted, control, 3);
+    release(control, 'p1');
+    step(uninterrupted, control, 30);
+
+    aimAt(input, 'p1', 0.6, -0.3);
+    step(game, input, 3);
+    cancel(input, 'p1');
+    step(game, input);
+    input.clear();
+    input.p1.actionPressed = true;
+    step(game, input, 30);
+
+    expect(uninterrupted.remainingFor('p1')).toBeLessThan(STARTING_SCORE);
+    expect(game.remainingFor('p1'), 'the cancel moved the reticle').toBe(
+      uninterrupted.remainingFor('p1'),
+    );
+  });
+});
+
 describe('playing with the keyboard alone', () => {
   it('moves the sight and throws with the action, with no pointer at all', () => {
     const game = new DartsGame();
@@ -250,6 +345,35 @@ describe('playing with the keyboard alone', () => {
     // In flight already, before any release.
     step(game, input, 30);
     expect(game.dartsThrownThisTurn).toBe(1);
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('carries nothing across it, because the keyboard commits on the press', () => {
+    // The counterpart of the pointer test above, and a characterisation rather than a fix:
+    // `#pointerAiming` is only ever raised inside the pointer branch, and the keyboard
+    // throws on `actionPressed` rather than building anything. So a window taken away with
+    // keys down leaves no charge to freeze — the aim stays, which is what it is for, and
+    // the next press throws exactly one dart at it. Nothing in `game.ts` changed for this.
+    const game = new DartsGame();
+    game.init(makeContext(null, null));
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.right);
+    for (let i = 0; i < 20; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.dartsThrownThisTurn, 'aiming throws nothing').toBe(0);
+
+    manager.clear();
+    for (let i = 0; i < 3; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.dartsThrownThisTurn, 'and neither does the clear').toBe(0);
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.action);
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    manager.keyUp(DEFAULT_BINDINGS.p1.action);
+    // `thrown` counts landings, so the flight has to be waited out.
+    for (let i = 0; i < 40; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    expect(game.dartsThrownThisTurn, 'exactly one dart, on the press').toBe(1);
   });
 });
 

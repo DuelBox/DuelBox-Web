@@ -76,8 +76,26 @@ function readAll(): Record<string, StoredSetup> {
     const games = versioned ? parsed['games'] : parsed;
     if (!isRecord(games)) return {};
 
-    const out: Record<string, StoredSetup> = {};
+    // `Object.create(null)` rather than `{}`, and `__proto__` skipped outright (#2365).
+    //
+    // `JSON.parse` makes `__proto__` an **own enumerable** property, so `Object.entries`
+    // yields it, and `out['__proto__'] = value` does not create a key — it replaces this
+    // map's prototype. Storage is untrusted input, so that is a real hazard.
+    //
+    // **It was not exploitable, and the reason is an ordering rather than a check**:
+    // `sanitise()` runs before the assignment, so whatever an attacker nested is reduced to
+    // a fresh object of known fields and the prototype is replaced with an inert `{}`.
+    // Traced end to end — with `{"__proto__": {"chess": {"mode": "bot"}}}` in storage,
+    // `out['chess']` is `undefined` either way, and `Object.prototype` is never touched.
+    //
+    // Hardened anyway, because resting on an ordering is fragile: moving this assignment
+    // above `sanitise()`, or adding a branch that stores a value straight from storage,
+    // would make it exploitable with nothing to catch it. The tests alongside this are
+    // deliberately labelled as characterization tests — they pass before and after — so
+    // nobody mistakes them for a regression guard they are not.
+    const out: Record<string, StoredSetup> = Object.create(null) as Record<string, StoredSetup>;
     for (const [slug, value] of Object.entries(games)) {
+      if (slug === '__proto__') continue;
       out[slug] = versioned ? sanitise(value) : isPlayMode(value) ? { mode: value } : {};
     }
     return out;

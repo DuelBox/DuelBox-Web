@@ -61,6 +61,42 @@
       "licence": "OFL-1.1",
       "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
       "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "public/icons/icon.svg",
+      "note": "Scalable app icon, also the browser tab icon",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/icon-192.png",
+      "note": "Web app manifest icon, purpose any, 192x192",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/icon-512.png",
+      "note": "Web app manifest icon, purpose any, 512x512",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/maskable-512.png",
+      "note": "Web app manifest icon, purpose maskable — full bleed, seats inside the 40% safe circle",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/apple-touch-icon.png",
+      "note": "iOS home screen icon, 180x180",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
     }
-  ]
+  ],
+  "_icons": "The five app icons are drawn by scripts/make-icons.mjs — arithmetic in that file, no design tool and no third-party artwork — from the geometry of src/components/Wordmark.tsx. Re-run `node scripts/make-icons.mjs` to reproduce them byte for byte. The one departure from the wordmark is that the second seat is a ring rather than a disc, so the two seats stay distinguishable in greyscale (rule 7)."
 }

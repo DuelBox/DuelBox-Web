@@ -197,3 +197,85 @@ canvas {
   white-space: nowrap;
   border: 0;
 }
+
+/* ── Offline ───────────────────────────────────────────────────────────────────────────
+ *
+ * Two states, both driven by `service-worker-client.ts` rather than by React: the site has
+ * to be able to say "you are offline" and "a new version is ready" when the shell has not
+ * hydrated, because those are exactly the moments when it might not have.
+ *
+ * `html[data-net]` follows the same pattern as `html[data-match='live']` above — one
+ * attribute on the document, styling in the stylesheet, no component involved.
+ */
+.db-net-bar {
+  position: fixed;
+  left: max(var(--db-space-3), var(--db-safe-left));
+  right: max(var(--db-space-3), var(--db-safe-right));
+  bottom: max(var(--db-space-3), var(--db-safe-bottom));
+  z-index: 40;
+  display: flex;
+  gap: var(--db-space-3);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-inline: auto;
+  max-width: 34rem;
+  padding: var(--db-space-3) var(--db-space-4);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+  background: var(--db-paper);
+  box-shadow: var(--db-shadow-lg);
+  color: var(--db-ink);
+  font-size: var(--db-text-sm);
+  text-align: center;
+}
+
+/* Both at once needs a connection to have found an update and then lost it, which is
+   vanishingly rare and still must not stack one on top of the other. */
+#db-offline ~ #db-update {
+  bottom: calc(max(var(--db-space-3), var(--db-safe-bottom)) + 3.75rem);
+}
+
+.db-net-do {
+  flex: none;
+  padding: var(--db-space-2) var(--db-space-4);
+  border: 0;
+  border-radius: var(--db-radius-pill);
+  background: var(--db-brand);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.db-net-do:hover {
+  background: var(--db-brand-deep);
+}
+
+/* The offline-aware catalogue.
+ *
+ * `data-offline-ready` is `1` on a link whose destination this device actually holds and `0`
+ * on one it does not. The script sets it only on links to a *particular* game inside
+ * `#main`, so the header's "Games" and "Play now" are never annotated and no selector here
+ * has to know an href pattern.
+ *
+ * It says nothing while there is a connection — a badge on 3 of 108 cards is noise when
+ * every one of them works. With the connection gone it is the only useful information on
+ * the page, so it appears then and in words, not as a colour: rule 7 applies to a catalogue
+ * as much as to a board, and "dimmed" is not a signal anybody can read in greyscale. */
+html[data-net='offline'] a[data-offline-ready='0']::after {
+  content: 'Needs a connection';
+  color: var(--db-muted);
+  font-size: var(--db-text-sm);
+}
+
+html[data-net='offline'] a[data-offline-ready='1']::after {
+  content: 'Saved on this device';
+  color: var(--db-success);
+  font-size: var(--db-text-sm);
+  font-weight: 600;
+}
+
+html[data-net='offline'] a[data-offline-ready='0'] {
+  opacity: 0.55;
+}

@@ -19,6 +19,27 @@
 /** Long enough for a real name, short enough not to break a scoreboard. */
 export const MAX_NAME_LENGTH = 16;
 
+/**
+ * The most input this will look at, in UTF-16 units, before it stops caring (#2387).
+ *
+ * Every pass below runs over the **whole** string — six `replace`s, an NFC normalisation
+ * and two spreads — and only then is the result cut to {@link MAX_NAME_LENGTH}. That is
+ * linear rather than catastrophic (the patterns are flat character classes with no nested
+ * quantifiers, so there is no ReDoS here), but linear on unbounded input is still
+ * unbounded work: two million combining marks measured **390 ms**, on the thread that
+ * draws the page.
+ *
+ * Input arrives from a peer's payload, a stale `localStorage` entry or a hand-edited URL,
+ * so its length is not ours to assume. Sixteen times the longest name anyone may keep is
+ * a generous ceiling for something that is meant to be a name.
+ *
+ * The trade, stated because it is a real behaviour change: an input whose first 256 units
+ * are all disallowed and which then contains a valid name now yields nothing, where before
+ * it yielded the name. That input is hostile by construction, and 'truncated' is reported
+ * either way, so a UI that explains itself still has something to say.
+ */
+export const MAX_INPUT_LENGTH = MAX_NAME_LENGTH * 16;
+
 export interface SanitiseResult {
   /** Safe to store, render and transmit. Empty when nothing survived. */
   readonly text: string;
@@ -88,6 +109,14 @@ export function sanitisePlayerName(input: unknown): SanitiseResult {
 
   let text = input;
 
+  // Bounded before any pattern is applied, which is the whole of #2387's third action item.
+  // Cheapest possible check, and it must come first: every pass below is linear in the
+  // length of what it is handed.
+  if (text.length > MAX_INPUT_LENGTH) {
+    text = text.slice(0, MAX_INPUT_LENGTH);
+    reasons.push('truncated');
+  }
+
   const withoutControl = text.replace(CONTROL, '');
   if (withoutControl !== text) reasons.push('removed-control-characters');
   text = withoutControl;
@@ -117,7 +146,10 @@ export function sanitisePlayerName(input: unknown): SanitiseResult {
     // Sliced by code point rather than by UTF-16 unit: cutting mid-surrogate leaves a
     // lone half that is not valid text and renders as a replacement character.
     text = [...text].slice(0, MAX_NAME_LENGTH).join('');
-    reasons.push('truncated');
+    // Guarded so an over-long input that is also over the *name* limit reports the one
+    // reason once rather than twice — the list is for a UI to explain itself with, and
+    // "truncated, truncated" explains nothing.
+    if (!reasons.includes('truncated')) reasons.push('truncated');
   }
 
   if (text.length === 0) reasons.push('empty');

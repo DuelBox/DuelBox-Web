@@ -5,6 +5,8 @@ import type {
   Rng,
   SeatId,
   SeatInputView,
+  SoundBus,
+  SoundEvent,
 } from '@duelbox/engine';
 import type { GameManifest } from './manifest.js';
 
@@ -22,6 +24,12 @@ export type SeatInput = SeatInputView;
 export type InputState = InputStateView;
 
 export type { Renderer };
+
+/**
+ * Re-exported so a game imports its whole world from `@duelbox/game-sdk`, as it already
+ * does for the renderer. The vocabulary and the bus itself live in the engine.
+ */
+export type { SoundBus, SoundEvent };
 
 export interface MatchScore {
   readonly p1: number;
@@ -47,6 +55,20 @@ export interface GameContext {
   readonly openingSeat: SeatId;
   /** Difficulty of the bot occupying a seat, or null when a human holds it. */
   botDifficulty(seat: SeatId): 'easy' | 'normal' | 'hard' | null;
+  /**
+   * Where a game says what just happened, so the engine can decide what it sounds like.
+   *
+   * **Optional, and it must stay optional.** Sound is presentation: every headless test,
+   * every balance run and every replay drives a game with no bus at all, and a game that
+   * needs one to step is a game whose simulation depends on its output device. The calling
+   * convention is therefore always `context.audio?.emit('hit', force, seat)` — one optional
+   * chain, no allocation, and correct whether or not anybody is listening.
+   *
+   * The vocabulary is a closed set of ten names on {@link SoundBus}. A game names the
+   * *event*, never a waveform or a file: what a hit sounds like is one decision made once
+   * for 107 games, exactly as the countdown, the HUD and the result screen are.
+   */
+  readonly audio?: SoundBus | undefined;
 }
 
 export interface Game {
