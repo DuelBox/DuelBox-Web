@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { negotiateSharedViewport, viewportToLogical, type SharedViewport } from './viewport.js';
+import {
+  negotiateSharedViewport,
+  viewportToLogical,
+  type DeviceScreen,
+  type SafeAreaInsets,
+  type SharedViewport,
+} from './viewport.js';
 import { vec2 } from './vec2.js';
 
 /**
@@ -19,16 +25,30 @@ import { vec2 } from './vec2.js';
  * than on field of view.
  */
 
+interface DeviceSpec {
+  readonly label: string;
+  readonly width: number;
+  readonly height: number;
+  readonly insets?: SafeAreaInsets;
+}
+
 /** Devices that differ in every way that decides this: aspect, size, density, and a notch. */
-const DEVICES = [
-  { label: 'small phone portrait', width: 320, height: 568, insets: undefined },
+const DEVICES: readonly DeviceSpec[] = [
+  { label: 'small phone portrait', width: 320, height: 568 },
   { label: 'notched phone portrait', width: 393, height: 852, insets: { top: 59, right: 0, bottom: 34, left: 0 } },
-  { label: 'phone landscape', width: 852, height: 393, insets: undefined },
-  { label: 'tablet portrait', width: 768, height: 1024, insets: undefined },
-  { label: 'laptop', width: 1440, height: 900, insets: undefined },
-  { label: 'ultrawide', width: 3440, height: 1440, insets: undefined },
-  { label: 'square', width: 800, height: 800, insets: undefined },
-] as const;
+  { label: 'phone landscape', width: 852, height: 393 },
+  { label: 'tablet portrait', width: 768, height: 1024 },
+  { label: 'laptop', width: 1440, height: 900 },
+  { label: 'ultrawide', width: 3440, height: 1440 },
+  { label: 'square', width: 800, height: 800 },
+];
+
+/** Build the negotiation request, omitting insets when the device has none (exactOptionalPropertyTypes). */
+function request(logical: { width: number; height: number }, device: DeviceSpec): DeviceScreen {
+  return device.insets === undefined
+    ? { logical, screenWidth: device.width, screenHeight: device.height }
+    : { logical, screenWidth: device.width, screenHeight: device.height, insets: device.insets };
+}
 
 /** A spread of real game boxes: square, tall, wide. Both devices run the same game, so both
  * declare the same box — which is what makes the negotiated box independent of either screen. */
@@ -62,14 +82,8 @@ describe('the match-start viewport negotiation', () => {
     for (const game of GAME_BOXES) {
       for (const a of DEVICES) {
         for (const b of DEVICES) {
-          const seatA = negotiateSharedViewport(
-            { logical: game, screenWidth: a.width, screenHeight: a.height, insets: a.insets },
-            game,
-          );
-          const seatB = negotiateSharedViewport(
-            { logical: game, screenWidth: b.width, screenHeight: b.height, insets: b.insets },
-            game,
-          );
+          const seatA = negotiateSharedViewport(request(game, a), game);
+          const seatB = negotiateSharedViewport(request(game, b), game);
           const where = `${a.label} vs ${b.label} @ ${game.width}x${game.height}`;
           // Independent of either screen: both devices land on the game's own box.
           expect(seatA.logical, where).toEqual(game);
@@ -83,14 +97,8 @@ describe('the match-start viewport negotiation', () => {
     for (const game of GAME_BOXES) {
       for (const a of DEVICES) {
         for (const b of DEVICES) {
-          const seatA = negotiateSharedViewport(
-            { logical: game, screenWidth: a.width, screenHeight: a.height, insets: a.insets },
-            game,
-          );
-          const seatB = negotiateSharedViewport(
-            { logical: game, screenWidth: b.width, screenHeight: b.height, insets: b.insets },
-            game,
-          );
+          const seatA = negotiateSharedViewport(request(game, a), game);
+          const seatB = negotiateSharedViewport(request(game, b), game);
           const seenA = visibleWorld(seatA, a.width, a.height);
           const seenB = visibleWorld(seatB, b.width, b.height);
           const where = `${a.label} vs ${b.label} @ ${game.width}x${game.height}`;
