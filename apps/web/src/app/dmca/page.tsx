@@ -87,8 +87,9 @@ export default function DmcaPage() {
           DuelBox reimplements the rules of public-domain and everyday games — which are not
           protected — and writes its own code, art, sounds and names. We keep a written record of
           the naming and licensing decision for every game, so a concern about a name or an asset is
-          usually answered with a document we already hold. See <Link href="/terms/">Terms</Link>{' '}
-          and <Link href="/attribution/">Attribution</Link>.
+          usually answered with a document we already hold. See{' '}
+          <Link href="/terms/">Terms of use</Link> and <Link href="/attribution/">Attribution</Link>
+          .
         </p>
       </div>
     </div>

@@ -72,11 +72,10 @@ export function isBotTier(value: unknown): value is BotTier {
  * @throws RangeError if `tier` is not one of the three.
  */
 export function difficultyForTier(tier: BotTier): BotDifficulty {
-  const difficulty = BOT_DIFFICULTIES[tier];
-  if (difficulty === undefined) {
+  if (!(tier in BOT_DIFFICULTIES)) {
     throw new RangeError(`unknown bot tier: ${String(tier)}`);
   }
-  return difficulty;
+  return BOT_DIFFICULTIES[tier];
 }
 
 /**

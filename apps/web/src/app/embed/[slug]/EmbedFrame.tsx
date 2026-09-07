@@ -55,7 +55,11 @@ export function EmbedFrame({ slug, gameName, backlinkHref }: EmbedFrameProps) {
             // wiring them into the running match belongs to PlaySurface's own controls, which
             // this route does not own.
             if (message.type === 'ping') {
-              postToEmbedder(poster, { channel: EMBED_CHANNEL, type: 'pong', nonce: message.nonce }, origin);
+              postToEmbedder(
+                poster,
+                { channel: EMBED_CHANNEL, type: 'pong', nonce: message.nonce },
+                origin,
+              );
             }
           },
         },

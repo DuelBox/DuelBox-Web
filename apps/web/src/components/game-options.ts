@@ -82,9 +82,9 @@ export function readOptionValues(
 export function writeOptionValue(slug: string, id: string, value: OptionValue): void {
   const parsed = readJson(GAME_OPTIONS_KEY);
   const root = isRecord(parsed) && parsed['version'] === VERSION ? parsed : {};
-  const gamesValue = (root as Record<string, unknown>)['games'];
+  const gamesValue = root['games'];
   const games = isRecord(gamesValue) ? { ...gamesValue } : {};
-  const currentGame = isRecord(games[slug]) ? (games[slug] as Record<string, unknown>) : {};
+  const currentGame = isRecord(games[slug]) ? games[slug] : {};
   games[slug] = { ...currentGame, [id]: value };
   // The result is ignored on purpose, exactly as `last-mode` ignores it: storage full,
   // disabled or absent costs a convenience and nothing an app can act on.

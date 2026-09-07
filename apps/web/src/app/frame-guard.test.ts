@@ -57,9 +57,9 @@ describe('parseAllowedOrigins', () => {
   });
 
   it('drops blanks, duplicates and anything that is not an absolute URL', () => {
-    expect(parseAllowedOrigins('self self, not-a-url, https://a.example, https://a.example/x')).toEqual(
-      [SELF_TOKEN, 'https://a.example'],
-    );
+    expect(
+      parseAllowedOrigins('self self, not-a-url, https://a.example, https://a.example/x'),
+    ).toEqual([SELF_TOKEN, 'https://a.example']);
     expect(parseAllowedOrigins(undefined)).toEqual([]);
     expect(parseAllowedOrigins('')).toEqual([]);
   });

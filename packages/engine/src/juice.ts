@@ -217,7 +217,8 @@ export class HitStop {
   step(fixedDeltaSeconds: number): void {
     assertNonNegativeFinite(fixedDeltaSeconds, 'fixedDeltaSeconds');
     if (this.#remaining > 0) {
-      this.#remaining = this.#remaining > fixedDeltaSeconds ? this.#remaining - fixedDeltaSeconds : 0;
+      this.#remaining =
+        this.#remaining > fixedDeltaSeconds ? this.#remaining - fixedDeltaSeconds : 0;
     }
   }
 

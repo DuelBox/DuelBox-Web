@@ -83,7 +83,9 @@ export class AdaptiveQuality {
     assertPositiveFinite(degradeAfter, 'degradeAfterSeconds');
     assertPositiveFinite(upgradeAfter, 'upgradeAfterSeconds');
     if (!Number.isInteger(windowFrames) || windowFrames <= 0) {
-      throw new RangeError(`windowFrames must be a positive integer, received ${String(windowFrames)}`);
+      throw new RangeError(
+        `windowFrames must be a positive integer, received ${String(windowFrames)}`,
+      );
     }
     if (!(recoverFactor > 0) || recoverFactor > 1) {
       throw new RangeError(`recoverFactor must be in (0, 1], received ${String(recoverFactor)}`);

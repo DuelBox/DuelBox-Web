@@ -47,7 +47,9 @@ describe('packShelf geometry', () => {
     p: { x: number; y: number; width: number; height: number },
     q: { x: number; y: number; width: number; height: number },
   ): boolean {
-    return p.x < q.x + q.width && p.x + p.width > q.x && p.y < q.y + q.height && p.y + p.height > q.y;
+    return (
+      p.x < q.x + q.width && p.x + p.width > q.x && p.y < q.y + q.height && p.y + p.height > q.y
+    );
   }
 
   it('places every sprite within the reported bounds', () => {

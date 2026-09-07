@@ -200,13 +200,7 @@ function Phase({
   }
 }
 
-function Countdown({
-  remaining,
-  presentation,
-}: {
-  remaining: number;
-  presentation: Presentation;
-}) {
+function Countdown({ remaining, presentation }: { remaining: number; presentation: Presentation }) {
   // Ceiling, so the first frame of a three-second countdown reads "3" rather than "2".
   const count = Math.ceil(remaining);
   const label = count <= 0 ? 'Go' : String(count);

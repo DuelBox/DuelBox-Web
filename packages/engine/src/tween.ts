@@ -29,7 +29,7 @@ export const linear: Easing = (t) => t;
 export const quadIn: Easing = (t) => t * t;
 export const quadOut: Easing = (t) => t * (2 - t);
 export const quadInOut: Easing = (t) =>
-  t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) * (-2 * t + 2) / 2;
+  t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2)) / 2;
 
 export const cubicIn: Easing = (t) => t * t * t;
 export const cubicOut: Easing = (t) => {
@@ -194,7 +194,12 @@ export class Tween {
 
 /** One entry in a {@link TweenSequence}: a tween segment, or a hold that keeps the value still. */
 export type SequenceStep =
-  | { readonly kind: 'to'; readonly to: number; readonly durationSeconds: number; readonly easing?: Easing }
+  | {
+      readonly kind: 'to';
+      readonly to: number;
+      readonly durationSeconds: number;
+      readonly easing?: Easing;
+    }
   | { readonly kind: 'delay'; readonly durationSeconds: number };
 
 export interface TweenSequenceOptions {
@@ -365,7 +370,10 @@ export class TweenSequence {
   }
 
   #skipCompletedSegments(): void {
-    while (this.#index < this.#segments.length && this.#segments[this.#index]!.durationSeconds === 0) {
+    while (
+      this.#index < this.#segments.length &&
+      this.#segments[this.#index]!.durationSeconds === 0
+    ) {
       this.#value = this.#segments[this.#index]!.to;
       this.#index += 1;
     }

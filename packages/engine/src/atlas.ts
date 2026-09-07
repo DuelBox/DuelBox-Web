@@ -151,8 +151,12 @@ export function packShelf(inputs: readonly PackInput[], options?: PackOptions): 
   let atlasWidth = 0;
 
   for (const sprite of sorted) {
-    if (!Number.isInteger(sprite.width) || sprite.width <= 0 ||
-        !Number.isInteger(sprite.height) || sprite.height <= 0) {
+    if (
+      !Number.isInteger(sprite.width) ||
+      sprite.width <= 0 ||
+      !Number.isInteger(sprite.height) ||
+      sprite.height <= 0
+    ) {
       throw new RangeError(`sprite "${sprite.name}" must have positive integer dimensions`);
     }
     if (seen.has(sprite.name)) {
@@ -160,7 +164,9 @@ export function packShelf(inputs: readonly PackInput[], options?: PackOptions): 
     }
     seen.add(sprite.name);
     if (sprite.width > maxWidth) {
-      throw new Error(`sprite "${sprite.name}" (${sprite.width}px) is wider than maxWidth ${maxWidth}`);
+      throw new Error(
+        `sprite "${sprite.name}" (${sprite.width}px) is wider than maxWidth ${maxWidth}`,
+      );
     }
 
     // Open a new shelf when this sprite would overflow the current row.

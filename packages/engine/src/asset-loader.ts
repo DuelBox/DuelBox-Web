@@ -142,7 +142,9 @@ export class AssetLoader {
       throw new RangeError(`retries must be a non-negative integer, received ${String(retries)}`);
     }
     if (!Number.isFinite(backoffMs) || backoffMs < 0) {
-      throw new RangeError(`backoffMs must be a non-negative number, received ${String(backoffMs)}`);
+      throw new RangeError(
+        `backoffMs must be a non-negative number, received ${String(backoffMs)}`,
+      );
     }
     this.#io = io;
     this.#retries = retries;

@@ -469,7 +469,14 @@ export class WebGLSpriteSink implements SpriteSink {
   }
 }
 
-function write(buffer: Float32Array, offset: number, x: number, y: number, u: number, v: number): number {
+function write(
+  buffer: Float32Array,
+  offset: number,
+  x: number,
+  y: number,
+  u: number,
+  v: number,
+): number {
   buffer[offset] = x;
   buffer[offset + 1] = y;
   buffer[offset + 2] = u;

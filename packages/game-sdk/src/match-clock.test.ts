@@ -15,7 +15,11 @@ import { initialMatchState, reduce, type MatchRules } from './match.js';
 const STEP = 1 / 60;
 
 /** Advance a clock through `steps` fixed steps in a given phase. */
-function run(clock: MatchClock, phase: Parameters<typeof advanceClock>[1], steps: number): MatchClock {
+function run(
+  clock: MatchClock,
+  phase: Parameters<typeof advanceClock>[1],
+  steps: number,
+): MatchClock {
   let out = clock;
   for (let i = 0; i < steps; i += 1) out = advanceClock(out, phase, STEP);
   return out;

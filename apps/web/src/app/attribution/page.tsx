@@ -87,7 +87,7 @@ export default function AttributionPage() {
         <p>
           Everything else — the game code, the artwork, the sounds and the names — is original to
           DuelBox and covered by this repository&apos;s licence. See{' '}
-          <Link href="/terms/">Terms</Link> for what that means for you.
+          <Link href="/terms/">Terms of use</Link> for what that means for you.
         </p>
       </div>
     </div>

@@ -70,7 +70,12 @@ export default async function EmbedPage({ params }: { params: Promise<{ slug: st
         >
           <Wordmark />
         </a>
-        <a className={styles.backlink} href={backlinkHref} target="_blank" rel="noopener noreferrer">
+        <a
+          className={styles.backlink}
+          href={backlinkHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {embedBacklinkLabel(game.name)}
         </a>
       </footer>

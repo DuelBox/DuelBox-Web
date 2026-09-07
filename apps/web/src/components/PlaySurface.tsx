@@ -467,9 +467,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   useEffect(() => {
     clockRef.current = resetClock(createClock(clockLimit, rules.clockWarnSeconds));
     expiredRef.current = false;
-    setClockView(
-      clockLimit === null ? null : { text: formatClock(clockLimit), warning: false },
-    );
+    setClockView(clockLimit === null ? null : { text: formatClock(clockLimit), warning: false });
   }, [seed, match.round, clockLimit, rules.clockWarnSeconds]);
 
   const handleScore = useCallback((p1: number, p2: number, winner: SeatId | 'draw' | null) => {

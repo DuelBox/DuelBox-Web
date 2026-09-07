@@ -47,16 +47,13 @@ describe('zero per-step allocation (counting shim)', () => {
 });
 
 describe('no retained per-step growth (heap delta, when gc is exposed)', () => {
-  it.skipIf(!heapMeasurementAvailable())(
-    'retains a negligible number of bytes per step',
-    () => {
-      const loop = new RepresentativeLoop({ bodyCount: 150, seed: 5 });
-      const bytesPerStep = measureHeapBytesPerStep(loop, 3000);
-      expect(bytesPerStep).not.toBeNull();
-      // An allocation-free step keeps essentially nothing; allow slack for runtime noise.
-      expect(bytesPerStep!).toBeLessThan(200);
-    },
-  );
+  it.skipIf(!heapMeasurementAvailable())('retains a negligible number of bytes per step', () => {
+    const loop = new RepresentativeLoop({ bodyCount: 150, seed: 5 });
+    const bytesPerStep = measureHeapBytesPerStep(loop, 3000);
+    expect(bytesPerStep).not.toBeNull();
+    // An allocation-free step keeps essentially nothing; allow slack for runtime noise.
+    expect(bytesPerStep!).toBeLessThan(200);
+  });
 
   it('reports availability honestly', () => {
     // Documents the environment; the heap test above is gated on the same flag.

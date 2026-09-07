@@ -35,10 +35,7 @@ interface GameErrorBoundaryState {
   caught: unknown;
 }
 
-export class GameErrorBoundary extends Component<
-  GameErrorBoundaryProps,
-  GameErrorBoundaryState
-> {
+export class GameErrorBoundary extends Component<GameErrorBoundaryProps, GameErrorBoundaryState> {
   constructor(props: GameErrorBoundaryProps) {
     super(props);
     this.state = { caught: null };
@@ -57,7 +54,7 @@ export class GameErrorBoundary extends Component<
 
   override render(): ReactNode {
     const error = this.state.caught ?? this.props.externalError ?? null;
-    if (error === null || error === undefined) return this.props.children;
+    if (error === null) return this.props.children;
 
     return (
       <div className={styles.recovery} role="alert">

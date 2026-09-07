@@ -62,7 +62,9 @@ export class SpatialHash {
 
   constructor(cellSize: number) {
     if (!Number.isFinite(cellSize) || cellSize <= 0) {
-      throw new RangeError(`cellSize must be a positive finite number, received ${String(cellSize)}`);
+      throw new RangeError(
+        `cellSize must be a positive finite number, received ${String(cellSize)}`,
+      );
     }
     this.#cellSize = cellSize;
     this.#invCellSize = 1 / cellSize;
@@ -98,7 +100,9 @@ export class SpatialHash {
     const maxCx = Math.floor(maxX * this.#invCellSize);
     const maxCy = Math.floor(maxY * this.#invCellSize);
     if (minCx < CELL_MIN || maxCx > CELL_MAX || minCy < CELL_MIN || maxCy > CELL_MAX) {
-      throw new RangeError('SpatialHash: prewarm region reaches a cell outside the supported range');
+      throw new RangeError(
+        'SpatialHash: prewarm region reaches a cell outside the supported range',
+      );
     }
     if (bodyHint > 0) this.#ensureCapacity(bodyHint);
     // A cell can hold at most every body, so sizing each bucket's slots to the body
@@ -186,9 +190,11 @@ export class SpatialHash {
           const pj = slots[j]!;
           // Emit only from the top-left cell the pair shares, so a pair spanning
           // several shared cells is reported exactly once.
-          const sharedCx = this.#minCx[pi]! > this.#minCx[pj]! ? this.#minCx[pi]! : this.#minCx[pj]!;
+          const sharedCx =
+            this.#minCx[pi]! > this.#minCx[pj]! ? this.#minCx[pi]! : this.#minCx[pj]!;
           if (sharedCx !== cx) continue;
-          const sharedCy = this.#minCy[pi]! > this.#minCy[pj]! ? this.#minCy[pi]! : this.#minCy[pj]!;
+          const sharedCy =
+            this.#minCy[pi]! > this.#minCy[pj]! ? this.#minCy[pi]! : this.#minCy[pj]!;
           if (sharedCy !== cy) continue;
           callback(this.#id[pi]!, this.#id[pj]!);
         }

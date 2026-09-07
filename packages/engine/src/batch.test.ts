@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  Canvas2DSpriteSink,
-  LineBatch,
-  SpriteBatch,
-  WebGLSpriteSink,
-} from './batch.js';
+import { Canvas2DSpriteSink, LineBatch, SpriteBatch, WebGLSpriteSink } from './batch.js';
 import type { DrawImageContext, LineSink, SpriteSink, WebGLLike } from './batch.js';
 
 /** Records the begin/sprite/end calls a flush makes, for asserting batching. */

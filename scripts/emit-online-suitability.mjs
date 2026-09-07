@@ -24,7 +24,7 @@
  * is the artefact, and a generator that also owned the prose around the table would be a second
  * place the doc lived.
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

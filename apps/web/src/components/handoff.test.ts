@@ -15,7 +15,7 @@ describe('handoff gating (#134)', () => {
   it('is enabled only when the manifest opts in', () => {
     expect(handoffEnabled(optedIn)).toBe(true);
     expect(handoffEnabled(notOptedIn)).toBe(false);
-    expect(handoffEnabled({} as Pick<GameManifest, 'handoff'>)).toBe(false);
+    expect(handoffEnabled({})).toBe(false);
   });
 
   it('blacks out only for an opted-in game changing hands', () => {
@@ -36,7 +36,7 @@ describe('handoff gating (#134)', () => {
   });
 
   it('names the incoming player in the prompt', () => {
-    expect(handoffPrompt('Bo')).toBe('Pass to Bo');
+    expect(handoffPrompt('Robin')).toBe('Pass to Robin');
   });
 });
 

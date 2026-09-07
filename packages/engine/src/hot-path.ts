@@ -238,7 +238,11 @@ export class RepresentativeLoop {
  * the difference in {@link RepresentativeLoop.structuralAllocations} from first step
  * to last. Zero means no structure grew — no per-step allocation the shim can see.
  */
-export function measureStructuralGrowth(loop: RepresentativeLoop, steps: number, dt = 1 / 60): number {
+export function measureStructuralGrowth(
+  loop: RepresentativeLoop,
+  steps: number,
+  dt = 1 / 60,
+): number {
   const before = loop.structuralAllocations;
   for (let i = 0; i < steps; i += 1) loop.step(dt);
   return loop.structuralAllocations - before;

@@ -70,10 +70,7 @@ export const EMBED_ALLOWED_ORIGINS: readonly string[] = [
 ];
 
 /** Resolves the `'self'` token in an allowlist to this page's own origin, dropping blanks. */
-export function resolveAllowedOrigins(
-  allowlist: readonly string[],
-  selfOrigin: string,
-): string[] {
+export function resolveAllowedOrigins(allowlist: readonly string[], selfOrigin: string): string[] {
   const out: string[] = [];
   for (const entry of allowlist) {
     const origin = entry === SELF_TOKEN ? selfOrigin : entry;
@@ -199,7 +196,12 @@ export function evaluateFrameGuard(input: {
     };
   }
   if (isAllowedEmbedder(ancestor, allowlist, selfOrigin)) {
-    return { framed, ancestorOrigin: ancestor, allowed: true, reason: `${ancestor} is allowlisted` };
+    return {
+      framed,
+      ancestorOrigin: ancestor,
+      allowed: true,
+      reason: `${ancestor} is allowlisted`,
+    };
   }
   return {
     framed,

@@ -163,7 +163,13 @@ export {
   Tween,
   TweenSequence,
 } from './tween.js';
-export type { Easing, EasingName, TweenOptions, SequenceStep, TweenSequenceOptions } from './tween.js';
+export type {
+  Easing,
+  EasingName,
+  TweenOptions,
+  SequenceStep,
+  TweenSequenceOptions,
+} from './tween.js';
 
 export { ScreenShake, HitStop, Flash } from './juice.js';
 export type { ScreenShakeOptions, HitStopOptions, FlashOptions } from './juice.js';
@@ -194,12 +200,7 @@ export type {
 export { SpriteAtlas, packShelf } from './atlas.js';
 export type { AtlasFrame, AtlasManifest, PackInput, PackOptions, PackResult } from './atlas.js';
 
-export {
-  SpriteBatch,
-  LineBatch,
-  Canvas2DSpriteSink,
-  WebGLSpriteSink,
-} from './batch.js';
+export { SpriteBatch, LineBatch, Canvas2DSpriteSink, WebGLSpriteSink } from './batch.js';
 export type { SpriteSink, LineSink, DrawImageContext, ImageResolver, WebGLLike } from './batch.js';
 
 export {
