@@ -30,6 +30,7 @@
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "size": "node scripts/check-size.mjs",
     "share:images": "node scripts/generate-share-images.mjs",
+    "emit:icons": "node scripts/emit-icon-sprite.mjs",
     "check:share-images": "node scripts/check-share-images.mjs",
     "check:assets": "node scripts/check-asset-licenses.mjs",
     "check:names": "node scripts/check-game-names.mjs",
