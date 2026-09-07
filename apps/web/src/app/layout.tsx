@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
@@ -23,11 +24,16 @@ export const metadata: Metadata = {
     siteName: 'DuelBox',
     title: 'DuelBox — 108 games for two players',
     description: 'Share one screen, play across two devices, or take on a bot.',
+    // The card every route inherits unless it names its own (#2453). A route that sets its
+    // own `openGraph` replaces this object rather than merging with it, which is why the
+    // two that do — a game's page and a category hub — each carry `images` of their own.
+    images: [SITE_SHARE_IMAGE],
   },
   twitter: {
     card: 'summary',
     title: 'DuelBox — 108 games for two players',
     description: 'Share one screen, play across two devices, or take on a bot.',
+    images: [SITE_SHARE_IMAGE],
   },
 };
 

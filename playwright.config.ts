@@ -68,8 +68,17 @@ const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
  * number is real.
  *
  * If a rule ever fires on one engine and not another, this is the list to take it out of.
+ *
+ * `tournament.spec.ts` is here on the first of those arguments rather than the second. What
+ * it asserts is a state machine, a `localStorage` document and the markup drawn from them,
+ * and none of the three is a thing engines differ about. It does play two bot matches to
+ * their end, which *is* engine-sensitive — but that path is already covered on all four
+ * projects by `record.spec.ts` and `match-flow.spec.ts`, so a second engine here would pay
+ * about seventy seconds of authorised waiting to re-confirm a canvas somebody else has
+ * already confirmed. It is the most expensive spec in the suite per run, which is the
+ * strongest reason of all to run it once.
  */
-const CHROMIUM_ONLY = ['**/axe.spec.ts', '**/page-transition.spec.ts'];
+const CHROMIUM_ONLY = ['**/axe.spec.ts', '**/page-transition.spec.ts', '**/tournament.spec.ts'];
 
 /**
  * Specs that set their own viewport and therefore want one project *per engine*, not four.

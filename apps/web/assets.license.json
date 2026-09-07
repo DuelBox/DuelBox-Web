@@ -1,7 +1,8 @@
 {
   "_comment": "Rule 3: every asset shipped from this app says where it came from and under what terms. Checked by scripts/check-asset-licenses.mjs, which requires source, licence and author on every entry. Paths are relative to this file.",
   "_fonts": "All three families are variable fonts. The files here were fetched from the Google Fonts CSS2 API with the weight axis clipped to the range this site actually sets (wght@500..700 and wght@400..700), which is why one file covers every weight of a family instead of one file per weight. Each family is split into the 'latin' and 'latin-ext' subsets Google publishes, so a browser downloads only the subset the page needs. The bytes are Google's own subsetted, hinted builds, redistributed unmodified under the OFL; the licence text is in src/styles/fonts/OFL.txt.",
-  "_generated": "One entry below has no file. The 108 catalogue tiles (#2457) are not files: they are composed during `next build` from the vocabulary in src/lib/tiles.ts and land as inline SVG in the exported HTML, so there is no .svg or .png for the extension scan to find. Rule 3 says every asset carries a source, a licence and an author, and the answer for a generated asset is the code that generates it — not an invented provenance. check-asset-licenses.mjs checks entries as well as files, so this one is enforced: its three required fields must be present and the path it names must exist.",
+  "_generated": "Two entries below name source files rather than assets. The 108 catalogue tiles (#2457) are not files: they are composed during `next build` from the vocabulary in src/lib/tiles.ts and land as inline SVG in the exported HTML, so there is no .svg or .png for the extension scan to find. Rule 3 says every asset carries a source, a licence and an author, and the answer for a generated asset is the code that generates it — not an invented provenance. check-asset-licenses.mjs checks entries as well as files, so these are enforced: their three required fields must be present and the paths they name must exist.",
+  "_share_images": "The 109 share images (#2453) are the case the paragraph above did not have to answer: they ARE files — public/og/*.png, 1200x630, one per game plus one for the site. They are not tracked. `pnpm share:images` composes them from the same tile vocabulary before every build and the export copies them out, so they are build output in the way a JavaScript chunk is, and .gitignore keeps them out of the repository. Listing them individually would be 109 entries all saying the same sentence, and each would be a claim about a file no reviewer could inspect in a diff. The honest entry is the one below: the code that draws them, which is where their provenance actually lives. If they are ever committed instead of generated, check-asset-licenses.mjs will find 109 untracked-turned-tracked images and demand an entry for each, which is the right outcome — a committed image is a file somebody put there, and rule 1 wants to know where it came from.",
   "assets": [
     {
       "file": "src/styles/fonts/fredoka-latin.woff2",
@@ -62,6 +63,14 @@
       "licence": "OFL-1.1",
       "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
       "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
+    },
+    {
+      "file": "src/lib/share/card.ts",
+      "what": "The 109 share images: apps/web/public/og/<slug>.png, one for each game, plus duelbox.png for the site. Each is that game's own catalogue tile enlarged onto a 1200x630 frame, with the two seat glyphs and a bar in the brand colour.",
+      "generated": "Composed at build time by scripts/generate-share-images.mjs from src/lib/share/card.ts, src/lib/share/raster.ts and src/lib/share/png.ts, out of the geometry in src/lib/tiles.ts and the palette in src/styles/tokens.ts. Not tracked; see _share_images above.",
+      "source": "Original to this repository — every coordinate is written in src/lib/tiles.ts and src/lib/share/card.ts, and the rasteriser and PNG encoder that turn them into pixels are written in src/lib/share/. No image, typeface or third-party library contributes anything to these files (rules 1 and 3).",
+      "licence": "Proprietary — © DuelBox, all rights reserved. Part of this repository and covered by its licence.",
+      "author": "DuelBox"
     },
     {
       "file": "src/lib/tiles.ts",
