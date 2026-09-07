@@ -99,8 +99,8 @@ The three things a switch changes, from the player's side:
 
 - **No play route.** `PLAYABLE` no longer names it, so `out/play/<slug>/` is never written
   and the host answers with `not-found.tsx`. `app/play/[slug]/page.tsx` therefore has no
-  branch for a switched-off game: it would be code no build could reach, and this repository
-  has ten entries in `CLAUDE.md` about guards that could not run.
+  branch for a switched-off game: it would be code no build could reach, and `CLAUDE.md`
+  keeps a tally of guards that could not run.
 - **No offer anywhere.** Every card, badge and shuffle reads the registry, so the game is
   never presented as something to start.
 - **Its own page stays and says why.** `app/games/[slug]/page.tsx` shows "*X* is switched off
@@ -131,10 +131,42 @@ the defect the category hubs of #200 were written to remove.
   asserts `registry.ts` still contains it, because the alternative repair was a comment and a
   comment is the thing this repository has learned not to trust on its own.
 
+## What #208 asked for, and what this is not
+
+This decision does not meet #208's acceptance criterion, and the issue should be closed
+saying so rather than reported as done. Three of its lines, checked against what landed:
+
+- **"A game can be hidden from the catalog within minutes and without a deploy."** Not met.
+  A kill is an edit to `apps/web/src/lib/flags.ts`, a push to `main`, and `deploy.yml`. The
+  whole of the Context above argues that "without a deploy" has no implementation on this
+  origin rather than an expensive one — which may well be the right answer, and is still not
+  the criterion. If the hosting model ever changes, this ADR is what to reopen.
+- **"Client-evaluable flags with no flash of wrong content."** Not met, and nothing is
+  evaluated client-side at all. The catalogue is server-rendered at build time, so there is
+  no flash to avoid — and buying one would mean shipping JavaScript to every non-play route
+  to un-render what the HTML already says.
+- **"Hidden from the catalog"**, the other half of that same acceptance line. Not met as
+  written, deliberately: the card stays in the grid, marked unplayable, because
+  `scripts/check-zero-cost.mjs` requires one exported page per catalogue entry and a card
+  removed from the grid leaves that page reachable from nothing. What a switch removes is
+  the play route and every offer to start a match.
+
+What was built is a per-game kill switch that takes minutes and one commit. That is worth
+having; it is not what the acceptance line says.
+
 ## Consequences
 
 - A kill takes minutes and needs no review, and it also takes a commit that is visible in
   the history. Both halves are intended.
+- **A tournament in progress can name a game that has just been switched off**, and it is a
+  fourth surface a switch changes rather than a fifth thing the list above forgot. The
+  line-up is drawn once from `PLAYABLE` and then persisted, so a pair three legs into seven
+  can come back to a build that no longer exports the route their next leg names — and a leg
+  is only reportable from that route, so before this was handled the tournament could not
+  advance and leaving it was the only way out. `lib/tournament-store.ts` now takes the
+  playable list from its caller and drops the unplayed legs that are no longer in it; legs
+  already played stay, because results are positional and dropping one would re-label every
+  leg after it. A tournament whose whole remainder has gone resumes as a finished one.
 - **A kill turns the unit suite red, and the red is telling the truth.** Measured, by
   switching `carrom` off and running `npx vitest run apps/web/src`: six assertions in four
   files fail — `data/routing.test.ts` ("cover exactly the games that have a build", "is

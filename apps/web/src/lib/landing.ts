@@ -150,9 +150,19 @@ export const FREE_SECTION: LandingSection = {
     'Nothing you do here is sent anywhere, because there is nowhere to send it. The games, the ' +
       'bots and the physics all run in your own browser, and there is no advertising, no ' +
       'analytics and not one cookie.',
-    'What the site remembers, it remembers on your device: your favourites, the games you ' +
-      'played last, your settings, and the running head-to-head between the two seats. The ' +
-      'settings page shows the lot, writes it out to a file, and erases it in one press.',
+    // Deliberately no list. This sentence used to name four of the seven things the site
+    // stores, and it went on naming four while a fifth, a sixth and a seventh were added
+    // through `lib/local-store.ts` — the same drift the privacy page had, on the page far
+    // more people read. The exhaustive list belongs where something counts it: the privacy
+    // page enumerates all seven and `lib/privacy-claims.test.ts` fails on the day a key is
+    // added without a bullet. `landing.test.ts` holds this paragraph to naming all of them
+    // or none of them, so a half-list cannot come back quietly.
+    // "On your device" and not "on your own device": the second is one of the cross-device
+    // phrasings `app/metadata-claims.test.ts` holds this repository to never using again,
+    // and it caught this paragraph the first time it was rewritten.
+    'What the site remembers, it remembers on your device, and one page has all of it: the ' +
+      'settings page lists everything kept here, writes it out to a file you can take with ' +
+      'you, and erases the lot in one press.',
     'One limit, stated rather than buried. Once a page has loaded, playing it needs nothing ' +
       'further from the network — but there is no offline cache yet, so opening the site, or ' +
       'reloading it, does need a connection.',

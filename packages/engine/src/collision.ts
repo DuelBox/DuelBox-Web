@@ -35,7 +35,14 @@ import { set } from './vec2.js';
  * pairs to test costs several times more than testing all of them.
  *
  * Measured on 7 September 2026. The games that test bodies against each other
- * are the six that `grep -rn "j = i + 1" packages/games` finds, and they top out
+ * are the six that
+ * `grep -rn "j = i + 1" packages/games --include="*.ts" | grep -v '\.test\.'`
+ * finds — five of them physics, the sixth `memory/src/rules.ts`, where the loop
+ * is a bot scanning the cards it remembers rather than a body-vs-body pass. The
+ * filters are part of the command rather than tidying: without them the same
+ * grep answers with twenty-eight hits across thirteen packages, because most of
+ * the matches are in `*.test.ts`, and a reader checking this paragraph would get
+ * a set more than twice the size of the one it goes on to name. The five top out
  * at sixteen bodies: Pool and Sling Puck at sixteen, Carrom at fourteen, Bowling
  * at ten pins, Soccer Pool at seven discs. Sixteen bodies is a hundred and twenty
  * pairs, which the plain double loop settles in about 85 ns on an M4 — and Pool's

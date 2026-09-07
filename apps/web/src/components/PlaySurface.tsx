@@ -139,7 +139,10 @@ export function PlaySurface({ slug }: { slug: string }) {
   useEffect(() => {
     setSetup(readSetup(slug));
     setChosenNames(readPlayerNames());
-    const stored = readTournament();
+    // `PLAYABLE` rather than nothing: a line-up drawn before a game was switched off (#208)
+    // would otherwise send the pair to a route this build no longer exports, and a leg can
+    // only be reported from the route it names.
+    const stored = readTournament(PLAYABLE);
     setTournament(stored === null ? initialTournament() : resume(stored));
   }, [slug]);
 

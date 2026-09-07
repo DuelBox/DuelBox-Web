@@ -113,7 +113,7 @@
   font-weight: 700;
   line-height: 1;
   color: var(--db-paper);
-  text-shadow: 0 4px 24px rgb(0 0 0 / 45%);
+  text-shadow: var(--db-shadow-text);
   animation: pop var(--db-duration) var(--db-ease);
 }
 

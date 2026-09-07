@@ -33,9 +33,24 @@ const MODE_LABEL: Record<string, string> = {
  *
  * The same measurement found the other half of #185 unaddressed, and it is not this file's
  * to fix either: those route payloads are 3.7 KB gzipped each, and browsing all 108 cards
- * fetches all 108 of them — 390 KB speculated on a visitor who presses one. `prefetch`
+ * fetches all 108 of them — 397 KB speculated on a visitor who presses one. `prefetch`
  * here is the switch, but it is not a free one, because Next 15 turns hover and
  * touch-start prefetching off along with the viewport kind rather than in place of it.
+ * That figure is now `speculatedBytes` in `size-budget.json`, held from the build by
+ * `check-size.mjs` and from a real browse by `e2e/prefetch.spec.ts`, so it cannot grow
+ * while the decision waits. Nothing else changed: it is bounded, not fixed.
+ *
+ * ## What this card does not show, and why
+ *
+ * #162 asks for the head-to-head record "on the game card and game page". Only the game
+ * page has it, in `components/GameRecord.tsx`, and that is a decision rather than an
+ * oversight: a record is read from this device's storage, so a card that showed one would
+ * be a client component — 108 of them on the catalogue route and twelve on the landing
+ * page, each pulling `lib/head-to-head` into the shell bundle every visitor downloads,
+ * against a budget with under a kilobyte spare. `lib/landing.test.ts` names this file in
+ * the landing page's import graph and fails on a client directive in it, which is the same
+ * argument enforced. So the card half of #162 is **not met**, and the issue should say so
+ * rather than be closed on the page half alone.
  */
 export function GameCard({ game }: { game: CatalogueEntry }) {
   const playable = isPlayable(game.slug);

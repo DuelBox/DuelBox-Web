@@ -102,13 +102,23 @@ jobs:
       # this runner is: the spec skips itself anywhere else rather than failing on a
       # developer's Mac for a reason no developer can fix.
       #
-      # This step exists for the one window where no baseline is committed, and it deletes
-      # itself at the end of that window. It takes the pictures from the build this job has
-      # just made, so the suite below compares against them and passes, and hands them over
-      # as an artefact to be committed. That is a guard that cannot fail, which is the exact
-      # shape CLAUDE.md keeps a tally of — so it says so, as an annotation, on every run
-      # until somebody commits the PNGs. After that `find` matches, this step returns
-      # immediately, and a missing baseline is `A snapshot doesn't exist at …` and a red job.
+      # **While this step exists, #227's acceptance — "unintended visual changes are caught
+      # before merge" — is NOT met.** Nothing in the repository has a `-linux` baseline yet,
+      # and only a Linux runner can take one, so this takes them from the build this job has
+      # just made and hands them over as an artefact.
+      #
+      # The first version of it then left the pictures on disk, so the suite below compared
+      # this build against photographs of this build and passed five screens it could not
+      # have failed — the exact shape CLAUDE.md keeps a tally of. They are deleted again
+      # instead, and `DUELBOX_VISUAL_BOOTSTRAP` tells the spec to *skip* the five rather than
+      # compare against nothing: a run that says "not covered" is worth having and a run that
+      # says "passed" is not. The annotation says the same thing to whoever reads the run.
+      #
+      # Closing the window is two steps and one CI run: download the
+      # `visual-baselines-<shard>` artefact into `e2e/__screenshots__`, commit it, then
+      # delete this step, its upload, its cleanup and the env line below. After that `find`
+      # matches nothing to do, and a missing baseline is `A snapshot doesn't exist at …` and
+      # a red job, which is what the guard is for.
       - id: visual
         run: |
           if [ -n "$(find e2e/__screenshots__ -name '*-linux.png' 2>/dev/null | head -n1)" ]; then
@@ -116,7 +126,7 @@ jobs:
           fi
           echo "bootstrap=1" >> "$GITHUB_OUTPUT"
           npx playwright test e2e/visual.spec.ts --project=chromium -u changed --output=/tmp/pw-visual
-          echo "::warning title=Visual baselines are not committed::e2e/visual.spec.ts compared this run against pictures taken from this same build, so it could not fail. Download the visual-baselines-${{ matrix.shard }} artefact into e2e/__screenshots__ and commit it, and this stops being true."
+          echo "::warning title=Visual baselines are not committed::#227 is not met on this run: e2e/visual.spec.ts has no committed -linux baseline, so its five screens are skipped rather than compared. Download the visual-baselines-${{ matrix.shard }} artefact into e2e/__screenshots__ and commit it, and this stops being true."
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.visual.outputs.bootstrap == '1'
         with:
@@ -124,6 +134,10 @@ jobs:
           path: e2e/__screenshots__
           if-no-files-found: error
           retention-days: 7
+      # Off disk again, once they are safely in the artefact. A picture this job took is not
+      # a baseline, and leaving it where the suite will find it is how it became one.
+      - if: steps.visual.outputs.bootstrap == '1'
+        run: rm -rf e2e/__screenshots__
       # No `--` before the flag: pnpm 9 consumes that itself and the argument never reaches
       # Playwright, which then runs the whole suite on every shard — three full runs that
       # each look like a pass.
@@ -134,6 +148,12 @@ jobs:
       # remembered number would have caught anyway — the command is what catches it.
       - id: suite
         run: pnpm e2e --shard=${{ matrix.shard }}/3
+        env:
+          # Set only while the step above had to take the baselines itself. It makes
+          # `visual.spec.ts` stand its five screens down instead of comparing them against
+          # pictures that are no longer there; unset — which is every run once the PNGs are
+          # committed — a missing baseline is a failure, as it should be.
+          DUELBOX_VISUAL_BOOTSTRAP: ${{ steps.visual.outputs.bootstrap }}
       # ## Accepting an intended visual change, in one command
       #
       # The suite has failed, and one reason it can have failed is that somebody meant to

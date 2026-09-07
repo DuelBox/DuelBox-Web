@@ -4,7 +4,7 @@
  * promised. Neither existed: the command resolved to the system `size(1)`, which
  * cheerfully reported on a non-existent `a.out` and exited without complaint.
  *
- * Three numbers matter to a player, and they are not the same number:
+ * Four numbers matter to a player, and they are not the same number:
  *
  *   - **The shell** — everything the browser must have before anyone can pick a game.
  *     Every visitor pays it once.
@@ -13,8 +13,27 @@
  *   - **A game** — the marginal chunk for the one game they chose. One chunk per game is
  *     the whole point of the layout, and it is worth failing a build that quietly
  *     collapses that into the shell.
+ *   - **Speculated** — the route payloads the router fetches for links nobody has pressed.
+ *     Not JavaScript, and therefore invisible here until #185 measured it: see below.
  *
  * Gzipped, because that is what crosses the wire.
+ *
+ * ## The bytes this script could not see, and now can
+ *
+ * Every number above is a `.js` file, because `walk()` collects nothing else — and the
+ * largest download on this site is not JavaScript. `next/link` prefetches the route payload
+ * for every catalogue card within 200px of the viewport, and a catalogue browse passes all
+ * 108 of them under that observer: 108 requests for `/play/<slug>/index.txt`, which the
+ * build writes as the router's payload for each play route. Measured on the build this
+ * guard was written against, that is **more than twice ADR 0001's whole 182 KB first-session
+ * budget**, spent before anybody has pressed anything, on a metered connection as readily as
+ * on any other — `next/link` in the app router has no save-data bail-out.
+ *
+ * The point of #2516 was that an unmeasured chunk is where the bytes go to hide, and a file
+ * extension this script filtered out is the same hiding place one layer over. So the total
+ * is budgeted here, where a build fails over it, rather than described in a docstring. What
+ * the number does *not* do is bless the arrangement: `e2e/prefetch.spec.ts` carries the
+ * argument about what to do next, and `size-budget.json`'s note carries the arithmetic.
  *
  * ## What "shell" is, and what it was
  *
@@ -262,6 +281,32 @@ const shellBytes = bytesOf(shellEager);
 const onDemandBytes = bytesOf(onDemand);
 const biggestGame = Math.max(0, ...[...gameChunkFiles].map((file) => sizes.get(file) ?? 0));
 
+// ---------------------------------------------------------------------------------
+// Speculated: the route payloads a browse of the catalogue fetches for links nobody
+// pressed. One `index.txt` per play route, which is one per card in the grid.
+// ---------------------------------------------------------------------------------
+// From the export rather than from a browser, so this runs in the same second as the rest
+// of the build; `e2e/prefetch.spec.ts` is the half that watches a real router fetch them,
+// and it holds the total against this same budget so the two cannot drift.
+function routePayloads(dir) {
+  const found = [];
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) found.push(...routePayloads(full));
+    else if (entry === 'index.txt') found.push(full);
+  }
+  return found;
+}
+
+const payloads = routePayloads(join(OUT, 'play'));
+const speculatedBytes = payloads.reduce((sum, file) => sum + gzipped(file), 0);
+
 console.log(
   `check-size: ${String(files.length)} shipped script(s), ${kb(totalJs)} gzipped in total`,
 );
@@ -270,6 +315,10 @@ console.log(`check-size: on demand (paid on choosing a game) ${kb(onDemandBytes)
 console.log(
   `check-size: worst case for one player ${kb(shellBytes + onDemandBytes + biggestGame)}` +
     ` = shell + on demand + the largest game`,
+);
+console.log(
+  `check-size: speculated (paid for browsing, pressing nothing) ${kb(speculatedBytes)}` +
+    ` across ${String(payloads.length)} route payload(s)`,
 );
 if (neverFetched.size > 0) {
   console.log(
@@ -314,6 +363,19 @@ if (shellBytes > BUDGET.shellBytes) {
 if (onDemandBytes > BUDGET.onDemandBytes) {
   failures.push(
     `on-demand code is ${kb(onDemandBytes)}, over the ${kb(BUDGET.onDemandBytes)} budget`,
+  );
+}
+// A floor as well as a ceiling. Every card in the grid links a play route, so a build that
+// suddenly speculates far less has stopped exporting payloads rather than got thriftier —
+// and this number would then read as a win while `e2e/prefetch.spec.ts`'s count of what a
+// browse fetches went to nothing.
+if (payloads.length === 0) {
+  failures.push('no route payloads at all — the export has stopped writing index.txt files');
+}
+if (speculatedBytes > BUDGET.speculatedBytes) {
+  failures.push(
+    `browsing the catalogue speculates ${kb(speculatedBytes)} of route payloads, over the` +
+      ` ${kb(BUDGET.speculatedBytes)} budget`,
   );
 }
 

@@ -19,8 +19,8 @@ import { DISABLED_GAMES } from '../apps/web/src/lib/flags';
  * empty loop and reporting a kill switch that works.
  *
  * Content only: it asks what the export contains and what the pages link to, and never
- * touches a pointer, a key or the canvas. It belongs in `CONTENT_ONLY` in
- * `playwright.config.ts` for the reason `smoke.spec.ts` is there, and is not yet in it.
+ * touches a pointer, a key or the canvas. It is in `CONTENT_ONLY` in `playwright.config.ts`
+ * for the reason `smoke.spec.ts` is there, and that file carries the argument.
  */
 
 /** A game this build plays, whatever else it is compiled to refuse. */

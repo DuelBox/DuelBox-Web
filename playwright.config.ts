@@ -80,12 +80,16 @@ const CONTENT_ONLY = [
  * so a second one would re-confirm the verdict rather than test it, and the property that
  * could differ between engines — how a fade is painted — is not the property under test.
  *
- * It is also the list that spec *must* be in, which is a stronger reason than the one above.
- * Its layout-shift measurement reads `PerformanceObserver` entries of type `layout-shift`,
- * an API only Chromium implements: on WebKit the observer would never fire, the total would
- * be zero, and the assertion would pass having measured nothing at all. A guard that cannot
- * fail on an engine is worse on that engine than no guard, so it is only run where the
- * number is real.
+ * It is also the list that spec *must* be in, which is a stronger reason than the one above
+ * — though that reason is parked rather than live today, and the difference matters to
+ * anyone reading this to decide where a spec goes. Its layout-shift measurement reads
+ * `PerformanceObserver` entries of type `layout-shift`, an API only Chromium implements: on
+ * WebKit the observer would never fire, the total would be zero, and the assertion would
+ * pass having measured nothing at all. A guard that cannot fail on an engine is worse on
+ * that engine than no guard, so it is only run where the number is real. That test is
+ * `test.fixme` under #2539, so what runs in the file today asks `getAnimations()` for a
+ * play state, which every engine implements; the spec stays here for the day #2539 unparks
+ * the measurement, and on the opacity argument above in the meantime.
  *
  * If a rule ever fires on one engine and not another, this is the list to take it out of.
  *
@@ -115,6 +119,16 @@ const CONTENT_ONLY = [
  * shape of the record block on a narrow screen — and that is not this spec's question:
  * `safe-area.spec.ts` already opens a game page on all four and fails if the page scrolls
  * sideways, which is the assertion that would actually catch a row too wide to fit.
+ *
+ * `prefetch.spec.ts` (#185) counts network scheduling and the bytes it moves, which
+ * `offline.spec.ts` records as the one thing that genuinely differs between these engines —
+ * "WebKit schedules all of it differently from Chromium, which is why this only ever failed
+ * in CI". A count that means one thing on Chromium and another on WebKit is not a guard on
+ * either. It stood down from inside its own test bodies until it was listed here, which
+ * cost nine browser contexts a run — built by the `page` fixture, then discarded by a
+ * runtime `test.skip`, two of them real WebKit — on a job this file has already been split
+ * twice to keep inside its budget. The skip and this line were always meant to be one
+ * decision, and the spec's header said so; this is that decision.
  */
 const CHROMIUM_ONLY = [
   '**/axe.spec.ts',
@@ -122,6 +136,7 @@ const CHROMIUM_ONLY = [
   '**/tournament.spec.ts',
   '**/visual.spec.ts',
   '**/game-record.spec.ts',
+  '**/prefetch.spec.ts',
 ];
 
 /**

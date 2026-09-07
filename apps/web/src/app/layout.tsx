@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { SITE_URL } from '@/lib/site';
+import { colour } from '@/styles/tokens';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -54,7 +55,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#4b3beb',
+  // The colour the browser paints its own chrome, and the one place the brand was written
+  // out a second time. `styles/tokens.test.ts` scans stylesheets, so a hex in a TypeScript
+  // object is outside it — which is precisely the shape `page.module.css` records a scar
+  // about two rules above one of its own colours. Read from the palette instead: this is a
+  // server component and `viewport` is evaluated at build time, so the token costs no
+  // bytes, and changing `--db-brand` now changes the chrome with the page.
+  themeColor: colour.brand,
   // Zooming is an accessibility tool; the canvas suppresses its own gestures locally
   // rather than the page disabling zoom for everybody.
   initialScale: 1,

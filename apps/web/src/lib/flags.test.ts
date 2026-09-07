@@ -14,7 +14,8 @@ import type * as Flags from './flags';
  * here that matters runs against an injected switch instead. That is the whole point of the
  * `switches` parameter on `killSwitchFor` and of the module mock below: a kill switch tested
  * only against an empty list is a kill switch nobody has ever seen work, which is the shape
- * of guard CLAUDE.md now counts ten of.
+ * of guard CLAUDE.md keeps a tally of. The count lives there and only there — this sentence
+ * carried it for a day and was stale by the end of the same batch.
  *
  * Watched failing on purpose before it was trusted: with the `AVAILABLE` filter taken back
  * out of `data/registry.ts` — the one line this mechanism is — three of the four wiring

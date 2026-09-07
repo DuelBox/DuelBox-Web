@@ -155,7 +155,7 @@ describe('importing', () => {
     expect(readPlayerNames()).toEqual({ p1: 'Ada' });
     // A tournament in progress travels too, and it is the one thing in here that cannot be
     // rebuilt by playing: the line-up was drawn at random and the games behind it are gone.
-    expect(readTournament()).toEqual({
+    expect(readTournament(['chess', 'darts', 'ludo'])).toEqual({
       games: ['chess', 'darts', 'ludo'],
       results: ['p1'],
       opponent: 'bot',
@@ -246,7 +246,7 @@ describe('erasing', () => {
     expect(readSettings()).toEqual(DEFAULT_SETTINGS);
     expect(readGameRecord('chess', 'friend').played).toBe(0);
     expect(readPlayerNames()).toEqual({});
-    expect(readTournament()).toBeNull();
+    expect(readTournament(['chess', 'darts', 'ludo'])).toBeNull();
   });
 
   it('is safe with nothing stored and with no storage at all', () => {

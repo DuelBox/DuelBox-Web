@@ -123,15 +123,28 @@ import type { Viewport } from './viewport.js';
  * an alpha rather than being handed them, which is 108 `Game` implementations and the SDK
  * between them. It is recorded rather than guarded, and recorded rather than left out.
  *
+ * ## What that leaves #122 asking for
+ *
+ * #122 wants "zero allocations per frame in engine update, verified by profiling" and "the
+ * benchmark runs in CI". The second is met — `pnpm test` runs this file on every push. The
+ * first is met **inside the engine** and not at the boundary where a match actually spends
+ * its frames: 44 entry points are held under {@link ALLOCATION_FREE}, while the 37-to-48
+ * bytes a frame the loop hands a real game's callbacks, and the 64 a plausible two-puck
+ * `update()` costs a step, are measured above and asserted nowhere. So the issue should be
+ * closed against the half that landed, quoting both figures, rather than reported as done —
+ * and what the other half needs is either a per-game allocation case a game package can opt
+ * into, or the contract change in the paragraph above.
+ *
  * ## Why this measures what it claims to
  *
  * A benchmark that reports "no allocations" without being able to see one is worse than
- * nothing, so the first block below is the harness measuring four things it already knows
+ * nothing, so the first block below is the harness measuring five things it already knows
  * the answers to: an object per call, a single boxed double per call — the exact sixteen
  * bytes every defect this file found was made of — a closure that allocates nothing at all,
- * and the call-site cost the rest of the file deliberately holds out of its numbers. If the
- * harness ever stops seeing the ones it is supposed to see, those tests fail loudly rather
- * than the rest of the file passing vacuously.
+ * two kilobytes a call weighed a second way, and the call-site cost the rest of the file
+ * deliberately holds out of its numbers. If the harness ever stops seeing the ones it is
+ * supposed to see, those tests fail loudly rather than the rest of the file passing
+ * vacuously.
  *
  * Three things had to be right before any number here meant anything, and each of them was
  * got wrong first:
@@ -144,6 +157,16 @@ import type { Viewport } from './viewport.js';
  *    garbage is collected without `used_heap_size` ever rising, so a batch large enough to
  *    trigger a collection reports a fraction of what it allocated: an early draft measured
  *    a known 40-byte allocation as 9 bytes at 200,000 iterations and as 40 at 10,000.
+ *
+ *    This file said that in a comment and then fixed the batch at 10,000 anyway, which made
+ *    it true of the defects it was hunting and false of anything larger — the four controls
+ *    all measured 16 or 40 bytes, so nothing here could notice. A closure allocating a
+ *    250-element array, 2,067 bytes a call, read **178**; a 178-element one read *under the
+ *    ceiling*, so this harness would have called an allocation of 1,486 bytes a call
+ *    allocation-free. An engine change that built a contact list or a shuffled copy per step
+ *    is exactly that shape. {@link windowFor} now sizes every window from the case in front
+ *    of it, and the fifth control holds two kilobytes against an independent measurement so
+ *    that going blind again fails here rather than passing everywhere.
  * 3. **The closure must be warm.** Interpreted code allocates differently from optimised
  *    code, and it is the optimised code that runs in a match.
  *
@@ -159,7 +182,7 @@ import type { Viewport } from './viewport.js';
  * through.
  */
 
-/** Iterations per sample. Small enough that a scavenge never fires inside the window. */
+/** Iterations per sample, where the case is small enough to afford them. See {@link windowFor}. */
 const ITERATIONS = 10_000;
 
 /** Samples per case; the median is reported, so one disturbed batch cannot decide a case. */
@@ -203,6 +226,86 @@ const SINK = new Float64Array(8);
 const FLAGS = new Uint8Array(8);
 
 /**
+ * The most a window may allocate in total before it is not to be trusted.
+ *
+ * Young-generation garbage is collected without `used_heap_size` ever rising, so a window
+ * big enough to fill the young generation reports the *residue* after a scavenge rather than
+ * what it allocated. Half a megabyte is comfortably under the smallest young generation V8
+ * starts with, and it is the number {@link windowFor} sizes every measurement against.
+ */
+const SAFE_WINDOW_BYTES = 512 * 1024;
+
+/** Windows to size a case from, largest first, each one small enough for a bigger case. */
+const PROBES = [64, 8, 1] as const;
+
+/** The smallest window worth taking, for a case so large that even eight calls fill one. */
+const MIN_ITERATIONS = 8;
+
+/** Bytes the heap grows by while `run` is called `iterations` times, harness included. */
+function windowTotal(iterations: number, run: (i: number) => void): number {
+  collect();
+  collect();
+  const before = getHeapStatistics().used_heap_size;
+  for (let i = 0; i < iterations; i += 1) run(i);
+  const after = getHeapStatistics().used_heap_size;
+  return after - before;
+}
+
+/** A warmed closure that allocates nothing, so the harness's own cost can be measured. */
+function idle(i: number): void {
+  FLAGS[1] = i & 1;
+}
+
+/**
+ * What one window costs when the closure inside it allocates nothing: about 656 bytes here.
+ *
+ * The minimum of several rather than the median, and both parts matter. It is a floor —
+ * every window pays it — so the cleanest window is the honest one, and the first few windows
+ * in a process cost about twenty kilobytes more than the rest while V8 grows the heap back
+ * after the first full collection. An overstated figure here would be subtracted from every
+ * estimate below and would put the sizing back where it started.
+ */
+const WINDOW_OVERHEAD = (() => {
+  for (let i = 0; i < WARMUP; i += 1) idle(i);
+  windowTotal(PROBES[0], idle);
+  windowTotal(PROBES[0], idle);
+  let least = Infinity;
+  for (let k = 0; k < 5; k += 1) least = Math.min(least, windowTotal(PROBES[0], idle));
+  return least;
+})();
+
+/**
+ * How many iterations this case can be measured over without going blind.
+ *
+ * This is the answer to the flaw the first version of this file had: it fixed the window at
+ * {@link ITERATIONS} and said in a comment that a scavenge never fires inside one, which was
+ * true for the sixteen-to-125-byte defects it found and false above about a kilobyte a call.
+ * Measured with that fixed window, a closure allocating a 250-element array — 2,067 bytes a
+ * call, weighed independently by `retainedBytesPerCall` below — reported **178 bytes**, and
+ * a 178-element one reported under {@link ALLOCATION_FREE}, so the harness would have
+ * certified an allocation of 1,486 bytes a call as allocation-free.
+ *
+ * So the case is weighed first, in windows too small to collect anything, and the real
+ * window is chosen to stay under {@link SAFE_WINDOW_BYTES}. Three probe sizes rather than
+ * one because a probe is only safe while it is smaller than the case is large: sixty-four
+ * calls of a sixteen-kilobyte allocation is a megabyte and blind in its own right, and one
+ * call of anything is not. The largest of the three estimates wins, since going blind can
+ * only report *less* than the truth.
+ *
+ * The harness's own per-window cost is taken off each estimate, so a case that allocates
+ * nothing estimates zero and keeps the full window — which is what keeps the floor of a
+ * measurement at 0.06 bytes a call, and {@link ALLOCATION_FREE} meaningful.
+ */
+function windowFor(run: (i: number) => void): number {
+  let estimate = 0;
+  for (const probe of PROBES) {
+    estimate = Math.max(estimate, (windowTotal(probe, run) - WINDOW_OVERHEAD) / probe);
+  }
+  if (estimate * ITERATIONS <= SAFE_WINDOW_BYTES) return ITERATIONS;
+  return Math.max(MIN_ITERATIONS, Math.floor(SAFE_WINDOW_BYTES / estimate));
+}
+
+/**
  * Bytes allocated per call of `run`, as the median of {@link SAMPLES} batches.
  *
  * The median rather than the minimum: a scavenge inside a window makes that window read low,
@@ -211,17 +314,33 @@ const FLAGS = new Uint8Array(8);
  */
 function bytesPerCall(run: (i: number) => void): number {
   for (let i = 0; i < WARMUP; i += 1) run(i);
+  const iterations = windowFor(run);
   const samples = new Float64Array(SAMPLES);
   for (let s = 0; s < SAMPLES; s += 1) {
-    collect();
-    collect();
-    const before = getHeapStatistics().used_heap_size;
-    for (let i = 0; i < ITERATIONS; i += 1) run(i);
-    const after = getHeapStatistics().used_heap_size;
-    samples[s] = (after - before) / ITERATIONS;
+    samples[s] = windowTotal(iterations, run) / iterations;
   }
   samples.sort();
   return samples[(SAMPLES - 1) >> 1]!; // invariant: SAMPLES is a positive odd number
+}
+
+/**
+ * The same question answered a second way, for the control that holds the harness honest.
+ *
+ * Every allocation is kept alive in an array sized up front, so a collection inside the run
+ * can move the objects but cannot free them and the heap's growth is what was allocated.
+ * That makes this immune to the failure {@link windowFor} exists to prevent — and useless as
+ * the measurement itself, because holding a million objects is not what a match does.
+ */
+function retainedBytesPerCall(make: (i: number) => unknown, count: number): number {
+  const kept: unknown[] = new Array(count).fill(null);
+  collect();
+  collect();
+  const before = getHeapStatistics().used_heap_size;
+  for (let i = 0; i < count; i += 1) kept[i] = make(i);
+  const after = getHeapStatistics().used_heap_size;
+  // Read after the measurement so nothing here can be optimised away as unobserved.
+  if (kept[count - 1] === null) throw new Error('the retained run allocated nothing');
+  return (after - before) / count;
 }
 
 /**
@@ -310,6 +429,34 @@ describe('the harness can see an allocation', () => {
     });
     // The floor is `getHeapStatistics()` itself, about 0.06 bytes a call at this batch size.
     expect(bytes).toBeLessThan(1);
+  });
+
+  it('sees two kilobytes as two kilobytes, and not as a hundred and seventy-eight bytes', () => {
+    // The control that would have failed before `windowFor` existed, and the one that says
+    // where this harness's ceiling really is. A window of a fixed 10,000 iterations puts two
+    // megabytes through the young generation, a scavenge fires inside it, and `after -
+    // before` is then a residue rather than a total: this closure read 178 B/call that way,
+    // and a 178-element version of it read under the ceiling, which is a 1,486-byte
+    // allocation certified as free.
+    //
+    // The truth it is held against is measured rather than written down, by keeping every
+    // allocation alive so that nothing can be collected to hide it. Two independent methods
+    // agreeing within a factor of two is the claim; the numbers were 2,061 and 2,067 when
+    // this was written, which is a great deal closer than that.
+    // One closure, measured both ways, so the two numbers cannot be about two allocations.
+    const block = (i: number): number[] => new Array<number>(250).fill(i);
+    const held: { value: unknown } = { value: null };
+    const bytes = bytesPerCall((i) => {
+      held.value = block(i);
+    });
+    const truth = retainedBytesPerCall(block, 2000);
+    expect(held.value).not.toBeNull();
+    expect(truth, 'the oracle itself has gone blind').toBeGreaterThan(1024);
+    expect(
+      bytes,
+      `${bytes.toFixed(0)} B/call measured against ${truth.toFixed(0)} retained`,
+    ).toBeGreaterThan(truth / 2);
+    expect(bytes).toBeLessThan(truth * 2);
   });
 
   it('sees what a caller pays to hand over a number', () => {

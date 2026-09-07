@@ -210,7 +210,37 @@ over `tokens.css`, which must come back with the whole palette. Watched, both ha
 a hex planted in a module the check named it by file and line and ignored the `#178` beside
 it, and with the comment stripper made greedy the check went green **with the plant still
 there** while the control failed on its own, which is the pass that would otherwise have
-been indistinguishable from a clean one.
+been indistinguishable from a clean one. Reviewing it a day later found the guard narrower
+than its own headline sentence twice over, which is this list's most reliable finding about
+itself: it matched `#` and nothing else, so `rgb()`, `oklch()` and `background: white` were
+all still free — one `rgb(0 0 0 / 45%)` was already live — and it read stylesheets, so
+`app/layout.tsx`'s `themeColor: '#4b3beb'`, the brand written out a second time in a
+TypeScript object, sat exactly where the `#a06f00` scar says a colour goes to hide. Both are
+scanned now, and the entry stands as written: the sentence to distrust is the one in the
+docstring.
+
+The **thirteenth** is rule 11's, and it is the largest number in this list. `pnpm size` has
+never known what the biggest download on this site is, because `scripts/check-size.mjs`
+collects a file only if it ends `.js` — so the three budgets it defends are three facts
+about scripts, and every note in `size-budget.json` says in as many words that CSS and
+server-rendered markup are therefore free. Browsing the catalogue downloads something else.
+`next/link` prefetches the route payload of every card that passes within 200px of the
+viewport, and the grid has one card per game, so a visitor who scrolls it and presses
+nothing fetches 108 `/play/<slug>/index.txt` payloads: **397 KB gzipped, more than twice the
+182 KB ADR 0001 budgets for a whole first session.** The spec added in that same batch to
+hold #185 — whose other half is "do not waste bytes on links nobody presses" — did not merely
+fail to bound them, it *required* them, since its liveness control fails when fewer than
+fifty-five are speculated. And "markup is free" was falsified by the same batch that repeated
+it: the play route's `<noscript>` (#103) is 207 gzipped bytes of markup, in every one of
+those 108 payloads, so a block only a scripting-off visitor ever reads costs 22.4 KB of
+speculative download — more than everything that batch spent on both script budgets put
+together, in the one file that had written down that it cost nothing. `speculatedBytes` now holds the total,
+measured from the export by `check-size.mjs` and from a real browse by `e2e/prefetch.spec.ts`
+so the two ends cannot drift. Watched failing on purpose, both ways: fifty-five bytes appended
+to each payload in the built export failed the build with `browsing the catalogue speculates
+390.7 KB of route payloads, over the 390.0 KB budget`, and with the payloads moved aside the
+floor fired instead — `no route payloads at all — the export has stopped writing index.txt
+files` — because a guard that reads zero must never report a saving.
 
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute

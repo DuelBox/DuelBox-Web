@@ -6,7 +6,6 @@ import { clearFavourites, FAVOURITES_KEY } from '@/lib/favourites';
 import { hapticsSupported, vibrate } from '@/lib/haptics';
 import {
   clearRecord,
-  EMPTY_TALLY,
   HEAD_TO_HEAD_KEY,
   mostPlayed,
   readRecord,
@@ -62,6 +61,9 @@ const EMPTY_SUMMARY: Summary = {
 
 /** How many games the record lists here. Enough to recognise a habit, not a second catalogue. */
 const MOST_PLAYED = 5;
+
+/** What each count reads as before storage has been read, and with no scripting at all. */
+const UNREAD_TALLY = { p1: '–', p2: '–', draws: '–' } as const;
 
 /**
  * A slug as a title.
@@ -123,7 +125,7 @@ export function SettingsPanel() {
   const [supported, setSupported] = useState(false);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
   const [played, setPlayed] = useState<readonly { slug: string; record: GameRecord }[]>([]);
-  const [overall, setOverall] = useState<Tally>(EMPTY_TALLY);
+  const [overall, setOverall] = useState<Tally | null>(null);
   const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
   const [status, setStatus] = useState('');
 
@@ -263,6 +265,12 @@ export function SettingsPanel() {
   const percent = Math.round(settings.volume * 100);
   const volumeId = `${id}-volume`;
   const importId = `${id}-import`;
+  // Before the effect has run there is no record to state, and `components/GameRecord.tsx`
+  // makes the argument this follows: a zero is a claim — "you two have never finished one" —
+  // and a dash is what a component that has not read anything is entitled to say. This page
+  // is exported once for everybody, so the zeros were what a pair fifty matches in saw at
+  // first paint, and the whole of what a visitor with scripting off ever sees here.
+  const record = overall ?? UNREAD_TALLY;
 
   return (
     <div className={styles.panel}>
@@ -488,13 +496,13 @@ export function SettingsPanel() {
           greyscale, which is the rule the compact tally above satisfies with its W, L and D.
 
           After the list rather than before it, for the same reason the list is last: the
-          three counts are in the exported HTML at zero and the read only changes the digits,
-          so nothing here adds structure after hydration — but the list above does grow rows,
-          and a block it pushes down is better than a block that pushes it.
+          three counts are in the exported HTML as dashes and the read only replaces them
+          with digits, so nothing here adds structure after hydration — but the list above
+          does grow rows, and a block it pushes down is better than a block that pushes it.
         */}
         <h3 className={styles.subhead}>Between the two of you</h3>
         <p className={styles.overall}>
-          The near seat has won {overall.p1}, the far seat {overall.p2}, and {overall.draws} ended
+          The near seat has won {record.p1}, the far seat {record.p2}, and {record.draws} ended
           level.
         </p>
         <p className={styles.note}>

@@ -71,6 +71,10 @@
   --db-shadow-sm: 0 1px 2px rgb(20 22 31 / 6%);
   --db-shadow: 0 6px 18px -8px rgb(20 22 31 / 20%);
   --db-shadow-lg: 0 18px 40px -20px rgb(20 22 31 / 32%);
+  /* The three above are ink at low alpha, because they fall on paper. This one falls on
+     whatever a game happens to be drawing, so it is neutral black: an ink-tinted halo
+     behind the countdown reads as a blue smudge over a green pitch. */
+  --db-shadow-text: 0 4px 24px rgb(0 0 0 / 45%);
 
   /* Motion. Informative motion becomes an instant state change under reduced-motion;
      decorative motion is removed entirely. */
