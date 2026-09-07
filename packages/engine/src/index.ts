@@ -146,3 +146,66 @@ export type {
 
 export { LockstepSession, configFingerprint, mixNumber } from './lockstep.js';
 export type { LockstepOptions, MatchConfig, SessionStatus } from './lockstep.js';
+
+export {
+  linear,
+  quadIn,
+  quadOut,
+  quadInOut,
+  cubicIn,
+  cubicOut,
+  cubicInOut,
+  quartIn,
+  quartOut,
+  quartInOut,
+  smootherstep,
+  EASINGS,
+  Tween,
+  TweenSequence,
+} from './tween.js';
+export type { Easing, EasingName, TweenOptions, SequenceStep, TweenSequenceOptions } from './tween.js';
+
+export { ScreenShake, HitStop, Flash } from './juice.js';
+export type { ScreenShakeOptions, HitStopOptions, FlashOptions } from './juice.js';
+
+export { SceneNode } from './scene.js';
+
+export { createBody, resolveContact } from './resolve.js';
+export type { Body, BodyInit, ResolveOptions } from './resolve.js';
+
+export { SpatialHash, forEachBrutePair, brutePairCount } from './broadphase.js';
+
+export { ParticlePool } from './particle.js';
+export type { EmitterConfig } from './particle.js';
+
+export { AdaptiveQuality, DEFAULT_QUALITY_LEVELS } from './quality.js';
+export type { QualityLevel, AdaptiveQualityOptions } from './quality.js';
+
+export { AssetLoader, AssetBundle, AssetLoadError } from './asset-loader.js';
+export type {
+  AssetKind,
+  AssetDescriptor,
+  AssetIO,
+  ImageLike,
+  AudioLike,
+  AssetLoaderOptions,
+} from './asset-loader.js';
+
+export { SpriteAtlas, packShelf } from './atlas.js';
+export type { AtlasFrame, AtlasManifest, PackInput, PackOptions, PackResult } from './atlas.js';
+
+export {
+  SpriteBatch,
+  LineBatch,
+  Canvas2DSpriteSink,
+  WebGLSpriteSink,
+} from './batch.js';
+export type { SpriteSink, LineSink, DrawImageContext, ImageResolver, WebGLLike } from './batch.js';
+
+export {
+  RepresentativeLoop,
+  measureStructuralGrowth,
+  measureHeapBytesPerStep,
+  heapMeasurementAvailable,
+} from './hot-path.js';
+export type { RepresentativeLoopOptions } from './hot-path.js';
