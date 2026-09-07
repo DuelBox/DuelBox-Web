@@ -1,0 +1,115 @@
+/*
+ * A per-seat health bar, anchored to that seat's edge and turned to face them by `.rotated`
+ * — the same rotate-180 the scoreboard uses for the far seat.
+ */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  padding: var(--db-space-1) var(--db-space-2);
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  font-size: var(--db-text-xs);
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.track {
+  position: relative;
+  flex: 1 1 6rem;
+  height: 12px;
+  min-width: 3rem;
+  overflow: hidden;
+  background: var(--db-hairline);
+  border-radius: var(--db-radius-pill);
+}
+
+/*
+ * The fill. Width is the smooth signal — it transitions with the reported value, so a hit
+ * slides the bar down rather than snapping it — and the colour is the seat's. The
+ * `--db-duration` token is what the reduced-motion block in tokens.css collapses, so a player
+ * who asked for no motion gets the new width instantly with no animation.
+ */
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width var(--db-duration) var(--db-ease);
+}
+
+.bar[data-seat='p1'] .fill {
+  background: var(--db-p1);
+}
+
+.bar[data-seat='p2'] .fill {
+  background: var(--db-p2);
+}
+
+/*
+ * The non-colour signals (rule 7). At "low" the track gains a diagonal hatch over the empty
+ * part; at "critical" the hatch is denser and the whole bar carries a warning outline. In
+ * greyscale the level is legible from the hatch and the tag word alone.
+ */
+.bar[data-level='low'] .track {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    var(--db-border) 4px,
+    var(--db-border) 6px
+  );
+}
+
+.bar[data-level='critical'] {
+  border-color: var(--db-ink);
+}
+
+.bar[data-level='critical'] .track {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    var(--db-ink) 2px,
+    var(--db-ink) 4px
+  );
+}
+
+.tag {
+  flex: 0 0 auto;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A denser word only where it matters, so the state reads without leaning on the hue. */
+.bar[data-level='critical'] .tag {
+  animation: pulse var(--db-duration) var(--db-ease);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/*
+ * Reduced motion loses nothing: the width jump, the hatch and the tag word all still carry
+ * the meaning. Both the fill transition and the critical pulse switch off.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+
+  .bar[data-level='critical'] .tag {
+    animation: none;
+  }
+}

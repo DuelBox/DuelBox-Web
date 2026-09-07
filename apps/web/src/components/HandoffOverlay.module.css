@@ -1,0 +1,56 @@
+/*
+ * A full, opaque blackout — not the translucent pause panel.
+ *
+ * The whole point of #134 is that no frame of the previous seat's state shows through, so the
+ * cover is solid `--db-ink` with no `backdrop-filter` and no transparency, and it insets from
+ * the cutout so the prompt and the continue button never sit under a notch or the home
+ * indicator. `max()` so an inset can only widen a gutter, never narrow one.
+ */
+.blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding-top: max(var(--db-space-4), var(--db-safe-top));
+  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
+  padding-left: max(var(--db-space-4), var(--db-safe-left));
+  text-align: center;
+  background: var(--db-ink);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--db-space-3);
+  max-width: min(24rem, 100%);
+  color: var(--db-paper);
+}
+
+.prompt {
+  margin: 0;
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-2xl);
+  font-weight: 700;
+}
+
+.detail {
+  margin: 0;
+  font-size: var(--db-text-sm);
+  color: var(--db-hairline);
+}
+
+.continue {
+  min-height: var(--db-touch-target);
+  margin-top: var(--db-space-2);
+  padding-inline: var(--db-space-5);
+  border: none;
+  border-radius: var(--db-radius);
+  background: var(--db-brand);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

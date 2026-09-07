@@ -44,6 +44,16 @@ export interface MatchHudProps {
    */
   botSeats?: Readonly<Partial<Record<SeatId, unknown>>> | undefined;
   onPause?: (() => void) | undefined;
+  /**
+   * The round/match clock, already formatted as `m:ss` by the SDK's `formatClock` (#149).
+   *
+   * Absent for an untimed game, which is every game in the catalogue today, so the HUD is
+   * unchanged for them. Present, it shows between the two scoreboards where both seats can
+   * read it; the far copy is turned with the rest of the flipped HUD.
+   */
+  clock?: string | undefined;
+  /** True inside the clock's warning band, so the readout can flag that time is nearly up. */
+  clockWarning?: boolean | undefined;
 }
 
 export function MatchHud({
@@ -54,6 +64,8 @@ export function MatchHud({
   botSeats,
   onPause,
   flipped = false,
+  clock,
+  clockWarning = false,
 }: MatchHudProps) {
   const canPause = state.phase === 'playing' || state.phase === 'countdown';
   return (
@@ -82,6 +94,18 @@ export function MatchHud({
           </>
         ) : (
           <span className={styles.label}>vs</span>
+        )}
+        {clock === undefined ? null : (
+          // The clock the SDK drives (#149). Monospace and tabular so the digits do not
+          // jitter as they change; `data-warning` gives the near-expiry state a non-colour
+          // weight change as well as a colour, so it reads in greyscale (rule 7).
+          <span
+            className={styles.clock}
+            data-warning={clockWarning ? 'true' : 'false'}
+            {...(flipped ? { 'aria-hidden': true as const } : {})}
+          >
+            {clock}
+          </span>
         )}
       </div>
 

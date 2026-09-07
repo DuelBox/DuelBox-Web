@@ -20,6 +20,7 @@ import {
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
+  guard,
   isSimulating,
   type Game,
   type GameContext,
@@ -66,6 +67,14 @@ export interface GameHostProps {
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
   /**
+   * A throw escaped the game's `update()` or `render()` (#151).
+   *
+   * A React error boundary cannot catch this — it happens in a `requestAnimationFrame`
+   * callback, outside React — so the host catches it, stops the loop, and reports it here.
+   * The shell raises the recovery UI; the host never decides on its own that a match is over.
+   */
+  onError?: (error: unknown) => void;
+  /**
    * Record every input event, for export as a replayable trace.
    *
    * Off unless asked for. Recording costs an array push per event and nothing else, but a
@@ -95,6 +104,7 @@ export function GameHost({
   onScore,
   onActiveSeat,
   onRequestPause,
+  onError,
   recordTrace = false,
   onTraceReady,
 }: GameHostProps) {
@@ -115,6 +125,8 @@ export function GameHost({
   onActiveSeatRef.current = onActiveSeat;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
 
@@ -346,8 +358,26 @@ export function GameHost({
     let debugCancelled = false;
     let stopDebugOverlay: (() => void) | undefined;
 
+    /**
+     * A throw escaped game code (#151). Stop the loop and report it once.
+     *
+     * A React error boundary cannot reach a throw in these `requestAnimationFrame` callbacks,
+     * so the guard below catches it here and this is what it does with it: stop stepping the
+     * broken game — one more step would just throw again — and hand the error to the shell,
+     * which raises the recovery UI. `crashed` latches so a second callback in the same frame,
+     * or anything the stop has not torn down yet, does not report twice.
+     */
+    let crashed = false;
+    function onGameError(error: unknown): void {
+      if (crashed) return;
+      crashed = true;
+      runnerRef.current?.stop();
+      onErrorRef.current?.(error);
+    }
+
     const loop = new FixedLoop({
       update(dt) {
+        if (crashed) return;
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
@@ -356,31 +386,39 @@ export function GameHost({
           input.beginStep(dt);
           return;
         }
-        game.update(dt, inputView.sync(input.beginStep(dt)));
-        const score = game.getScore();
-        if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
-          lastP1 = score.p1;
-          lastP2 = score.p2;
-          lastWinner = score.winner;
-          onScoreRef.current?.(score.p1, score.p2, score.winner);
-        }
-        const seat = game.getActiveSeat?.() ?? null;
-        if (seat !== lastSeat) {
-          lastSeat = seat;
-          // The board changed hands, so the pointer surface does too — and a game that
-          // goes back to having no turns gets its two zones back.
-          input.setSplit(splitFor(seat));
-          input.setBoardSeat(seat ?? localSeat);
-          onActiveSeatRef.current?.(seat);
-        }
+        // Guarded, so a throw from the game becomes the recovery screen rather than a frozen
+        // board. Everything the step reads off the game — score, active seat — is inside the
+        // guard too, so a game that throws from `getScore` is caught the same way.
+        guard(() => {
+          game.update(dt, inputView.sync(input.beginStep(dt)));
+          const score = game.getScore();
+          if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
+            lastP1 = score.p1;
+            lastP2 = score.p2;
+            lastWinner = score.winner;
+            onScoreRef.current?.(score.p1, score.p2, score.winner);
+          }
+          const seat = game.getActiveSeat?.() ?? null;
+          if (seat !== lastSeat) {
+            lastSeat = seat;
+            // The board changed hands, so the pointer surface does too — and a game that
+            // goes back to having no turns gets its two zones back.
+            input.setSplit(splitFor(seat));
+            input.setBoardSeat(seat ?? localSeat);
+            onActiveSeatRef.current?.(seat);
+          }
+        }, onGameError);
       },
       render(alpha) {
+        if (crashed) return;
         // The only thing the overlay adds to the hot path, and the one number it cannot get
         // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
         if (process.env.NODE_ENV !== 'production') debugFrames += 1;
-        renderer.beginFrame();
-        game.render(renderer, alpha);
-        renderer.endFrame();
+        guard(() => {
+          renderer.beginFrame();
+          game.render(renderer, alpha);
+          renderer.endFrame();
+        }, onGameError);
         // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
         // sound from inside `update()` stays allocation-free (rule 5).
         audio().flush();

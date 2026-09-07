@@ -89,6 +89,18 @@ export interface MatchRules {
   readonly rounds?: number;
   /** Seconds of countdown before the first step of a round. Default 3. */
   readonly countdownSeconds?: number;
+  /**
+   * The round's time limit in seconds, driving the SDK's {@link MatchClock} (#149).
+   *
+   * Optional and absent by default: a game that declares no limit gets no clock, ends nothing
+   * on time, and is untouched. Present, the shell runs a clock from the fixed step, shows it
+   * in the HUD, and reports the round's tally with `timeExpired` when it runs out — so a win
+   * condition like `highest-when-time-expires` resolves. The reducer itself never reads this;
+   * the clock is the shell's, so a paused match cannot let it drift (rule 8).
+   */
+  readonly roundLimitSeconds?: number;
+  /** Seconds-of-remaining at which the clock enters its warning band. Meaningful with a limit. */
+  readonly clockWarnSeconds?: number;
 }
 
 export interface MatchState {

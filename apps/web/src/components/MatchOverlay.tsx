@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import type { SeatId } from '@duelbox/engine';
+import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
 import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
 import { resultAnnouncement } from '@/lib/match-announcement';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
+import { countdownViews } from './countdown-views';
 import styles from './MatchOverlay.module.css';
 
 /**
@@ -47,10 +48,18 @@ export interface MatchOverlayProps {
   record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
+  /**
+   * How the match is presented, so the count-in reads upright for whoever is looking (#142).
+   * Shared-screen draws it twice, once turned; single-seat draws it once. Defaults to
+   * shared-screen, the archetype default for everything the shell hosts today.
+   */
+  presentation?: Presentation | undefined;
   onResume: () => void;
   onQuit: () => void;
   onNextRound: () => void;
   onRematch: () => void;
+  /** Restart the match cleanly from the pause menu (#145). */
+  onRestart: () => void;
 }
 
 export function MatchOverlay(props: MatchOverlayProps) {
@@ -87,14 +96,16 @@ function Phase({
   seatNames,
   record,
   nextGame,
+  presentation = 'shared-screen',
   onResume,
   onQuit,
   onNextRound,
   onRematch,
+  onRestart,
 }: MatchOverlayProps) {
   switch (state.phase) {
     case 'countdown':
-      return <Countdown remaining={state.countdownRemaining} />;
+      return <Countdown remaining={state.countdownRemaining} presentation={presentation} />;
 
     case 'paused':
       return (
@@ -107,6 +118,16 @@ function Phase({
             <button type="button" className={styles.primary} onClick={onResume} autoFocus>
               Resume
             </button>
+            {/* Restart and Settings join Resume and Quit (#145). Restart starts the match
+                over cleanly; Settings opens the shell's settings surface. Both are ordinary
+                stops in the pause dialog's focus trap, so either seat operates them with a
+                keyboard as well as a tap. */}
+            <button type="button" className={styles.secondary} onClick={onRestart}>
+              Restart
+            </button>
+            <Link className={styles.secondary} href="/settings/" prefetch={false}>
+              Settings
+            </Link>
             <button type="button" className={styles.secondary} onClick={onQuit}>
               Quit match
             </button>
@@ -179,15 +200,47 @@ function Phase({
   }
 }
 
-function Countdown({ remaining }: { remaining: number }) {
+function Countdown({
+  remaining,
+  presentation,
+}: {
+  remaining: number;
+  presentation: Presentation;
+}) {
   // Ceiling, so the first frame of a three-second countdown reads "3" rather than "2".
   const count = Math.ceil(remaining);
   const label = count <= 0 ? 'Go' : String(count);
+  // One copy per seat that has to read it: in shared-screen two, the far one turned to face
+  // the player at the top of the device with the same rotate-180 the scoreboard uses; in
+  // single-seat one, upright (#142). Rotated copies first, so they sit at the top of the
+  // column facing the player there.
+  const views = [...countdownViews(presentation)].sort(
+    (a, b) => Number(b.rotated) - Number(a.rotated),
+  );
   return (
-    <div className={styles.overlay} role="status" aria-live="assertive" aria-atomic="true">
-      <span key={label} className={[styles.count, count <= 0 ? styles.go : ''].join(' ')}>
-        {label}
-      </span>
+    <div className={styles.overlay}>
+      <div className={styles.countdown}>
+        {views.map((view) => (
+          <div
+            key={view.seat}
+            className={[styles.countSeat, view.rotated ? styles.countFar : ''].join(' ')}
+            // The upright copy carries the announcement; the turned copy is decorative and
+            // hidden, or a screen reader hears the count twice — the same rule the flipped
+            // scoreboard follows.
+            {...(view.rotated
+              ? { 'aria-hidden': true as const }
+              : {
+                  role: 'status' as const,
+                  'aria-live': 'assertive' as const,
+                  'aria-atomic': true as const,
+                })}
+          >
+            <span key={label} className={[styles.count, count <= 0 ? styles.go : ''].join(' ')}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -3,10 +3,18 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import {
+  advanceClock,
+  clockExpired,
+  clockRemaining,
+  clockWarning,
+  createClock,
+  formatClock,
   initialMatchState,
   reduce,
+  resetClock,
   type Game,
   type GameManifest,
+  type MatchClock,
   type MatchEvent,
   type MatchRules,
 } from '@duelbox/game-sdk';
@@ -54,6 +62,11 @@ import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
 import { MatchOptions } from './MatchOptions';
+import { GameOptionsPanel } from './GameOptionsPanel';
+import { ExitControl } from './ExitControl';
+import { HandoffOverlay } from './HandoffOverlay';
+import { GameErrorBoundary } from './GameErrorBoundary';
+import { shouldHandOff } from './handoff';
 import { Controls } from './Controls';
 import styles from './PlaySurface.module.css';
 
@@ -214,6 +227,36 @@ export function PlaySurface({ slug }: { slug: string }) {
     initialMatchState,
   );
 
+  /** Whether the quit confirmation is open (#144). The persistent exit control is always shown. */
+  const [exitOpen, setExitOpen] = useState(false);
+  /** An error a game threw, caught at the host boundary, surfaced as the recovery screen (#151). */
+  const [gameError, setGameError] = useState<unknown>(null);
+  /** The seat the device is being passed to, or null when no hand-off is in progress (#134). */
+  const [handoffTo, setHandoffTo] = useState<SeatId | null>(null);
+  /** The active seat the last hand-off check saw, so only a real change of hands blacks out. */
+  const handoffFrom = useRef<SeatId | null>(null);
+
+  /**
+   * The round/match clock (#149), advanced from the fixed step and shown in the HUD.
+   *
+   * Held in a ref and advanced every tick, but only surfaced to React when the displayed
+   * `m:ss` actually changes — a clock re-rendering the whole surface sixty times a second is
+   * the one thing a HUD element must not do. Inert unless a game declares `roundLimitSeconds`,
+   * which none in the catalogue does today, so the whole path costs nothing for them.
+   */
+  const clockLimit = rules.roundLimitSeconds ?? null;
+  const clockRef = useRef<MatchClock>(createClock(clockLimit, rules.clockWarnSeconds));
+  const [clockView, setClockView] = useState<{ text: string; warning: boolean } | null>(null);
+  // Read inside the stable `handleTick` without re-creating it every frame.
+  const clockLimitRef = useRef(clockLimit);
+  clockLimitRef.current = clockLimit;
+  const phaseRef = useRef(match.phase);
+  phaseRef.current = match.phase;
+  const tallyRef = useRef(match.tally);
+  tallyRef.current = match.tally;
+  /** True once this round's expiry has been reported, so it fires the round end exactly once. */
+  const expiredRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
     loadGame(slug)
@@ -232,9 +275,21 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [slug]);
 
   // Escape pauses and resumes. The host deliberately never swallows it.
+  //
+  // Shift+Escape opens the quit confirmation instead (#144) — a distinct shortcut that is
+  // deliberately not a seat action key. Enter is seat two's and Space is seat one's, and the
+  // host captures both while the board is live, so a shortcut on either could never reach
+  // here (HANDOFF: the Enter-is-seat-two bug); the host passes Escape straight through with
+  // its modifiers, so Shift+Escape arrives intact.
   useEffect(() => {
     function onKey(event: KeyboardEvent): void {
       if (event.code !== 'Escape') return;
+      const live =
+        match.phase === 'playing' || match.phase === 'countdown' || match.phase === 'paused';
+      if (event.shiftKey) {
+        if (live) setExitOpen(true);
+        return;
+      }
       if (match.phase === 'playing' || match.phase === 'countdown') send({ kind: 'pause' });
       else if (match.phase === 'paused') send({ kind: 'resume' });
     }
@@ -377,7 +432,45 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const handleTick = useCallback((dt: number) => {
     send({ kind: 'tick', seconds: dt });
+    // The clock advances on the same fixed step (#149), but only when a game is timed —
+    // otherwise there is nothing to run and nothing to re-render.
+    if (clockLimitRef.current === null) return;
+    const advanced = advanceClock(clockRef.current, phaseRef.current, dt);
+    clockRef.current = advanced;
+    const remaining = clockRemaining(advanced);
+    if (remaining !== null) {
+      const text = formatClock(remaining);
+      const warning = clockWarning(advanced);
+      // Surface to React only when the shown value changes, so the HUD updates about once a
+      // second rather than every frame.
+      setClockView((previous) =>
+        previous !== null && previous.text === text && previous.warning === warning
+          ? previous
+          : { text, warning },
+      );
+    }
+    if (clockExpired(advanced) && phaseRef.current === 'playing' && !expiredRef.current) {
+      // Time is up. Report the round's current tally with `timeExpired`, which the win
+      // condition resolves into a round or match end. Latched so it fires once.
+      expiredRef.current = true;
+      send({ kind: 'score', tally: tallyRef.current, timeExpired: true });
+    }
   }, []);
+
+  /**
+   * Reset the clock at the start of every round, and whenever a fresh match begins.
+   *
+   * The round number and the seed together identify a round; when either changes the clock
+   * goes back to its limit and the expiry latch clears, so a rematch or the next round of a
+   * best-of counts its own time from zero rather than inheriting the last one's.
+   */
+  useEffect(() => {
+    clockRef.current = resetClock(createClock(clockLimit, rules.clockWarnSeconds));
+    expiredRef.current = false;
+    setClockView(
+      clockLimit === null ? null : { text: formatClock(clockLimit), warning: false },
+    );
+  }, [seed, match.round, clockLimit, rules.clockWarnSeconds]);
 
   const handleScore = useCallback((p1: number, p2: number, winner: SeatId | 'draw' | null) => {
     send({ kind: 'score', tally: { p1, p2 }, outcome: winner });
@@ -462,6 +555,9 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
     const next = seed + 1;
     setSeed(next);
     send({ kind: 'rematch', seed: next });
@@ -470,7 +566,58 @@ export function PlaySurface({ slug }: { slug: string }) {
   const quit = useCallback(() => {
     setMode(null);
     setLegMatch(false);
+    setExitOpen(false);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
     send({ kind: 'quit' });
+  }, []);
+
+  /**
+   * Restart the match cleanly, from the pause menu (#145) or the recovery screen (#151).
+   *
+   * A quit back to idle followed by a fresh start, with a new seed so the game host tears the
+   * game down and rebuilds it — the honest way to guarantee a restarted match is a new match
+   * and not a half-reset one. The mode is React state and survives, so the same opponent is
+   * kept; only the match itself starts over.
+   */
+  const restart = useCallback(() => {
+    setActiveSeat(null);
+    setExitOpen(false);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
+    const next = seed + 1;
+    setSeed(next);
+    send({ kind: 'quit' });
+    send({ kind: 'start', seed: next });
+  }, [seed]);
+
+  /** A game threw; the host stopped the loop, and this raises the recovery screen (#151). */
+  const handleGameError = useCallback((error: unknown) => {
+    setGameError(error ?? new Error('The game stopped unexpectedly.'));
+  }, []);
+
+  /**
+   * The active seat changed. Track it for the turn indicator, and raise the pass-and-play
+   * blackout when a hand-off game changes hands (#134).
+   *
+   * Only for a game that opted in, and only on a real change from one seat to another — the
+   * first seat of a match is nobody handing over. A game that does not opt in never blacks out.
+   */
+  const handleActiveSeat = useCallback(
+    (seat: SeatId | null) => {
+      setActiveSeat(seat);
+      if (manifest !== null && shouldHandOff(manifest, handoffFrom.current, seat)) {
+        setHandoffTo(seat);
+      }
+      handoffFrom.current = seat;
+    },
+    [manifest],
+  );
+
+  const continueHandoff = useCallback(() => {
+    setHandoffTo(null);
   }, []);
 
   // Both written through as they are chosen rather than when a match starts, so a player
@@ -581,6 +728,9 @@ export function PlaySurface({ slug }: { slug: string }) {
               rounds={setup.rounds}
               onRounds={chooseRounds}
             />
+            {/* The game's own options (#1751), rendered generically from its manifest and
+                persisted per game. A game that declares none shows nothing here. */}
+            <GameOptionsPanel slug={slug} options={manifest.options ?? []} />
             <div className={styles.modes}>
               {ordered.map((offer, index) => (
                 <button
@@ -669,7 +819,12 @@ export function PlaySurface({ slug }: { slug: string }) {
     activeSeat,
     seatNames,
     botSeats,
+    ...(clockView ? { clock: clockView.text, clockWarning: clockView.warning } : {}),
   };
+
+  /** Whether the match is live, which is when the exit control and the pull-to-refresh guard apply. */
+  const matchLive =
+    match.phase === 'countdown' || match.phase === 'playing' || match.phase === 'paused';
 
   return (
     <div className={styles.surface}>
@@ -687,29 +842,61 @@ export function PlaySurface({ slug }: { slug: string }) {
 
       <div className={styles.boardArea}>
         <div className={styles.board}>
-          <GameHost
-            manifest={manifest}
-            createGame={create}
-            seed={seed}
-            phase={match.phase}
-            presentation="shared-screen"
-            localSeat="p1"
-            openingSeat={match.openingSeat}
-            {...(botSeats ? { botDifficulty: botSeats } : {})}
-            onTick={handleTick}
-            onScore={handleScore}
-            onActiveSeat={setActiveSeat}
-            onRequestPause={handlePauseRequest}
-            recordTrace={recording}
-            // Wrapped, not passed. React treats a function handed to a state setter as an
-            // *updater* and calls it with the previous state — so `setGetTrace(get)` invoked
-            // the getter and stored the string it returned, and the panel then tried to call
-            // a string. The trace stayed empty and nothing threw where anyone would see it.
-            onTraceReady={(get) => {
-              setGetTrace(() => get);
-            }}
-          />
+          {/* A crash inside the game surfaces the recovery screen rather than a frozen board
+              or a white screen (#151). The boundary catches a throw in React's own render;
+              the host catches a throw inside the fixed loop and hands it back as
+              `externalError`, so both land on the same Restart / Quit screen. */}
+          <GameErrorBoundary externalError={gameError} onRestart={restart} onQuit={quit}>
+            <GameHost
+              manifest={manifest}
+              createGame={create}
+              seed={seed}
+              phase={match.phase}
+              presentation="shared-screen"
+              localSeat="p1"
+              openingSeat={match.openingSeat}
+              {...(botSeats ? { botDifficulty: botSeats } : {})}
+              onTick={handleTick}
+              onScore={handleScore}
+              onActiveSeat={handleActiveSeat}
+              onRequestPause={handlePauseRequest}
+              onError={handleGameError}
+              recordTrace={recording}
+              // Wrapped, not passed. React treats a function handed to a state setter as an
+              // *updater* and calls it with the previous state — so `setGetTrace(get)` invoked
+              // the getter and stored the string it returned, and the panel then tried to call
+              // a string. The trace stayed empty and nothing threw where anyone would see it.
+              onTraceReady={(get) => {
+                setGetTrace(() => get);
+              }}
+            />
+          </GameErrorBoundary>
           <TracePanel getTrace={recording ? getTrace : null} />
+          {/* The persistent edge-anchored exit and its forfeit confirmation (#144). Up
+              whenever the match is live, so quitting mid-play is always one deliberate step
+              away and never one accidental tap. */}
+          {matchLive ? (
+            <ExitControl
+              open={exitOpen}
+              onOpen={() => {
+                setExitOpen(true);
+              }}
+              onCancel={() => {
+                setExitOpen(false);
+              }}
+              onQuit={quit}
+            />
+          ) : null}
+          {/* The pass-and-play hand-off blackout (#134), only for a game that opted in and
+              only while a hand-off is in progress. It sits above the board so no frame of the
+              previous seat's state shows through. */}
+          {handoffTo !== null ? (
+            <HandoffOverlay
+              toSeat={handoffTo}
+              toName={seatNames[handoffTo]}
+              onContinue={continueHandoff}
+            />
+          ) : null}
           <MatchOverlay
             state={match}
             manifest={manifest}
@@ -717,6 +904,7 @@ export function PlaySurface({ slug }: { slug: string }) {
             seatNames={seatNames}
             record={record}
             nextGame={nextGame}
+            presentation="shared-screen"
             onResume={() => {
               send({ kind: 'resume' });
             }}
@@ -725,6 +913,7 @@ export function PlaySurface({ slug }: { slug: string }) {
               send({ kind: 'next-round' });
             }}
             onRematch={rematch}
+            onRestart={restart}
           />
         </div>
       </div>
