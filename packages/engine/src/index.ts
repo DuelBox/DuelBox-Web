@@ -38,9 +38,17 @@ export {
   toWorld,
   toScreen,
   seatForPoint,
+  zoneSplitFor,
   PointerOwnership,
 } from './seat.js';
-export type { SeatId, Presentation, SeatView, LogicalSize, ZoneSplit } from './seat.js';
+export type {
+  SeatId,
+  Presentation,
+  SeatView,
+  LogicalSize,
+  ZoneSplit,
+  DeclaredZoneSplit,
+} from './seat.js';
 
 export { GridCursor } from './cursor.js';
 export type { GridCursorOptions } from './cursor.js';

@@ -45,3 +45,8 @@ export {
 export type { Judgement } from './bot-judgement.js';
 
 export { SearchBudget, DEFAULT_SEARCH_NODES, deepen } from './search-budget.js';
+
+export { actionAbandoned } from './gesture.js';
+
+export { sanitisePlayerName, isValidPlayerName, MAX_NAME_LENGTH } from './player-text.js';
+export type { SanitiseResult, SanitiseReason } from './player-text.js';
