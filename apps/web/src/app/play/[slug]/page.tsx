@@ -4,7 +4,17 @@ import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
 import { PlaySurface } from '@/components/PlaySurface';
 
-/** Only games with a playable build get a play route; the rest keep their catalogue page. */
+/**
+ * Only games with a playable build get a play route; the rest keep their catalogue page.
+ *
+ * `PLAYABLE` is the registry's answer *after* the kill switch (#208), so a game switched off
+ * in `lib/flags.ts` has no exported page here at all and the host answers `/play/<slug>/`
+ * with `not-found.tsx`. That is the whole of what this route does about a switch, and it is
+ * deliberate: this page is the shell a match mounts into, so there is nothing honest for it
+ * to say that the game's own page — which stays, and explains itself — does not say better.
+ * A branch here would be code no build can reach, which is the shape of guard this
+ * repository keeps finding it never ran.
+ */
 export function generateStaticParams() {
   return PLAYABLE.map((slug) => ({ slug }));
 }

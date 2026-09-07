@@ -95,11 +95,85 @@ jobs:
       # WebKit is the engine iOS Safari ships, and two people sharing a phone is the
       # primary case — a chromium window sized like a phone is not the same test.
       - run: npx playwright install --with-deps chromium webkit
+      # ## The visual baselines (#227), and the window in which they are not there yet
+      #
+      # `e2e/visual.spec.ts` holds five shell screens against PNGs in `e2e/__screenshots__`.
+      # A screenshot is a fact about a platform, and the committed ones are `-linux` because
+      # this runner is: the spec skips itself anywhere else rather than failing on a
+      # developer's Mac for a reason no developer can fix.
+      #
+      # This step exists for the one window where no baseline is committed, and it deletes
+      # itself at the end of that window. It takes the pictures from the build this job has
+      # just made, so the suite below compares against them and passes, and hands them over
+      # as an artefact to be committed. That is a guard that cannot fail, which is the exact
+      # shape CLAUDE.md keeps a tally of — so it says so, as an annotation, on every run
+      # until somebody commits the PNGs. After that `find` matches, this step returns
+      # immediately, and a missing baseline is `A snapshot doesn't exist at …` and a red job.
+      - id: visual
+        run: |
+          if [ -n "$(find e2e/__screenshots__ -name '*-linux.png' 2>/dev/null | head -n1)" ]; then
+            exit 0
+          fi
+          echo "bootstrap=1" >> "$GITHUB_OUTPUT"
+          npx playwright test e2e/visual.spec.ts --project=chromium -u changed --output=/tmp/pw-visual
+          echo "::warning title=Visual baselines are not committed::e2e/visual.spec.ts compared this run against pictures taken from this same build, so it could not fail. Download the visual-baselines-${{ matrix.shard }} artefact into e2e/__screenshots__ and commit it, and this stops being true."
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.visual.outputs.bootstrap == '1'
+        with:
+          name: visual-baselines-${{ matrix.shard }}
+          path: e2e/__screenshots__
+          if-no-files-found: error
+          retention-days: 7
       # No `--` before the flag: pnpm 9 consumes that itself and the argument never reaches
       # Playwright, which then runs the whole suite on every shard — three full runs that
-      # each look like a pass. Checked with `--list`: 153 + 152 + 152 = the 457 the
-      # unsharded command reports.
-      - run: pnpm e2e --shard=${{ matrix.shard }}/3
+      # each look like a pass.
+      #
+      # The way to check that is still true is `npx playwright test --list`, whose total the
+      # three shards have to add up to and not merely each match. A count used to be written
+      # out here; it was stale within two batches, and a sharding bug is not something a
+      # remembered number would have caught anyway — the command is what catches it.
+      - id: suite
+        run: pnpm e2e --shard=${{ matrix.shard }}/3
+      # ## Accepting an intended visual change, in one command
+      #
+      # The suite has failed, and one reason it can have failed is that somebody meant to
+      # change how a screen looks. The reviewer needs two things that only a Linux runner can
+      # produce: the new baselines, and a picture of what moved. So the visual spec is run
+      # again with `-u changed`, which rewrites the baselines that did not match and leaves
+      # the rest alone, and both come back as artefacts:
+      #
+      #     gh run download <run-id> -n visual-baselines-<shard> -D e2e/__screenshots__
+      #     gh run download <run-id> -n visual-diffs-<shard> -D /tmp/visual-diffs
+      #
+      # Look at the diffs, then commit what the first command changed. The shard is in the
+      # name of the job that went red.
+      #
+      # `--output` keeps this run's own artefacts out of `test-results/`, which Playwright
+      # empties at the start of every run and which still holds the `-diff.png` the failing
+      # run left there. Conditioned on the suite step rather than on `failure()` so that a
+      # broken install or a broken build does not pay for a screenshot run, and skipped
+      # during the bootstrap above, whose upload has already claimed the artefact name.
+      - name: Regenerate the visual baselines for review
+        if: always() && steps.suite.outcome == 'failure' && steps.visual.outputs.bootstrap != '1'
+        run: npx playwright test e2e/visual.spec.ts --project=chromium -u changed --output=/tmp/pw-visual-accept
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && steps.suite.outcome == 'failure' && steps.visual.outputs.bootstrap != '1'
+        with:
+          name: visual-baselines-${{ matrix.shard }}
+          path: e2e/__screenshots__
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && steps.suite.outcome == 'failure' && steps.visual.outputs.bootstrap != '1'
+        with:
+          name: visual-diffs-${{ matrix.shard }}
+          # Nothing at all when the failure was somebody else's spec, which is why this one
+          # is `ignore` rather than `error`.
+          path: |
+            test-results/**/*-diff.png
+            test-results/**/*-actual.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   audit:
     runs-on: ubuntu-latest
