@@ -2,7 +2,7 @@ name: Nightly
 
 # Everything that is too slow to pay for on every push.
 #
-# Three things now. The third browser engine: the whole suite passes on Firefox and has done
+# Four things now. The third browser engine: the whole suite passes on Firefox and has done
 # since it was first tried, so running it per-push would spend install and run time to
 # re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
 #
@@ -32,6 +32,23 @@ name: Nightly
 # The cost of that choice, stated plainly: a pull request that drops coverage below 70% merges
 # green and is caught the next morning rather than in review. If that ever costs more than the
 # minutes it saves, move this job into `verify` — the command is identical either way.
+#
+# And the memory soak (#232). `lifecycle.spec.ts` counts listeners across fifty mount-unmount
+# cycles on every push and that is the right instrument for a push gate; `soak.spec.ts` runs a
+# hundred and measures the heap either side, which is the acceptance criterion #232 states and
+# a slower, noisier instrument than a listener count. It is here for this file's usual reason —
+# a minute or two of CI to re-measure at a hundred cycles what the push gate already watches at
+# fifty — and for one more that is specific to it: a heap comparison on a shared runner is the
+# flakiest assertion in the suite, and a flaky test on the push gate teaches everybody to re-run
+# the job rather than to read it.
+#
+# Half of what that job runs is a control that installs a deliberate leak and requires the
+# measurement to catch it, because a threshold nobody has watched fail is not a threshold — the
+# habit CLAUDE.md records after five guards in this repository turned out to be enforcing
+# nothing. Measured on a development machine, both at a hundred cycles: **0.73MB of growth
+# clean, 17.08MB with the control's leak installed**, against the 5MB budget between them. The
+# shell releases its matches; five consecutive blocks of a hundred cycles grew 0.71, 0.21, 0.06,
+# 0.011 and 0.011MB, which is a warm-up curve and not a leak.
 on:
   schedule:
     # 03:15 UTC, which is a quiet hour for the free-tier runners.
@@ -142,3 +159,45 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  soak:
+    name: memory soak, a hundred load-unload cycles
+    runs-on: ubuntu-latest
+    # Twelve seconds a test on a development machine, and the jobs above record that CI runs
+    # this kind of work four to five times slower; the rest of the wall clock is install and
+    # the build. Fifteen minutes is headroom rather than an estimate — a soak killed by its
+    # own timeout reads as an infrastructure flake, which is exactly what `ci.yml` has been
+    # bitten by twice.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The suite drives the real static artefact rather than a dev server, so what is
+      # measured is what ships. This job runs alone and shares nothing with `all-engines`,
+      # so it builds its own.
+      - run: pnpm build
+      # Chromium alone. The reading comes from the Chrome DevTools Protocol —
+      # `HeapProfiler.collectGarbage` then `Runtime.getHeapUsage` — and no other engine
+      # offers an honest one; the spec skips itself on WebKit rather than failing there.
+      - run: npx playwright install --with-deps chromium
+      # No `--` before the flags: pnpm 9 consumes that itself and they never reach Playwright,
+      # which is the mistake `ci.yml` records against its shard flag. `--project=chromium`
+      # because the `mobile` project is Chromium behind a phone viewport and would measure the
+      # same teardown a second time. `DUELBOX_SOAK` is what un-skips the spec: without it the
+      # soak is inert everywhere, which is how the push gate stays out of it.
+      - run: pnpm e2e e2e/soak.spec.ts --project=chromium
+        env:
+          DUELBOX_SOAK: '1'
+      # The numbers are printed by the spec on every run, pass or fail, so the log is the
+      # record. The report is for the run where the trace matters.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: soak-report
+          path: playwright-report/
+          retention-days: 7
