@@ -156,7 +156,14 @@ describe('importing', () => {
     expect(readSetup('chess')).toEqual({ mode: 'bot', difficulty: 'hard', rounds: 3 });
     expect(readFavourites()).toEqual(['chess', 'ludo']);
     expect(readRecent()).toEqual(['chess', 'pool']);
-    expect(readSettings()).toEqual({ muted: true, volume: 0.5, haptics: false, theme: 'system', seatPalette: 'default', gameSpeed: 1 });
+    expect(readSettings()).toEqual({
+      muted: true,
+      volume: 0.5,
+      haptics: false,
+      theme: 'system',
+      seatPalette: 'default',
+      gameSpeed: 1,
+    });
     // The record travels with everything else (#2448): a pair who move to a new phone
     // keep the score they have been keeping against each other.
     expect(readGameRecord('chess', 'friend')).toEqual({ p1: 1, p2: 0, draws: 1, played: 2 });
