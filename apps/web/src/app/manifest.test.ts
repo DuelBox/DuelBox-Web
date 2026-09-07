@@ -21,8 +21,9 @@ function loadManifest(basePath: string | undefined): Record<string, unknown> {
   if (basePath === undefined) delete process.env.NEXT_PUBLIC_BASE_PATH;
   else process.env.NEXT_PUBLIC_BASE_PATH = basePath;
   // The route reads the env inside itself, so calling it again with a new env is enough —
-  // no module-cache bust needed.
-  return manifestRoute() as unknown as Record<string, unknown>;
+  // no module-cache bust needed. The manifest's keys are all strings, so it is already a
+  // `Record<string, unknown>` and needs no assertion.
+  return manifestRoute();
 }
 
 describe('the web manifest', () => {

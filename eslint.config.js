@@ -16,6 +16,13 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.generated.ts',
       '**/next-env.d.ts',
+      // Storybook (#75) is scaffolded but not installed here, so its config and stories import
+      // `@storybook/*` — packages this repository does not yet depend on. They live outside
+      // the app tree and outside every gate's tsconfig; ignoring them keeps `eslint .` from
+      // failing on the unresolved imports until Storybook is added. See docs/storybook.md.
+      '.storybook/**',
+      '**/*.stories.tsx',
+      '**/storybook-static/**',
     ],
   },
   js.configs.recommended,

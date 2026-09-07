@@ -84,8 +84,14 @@ let activeId: SeatPaletteId = 'default';
  * rather than leaving the seats half-recoloured. Returns the id that took effect so a
  * caller can tell a fallback from a hit.
  */
+const KNOWN_PALETTES: readonly SeatPaletteId[] = ['default', 'colourblind'];
+
 export function setActiveSeatPalette(id: SeatPaletteId): SeatPaletteId {
-  const resolved: SeatPaletteId = SEAT_PALETTES[id] ? id : 'default';
+  // `includes` rather than an index-and-truthy check: the type says every `SeatPaletteId` is a
+  // key, so a truthiness guard reads as always-true to the linter, but a caller reaching past
+  // the types (a stored string from an older build) can still hand this an unknown id. The
+  // membership test survives that and the lint both.
+  const resolved: SeatPaletteId = KNOWN_PALETTES.includes(id) ? id : 'default';
   const chosen = SEAT_PALETTES[resolved];
   for (const seat of SEATS) {
     Object.assign(live[seat], chosen[seat]);

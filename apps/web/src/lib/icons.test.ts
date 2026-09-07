@@ -88,7 +88,10 @@ describe('every glyph', () => {
           expect(inside(shape.cx) && inside(shape.cy), name).toBe(true);
         } else if (shape.kind === 'rect') {
           expect(inside(shape.x) && inside(shape.y), name).toBe(true);
-          expect(inside((shape.x ?? 0) + (shape.w ?? 0)) && inside((shape.y ?? 0) + (shape.h ?? 0)), name).toBe(true);
+          expect(
+            inside((shape.x ?? 0) + (shape.w ?? 0)) && inside((shape.y ?? 0) + (shape.h ?? 0)),
+            name,
+          ).toBe(true);
         }
       }
     }

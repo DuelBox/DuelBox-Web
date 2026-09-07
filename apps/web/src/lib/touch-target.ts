@@ -54,7 +54,10 @@ const MAX_DPR = 4;
  * at or above the shell target so a device that under-reports its ratio can only ever make
  * the control bigger, never smaller than the rest of the site's controls.
  */
-export function gameplayTouchTargetPx(dpr: number, physicalMinMm: number = GAMEPLAY_MIN_MM): number {
+export function gameplayTouchTargetPx(
+  dpr: number,
+  physicalMinMm: number = GAMEPLAY_MIN_MM,
+): number {
   const ratio = Number.isFinite(dpr) ? Math.min(MAX_DPR, Math.max(MIN_DPR, dpr)) : 1;
   const mm = Number.isFinite(physicalMinMm) && physicalMinMm > 0 ? physicalMinMm : GAMEPLAY_MIN_MM;
   const cssPx = mm * CSS_PX_PER_MM;

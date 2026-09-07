@@ -57,7 +57,18 @@ const STAR = starPoints(12, 12, 8.5, 3.4, 5);
  * run of points), `circle`, `rect`, `path`.
  */
 export const ICON_ART = {
-  play: [{ kind: 'poly', points: [[8, 5], [8, 19], [19, 12]], closed: true, fill: true }],
+  play: [
+    {
+      kind: 'poly',
+      points: [
+        [8, 5],
+        [8, 19],
+        [19, 12],
+      ],
+      closed: true,
+      fill: true,
+    },
+  ],
   pause: [
     { kind: 'rect', x: 7, y: 5, w: 3.5, h: 14, r: 1, fill: true },
     { kind: 'rect', x: 13.5, y: 5, w: 3.5, h: 14, r: 1, fill: true },
@@ -65,7 +76,14 @@ export const ICON_ART = {
   'sound-on': [
     {
       kind: 'poly',
-      points: [[3, 9.5], [7, 9.5], [11, 5.5], [11, 18.5], [7, 14.5], [3, 14.5]],
+      points: [
+        [3, 9.5],
+        [7, 9.5],
+        [11, 5.5],
+        [11, 18.5],
+        [7, 14.5],
+        [3, 14.5],
+      ],
       closed: true,
       fill: true,
     },
@@ -75,7 +93,14 @@ export const ICON_ART = {
   'sound-off': [
     {
       kind: 'poly',
-      points: [[3, 9.5], [7, 9.5], [11, 5.5], [11, 18.5], [7, 14.5], [3, 14.5]],
+      points: [
+        [3, 9.5],
+        [7, 9.5],
+        [11, 5.5],
+        [11, 18.5],
+        [7, 14.5],
+        [3, 14.5],
+      ],
       closed: true,
       fill: true,
     },
@@ -94,8 +119,28 @@ export const ICON_ART = {
     { kind: 'line', x1: 6, y1: 6, x2: 18, y2: 18 },
     { kind: 'line', x1: 18, y1: 6, x2: 6, y2: 18 },
   ],
-  back: [{ kind: 'poly', points: [[14.5, 5], [7.5, 12], [14.5, 19]], closed: false }],
-  forward: [{ kind: 'poly', points: [[9.5, 5], [16.5, 12], [9.5, 19]], closed: false }],
+  back: [
+    {
+      kind: 'poly',
+      points: [
+        [14.5, 5],
+        [7.5, 12],
+        [14.5, 19],
+      ],
+      closed: false,
+    },
+  ],
+  forward: [
+    {
+      kind: 'poly',
+      points: [
+        [9.5, 5],
+        [16.5, 12],
+        [9.5, 19],
+      ],
+      closed: false,
+    },
+  ],
   star: [{ kind: 'poly', points: STAR, closed: true }],
   'star-filled': [{ kind: 'poly', points: STAR, closed: true, fill: true }],
   trophy: [
@@ -107,9 +152,28 @@ export const ICON_ART = {
   ],
   refresh: [
     { kind: 'path', d: 'M18 8a7 7 0 1 0 1.5 5' },
-    { kind: 'poly', points: [[18, 3.5], [18, 8.5], [13, 8.5]], closed: true, fill: true },
+    {
+      kind: 'poly',
+      points: [
+        [18, 3.5],
+        [18, 8.5],
+        [13, 8.5],
+      ],
+      closed: true,
+      fill: true,
+    },
   ],
-  check: [{ kind: 'poly', points: [[5, 12.5], [10, 17.5], [19, 7]], closed: false }],
+  check: [
+    {
+      kind: 'poly',
+      points: [
+        [5, 12.5],
+        [10, 17.5],
+        [19, 7],
+      ],
+      closed: false,
+    },
+  ],
   info: [
     { kind: 'circle', cx: 12, cy: 12, r: 8.5 },
     { kind: 'line', x1: 12, y1: 11, x2: 12, y2: 16.5 },

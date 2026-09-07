@@ -117,8 +117,12 @@ describe.each([
     // If a single colour already cleared every background, the second would be decoration
     // and a regression that broke it would pass unnoticed. This proves the pair is load
     // bearing: on some background each colour is the one below the bar.
-    const ringAlonePasses = BACKGROUNDS.every((name) => contrast(ring, tokenIn(block, name)) >= MIN);
-    const haloAlonePasses = BACKGROUNDS.every((name) => contrast(halo, tokenIn(block, name)) >= MIN);
+    const ringAlonePasses = BACKGROUNDS.every(
+      (name) => contrast(ring, tokenIn(block, name)) >= MIN,
+    );
+    const haloAlonePasses = BACKGROUNDS.every(
+      (name) => contrast(halo, tokenIn(block, name)) >= MIN,
+    );
     expect(ringAlonePasses || haloAlonePasses, 'one colour alone covers every background').toBe(
       false,
     );

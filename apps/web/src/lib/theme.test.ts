@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  applySeatPalette,
-  applyTheme,
-  seatPaletteAttribute,
-  themeAttribute,
-} from './theme';
+import { applySeatPalette, applyTheme, seatPaletteAttribute, themeAttribute } from './theme';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -102,10 +97,7 @@ describe('applying a seat palette to the document', () => {
 });
 
 describe('the inline head script in layout.tsx', () => {
-  const layout = readFileSync(
-    fileURLToPath(new URL('../app/layout.tsx', import.meta.url)),
-    'utf8',
-  );
+  const layout = readFileSync(fileURLToPath(new URL('../app/layout.tsx', import.meta.url)), 'utf8');
 
   it('reads the same storage key and reacts to the same three theme names', () => {
     // The script cannot import settings.ts, so it duplicates the key and the version. This
