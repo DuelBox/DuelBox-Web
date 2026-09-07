@@ -129,8 +129,7 @@ const BUDGET = JSON.parse(readFileSync(join(ROOT, 'size-budget.json'), 'utf8'));
 // visitor never downloads by arriving at this site, fetched only when someone opens that one
 // embed elsewhere, so it hosts the same PlaySurface machinery and belongs off the shell number
 // exactly as the comment below always said the next one would.
-const isPostChoiceRoute = (route) =>
-  route.startsWith('/play/') || route.startsWith('/embed/');
+const isPostChoiceRoute = (route) => route.startsWith('/play/') || route.startsWith('/embed/');
 
 function walk(dir) {
   const found = [];
