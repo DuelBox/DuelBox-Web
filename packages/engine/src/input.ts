@@ -194,34 +194,58 @@ function copyBinding(binding: Readonly<KeyBinding>): KeyBinding {
 }
 
 /**
- * A key may drive exactly one slot of one seat. Two seats sharing a code would let
- * one player move the other, and one seat using a code twice would leave the second
- * slot stuck down after a key-up. Both are rejected before anything is stored.
+ * Every reason `binding` (for `seat`) cannot be used against `other`, in the order the
+ * checks run — cross-seat collisions first, then a seat colliding with itself. An empty
+ * array means the binding is legal.
+ *
+ * A key may drive exactly one slot of one seat. Two seats sharing a code would let one
+ * player move the other, and one seat using a code twice would leave the second slot stuck
+ * down after a key-up. Exported so a rebinding UI can show a conflict *before* the player
+ * commits it (#129) rather than only catching the throw {@link validateBinding} raises — one
+ * source of truth for both paths.
+ */
+export function bindingConflicts(
+  seat: SeatId,
+  binding: Readonly<KeyBinding>,
+  other: Readonly<KeyBinding>,
+): string[] {
+  const conflicts: string[] = [];
+  for (const slot of KEY_SLOTS) {
+    const code = binding[slot];
+    for (const otherSlot of KEY_SLOTS) {
+      if (other[otherSlot] === code) {
+        conflicts.push(
+          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
+        );
+      }
+    }
+  }
+  for (let i = 0; i < KEY_SLOTS.length; i += 1) {
+    for (let j = i + 1; j < KEY_SLOTS.length; j += 1) {
+      const slot = KEY_SLOTS[i];
+      const otherSlot = KEY_SLOTS[j];
+      if (slot !== undefined && otherSlot !== undefined && binding[slot] === binding[otherSlot]) {
+        conflicts.push(
+          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
+        );
+      }
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Throws on the first conflict {@link bindingConflicts} finds, naming the key. Both are
+ * rejected before anything is stored, so a rejected binding leaves the manager untouched.
  */
 function validateBinding(
   seat: SeatId,
   binding: Readonly<KeyBinding>,
   other: Readonly<KeyBinding>,
 ): void {
-  for (const slot of KEY_SLOTS) {
-    const code = binding[slot];
-    for (const otherSlot of KEY_SLOTS) {
-      if (other[otherSlot] === code) {
-        throw new Error(
-          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
-        );
-      }
-    }
-  }
-  for (const slot of KEY_SLOTS) {
-    for (const otherSlot of KEY_SLOTS) {
-      if (slot !== otherSlot && binding[slot] === binding[otherSlot]) {
-        throw new Error(
-          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
-        );
-      }
-    }
-  }
+  const conflicts = bindingConflicts(seat, binding, other);
+  const first = conflicts[0];
+  if (first !== undefined) throw new Error(first);
 }
 
 /** Live hardware state for one seat. Not exported: games read SeatInputState instead. */

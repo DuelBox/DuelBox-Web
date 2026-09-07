@@ -105,6 +105,7 @@ export {
   scalarEnvelopeFor,
   quantiseScalar,
   DEFAULT_BINDINGS,
+  bindingConflicts,
 } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 
