@@ -22,6 +22,7 @@ import {
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
+  createPresentationToggle,
   isSimulating,
   type Game,
   type GameContext,
@@ -193,10 +194,19 @@ export function GameHost({
     const input: InputManager | InputRecorder = recorder ?? manager;
 
     gameRef.current = game;
+    // The presentation is read through a getter over this mutable, not baked in, so it can be
+    // flipped live by the dev toggle below without rebuilding the match (#1863). Switching it
+    // mid-match cannot disturb the simulation — presentation-parity.test.ts proves every game
+    // steps the identical trace across a switch — so this is safe; it only changes what is
+    // drawn. In production the toggle is stripped, so `livePresentation` never changes and this
+    // is exactly the fixed prop it used to be.
+    let livePresentation = presentation;
     const gameContext: GameContext = {
       manifest,
       rng: new Rng(seed),
-      presentation,
+      get presentation() {
+        return livePresentation;
+      },
       localSeat,
       openingSeat,
       // Read here rather than through the hook, and the difference matters: a game is
@@ -376,6 +386,11 @@ export function GameHost({
     let debugFrames = 0;
     let debugCancelled = false;
     let stopDebugOverlay: (() => void) | undefined;
+    // Same shape and same fate as the debug bindings above: a `let` that survives the bundler
+    // and then goes, because once the production build folds `process.env.NODE_ENV !==
+    // 'production'` to `false` nothing writes it and the minifier drops it. It carries the
+    // dev-only presentation toggle's teardown (#1863).
+    let stopPresentationToggle: (() => void) | undefined;
 
     const loop = new FixedLoop({
       update(dt) {
@@ -497,6 +512,27 @@ export function GameHost({
       }
     }
 
+    /**
+     * A development-only presentation toggle (#1863). Press F2 to flip the active presentation
+     * live and see a game's two layouts on one screen without a second device.
+     *
+     * Stripped from production by the same build-time flag as the debug overlay: webpack folds
+     * `process.env.NODE_ENV !== 'production'` to `false` and deletes the block, so no toggle,
+     * no key listener and no flip reach a player. The flip only changes what is drawn — the
+     * context reads `livePresentation` through a getter and presentation-parity proves a
+     * mid-match switch never disturbs the simulation — so it is safe to leave in dev.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      const toggle = createPresentationToggle(livePresentation, true);
+      const onPresentationKey = (event: KeyboardEvent): void => {
+        if (event.code !== 'F2') return;
+        event.preventDefault();
+        livePresentation = toggle.toggle();
+      };
+      globalThis.addEventListener('keydown', onPresentationKey);
+      stopPresentationToggle = () => globalThis.removeEventListener('keydown', onPresentationKey);
+    }
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.
@@ -509,6 +545,7 @@ export function GameHost({
       if (process.env.NODE_ENV !== 'production') {
         debugCancelled = true;
         stopDebugOverlay?.();
+        stopPresentationToggle?.();
       }
       if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;

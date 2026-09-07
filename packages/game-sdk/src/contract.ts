@@ -7,6 +7,7 @@ import type {
   SeatInputView,
 } from '@duelbox/engine';
 import type { GameManifest } from './manifest.js';
+import type { GameLayout, LayoutContext } from './layout.js';
 
 /**
  * The contract every game implements. The shell loads, runs, pauses, scores and unloads
@@ -88,6 +89,16 @@ export interface Game {
    * answers this never draws its own turn banner — the shell owns that, once.
    */
   getActiveSeat?(): SeatId | null;
+  /**
+   * Where the play area and control zones sit, for the SDK to place (#1863). Optional and
+   * opt-in: a game that omits it keeps placing its own geometry exactly as before, and the
+   * SDK falls back to the whole-box {@link import('./layout.js').defaultLayout}. A game that
+   * implements it declares its regions once, in logical units, and lets `placeLayout` decide
+   * where each lands and which way it faces per presentation — so it supports both without one
+   * line branching on the device (rule 10). Called for placement only; it is not simulation
+   * and must not read anything the two presentations are required to share.
+   */
+  describeLayout?(context: LayoutContext): GameLayout;
   /** Release every listener, timer and buffer. The shell asserts no heap growth. */
   destroy(): void;
 }

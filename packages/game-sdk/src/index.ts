@@ -24,6 +24,27 @@ export type {
 } from './contract.js';
 
 export {
+  defaultLayout,
+  resolveLayout,
+  placeLayout,
+  mirrorRect,
+} from './layout.js';
+export type {
+  LayoutRect,
+  ControlRole,
+  ControlZone,
+  HudSlot,
+  GameLayout,
+  LayoutContext,
+  LayoutAware,
+  PlacedZone,
+  PlacedLayout,
+} from './layout.js';
+
+export { createPresentationToggle, otherPresentation } from './presentation-toggle.js';
+export type { PresentationToggle } from './presentation-toggle.js';
+
+export {
   reduce,
   canSend,
   legalEvents,
