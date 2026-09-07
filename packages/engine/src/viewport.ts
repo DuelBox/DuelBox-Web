@@ -193,3 +193,53 @@ export function negotiateSharedLogical(
 
   return { width: a.width * scale, height: a.height * scale };
 }
+
+/** One device's screen, for {@link negotiateSharedViewport}. Device-independent CSS pixels. */
+export interface DeviceScreen {
+  readonly logical: { width: number; height: number };
+  readonly screenWidth: number;
+  readonly screenHeight: number;
+  readonly insets?: SafeAreaInsets;
+}
+
+/**
+ * The shared logical box a match adopts, and one device's letterbox onto it.
+ *
+ * `logical` is the negotiated play area — the *same object of dimensions* on both devices —
+ * and `view` is how this particular screen letterboxes it. The pair is what the host needs:
+ * it renders and hit-tests through `view`, and it reads coordinates in `logical`.
+ */
+export interface SharedViewport {
+  readonly logical: { width: number; height: number };
+  readonly view: Viewport;
+}
+
+/**
+ * The match-start negotiation of the one play area both players share (CLAUDE.md rule 9).
+ *
+ * The two devices in a remote match must never see different amounts of the world, and the
+ * only honest way to guarantee it is to fix **one** logical box before either has drawn a
+ * frame and letterbox both screens to it. This is where that box is decided.
+ *
+ * The box is `negotiateSharedLogical(local.logical, peerLogical)`: the largest box, in the
+ * game's own aspect, that fits inside both devices' declared play areas. Because both devices
+ * are running the same game they declare the same box, so the negotiation returns that box
+ * unchanged — the point is that it is *decided by agreement between the two declarations*
+ * rather than assumed per device, and it stays independent of either screen's shape or size
+ * (the issue's "independent of either device's screen"). Were the two ever handed different
+ * boxes, the clamp is what stops the larger one showing a strip of world the smaller cannot —
+ * the same disagreement `LockstepSession`'s config fingerprint refuses outright.
+ *
+ * `view` then letterboxes this device's screen to that box: surplus screen becomes bars, and
+ * a bigger or wider screen gets the identical field of view as a smaller one, with the extra
+ * space free for chrome. `shared-viewport.test.ts` proves the end-to-end property — every
+ * pair of real devices sees the identical set of world points once negotiated.
+ */
+export function negotiateSharedViewport(
+  local: DeviceScreen,
+  peerLogical: { width: number; height: number },
+): SharedViewport {
+  const logical = negotiateSharedLogical(local.logical, peerLogical);
+  const view = fitViewport(logical, local.screenWidth, local.screenHeight, local.insets ?? NO_INSETS);
+  return { logical, view };
+}

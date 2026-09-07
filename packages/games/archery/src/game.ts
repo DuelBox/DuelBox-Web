@@ -228,14 +228,14 @@ export class ArcheryGame implements Game {
     this.#flightSteps = 0;
     this.#settleSteps = 0;
     this.#beginTurn();
-    this.#flip.snap(this.#shouldRotate());
+    this.#flip.snap(this.#facesActiveSeat());
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
-    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.retarget(this.#facesActiveSeat());
     this.#flip.step(fixedDeltaSeconds);
     if (this.#matchWinner !== null) return;
 
@@ -287,7 +287,7 @@ export class ArcheryGame implements Game {
     // finger held still has no drag to read and a relative scheme would go dead.
     const pointer = seatInput.pointer;
     if (pointer !== null) {
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#viewRotated());
       this.#aim.x = clamp((this.#pointerWorld.x - PAD_CX) / PAD_HALF_W, -1, 1) * AIM_REACH;
       this.#aim.y = clamp((this.#pointerWorld.y - PAD_CY) / PAD_HALF_H, -1, 1) * AIM_REACH;
     }
@@ -319,7 +319,7 @@ export class ArcheryGame implements Game {
   render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_SKY);
-    renderer.pushRotation(this.#flip.angle);
+    renderer.pushRotation(this.#presentation === 'single-seat' ? 0 : this.#flip.angle);
     this.#drawField(renderer);
     this.#drawTarget(renderer);
     this.#drawStuck(renderer);
@@ -544,9 +544,27 @@ export class ArcheryGame implements Game {
     this.#beginTurn();
   }
 
-  /** The orientation the field should be in, which the flip tweens towards. */
-  #shouldRotate(): boolean {
-    return seatRotated(this.#active, this.#presentation, this.#localSeat);
+  /**
+   * Whether the board turns to face the seat to move.
+   *
+   * Presentation-independent on purpose. The turn handover — the field settling to face
+   * whoever now has the shot, and the input it suppresses while it settles — is simulation,
+   * not decoration: the shot clock and the bot both sit behind `acceptsInput`, so it must
+   * cost the same steps in both presentations or the two step different matches (CLAUDE.md
+   * rule 8, enforced by presentation-parity.test.ts). Single-seat spends those steps too; it
+   * simply does not draw the field turning (docs/presentation.md), which is {@link #viewRotated}'s
+   * job and this method's non-concern.
+   */
+  #facesActiveSeat(): boolean {
+    return seatRotated(this.#active, 'shared-screen', this.#localSeat);
+  }
+
+  /**
+   * Whether the picture and the pointer mapping are turned. Never in single-seat, where the
+   * local player owns the whole viewport upright even while the handover flip runs underneath.
+   */
+  #viewRotated(): boolean {
+    return this.#presentation === 'shared-screen' && this.#flip.rotated;
   }
 
   // -------------------------------------------------------------------------

@@ -244,6 +244,12 @@ function shoot(
   rotated = false,
 ): void {
   input.clear();
+  // Wait out the turn handover before drawing. Single-seat now spends the same settle steps
+  // as a shared screen when the board hands over to the far seat (#1990 parity fix) — it just
+  // does not draw the rotation — so a draw pressed mid-handover would be swallowed. The flip
+  // begins on the first step of the new turn, so step once to let it start, then wait it out.
+  step(game, input, 1);
+  for (let i = 0; i < WAIT_CAP && !game.acceptsInput; i += 1) step(game, input);
   touch(input, seat, angle, power, rotated);
   step(game, input, holdFrames);
   lift(input, seat);

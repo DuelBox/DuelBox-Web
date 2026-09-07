@@ -1287,7 +1287,13 @@ describe('two devices step the same match', () => {
     expect(shared.length).toBeGreaterThan(50);
   });
 
-  it('takes longer on a shared screen than alone, and only because of the turning', () => {
+  it('takes exactly as long on a shared screen as alone, turn handover included', () => {
+    // This used to assert the shared screen took *longer*, because the board only turned
+    // there and single-seat skipped the 0.36 s. That was the presentation-parity divergence
+    // (#1990): the turn handover is simulation — the shot clock and the bot both sit behind
+    // it — so a presentation that skips it steps a different match (CLAUDE.md rule 8). Both
+    // now spend the handover; single-seat just does not draw the board turning. The two
+    // matches are step-for-step identical, so they end on the very same step.
     const shared = started(88, { p1: 'hard', p2: 'hard' });
     const single = started(88, { p1: 'hard', p2: 'hard', presentation: 'single-seat' });
     const length = (game: SoccerPoolGame): number => {
@@ -1300,7 +1306,7 @@ describe('two devices step the same match', () => {
     const withFlip = length(shared);
     const without = length(single);
     expect(without).toBeGreaterThan(0);
-    expect(withFlip).toBeGreaterThan(without);
+    expect(withFlip).toBe(without);
     expect(shared.match.shots).toBe(single.match.shots);
   });
 

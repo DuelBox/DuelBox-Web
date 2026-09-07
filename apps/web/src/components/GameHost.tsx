@@ -12,17 +12,20 @@ import {
   RunLoop,
   browserClock,
   clampDevicePixelRatio,
-  fitViewport,
+  negotiateSharedLogical,
+  negotiateSharedViewport,
   NO_INSETS,
   viewportToLogical,
   vec2,
   zoneSplitFor,
   type Presentation,
+  type LogicalSize,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
   guard,
+  createPresentationToggle,
   isSimulating,
   type Game,
   type GameContext,
@@ -55,6 +58,16 @@ export interface GameHostProps {
   /** Which seat this device plays. Only meaningful in single-seat presentation. */
   localSeat?: SeatId;
   presentation?: 'shared-screen' | 'single-seat';
+  /**
+   * The logical play area the *other* device declared, for a remote match (#1862).
+   *
+   * At match start the host negotiates one shared logical viewport both devices letterbox to,
+   * so neither player ever sees more of the play area than the other (CLAUDE.md rule 9). For
+   * a matched pair this equals the game's own box and the negotiation returns it unchanged;
+   * the point is that the box both devices draw is *agreed*, not assumed per screen. Omitted
+   * for local play, where there is no second device and the game's box is the shared box.
+   */
+  peerLogical?: LogicalSize;
   /** Which seat moves first this round. The match machine decides it; the host relays it. */
   openingSeat?: SeatId;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
@@ -119,6 +132,7 @@ export function GameHost({
   localSeat = 'p1',
   presentation = 'shared-screen',
   openingSeat = 'p1',
+  peerLogical,
   botDifficulty,
   onTick,
   onScore,
@@ -156,7 +170,16 @@ export function GameHost({
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const logical = manifest.logical;
+    // The one play area both players share, negotiated once before the first frame (rule 9,
+    // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
+    // box by agreement between the two devices' declarations rather than letting each device
+    // letterbox its own screen independently. For a matched pair (both on the same game) it
+    // is the game's own box; a mismatch is clamped so neither device shows a strip of world
+    // the other cannot, the same disagreement LockstepSession refuses. Everything below draws
+    // and hit-tests in this box; the simulation runs in `manifest.logical`, and the two are
+    // equal for any pair the shell would actually start.
+    const peerBox = peerLogical ?? manifest.logical;
+    const logical = negotiateSharedLogical(manifest.logical, peerBox);
     const renderer = new Canvas2DRenderer(context, logical);
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
@@ -208,10 +231,19 @@ export function GameHost({
     const input: InputManager | InputRecorder = recorder ?? manager;
 
     gameRef.current = game;
+    // The presentation is read through a getter over this mutable, not baked in, so it can be
+    // flipped live by the dev toggle below without rebuilding the match (#1863). Switching it
+    // mid-match cannot disturb the simulation — presentation-parity.test.ts proves every game
+    // steps the identical trace across a switch — so this is safe; it only changes what is
+    // drawn. In production the toggle is stripped, so `livePresentation` never changes and this
+    // is exactly the fixed prop it used to be.
+    let livePresentation = presentation;
     const gameContext: GameContext = {
       manifest,
       rng: new Rng(seed),
-      presentation,
+      get presentation() {
+        return livePresentation;
+      },
       localSeat,
       openingSeat,
       // Read here rather than through the hook, and the difference matters: a game is
@@ -228,7 +260,13 @@ export function GameHost({
     // shell so this canvas is already inside the safe region by the time it is measured.
     // Subtracting the root insets here as well shrank the play area twice over on a
     // notched phone, and cost a getComputedStyle on every resize to do it.
-    let view = fitViewport(logical, canvas.clientWidth, canvas.clientHeight, NO_INSETS);
+    // Letterbox this device to the negotiated shared box. `negotiateSharedViewport` is the
+    // match-path seam: it re-affirms the shared box (idempotent — `logical` is already it) and
+    // fits this screen to it, so a wider or taller screen gets bars rather than more world.
+    let view = negotiateSharedViewport(
+      { logical, screenWidth: canvas.clientWidth, screenHeight: canvas.clientHeight, insets: NO_INSETS },
+      peerBox,
+    ).view;
     const scratch = vec2();
     let lastWidth = -1;
     let lastHeight = -1;
@@ -252,7 +290,10 @@ export function GameHost({
       el.height = Math.round(cssHeight * dpr);
       // Draw in CSS pixels; the backing store carries the device ratio.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      view = fitViewport(logical, cssWidth, cssHeight, NO_INSETS);
+      view = negotiateSharedViewport(
+        { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
+        peerBox,
+      ).view;
       renderer.setViewport(view);
     }
     resize(canvas, context);
@@ -382,6 +423,11 @@ export function GameHost({
     let debugFrames = 0;
     let debugCancelled = false;
     let stopDebugOverlay: (() => void) | undefined;
+    // Same shape and same fate as the debug bindings above: a `let` that survives the bundler
+    // and then goes, because once the production build folds `process.env.NODE_ENV !==
+    // 'production'` to `false` nothing writes it and the minifier drops it. It carries the
+    // dev-only presentation toggle's teardown (#1863).
+    let stopPresentationToggle: (() => void) | undefined;
 
     /**
      * A throw escaped game code (#151). Stop the loop and report it once.
@@ -529,6 +575,27 @@ export function GameHost({
       }
     }
 
+    /**
+     * A development-only presentation toggle (#1863). Press F2 to flip the active presentation
+     * live and see a game's two layouts on one screen without a second device.
+     *
+     * Stripped from production by the same build-time flag as the debug overlay: webpack folds
+     * `process.env.NODE_ENV !== 'production'` to `false` and deletes the block, so no toggle,
+     * no key listener and no flip reach a player. The flip only changes what is drawn — the
+     * context reads `livePresentation` through a getter and presentation-parity proves a
+     * mid-match switch never disturbs the simulation — so it is safe to leave in dev.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      const toggle = createPresentationToggle(livePresentation, true);
+      const onPresentationKey = (event: KeyboardEvent): void => {
+        if (event.code !== 'F2') return;
+        event.preventDefault();
+        livePresentation = toggle.toggle();
+      };
+      globalThis.addEventListener('keydown', onPresentationKey);
+      stopPresentationToggle = () => globalThis.removeEventListener('keydown', onPresentationKey);
+    }
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.
@@ -541,6 +608,7 @@ export function GameHost({
       if (process.env.NODE_ENV !== 'production') {
         debugCancelled = true;
         stopDebugOverlay?.();
+        stopPresentationToggle?.();
       }
       if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;
@@ -574,6 +642,7 @@ export function GameHost({
     localSeat,
     presentation,
     openingSeat,
+    peerLogical,
     botDifficulty,
     recordTrace,
   ]);
