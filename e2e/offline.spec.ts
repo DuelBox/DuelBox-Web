@@ -392,9 +392,11 @@ test.describe('with the network gone before the page even opens', () => {
     try {
       await expect(page.locator('html[data-net="offline"]')).toBeAttached();
       await expect(page.getByRole('status').filter({ hasText: /Offline/ })).toBeVisible();
-      // The game that is here is marked as here. Rule 7: it is a word, not a shade.
+      // The game that is here is marked as here. Rule 7: it is a word, not a shade. A played
+      // game now appears twice — once in the recently-played rail and once in the grid — and
+      // both carry the same annotation, so the first is enough to prove it is marked here.
       await expect(
-        page.locator('a[href="/play/tic-tac-toe/"][data-offline-ready="1"]'),
+        page.locator('a[href="/play/tic-tac-toe/"][data-offline-ready="1"]').first(),
       ).toBeAttached();
       // And one that has never been opened is marked as not here, rather than left blank.
       await expect(page.locator('a[href="/play/sudoku/"][data-offline-ready="0"]')).toBeAttached();
