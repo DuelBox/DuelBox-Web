@@ -118,6 +118,16 @@ export type {
   GainNodeLike,
 } from './audio.js';
 
+export { SOUND_EVENTS, soundEventSpec } from './sound-events.js';
+export type {
+  SoundEvent,
+  SoundEventSpec,
+  SoundOwner,
+  ShellSoundEvent,
+  GameSoundEvent,
+  GameSoundBus,
+} from './sound-events.js';
+
 export {
   LoopbackTransport,
   loopbackPair,
