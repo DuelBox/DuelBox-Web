@@ -110,11 +110,11 @@ export default function PrivacyPage() {
         </p>
         <p>
           Once a page has loaded, playing it needs nothing further from the network: the game, the
-          bot and the physics all run on your device. Your browser also keeps a copy of the site
-          itself, and of each game as you open it, so after the first visit it opens and plays with
-          no connection at all — including a game you played before, on a device that has been
-          switched off since. A game you have never opened is not saved yet and will say so rather
-          than pretend. Clearing your browser&apos;s site data removes those copies.
+          bot and the physics all run on your device. Your browser also keeps a copy of the site and
+          of each game you open, so after the first visit the whole thing works with no connection
+          at all — it reopens and plays, including a game you played before on a device that has
+          been switched off since. A game you have never opened is not saved yet and will say so
+          rather than pretend. Clearing your browser&apos;s site data removes those copies.
         </p>
 
         <h2>Children</h2>

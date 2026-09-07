@@ -20,8 +20,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const web = join(here, '..');
 const privacy = readFileSync(join(web, 'app', 'privacy', 'page.tsx'), 'utf8');
 
-/** The page's prose, with the file's own explanatory comments taken out. */
-const prose = privacy.replace(/\/\*[\s\S]*?\*\//g, '');
+/**
+ * The page's prose: the file's own explanatory comments taken out, and whitespace collapsed
+ * the way the rendered HTML collapses it — so a phrase the browser shows on one line is one
+ * string here too, rather than one the source happened to wrap across an indented newline.
+ */
+const prose = privacy.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
 
 function sources(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {

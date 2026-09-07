@@ -473,7 +473,16 @@ describe('the bot', () => {
     const games = 6;
     for (let i = 0; i < games; i += 1) {
       const hardIsP1 = i % 2 === 0;
-      const finished = playOut(hardIsP1 ? 'hard' : 'easy', hardIsP1 ? 'easy' : 'hard', 500 + i);
+      // 600 plies, the same cap `always terminates` uses, not the 300 default: the covariant
+      // bot and the forty-move rule make an even game run longer, and at 300 two of these six
+      // were cut off mid-progress (one of them a hard win at ply 406) and counted as no result.
+      // The rule guarantees a terminal state well inside 600, so this measures decided games.
+      const finished = playOut(
+        hardIsP1 ? 'hard' : 'easy',
+        hardIsP1 ? 'easy' : 'hard',
+        500 + i,
+        600,
+      );
       const winner = winnerOf(finished);
       if (winner === (hardIsP1 ? 'p1' : 'p2')) hardWins += 1;
     }

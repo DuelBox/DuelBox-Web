@@ -290,7 +290,7 @@ test.describe('with the network gone before the page even opens', () => {
     await page.goto(`/play/${slug}/`);
     await controlled(page);
     await page.reload();
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await expect(page.locator('canvas')).toBeVisible();
   }
 
@@ -312,7 +312,7 @@ test.describe('with the network gone before the page even opens', () => {
     // switched on — it stays `true`, and the indicator reads exactly that flag. A real
     // browser with no connection reports `false`. The indicator is covered by the catalogue
     // test below, which goes offline while a page is open and so gets the `offline` event.
-    await cold.getByRole('button', { name: 'Play against Bo' }).click();
+    await cold.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await expect(cold.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
       timeout: 10_000,
     });
@@ -362,7 +362,7 @@ test.describe('with the network gone before the page even opens', () => {
     });
 
     await second.goto('/play/tic-tac-toe/');
-    await second.getByRole('button', { name: 'Play against Bo' }).click();
+    await second.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await expect(second.locator('canvas')).toBeVisible();
 
     expect(fromNetwork, 'the second play of a game must ask the network for nothing').toEqual([]);
