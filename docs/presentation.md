@@ -18,7 +18,7 @@ is not, and building it that way produces a game that is unfair, unreadable, or 
 A shared-screen layout divides one viewport between two people who are looking at it from
 opposite sides. A single-seat layout gives one person the whole viewport in their own
 orientation. Those are different placements of the same objects, not a crop of one
-another. Bolt the second on later and each of the 107 games grows its own private answer
+another. Bolt the second on later and each of the 108 games grows its own private answer
 to a question the shell should have answered once.
 
 ## What differs, exactly

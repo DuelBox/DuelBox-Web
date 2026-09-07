@@ -73,6 +73,34 @@ export interface Renderer {
    */
   pushRotation(radians: number): void;
   popSeatRotation(): void;
+  /**
+   * Displace everything drawn until the matching {@link Renderer.popShake} by an offset in
+   * logical units — screen shake, and nothing else (#114). Under reduced motion the
+   * displacement is dropped and the calls still balance, exactly as
+   * {@link Renderer.pushRotation} still saves and restores when it snaps a board to rest.
+   *
+   * Reach it through `applyShake`/`releaseShake` in `juice.ts` rather than calling it here:
+   * this pair is optional, and those two are where the optionality is dealt with once.
+   */
+  pushShake?(offsetX: number, offsetY: number): void;
+  popShake?(): void;
+  /**
+   * Whether the player has asked their system for reduced motion, as of this frame.
+   *
+   * The live answer, not a snapshot. `GameContext.reducedMotion` is read once when a game is
+   * handed its context and can never be corrected, so a player who turns the preference on
+   * halfway through a match is not heard until the next one; the host updates this one
+   * through `setReducedMotion` whenever the media query changes. It is also the safer of the
+   * two by construction: a renderer only exists inside `render()`, so a preference read from
+   * here is unreachable from `update()` and cannot get into the simulation.
+   *
+   * Optional for the reason `GameContext.reducedMotion` is optional: this interface is
+   * implemented by hand in more than fifty games' test doubles, and a required member is a
+   * breaking change to all of them at once. Absent means full motion, which is what a device
+   * with no preference set reports. It satisfies `MotionPreference`, so it can be handed
+   * straight to `Tween.valueFor`, `Flash.levelFor` and `HitStop.holdingFor`.
+   */
+  readonly reducedMotion?: boolean;
 }
 
 /**
@@ -162,6 +190,16 @@ export class Canvas2DRenderer implements Renderer {
   #offsetX = 0;
   #offsetY = 0;
   #rotationDepth = 0;
+  /**
+   * Outstanding pushShake calls, counted apart from the rotations.
+   *
+   * One counter would unwind a leaked frame just as correctly — both pairs are a save and a
+   * restore, and the context stack does not care which of them opened a level. Two exist for
+   * the diagnostics: a shake left open used to be reported as an unbalanced
+   * `pushSeatRotation`, which sends the author to the seat-flip code, and that code is
+   * balanced. The counter is cheap; the wrong noun costs somebody an afternoon.
+   */
+  #shakeDepth = 0;
   #reducedMotion = false;
   #inFrame = false;
 
@@ -181,9 +219,25 @@ export class Canvas2DRenderer implements Renderer {
     this.#centreY = logical.height / 2;
   }
 
-  /** Outstanding pushSeatRotation calls. Diagnostic; zero everywhere a frame is balanced. */
+  /**
+   * Outstanding pushSeatRotation calls, and nothing else. Diagnostic; zero everywhere a
+   * frame is balanced.
+   *
+   * A shake is not counted here even though it opens the same kind of level, because a
+   * debug overlay reading this is asking which seat the world is turned for.
+   */
   get seatRotationDepth(): number {
     return this.#rotationDepth;
+  }
+
+  /** Outstanding pushShake calls. The other half of {@link seatRotationDepth}. */
+  get shakeDepth(): number {
+    return this.#shakeDepth;
+  }
+
+  /** The live preference, for the juice primitives that are levels rather than transforms. */
+  get reducedMotion(): boolean {
+    return this.#reducedMotion;
   }
 
   /**
@@ -239,26 +293,39 @@ export class Canvas2DRenderer implements Renderer {
   /**
    * Close the frame, restoring the context to exactly the state beginFrame() found.
    *
-   * A seat rotation the game left open is unwound first: a leaked save() would corrupt
-   * every later frame rather than only this one, so the stack is repaired and then the
-   * bug is reported.
+   * A seat rotation or a shake the game left open is unwound first: a leaked save() would
+   * corrupt every later frame rather than only this one, so the stack is repaired and then
+   * the bug is reported.
    *
-   * @throws Error if no frame is open, or if seat rotations were left unbalanced.
+   * The report names the pair that is actually unbalanced. It used to say
+   * `pushSeatRotation` whichever had leaked, because both counted on one depth, and a
+   * leaked shake is easy to write in exactly the shape `juice.ts` recommends — read
+   * `HitStop` at the top of `render()` and return, having already applied the shake. The
+   * author was then sent to the seat-flip code, which was balanced.
+   *
+   * @throws Error if no frame is open, or if either pair was left unbalanced.
    */
   endFrame(): void {
     if (!this.#inFrame) {
       throw new Error('endFrame called without a matching beginFrame');
     }
     const ctx = this.#context;
-    const leaked = this.#rotationDepth;
-    for (let i = 0; i < leaked; i += 1) {
+    const rotations = this.#rotationDepth;
+    const shakes = this.#shakeDepth;
+    for (let i = 0; i < rotations + shakes; i += 1) {
       ctx.restore();
     }
     this.#rotationDepth = 0;
+    this.#shakeDepth = 0;
     ctx.restore();
     this.#inFrame = false;
-    if (leaked !== 0) {
-      throw new Error(`endFrame with ${leaked} unbalanced pushSeatRotation call(s)`);
+    if (rotations !== 0 || shakes !== 0) {
+      // Built from whichever leaked, so the message never names a method the game did not
+      // call. Both, when both did.
+      const unbalanced: string[] = [];
+      if (rotations !== 0) unbalanced.push(`${rotations} unbalanced pushSeatRotation call(s)`);
+      if (shakes !== 0) unbalanced.push(`${shakes} unbalanced pushShake call(s)`);
+      throw new Error(`endFrame with ${unbalanced.join(' and ')}`);
     }
   }
 
@@ -397,6 +464,56 @@ export class Canvas2DRenderer implements Renderer {
     // settled board must produce the same calls it always did.
     if (fit < 1 - 1e-9) ctx.scale(fit, fit);
     ctx.translate(-this.#centreX, -this.#centreY);
+  }
+
+  /**
+   * Shift the world for a screen shake, in logical units.
+   *
+   * Under reduced motion the offset is dropped and the world is drawn where it belongs. The
+   * switch is here rather than on `Shake` for the reason `flip.ts` gives at length: this is
+   * the one place that hears the preference change mid-match, so a board and a shake stop
+   * moving at the same instant instead of one of them waiting for the next match.
+   *
+   * The frame is clipped to the logical box, so a shake moves the play area within its
+   * letterbox rather than spilling out over it — which matters beyond tidiness, because the
+   * letterbox is where rule 9's "neither player sees more of the play area than the other"
+   * is enforced. Call it after `clear()` so the background stays put and the world moves
+   * against it.
+   *
+   * @throws RangeError if either offset is not a finite number.
+   */
+  pushShake(offsetX: number, offsetY: number): void {
+    if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
+      throw new RangeError(
+        `shake offset must be finite logical units, received ${String(offsetX)}, ${String(offsetY)}`,
+      );
+    }
+    const ctx = this.#context;
+    // Saved whether or not anything moves, so the pair balances on every device and the
+    // caller never branches on the preference.
+    ctx.save();
+    this.#shakeDepth += 1;
+    if (this.#reducedMotion) return;
+    if (offsetX === 0 && offsetY === 0) return;
+    ctx.translate(offsetX, offsetY);
+  }
+
+  /**
+   * Undo the most recent {@link Canvas2DRenderer.pushShake}.
+   *
+   * The same context stack the rotations use — both are a save and a restore — but its own
+   * depth, so that a leak is reported against the pair that leaked. It used to delegate
+   * here, which meant a `releaseShake` with no `applyShake` was answered by a sentence
+   * naming two methods the game had never called.
+   *
+   * @throws Error if there is no matching push; the context stack is left untouched.
+   */
+  popShake(): void {
+    if (this.#shakeDepth === 0) {
+      throw new Error('popShake called without a matching pushShake');
+    }
+    this.#shakeDepth -= 1;
+    this.#context.restore();
   }
 
   /** @throws Error if there is no matching push; the context stack is left untouched. */

@@ -1,7 +1,11 @@
 # DuelBox
 
 A browser collection of two-player mini-games played by two people on one device, in one
-tab. No accounts, no install, offline-capable.
+tab. No accounts and no install. Once a page has loaded, playing it needs no network at
+all — the simulation, the bots and the physics are all on your device, and
+`e2e/offline.spec.ts` blocks every request after load and plays a bot match through to
+prove it. Coming back to it does need one: there is no service worker, so nothing is
+cached for a second visit (#2445).
 
 ## Layout
 
