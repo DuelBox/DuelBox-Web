@@ -80,7 +80,7 @@
   padding: 2px 8px;
   border-radius: var(--db-radius-pill);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font-family: var(--db-font-mono);
   font-size: 10px;
   font-weight: 700;

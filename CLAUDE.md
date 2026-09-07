@@ -175,6 +175,43 @@ files the same batch had open. What generalises is not any of the three. It is t
 written beside the thing it guards is tested against the defect that prompted it and nothing
 else, so **the sentence to distrust is the one in the docstring, not the one in the code**.
 
+The **eleventh** is rule 5 above, and it is the first entry that was never a guard at all —
+only a sentence. "No per-frame allocations in engine or game `update()`" had been believed
+since it was written and had never once been measured, and it was false in four places.
+`obbSegment` cost 125 bytes a call, `sweptCircleAabb` 94, `obbObb` 119, `aabbSegment` 95,
+`aabbObb` 40, and `InputManager.beginStep` 16 bytes on every step of every match in the
+collection, since every game reads its controls through it. None of it was visible to a
+reader, and that is the part worth keeping: the source allocates nothing, and what allocates
+is the *generated code* — a floating-point value crossing a call the optimiser has declined
+to inline cannot travel as a raw double, so V8 materialises it on the heap first. Inlining
+depends on the size of the calling function, which is why the same helper was free from one
+caller and expensive from another, and why reading the file could not have found it.
+`packages/engine/src/allocation.test.ts` measures all 44 paths on every push, and it proves
+it can see a single 16-byte allocation before it asserts the absence of one — its first
+16-byte control read 0.07 bytes and would have let everything below it pass. Its second half
+is not closed: a game's `update()` is its own compilation unit with its own inlining budget,
+a plausible two-puck one costs 64 bytes a step with every engine call inside it free, and no
+game here measures itself. The benchmark's header says so in as many words rather than
+implying a coverage it does not have.
+
+The **twelfth** was found while reviewing the batch that added the eleventh, and it is the
+shortest story here: "CSS modules use the `var(--db-*)` tokens; no raw hex" was enforced by
+nothing whatsoever. `tokens.test.ts` checked that the TS and CSS palettes agree and that
+every `var()` names a token that exists — both real checks, neither of them this one — and a
+stylesheet that simply declines to use `var()` walked past all four style suites in silence.
+There is no stylelint in this repository. It had already drifted to thirteen `color: #fff`
+declarations across eight stylesheets, every one of them `--db-paper` spelled a second way,
+and the cost of that habit is on the record two rules above one of them: `page.module.css`
+still carries a comment about a hand-copied `#a06f00` that shipped at 3.93:1, below AA,
+because it was a colour nobody could reach the palette from. The thirteen are now
+`var(--db-paper)` and `tokens.test.ts` scans every stylesheet but `tokens.css` itself. What
+that guard has that the tenth entry's did not is a control on real input: the scanner is run
+over `tokens.css`, which must come back with the whole palette. Watched, both halves — with
+a hex planted in a module the check named it by file and line and ignored the `#178` beside
+it, and with the comment stripper made greedy the check went green **with the plant still
+there** while the control failed on its own, which is the pass that would otherwise have
+been indistinguishable from a clean one.
+
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard

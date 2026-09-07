@@ -45,12 +45,12 @@
 
 .primary {
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   box-shadow: 0 4px 0 var(--db-brand-deep);
 }
 
 .primary:hover {
-  color: #fff;
+  color: var(--db-paper);
   background: var(--db-brand-deep);
 }
 

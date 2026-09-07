@@ -123,7 +123,7 @@ canvas {
   z-index: 100;
   padding: var(--db-space-3) var(--db-space-4);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border-radius: var(--db-radius-sm);
   font-weight: 600;
   transition: top var(--db-duration) var(--db-ease);
@@ -132,7 +132,7 @@ canvas {
 .db-skip:focus {
   /* The first thing a keyboard user reaches must not land under a notch. */
   top: max(var(--db-space-4), var(--db-safe-top));
-  color: #fff;
+  color: var(--db-paper);
 }
 
 .db-shell {

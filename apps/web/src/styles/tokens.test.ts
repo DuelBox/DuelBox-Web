@@ -127,3 +127,66 @@ describe('the design tokens', () => {
     expect(missing, `undefined token: ${missing.join(', ')}`).toEqual([]);
   });
 });
+
+/**
+ * The palette is the only place a colour is written down.
+ *
+ * "CSS modules use the `var(--db-*)` tokens; no raw hex" has been a house rule for as long
+ * as there have been house rules, and until this test it was enforced by nothing at all.
+ * The block above only checks that a `var()` names a token that exists; a stylesheet that
+ * declines to use `var()` and writes the colour out by hand walks past it, and past
+ * `breakpoints.test.ts`, `motion.test.ts` and `safe-area.test.ts` too, none of which look at
+ * colour. There is no stylelint in this repository to catch it either. It had already
+ * drifted: thirteen `color: #fff` declarations across eight stylesheets on the day this was
+ * written, every one of them the `--db-paper` white spelled a second way.
+ *
+ * That is not pedantry about spelling. A palette is only a palette while every use of it
+ * goes through it — the moment a value is copied, changing the token stops changing the
+ * page, and the copy is invisible in a diff of the file that matters. The same page already
+ * carries the scar: `page.module.css` records a hand-copied `#a06f00` that shipped at
+ * 3.93:1, below AA, because it was a colour nobody could see from the palette.
+ *
+ * `tokens.css` is the exemption and the only one, because it is the file where a colour is
+ * supposed to be a literal. It is also this guard's control: the scanner is run over it and
+ * has to come back with the whole palette, which is what stops the comment-stripping below
+ * from quietly turning the whole check into a pass over nothing.
+ */
+
+/** The palette itself, where a hex literal is the point rather than a leak. */
+const PALETTE = join(web, 'styles/tokens.css');
+
+/**
+ * Hex colours, with comments taken out first.
+ *
+ * Comments are stripped rather than filtered afterwards because this repository writes issue
+ * numbers as `#178` and `#2516`, and a scanner that could not tell those from a colour would
+ * report ten false positives on its first run and be deleted by the end of the week.
+ * Newlines are preserved so a reported line number is the line the reader will find.
+ */
+function hexColours(path: string): string[] {
+  const source = readFileSync(path, 'utf8');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  return [...code.matchAll(/#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/gi)].map((match) => {
+    const line = code.slice(0, match.index).split('\n').length;
+    return `${path.slice(web.length + 1)}:${String(line)} ${match[0]}`;
+  });
+}
+
+describe('colour lives in the palette', () => {
+  const sheets = stylesheets(web);
+
+  it('can see a hex literal at all, which is what makes the next test mean something', () => {
+    // Run against the one file that is allowed to be full of them. If the regex or the
+    // comment stripper ever stops working, this goes to nothing and says so here, rather
+    // than letting the check below pass by finding nothing anywhere.
+    expect(hexColours(PALETTE).length, 'hex literals in tokens.css').toBeGreaterThan(20);
+  });
+
+  it('and nowhere else writes one by hand', () => {
+    const raw = sheets.filter((path) => path !== PALETTE).flatMap(hexColours);
+    expect(
+      raw,
+      `write the colour as a var(--db-*) token from styles/tokens.css: ${raw.join(', ')}`,
+    ).toEqual([]);
+  });
+});

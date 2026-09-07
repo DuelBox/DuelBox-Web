@@ -92,7 +92,7 @@
 
 .primary {
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border: none;
   box-shadow: 0 4px 0 var(--db-brand-deep);
 }
@@ -112,7 +112,7 @@
   font-size: clamp(4rem, 22vmin, 9rem);
   font-weight: 700;
   line-height: 1;
-  color: #fff;
+  color: var(--db-paper);
   text-shadow: 0 4px 24px rgb(0 0 0 / 45%);
   animation: pop var(--db-duration) var(--db-ease);
 }
