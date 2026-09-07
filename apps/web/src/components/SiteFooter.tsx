@@ -32,6 +32,29 @@ export function SiteFooter() {
           <Link href="/settings/">Settings</Link>
           <Link href="/privacy/">Privacy</Link>
           <Link href="/terms/">Terms of use</Link>
+          <Link href="/attribution/">Attribution</Link>
+          <Link href="/dmca/">DMCA</Link>
+          {/*
+            Report a bug (#233): opens the GitHub new-issue form pre-selected to the bug
+            template, which already requires the game, seat, input family, device and viewport —
+            so a report arrives with the context a game bug needs.
+
+            The template's field ids (`game`, `device`, `size`) can be pre-filled from the URL:
+            `?template=bug.yml&game=<slug>&device=<userAgent>&size=<w>x<h>`. This footer is a
+            server component rendered identically on every page, so it cannot know the current
+            game slug, viewport or user-agent — those are client-only. Filling them in is a small
+            client enhancement (a `'use client'` link, or the same link placed in the pause/result
+            overlay where the slug is already known); it is intentionally left to that surface
+            rather than converting this shared footer to a client component. The static link below
+            still lands the reporter on the right form with the right required fields.
+          */}
+          <a
+            href="https://github.com/DuelBox/DuelBox-Web/issues/new?template=bug.yml"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Report a bug
+          </a>
         </nav>
         <nav className={styles.hubs} aria-label="Game categories">
           {FOOTER_HUBS.map((hub) => (

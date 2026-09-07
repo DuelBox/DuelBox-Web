@@ -35,10 +35,14 @@
     "check:names": "node scripts/check-game-names.mjs",
     "check:source-secrets": "node scripts/check-source-secrets.mjs",
     "emit:host-config": "node scripts/emit-host-config.mjs",
-    "check:headers": "node scripts/check-headers.mjs"
+    "check:headers": "node scripts/check-headers.mjs",
+    "emit:attribution": "node scripts/emit-attribution.mjs",
+    "check:attribution": "node scripts/emit-attribution.mjs --check",
+    "changeset": "changeset"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@changesets/cli": "^2.27.11",
     "@eslint/js": "^9.17.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.2",

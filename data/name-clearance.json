@@ -164,12 +164,12 @@
       "why": "Renamed from the reference name \"Guess The Person\". Rule 1 satisfied by not using it."
     },
     "hammer-hit": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Hammer Hit\" is a plain description of the activity — hitting with a hammer (a strength-tester / whack game). Ordinary words, no coined element."
     },
     "hand-slap": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Hand Slap\" is the ordinary name of the public-domain hand-slapping reaction game (played as Slaps or Red Hands) and a plain description of the physical action. Nobody owns it."
     },
     "happy-birds": {
       "status": "pending",
@@ -188,8 +188,8 @@
       "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
     },
     "knife-thrower": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Knife Thrower\" is a plain description of the activity — throwing knives at a target — a public-domain fairground skill game. No distinctive coined element."
     },
     "light-fingers": {
       "status": "pending",
@@ -216,8 +216,8 @@
       "why": "Renamed from the reference name \"Math Quiz\". Rule 1 satisfied by not using it."
     },
     "maze-paint": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Maze Paint\" is a plain description of the activity — painting or filling a maze. Ordinary words for what the game does."
     },
     "memory": {
       "status": "renamed",
@@ -240,8 +240,8 @@
       "why": "\"Nuts and Bolts\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
     },
     "paint-fight": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Paint Fight\" is a plain description of the activity — a fight with paint. Ordinary words, no coined element."
     },
     "penalty-kicks": {
       "status": "generic",
@@ -288,8 +288,8 @@
       "why": "\"Reversi\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
     },
     "road-dodge": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Road Dodge\" is a plain description of the activity — dodging traffic along a road — the public-domain cross-the-traffic arcade genre. No distinctive coined element."
     },
     "robot-arena": {
       "status": "pending",
@@ -304,8 +304,8 @@
       "why": "\"Sea Battle\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
     },
     "ship-battle": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Ship Battle\" is a plain description of a naval-battle game, the same descriptive form as the already-cleared \"Sea Battle\". Ordinary words for the subject."
     },
     "shuriken": {
       "status": "renamed",
@@ -320,12 +320,12 @@
       "why": "\"Sliding Puzzle\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
     },
     "sling-puck": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Sling Puck\" is the ordinary descriptive name of the public-domain table game in which pucks are slung through a central gap; sold generically under that name."
     },
     "slot-cars": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Slot Cars\" is the ordinary generic term for the electric slot-car racing toy and its genre. Descriptive of the thing, not a brand."
     },
     "snakes": {
       "status": "renamed",
@@ -376,8 +376,8 @@
       "why": "Renamed from the reference name \"Sword Thrower\". Rule 1 satisfied by not using it."
     },
     "tanks": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Tanks\" is an ordinary plural noun and the common name of the public-domain artillery-duel genre (two tanks lobbing shells over terrain). The word names the subject; it is not a coined title."
     },
     "tap-match": {
       "status": "generic",
@@ -420,16 +420,16 @@
       "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
     },
     "water-game": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Water Game\" is a plain, generic description — a game played with water. The wording is descriptive rather than a distinctive coined title."
     },
     "whack-a-mole": {
       "status": "generic",
       "why": "\"Whack a Mole\" is the ordinary English name of a public-domain game or a plain description of the activity. Naming the game is not copying a name."
     },
     "wheelie": {
-      "status": "pending",
-      "why": "Coined name, identical to the reference app's. Rule 1 exposure; awaiting the owner's rename decision (#2515). Not cleared."
+      "status": "generic",
+      "why": "\"Wheelie\" is the ordinary English word for the balancing stunt on one wheel — a plain description of the activity."
     },
     "wrestle": {
       "status": "generic",
