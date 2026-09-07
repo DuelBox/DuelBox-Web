@@ -102,10 +102,12 @@
 }
 
 /* And the ring is repeated on the whole option, so a keyboard player sees the target they
-   are about to choose rather than a 19px dot inside it. */
+   are about to choose rather than a 19px dot inside it. The two-colour ring, same as the
+   site-wide one in globals.css (#176), so it clears 3:1 on the tinted option as well. */
 .choice:has(.radio:focus-visible) {
-  outline: 3px solid var(--db-focus);
+  outline: 3px solid var(--db-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--db-focus-halo);
 }
 
 /* Allowed to wrap: on a 320px screen "One round" over two lines is better than an

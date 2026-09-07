@@ -128,8 +128,11 @@
 
 .pause {
   flex: 0 0 auto;
-  min-width: var(--db-touch-target);
-  min-height: var(--db-touch-target);
+  /* The one gameplay control the shell owns (the games draw their own on the canvas), so it
+     takes the physical gameplay target the play surface publishes (#1889), falling back to
+     the shell target before that variable is set or on any page that does not publish it. */
+  min-width: var(--db-gameplay-target, var(--db-touch-target));
+  min-height: var(--db-gameplay-target, var(--db-touch-target));
   border: 2px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   background: var(--db-paper);

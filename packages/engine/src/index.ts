@@ -82,8 +82,14 @@ export {
 } from './juice.js';
 export type { ShakeOptions, FlashOptions, ImpactOptions } from './juice.js';
 
-export { SEAT_PALETTE, seatPalette } from './palette.js';
-export type { SeatPalette } from './palette.js';
+export {
+  SEAT_PALETTE,
+  SEAT_PALETTES,
+  seatPalette,
+  setActiveSeatPalette,
+  activeSeatPaletteId,
+} from './palette.js';
+export type { SeatPalette, SeatPaletteId } from './palette.js';
 
 export {
   NO_INSETS,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { SeatId } from '@duelbox/engine';
+import { setActiveSeatPalette, type SeatId } from '@duelbox/engine';
 import {
   advanceClock,
   clockExpired,
@@ -30,6 +30,8 @@ import {
   type Tally,
 } from '@/lib/head-to-head';
 import { readPlayerNames } from '@/lib/player-names';
+import { readSettings } from '@/lib/settings';
+import { useGameplayTouchTarget } from '@/lib/touch-target';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio, audio } from '@/lib/audio';
 import { ducksMatchAudio, shellCueFor } from '@/lib/match-cues';
@@ -256,9 +258,19 @@ export function PlaySurface({ slug }: { slug: string }) {
   tallyRef.current = match.tally;
   /** True once this round's expiry has been reported, so it fires the round end exactly once. */
   const expiredRef = useRef(false);
+  // The physical size a gameplay control should be on this device (#1889). Read in an
+  // effect inside the hook and kept current across a DPR change, so it is the shell target
+  // on the first paint and the device-aware size a frame later.
+  const gameplayTarget = useGameplayTouchTarget();
 
   useEffect(() => {
     let cancelled = false;
+    // Select the seat palette before the game chunk loads (#174). A game may read
+    // `SEAT_PALETTE.p1.base` into a module-level constant as its file is evaluated, so the
+    // choice has to be in effect before the dynamic import inside `loadGame` resolves and
+    // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
+    // has already been read. It is a no-op on the default and cheap either way.
+    setActiveSeatPalette(readSettings().seatPalette);
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;
@@ -825,7 +837,15 @@ export function PlaySurface({ slug }: { slug: string }) {
     match.phase === 'countdown' || match.phase === 'playing' || match.phase === 'paused';
 
   return (
-    <div className={styles.surface}>
+    <div
+      className={styles.surface}
+      // The physical gameplay target (#1889), published as a custom property the play
+      // controls read. Computed from the device's pixel ratio in the presentation layer, so
+      // a control jabbed at across a table holds its size in millimetres rather than in a
+      // pixel count that a dense screen shrinks. Falls back to the shell target where a
+      // control does not opt in.
+      style={{ ['--db-gameplay-target' as string]: `${String(gameplayTarget)}px` }}
+    >
       {/* The tournament's standing, on the one screen during a leg where it is what the
           pair are talking about: the moment a game ends. It is deliberately not up while
           the board is live — the match HUD is the score that matters then, and a phone two

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, readSettings, writeSettings, type Settings } from '@/lib/settings';
+import { applySeatPalette, applyTheme } from '@/lib/theme';
 import styles from './SoundToggle.module.css';
 
 /**
@@ -68,6 +69,14 @@ export function useSettings(): readonly [Settings, (patch: Partial<Settings>) =>
     setSettings(readSettings());
     const listener: Listener = (next) => {
       setSettings(next);
+      // The colour scheme and the shell's seat palette are put into effect here as well as
+      // into React state, so a choice made on the settings page reaches every open surface
+      // the moment it changes rather than on the next load — the same argument the level
+      // uses just below. The inline script in `layout.tsx` handles both before the first
+      // paint; this handles them after. The games take the seat palette through the engine,
+      // which `GameHost` selects at match start.
+      applyTheme(next.theme);
+      applySeatPalette(next.seatPalette);
       void import('@/lib/audio').then((module) => {
         module.applySoundSettings(next);
       });
