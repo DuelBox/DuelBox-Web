@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { InputManager } from './input.js';
 import { InputView } from './input-view.js';
 import { Rng } from './rng.js';
@@ -173,5 +173,52 @@ describe('recording and replaying input', () => {
     const player = new TracePlayer(recorder.toTrace('sumo', 1, STEP));
     const input = new InputManager(LOGICAL);
     expect(() => player.apply(input, 5)).toThrow(/skipped/);
+  });
+});
+
+describe('refusing a prototype-pollution payload (#2365)', () => {
+  const head =
+    '{"version":1,"game":"x","seed":1,"fixedDeltaSeconds":0.016,"logical":{"width":1,"height":1}';
+
+  afterEach(() => {
+    delete (Object.prototype as Record<string, unknown>)['polluted'];
+  });
+
+  it('refuses a __proto__ key at the top level, before trusting the shape', () => {
+    expect(() => importTrace(`{"__proto__":{"polluted":1},${head.slice(1)}}`)).toThrow(
+      /forbidden key "__proto__"/,
+    );
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('refuses constructor and prototype keys too', () => {
+    expect(() => importTrace(`${head},"frames":[],"constructor":{"x":1}}`)).toThrow(
+      /forbidden key "constructor"/,
+    );
+    expect(() => importTrace(`${head},"frames":[],"prototype":{"x":1}}`)).toThrow(
+      /forbidden key "prototype"/,
+    );
+  });
+
+  it('refuses a payload buried inside a frame or an event', () => {
+    expect(() =>
+      importTrace(`${head},"frames":[{"at":0,"events":[],"__proto__":{"polluted":1}}]}`),
+    ).toThrow(/forbidden key/);
+    expect(() =>
+      importTrace(
+        `${head},"frames":[{"at":0,"events":[{"kind":"clear","__proto__":{"polluted":1}}]}]}`,
+      ),
+    ).toThrow(/forbidden key/);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('still accepts and round-trips an honest trace', () => {
+    const recorder = new InputRecorder(
+      new InputManager(LOGICAL, { split: 'horizontal', bottomSeat: 'p1' }),
+    );
+    const live = storm(recorder, 5, 120);
+    const trace = importTrace(exportTrace(recorder.toTrace('pool', 3, STEP)));
+    expect(trace.game).toBe('pool');
+    expect(replay(trace, 120)).toEqual(live);
   });
 });

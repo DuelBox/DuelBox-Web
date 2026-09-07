@@ -194,34 +194,58 @@ function copyBinding(binding: Readonly<KeyBinding>): KeyBinding {
 }
 
 /**
- * A key may drive exactly one slot of one seat. Two seats sharing a code would let
- * one player move the other, and one seat using a code twice would leave the second
- * slot stuck down after a key-up. Both are rejected before anything is stored.
+ * Every reason `binding` (for `seat`) cannot be used against `other`, in the order the
+ * checks run — cross-seat collisions first, then a seat colliding with itself. An empty
+ * array means the binding is legal.
+ *
+ * A key may drive exactly one slot of one seat. Two seats sharing a code would let one
+ * player move the other, and one seat using a code twice would leave the second slot stuck
+ * down after a key-up. Exported so a rebinding UI can show a conflict *before* the player
+ * commits it (#129) rather than only catching the throw {@link validateBinding} raises — one
+ * source of truth for both paths.
+ */
+export function bindingConflicts(
+  seat: SeatId,
+  binding: Readonly<KeyBinding>,
+  other: Readonly<KeyBinding>,
+): string[] {
+  const conflicts: string[] = [];
+  for (const slot of KEY_SLOTS) {
+    const code = binding[slot];
+    for (const otherSlot of KEY_SLOTS) {
+      if (other[otherSlot] === code) {
+        conflicts.push(
+          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
+        );
+      }
+    }
+  }
+  for (let i = 0; i < KEY_SLOTS.length; i += 1) {
+    for (let j = i + 1; j < KEY_SLOTS.length; j += 1) {
+      const slot = KEY_SLOTS[i];
+      const otherSlot = KEY_SLOTS[j];
+      if (slot !== undefined && otherSlot !== undefined && binding[slot] === binding[otherSlot]) {
+        conflicts.push(
+          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
+        );
+      }
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Throws on the first conflict {@link bindingConflicts} finds, naming the key. Both are
+ * rejected before anything is stored, so a rejected binding leaves the manager untouched.
  */
 function validateBinding(
   seat: SeatId,
   binding: Readonly<KeyBinding>,
   other: Readonly<KeyBinding>,
 ): void {
-  for (const slot of KEY_SLOTS) {
-    const code = binding[slot];
-    for (const otherSlot of KEY_SLOTS) {
-      if (other[otherSlot] === code) {
-        throw new Error(
-          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
-        );
-      }
-    }
-  }
-  for (const slot of KEY_SLOTS) {
-    for (const otherSlot of KEY_SLOTS) {
-      if (slot !== otherSlot && binding[slot] === binding[otherSlot]) {
-        throw new Error(
-          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
-        );
-      }
-    }
-  }
+  const conflicts = bindingConflicts(seat, binding, other);
+  const first = conflicts[0];
+  if (first !== undefined) throw new Error(first);
 }
 
 /** Live hardware state for one seat. Not exported: games read SeatInputState instead. */
@@ -264,13 +288,30 @@ interface SeatSources {
    */
   pointerLatched: boolean;
   /**
-   * Whether a pointer owned by this seat was cancelled since the last step.
+   * Whether this seat's action was taken away since the last step.
    *
    * Latched like the others so a cancel that lands between two steps is still reported —
    * losing it would put the gesture back exactly where it was before #2480, with the game
    * still holding an aim nothing will ever tell it to drop.
+   *
+   * Raised by {@link InputManager.pointerCancel} for a cancelled pointer, and by
+   * {@link InputManager.clear} for **any** source that was holding the action — a key as
+   * much as a finger. See `clear` for why the keyboard belongs here too.
    */
   cancelLatched: boolean;
+  /**
+   * A gamepad's analogue movement and action for this seat (#130), each axis in [-1, 1].
+   *
+   * Set once per step by the host's gamepad poll through {@link InputManager.setSeatAnalog},
+   * before `beginStep`, and added to the keyboard's movement vector so a seat driven by a
+   * pad reads the same `moveX`/`moveY`/`actionHeld` a seat driven by keys does — a game never
+   * learns which family it is. Zero by default, so a build with no pad is byte-identical to
+   * one before this existed: the analog is *added* to the key vector, and adding zero changes
+   * nothing.
+   */
+  analogX: number;
+  analogY: number;
+  analogAction: boolean;
 }
 
 function createSeatSources(): SeatSources {
@@ -284,6 +325,9 @@ function createSeatSources(): SeatSources {
     actionLatched: false,
     pointerLatched: false,
     cancelLatched: false,
+    analogX: 0,
+    analogY: 0,
+    analogAction: false,
   };
 }
 
@@ -304,6 +348,19 @@ function releaseKeys(sources: SeatSources): void {
   latched.action = false;
 }
 
+/**
+ * Whether this seat's action is, or was, live with nothing having told the game it ended.
+ *
+ * The three terms are three ways for a charge to be in flight when the world is taken away:
+ * a finger on the glass, a key physically down, and — the one that is easy to miss — an
+ * action the last step reported as held whose key-up landed between two steps and has not
+ * been published yet. All three must produce a cancellation, or the game is left holding a
+ * charge with nothing to tell it to drop one.
+ */
+function actionLive(sources: SeatSources): boolean {
+  return sources.pointerCount > 0 || sources.keys.action || sources.wasActionHeld;
+}
+
 function releaseSources(sources: SeatSources): void {
   releaseKeys(sources);
   sources.pointerCount = 0;
@@ -313,6 +370,9 @@ function releaseSources(sources: SeatSources): void {
   sources.actionLatched = false;
   sources.pointerLatched = false;
   sources.cancelLatched = false;
+  sources.analogX = 0;
+  sources.analogY = 0;
+  sources.analogAction = false;
 }
 
 /** Where a key code writes to. Built on construction and on rebind, never per step. */
@@ -526,6 +586,26 @@ export class InputManager {
   }
 
   /**
+   * Set a seat's analogue movement and action from a gamepad (#130).
+   *
+   * Called once per step by the host's gamepad poll, before {@link beginStep}, with the
+   * deadzoned, normalised reading from {@link GamepadManager}. The values persist until the
+   * next call, so a host that polls every step keeps them fresh and one that stops polling
+   * (the pad was unplugged) should call this with zeros — which `GamepadManager.reading`
+   * returning null tells it to do.
+   *
+   * Movement is *added* to the keyboard vector and clamped with it, so a seat with both a pad
+   * and a hand on the keys is not two players; a seat with neither reads exactly as it did
+   * before this channel existed.
+   */
+  setSeatAnalog(seat: SeatId, moveX: number, moveY: number, action: boolean): void {
+    const sources = this.#sourcesFor(seat);
+    sources.analogX = Number.isFinite(moveX) ? moveX : 0;
+    sources.analogY = Number.isFinite(moveY) ? moveY : 0;
+    sources.analogAction = action;
+  }
+
+  /**
    * Round a logical coordinate onto the shared precision lattice.
    *
    * See {@link PRECISION_ENVELOPE}. Applied at the one place logical coordinates enter the
@@ -633,21 +713,34 @@ export class InputManager {
    * not deliver a press. The cost is that a key still physically held when focus
    * returns counts as up until it repeats or is pressed again — the right trade,
    * since the browser does not reliably deliver the key-up that happened elsewhere.
+   *
+   * **A seat whose action was live is told its gesture was taken away.** That is the whole
+   * of the trade above made survivable: this method deletes both edges at once — the
+   * release cannot be published because `wasActionHeld` has just been zeroed, and the hold
+   * cannot continue because the key is gone — so a game charging a shot would otherwise be
+   * left with a drawn bow and nothing to tell it to let the string down, forever.
+   * `pointerCancelled` is that telling, and `actionAbandoned` in the SDK is how a game
+   * reads it.
+   *
+   * It was raised only for a seat with a *pointer* down until #2501, which left the
+   * keyboard half of the same bug intact: opening the pause menu with the action key held
+   * froze the charge silently, and the next release fired it. A key and a finger are one
+   * intent everywhere else in this file (`held = keys.action || pointerDown`) and they are
+   * one intent here.
    */
   clear(): void {
-    // Read before the wipe: a seat holding a pointer when the world is taken away has had
-    // its gesture cancelled in exactly the sense `pointerCancel` means, and must be told
-    // so on the next step. Without it a paused aim stays armed in the game, waiting for a
-    // release that can never come.
-    const p1Live = this.#p1Sources.pointerCount > 0;
-    const p2Live = this.#p2Sources.pointerCount > 0;
+    // Read before the wipe: a seat whose action was live when the world was taken away has
+    // had its gesture cancelled in exactly the sense `pointerCancel` means, whichever
+    // instrument was holding it, and must be told so on the next step.
+    const p1Held = actionLive(this.#p1Sources);
+    const p2Held = actionLive(this.#p2Sources);
     this.#ownership.releaseAll();
     releaseSources(this.#p1Sources);
     releaseSources(this.#p2Sources);
     resetSeatInputState(this.#p1State);
     resetSeatInputState(this.#p2State);
-    this.#p1Sources.cancelLatched = p1Live;
-    this.#p2Sources.cancelLatched = p2Live;
+    this.#p1Sources.cancelLatched = p1Held;
+    this.#p2Sources.cancelLatched = p2Held;
   }
 
   /**
@@ -681,7 +774,14 @@ export class InputManager {
     const left = keys.left || taps.left;
     const down = keys.down || taps.down;
     const up = keys.up || taps.up;
-    set(move, (right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
+    // The gamepad's analogue movement is added to the keyboard's digital one (#130). A seat
+    // with no pad has analogX/Y == 0, so this line is byte-identical to the digital-only
+    // one it replaced — the clamp below keeps a pad-and-keys seat inside unit length.
+    set(
+      move,
+      (right ? 1 : 0) - (left ? 1 : 0) + sources.analogX,
+      (down ? 1 : 0) - (up ? 1 : 0) + sources.analogY,
+    );
     taps.right = false;
     taps.left = false;
     taps.down = false;
@@ -705,8 +805,9 @@ export class InputManager {
     out.pointerX = sources.pointerX;
     out.pointerY = sources.pointerY;
 
-    // Either source raises the action: a thumb on the screen and a key are the same intent.
-    const held = keys.action || pointerDown;
+    // Either source raises the action: a thumb on the screen, a key, or a gamepad button
+    // are the same intent, so a game reading `actionHeld` never learns which family it was.
+    const held = keys.action || pointerDown || sources.analogAction;
     const was = sources.wasActionHeld;
     // A tap that began and ended between two steps is still a press. Without the latch
     // it is invisible: by the time the step runs the finger is already gone.

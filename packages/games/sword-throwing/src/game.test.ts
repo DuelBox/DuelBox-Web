@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InputManager, InputView, Rng } from '@duelbox/engine';
+import { DEFAULT_BINDINGS, InputManager, InputView, Rng } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
 import type { Game, GameContext, Renderer } from '@duelbox/game-sdk';
 import { SwordThrowingGame } from './game.js';
@@ -517,6 +517,107 @@ describe('the pointer', () => {
     expect(rigged.state.p2Throws).toBe(0);
     rigged.step(10);
     expect(rigged.state.p2Throws).toBe(0);
+  });
+});
+
+describe('a cancelled gesture', () => {
+  // The gesture taken away rather than let go: a system edge-swipe, palm rejection, an
+  // incoming call, a pause. Driven through the real `InputManager` — `pointerCancel` and
+  // `clear` are the engine's own two sources of it — so nothing here can agree with the
+  // game about a bit the browser would not actually raise.
+
+  it('throws nothing on the step the gesture is taken away', () => {
+    const rigged = rig();
+    rigged.input.pointerDown(1, CENTRE_X + 200, CENTRE_Y - 300);
+    rigged.step(3);
+    rigged.input.pointerCancel(1);
+    rigged.step(4);
+    expect(rigged.state.throws, 'a cancel commits nothing').toBe(0);
+    expect(rigged.state.phase).toBe('aiming');
+  });
+
+  it('keeps the aim, which commits nothing on its own', () => {
+    // Swinging the sight because the system took the finger away would punish the player
+    // twice for an interruption they did not cause, and this game already carries the aim
+    // from one attempt to the next.
+    const rigged = rig();
+    rigged.input.pointerDown(1, CENTRE_X + 200, CENTRE_Y - 300);
+    rigged.step(3);
+    const aimed = rigged.state.aim;
+    expect(aimed).toBeGreaterThan(0.2);
+    rigged.input.pointerCancel(1);
+    rigged.step(2);
+    expect(rigged.state.aim, 'the cancel swung the sight').toBeCloseTo(aimed, 12);
+  });
+
+  it('leaves the keyboard, which was never cancelled, able to throw', () => {
+    // `#pointerAiming` exists only while a finger is on the glass. Frozen true by a cancel,
+    // the keyboard's press-to-commit branch is unreachable for the rest of the turn: the
+    // interruption costs the player their turn as well as their gesture.
+    const rigged = rig();
+    rigged.input.pointerDown(1, CENTRE_X + 200, CENTRE_Y - 300);
+    rigged.step(3);
+    rigged.input.pointerCancel(1);
+    rigged.step();
+    rigged.input.keyDown(P1_KEYS.action);
+    rigged.step(4);
+    expect(rigged.state.throws, 'the key press must still commit').toBe(1);
+  });
+
+  it('does not throw on the next release, which commits nothing after a cancel', () => {
+    // The headline. A cancel abandons: whatever release arrives next — a key coming up, a
+    // second finger lifting — must not throw the sword the interruption left armed, at the
+    // aim the abandoned drag happened to stop on. In a two-seat game that throw is the
+    // other player's turn spent for them.
+    const rigged = rig();
+    rigged.input.pointerDown(1, CENTRE_X + 200, CENTRE_Y - 300);
+    rigged.step(3);
+    rigged.input.pointerCancel(1);
+    rigged.step();
+    rigged.input.keyDown(P1_KEYS.action);
+    rigged.step(4);
+    const afterPress = rigged.state.throws;
+    rigged.input.keyUp(P1_KEYS.action);
+    rigged.step(2);
+    expect(rigged.state.throws, 'a release must not commit an abandoned gesture').toBe(afterPress);
+  });
+
+  it('abandons the aim a pause took away, the same as a cancelled pointer', () => {
+    // `InputManager.clear()` is the other source: it raises the same bit for every pointer
+    // that was live when the shell paused or the window lost focus.
+    const rigged = rig();
+    rigged.input.pointerDown(1, CENTRE_X + 200, CENTRE_Y - 300);
+    rigged.step(3);
+    rigged.input.clear();
+    rigged.step();
+    expect(rigged.state.throws, 'a pause commits nothing').toBe(0);
+    rigged.input.keyDown(P1_KEYS.action);
+    rigged.step(4);
+    expect(rigged.state.throws, 'the key press must still commit after a pause').toBe(1);
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('carries nothing across it, because the keyboard commits on the press', () => {
+    // The counterpart of the pointer test above, and a characterisation rather than a fix:
+    // `#pointerAiming` is only ever raised inside the pointer branch, and the keyboard
+    // throws on `actionPressed` rather than building anything. So a window taken away with
+    // keys down leaves no charge to freeze — the sight stays, which is what it is for, and
+    // the next press throws exactly one sword. Nothing in `game.ts` changed for this.
+    const rigged = rig();
+    const thrownBefore = rigged.state.throws;
+
+    rigged.input.keyDown(DEFAULT_BINDINGS.p1.right);
+    rigged.step(20);
+    rigged.input.clear();
+    rigged.step(3);
+    expect(rigged.state.throws, 'the clear throws nothing').toBe(thrownBefore);
+
+    rigged.input.keyDown(DEFAULT_BINDINGS.p1.action);
+    rigged.step();
+    rigged.input.keyUp(DEFAULT_BINDINGS.p1.action);
+    rigged.step();
+    expect(rigged.state.throws, 'exactly one sword, on the press').toBe(thrownBefore + 1);
   });
 });
 

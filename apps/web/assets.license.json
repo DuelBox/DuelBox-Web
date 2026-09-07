@@ -65,6 +65,41 @@
       "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)"
     },
     {
+      "file": "public/icons/icon.svg",
+      "note": "Scalable app icon, also the browser tab icon",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/icon-192.png",
+      "note": "Web app manifest icon, purpose any, 192x192",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/icon-512.png",
+      "note": "Web app manifest icon, purpose any, 512x512",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/maskable-512.png",
+      "note": "Web app manifest icon, purpose maskable — full bleed, seats inside the 40% safe circle",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/icons/apple-touch-icon.png",
+      "note": "iOS home screen icon, 180x180",
+      "source": "scripts/make-icons.mjs — drawn in this repository from apps/web/src/components/Wordmark.tsx",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
       "file": "src/lib/share/card.ts",
       "what": "The 109 share images: apps/web/public/og/<slug>.png, one for each game, plus duelbox.png for the site. Each is that game's own catalogue tile enlarged onto a 1200x630 frame, with the two seat glyphs and a bar in the brand colour.",
       "generated": "Composed at build time by scripts/generate-share-images.mjs from src/lib/share/card.ts, src/lib/share/raster.ts and src/lib/share/png.ts, out of the geometry in src/lib/tiles.ts and the palette in src/styles/tokens.ts. Not tracked; see _share_images above.",
@@ -79,6 +114,35 @@
       "source": "Original to this repository — every coordinate is written in src/lib/tiles.ts. Nothing is traced from, derived from, or fitted to another product's art (rule 1).",
       "licence": "Proprietary — © DuelBox, all rights reserved. Part of this repository and covered by its licence.",
       "author": "DuelBox"
+    },
+    {
+      "file": "src/app/icon.svg",
+      "note": "Favicon / app icon — the DuelBox seam mark",
+      "source": "Original geometric mark drawn in this repository (#73); see docs/brand-icons.md",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "src/app/apple-icon.svg",
+      "note": "Apple touch icon — the DuelBox seam mark on a filled tile",
+      "source": "Original geometric mark drawn in this repository (#73); see docs/brand-icons.md",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/manifest-icon.svg",
+      "note": "Web app manifest icon — the DuelBox seam mark",
+      "source": "Original geometric mark drawn in this repository (#73); see docs/brand-icons.md",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
+    },
+    {
+      "file": "public/manifest-icon-maskable.svg",
+      "note": "Web app manifest maskable icon — the seam mark inside the safe zone",
+      "source": "Original geometric mark drawn in this repository (#73); see docs/brand-icons.md",
+      "licence": "Original work, part of this repository and under its licence",
+      "author": "DuelBox"
     }
-  ]
+  ],
+  "_icons": "The five app icons are drawn by scripts/make-icons.mjs — arithmetic in that file, no design tool and no third-party artwork — from the geometry of src/components/Wordmark.tsx. Re-run `node scripts/make-icons.mjs` to reproduce them byte for byte. The one departure from the wordmark is that the second seat is a ring rather than a disc, so the two seats stay distinguishable in greyscale (rule 7)."
 }

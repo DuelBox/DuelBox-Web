@@ -117,6 +117,59 @@ export function toScreen(
 export type ZoneSplit = 'horizontal' | 'vertical' | 'shared';
 
 /**
+ * What a manifest *declares* about its board, which is not the same question as
+ * {@link ZoneSplit}.
+ *
+ * `'shared-board'` says the two seats look at one common board rather than at two halves.
+ * That is a statement about the picture, not about who a finger belongs to — Whack a Mole
+ * declares it and still needs two pointer zones, because both seats swing at those same
+ * twelve holes *at the same time* and the zone is the only thing that can say which of the
+ * two people a tap came from. Only the live turn state can answer the ownership question,
+ * which is why {@link zoneSplitFor} takes both.
+ *
+ * Deliberately written out rather than imported from `@duelbox/game-sdk`'s `ZONE_SPLITS`:
+ * game-sdk depends on the engine, so the engine cannot depend back. It needs no guard to
+ * keep the two in step. If a fourth split were added to the manifest schema, every caller
+ * passing `manifest.zoneSplit` into {@link zoneSplitFor} would stop compiling, because the
+ * wider union is not assignable to this one. The compiler is the check.
+ */
+export type DeclaredZoneSplit = 'horizontal' | 'vertical' | 'shared-board';
+
+/**
+ * The split the pointer surface is on **right now**: the one answer, for every caller.
+ *
+ * This existed twice, derived differently, and the two disagreed for eleven real-time games
+ * (issue #2479). The shell went through the live active seat and so never reached `'shared'`
+ * for a real-time game; the input fuzzer went straight from `manifest.zoneSplit`, read
+ * `'shared-board'` as `'shared'`, and therefore handed *every* pointer to seat one and none
+ * to seat two — a harness whose whole purpose is two children mashing one screen, modelling
+ * one child. Both derivations were locally reasonable. That is exactly why there is one.
+ *
+ * Three things decide it, in this order:
+ *
+ * 1. **Single-seat play has no divider.** The local player owns the whole viewport
+ *    (`docs/presentation.md`), so the surface is `'shared'` whatever else is true. Halving
+ *    it there would leave a remote player with half a dead screen.
+ * 2. **A turn belongs to whoever has it.** A non-null `activeSeat` means the board has
+ *    turned to face one person, so all of it is theirs. Dividing it put the far side of a
+ *    rotated board in the *other* seat's zone and dropped every tap aimed there.
+ * 3. **Otherwise the seats share the device and act at once**, so they get a zone each, and
+ *    the manifest chooses the axis. Anything that is not `'vertical'` is horizontal: a
+ *    `'shared-board'` declaration describes the picture, not the ownership.
+ *
+ * Allocates nothing, so it is safe to ask every frame.
+ */
+export function zoneSplitFor(
+  presentation: Presentation,
+  declared: DeclaredZoneSplit,
+  activeSeat: SeatId | null,
+): ZoneSplit {
+  if (presentation === 'single-seat') return 'shared';
+  if (activeSeat !== null) return 'shared';
+  return declared === 'vertical' ? 'vertical' : 'horizontal';
+}
+
+/**
  * Which seat owns the zone a point falls in. `bottomSeat` owns the lower half
  * under a horizontal split, the left half under a vertical one, and **everything**
  * under a shared one.

@@ -27,8 +27,21 @@ export {
 } from './vec2.js';
 export type { Vec2 } from './vec2.js';
 
-export { FixedLoop, RunLoop, browserClock } from './loop.js';
+export { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
 export type { Clock, LoopCallbacks, LoopOptions } from './loop.js';
+
+export { LatencyMeter, INPUT_FAMILIES } from './latency.js';
+export type { InputFamily, LatencyStats } from './latency.js';
+
+export { GamepadManager } from './gamepad.js';
+export type {
+  GamepadSnapshot,
+  GamepadSource,
+  GamepadReading,
+  GamepadEvent,
+  GamepadEventKind,
+  GamepadManagerOptions,
+} from './gamepad.js';
 
 export {
   SEATS,
@@ -38,9 +51,17 @@ export {
   toWorld,
   toScreen,
   seatForPoint,
+  zoneSplitFor,
   PointerOwnership,
 } from './seat.js';
-export type { SeatId, Presentation, SeatView, LogicalSize, ZoneSplit } from './seat.js';
+export type {
+  SeatId,
+  Presentation,
+  SeatView,
+  LogicalSize,
+  ZoneSplit,
+  DeclaredZoneSplit,
+} from './seat.js';
 
 export { GridCursor } from './cursor.js';
 export type { GridCursorOptions } from './cursor.js';
@@ -74,8 +95,14 @@ export {
 } from './juice.js';
 export type { ShakeOptions, FlashOptions, ImpactOptions } from './juice.js';
 
-export { SEAT_PALETTE, seatPalette } from './palette.js';
-export type { SeatPalette } from './palette.js';
+export {
+  SEAT_PALETTE,
+  SEAT_PALETTES,
+  seatPalette,
+  setActiveSeatPalette,
+  activeSeatPaletteId,
+} from './palette.js';
+export type { SeatPalette, SeatPaletteId } from './palette.js';
 
 export {
   NO_INSETS,
@@ -85,8 +112,9 @@ export {
   isInsideLogical,
   clampDevicePixelRatio,
   negotiateSharedLogical,
+  negotiateSharedViewport,
 } from './viewport.js';
-export type { SafeAreaInsets, Viewport } from './viewport.js';
+export type { SafeAreaInsets, Viewport, DeviceScreen, SharedViewport } from './viewport.js';
 
 export {
   createContact,
@@ -118,6 +146,7 @@ export {
   scalarEnvelopeFor,
   quantiseScalar,
   DEFAULT_BINDINGS,
+  bindingConflicts,
 } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 
@@ -172,3 +201,40 @@ export type {
 
 export { LockstepSession, configFingerprint, mixNumber } from './lockstep.js';
 export type { LockstepOptions, MatchConfig, SessionStatus } from './lockstep.js';
+
+export { SceneNode } from './scene.js';
+
+export { createBody, resolveContact } from './resolve.js';
+export type { Body, BodyInit, ResolveOptions } from './resolve.js';
+
+export { SpatialHash, forEachBrutePair, brutePairCount } from './broadphase.js';
+
+export { ParticlePool } from './particle.js';
+export type { EmitterConfig } from './particle.js';
+
+export { AdaptiveQuality, DEFAULT_QUALITY_LEVELS } from './quality.js';
+export type { QualityLevel, AdaptiveQualityOptions } from './quality.js';
+
+export { AssetLoader, AssetBundle, AssetLoadError } from './asset-loader.js';
+export type {
+  AssetKind,
+  AssetDescriptor,
+  AssetIO,
+  ImageLike,
+  AudioLike,
+  AssetLoaderOptions,
+} from './asset-loader.js';
+
+export { SpriteAtlas, packShelf } from './atlas.js';
+export type { AtlasFrame, AtlasManifest, PackInput, PackOptions, PackResult } from './atlas.js';
+
+export { SpriteBatch, LineBatch, Canvas2DSpriteSink, WebGLSpriteSink } from './batch.js';
+export type { SpriteSink, LineSink, DrawImageContext, ImageResolver, WebGLLike } from './batch.js';
+
+export {
+  RepresentativeLoop,
+  measureStructuralGrowth,
+  measureHeapBytesPerStep,
+  heapMeasurementAvailable,
+} from './hot-path.js';
+export type { RepresentativeLoopOptions } from './hot-path.js';

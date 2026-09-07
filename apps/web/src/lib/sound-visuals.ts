@@ -69,7 +69,7 @@ export const VISUAL_COUNTERPARTS: Readonly<Record<SoundEvent, VisualCounterpart>
     kind: 'shell',
     shows: 'The count filling the middle of the board, one number a second, in the overlay.',
     source: OVERLAY,
-    marker: '<Countdown remaining={state.countdownRemaining} />',
+    marker: '<Countdown remaining={state.countdownRemaining}',
   },
   /*
    * `start` is the weakest row here and it is worth saying so out loud rather than dressing

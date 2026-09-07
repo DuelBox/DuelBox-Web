@@ -30,15 +30,22 @@
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "size": "node scripts/check-size.mjs",
     "share:images": "node scripts/generate-share-images.mjs",
+    "emit:icons": "node scripts/emit-icon-sprite.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "check:share-images": "node scripts/check-share-images.mjs",
     "check:assets": "node scripts/check-asset-licenses.mjs",
     "check:names": "node scripts/check-game-names.mjs",
     "check:source-secrets": "node scripts/check-source-secrets.mjs",
     "emit:host-config": "node scripts/emit-host-config.mjs",
-    "check:headers": "node scripts/check-headers.mjs"
+    "check:headers": "node scripts/check-headers.mjs",
+    "emit:attribution": "node scripts/emit-attribution.mjs",
+    "check:attribution": "node scripts/emit-attribution.mjs --check",
+    "changeset": "changeset"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@changesets/cli": "^2.27.11",
     "@eslint/js": "^9.17.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.2",

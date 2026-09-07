@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE } from '@duelbox/engine';
 import type { Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
   BOARD_HEIGHT,
@@ -363,6 +364,17 @@ export class StickyTonguesGame implements Game {
     let dirX = 0;
     let dirY = 0;
     let fire = false;
+
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so no tongue is flicked on this step — but the gesture would otherwise stay standing:
+    // the next release fires it, and the next press does not re-anchor, so the player's tap
+    // is measured from a press point they abandoned. Dropped here for exactly the reason
+    // `onPause` drops it, and by the same call (#2501). The frog's heading is untouched: the
+    // charge is what commits, and an interruption must not also move where the player aimed.
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) dropGesture(runtime);
 
     if (pointer !== null) {
       if (!runtime.gestureDown) {

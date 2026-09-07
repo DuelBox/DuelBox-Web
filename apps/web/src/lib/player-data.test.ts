@@ -97,7 +97,15 @@ describe('exporting', () => {
         },
         [FAVOURITES_KEY]: { version: 1, slugs: ['chess', 'ludo'] },
         [RECENT_KEY]: { version: 1, slugs: ['chess', 'pool'] },
-        [SETTINGS_KEY]: { version: 1, muted: true, volume: 0.5, haptics: false },
+        [SETTINGS_KEY]: {
+          version: 1,
+          muted: true,
+          volume: 0.5,
+          haptics: false,
+          theme: 'system',
+          seatPalette: 'default',
+          gameSpeed: 1,
+        },
         [HEAD_TO_HEAD_KEY]: {
           version: 1,
           games: { chess: { p1: 1, p2: 0, draws: 1 }, pool: { p1: 0, p2: 1, draws: 0 } },
@@ -148,7 +156,14 @@ describe('importing', () => {
     expect(readSetup('chess')).toEqual({ mode: 'bot', difficulty: 'hard', rounds: 3 });
     expect(readFavourites()).toEqual(['chess', 'ludo']);
     expect(readRecent()).toEqual(['chess', 'pool']);
-    expect(readSettings()).toEqual({ muted: true, volume: 0.5, haptics: false });
+    expect(readSettings()).toEqual({
+      muted: true,
+      volume: 0.5,
+      haptics: false,
+      theme: 'system',
+      seatPalette: 'default',
+      gameSpeed: 1,
+    });
     // The record travels with everything else (#2448): a pair who move to a new phone
     // keep the score they have been keeping against each other.
     expect(readGameRecord('chess', 'friend')).toEqual({ p1: 1, p2: 0, draws: 1, played: 2 });
@@ -308,5 +323,31 @@ describe('the summary', () => {
   it('counts a game whose setup was remembered before it was versioned', () => {
     install(fakeStorage({ [LAST_MODE_KEY]: '{"chess":"bot","pool":"friend"}' }));
     expect(playerDataSummary().games).toBe(2);
+  });
+});
+
+describe('refusing a prototype-pollution payload on import (#2365)', () => {
+  beforeEach(() => {
+    install(fakeStorage());
+  });
+  afterEach(() => {
+    delete (Object.prototype as Record<string, unknown>)['polluted'];
+    vi.restoreAllMocks();
+  });
+
+  it('imports a poisoned file without polluting Object.prototype', () => {
+    // A __proto__ payload at the envelope and inside `data`, plus a legitimate favourites
+    // value that must still land. Written as raw JSON so `__proto__` is an own key rather
+    // than the object-literal form that would set a prototype instead.
+    const file =
+      `{"format":${JSON.stringify(PLAYER_DATA_FORMAT)},"version":${String(PLAYER_DATA_VERSION)},` +
+      `"__proto__":{"polluted":1},` +
+      `"data":{"__proto__":{"polluted":1},` +
+      `${JSON.stringify(FAVOURITES_KEY)}:{"version":1,"slugs":["chess"]}}}`;
+    const result = importPlayerData(file);
+    expect('imported' in result).toBe(true);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    // The clean value beside the payload still imported and reads back.
+    expect(readFavourites()).toEqual(['chess']);
   });
 });

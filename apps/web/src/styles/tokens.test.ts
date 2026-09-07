@@ -335,5 +335,33 @@ describe('colour lives in the palette', () => {
       raw,
       `read the colour from styles/tokens.ts rather than spelling it again: ${raw.join(', ')}`,
     ).toEqual([]);
+describe("the catalogue card's seat marks", () => {
+  // Rule 7 applies to the shell as much as to a game, and this is the seat signal a player
+  // meets first. The greyscale harness in `apps/web/src/data` walks games and never looks
+  // at a stylesheet, so nothing was holding this: both marks were 7px circles differing
+  // only in `background` (#2518).
+  const card = readFileSync(join(here, '../components/GameCard.module.css'), 'utf8');
+
+  const radiusOf = (selector: string): string => {
+    const block = new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`).exec(card)?.[1] ?? '';
+    return /border-radius:\s*([^;]+);/.exec(block)?.[1]?.trim() ?? '';
+  };
+
+  it('gives each seat a different shape, not just a different colour', () => {
+    const p1 = radiusOf('.p1');
+    const p2 = radiusOf('.p2');
+    expect(p1, '.p1 declares no border-radius').not.toBe('');
+    expect(p2, '.p2 declares no border-radius').not.toBe('');
+    expect(p2, `both seat marks are ${p1}, so colour is the only signal`).not.toBe(p1);
+  });
+
+  it('uses the same shapes as SeatGlyph, so the catalogue and the match agree', () => {
+    // A disc and a rounded square. If SeatGlyph's language changes, this should too —
+    // two visual languages for one seat is worse than one imperfect language.
+    const glyph = readFileSync(join(here, '../components/SeatGlyph.tsx'), 'utf8');
+    expect(glyph, 'SeatGlyph no longer draws p1 as a circle').toContain('<circle');
+    expect(glyph, 'SeatGlyph no longer draws p2 as a rounded rect').toContain('<rect');
+    expect(radiusOf('.p1'), 'p1 is the disc in both places').toBe('50%');
+    expect(radiusOf('.p2'), 'p2 is the rounded square in both places').not.toBe('50%');
   });
 });

@@ -19,6 +19,7 @@ import {
   type Presentation,
   type SeatId,
   type ZoneSplit,
+  zoneSplitFor,
 } from '@duelbox/engine';
 import type {
   Game,
@@ -198,27 +199,14 @@ function reportLines(label: string, ids: readonly string[]): string {
  */
 const KNOWN_DIVERGENCES: ReadonlyMap<string, { readonly arms: readonly ArmName[]; readonly why: string }> =
   new Map([
-    [
-      'archery',
-      {
-        arms: ['human', 'bots'],
-        why: 'the flip gate returns out of the whole turn, so shared-screen spends 0.36s per turn change that single-seat does not (scored 8-32 vs 0-32 on the same trace)',
-      },
-    ],
-    [
-      'archery-master',
-      {
-        arms: ['human', 'bots', 'far-hand'],
-        why: "same frozen turn; its own comment claims the flip changes 'nothing about what happens', and two bots finish 14-12 shared-screen against 18-12 single-seat. The only game the far-seat arm cannot find a control mapping for either, for the same reason: the loss is steps, not coordinates",
-      },
-    ],
-    [
-      'soccer-pool',
-      {
-        arms: ['human', 'bots'],
-        why: 'same frozen turn; the sequence of events matches but every one of them lands on a different step',
-      },
-    ],
+    // archery (#2014), archery-master (#2018) and soccer-pool (#1990) were here. All three had
+    // the same defect: `if (!flip.acceptsInput) return;` returned out of the whole of `update`,
+    // and the shot clock and the bot both sat below it — so shared-screen spent the flip's 0.36s
+    // per turn change that single-seat did not, and the two presentations stepped different
+    // matches. Fixed by making the turn handover presentation-independent: it runs the same
+    // steps in both, and single-seat simply does not draw the board turning (see each game's
+    // #facesActiveSeat / #viewRotated). The list is empty on purpose — a game that regresses is
+    // added back here with its reason, never left to fail silently.
   ]);
 
 /**
@@ -394,8 +382,17 @@ function drive(manifest: GameManifest, create: () => Game, arm: Arm): Frame[] {
   const renderer = new Canvas2DRenderer(stubContext(), logical);
   renderer.setViewport(fitViewport(logical, VIEWPORT.width, VIEWPORT.height, NO_INSETS));
 
-  const zoned: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
-  const input = new InputManager(logical, { split: zoned, bottomSeat: arm.localSeat });
+  // `zoneSplitFor` is the engine's one answer to "what is the split right now", shared with
+  // `GameHost` and the input fuzzer since #2479 — three copies of this derivation had drifted
+  // apart before that. The presentation is pinned to `shared-screen` **on purpose**, and this
+  // is the one place that is correct rather than a bug: in single-seat the local player owns
+  // the whole viewport, so a pointer at a given point would be attributed to a different seat
+  // in the two arms, and the harness would report a parity failure for the one difference the
+  // spec explicitly allows. Holding the split identical is what leaves the simulation as the
+  // only thing under comparison.
+  const splitFor = (active: SeatId | null): ZoneSplit =>
+    zoneSplitFor('shared-screen', manifest.zoneSplit, active);
+  const input = new InputManager(logical, { split: splitFor(null), bottomSeat: arm.localSeat });
   const view = new InputView();
   const guard = arm.settleGuard ?? SETTLE_GUARD;
 
@@ -496,8 +493,7 @@ function drive(manifest: GameManifest, create: () => Game, arm: Arm): Frame[] {
     const active = game.getActiveSeat?.() ?? null;
     stable = active === previousSeat ? stable + 1 : 0;
     previousSeat = active;
-    const split: ZoneSplit = active === null ? zoned : 'shared';
-    input.setSplit(split);
+    input.setSplit(splitFor(active));
     input.setBoardSeat(active ?? arm.localSeat);
 
     if (arm.hands === 'both-seats') {
@@ -519,7 +515,7 @@ function drive(manifest: GameManifest, create: () => Game, arm: Arm): Frame[] {
           const owner = active ?? (script.float() < 0.5 ? arm.localSeat : far);
           const x = script.float() * logical.width;
           const y = script.float() * logical.height;
-          press(owner, pointerId, x, y, { split, board: active ?? arm.localSeat });
+          press(owner, pointerId, x, y, { split: splitFor(active), board: active ?? arm.localSeat });
         }
         // The local seat keeps the key it has in every other arm, and the far seat gets
         // one of its own — a direction, which a rotated seat reads turned around, and the

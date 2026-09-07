@@ -73,6 +73,23 @@
   gap: var(--db-space-1);
 }
 
+/* The round/match clock (#149), between the two scoreboards where both seats can read it.
+   Tabular so the digits do not shift the layout as they tick. */
+.clock {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Near-expiry: heavier and warm, so the warning reads by weight as well as by colour and so
+   survives greyscale (rule 7). */
+.clock[data-warning='true'] {
+  color: var(--db-danger);
+  font-weight: 900;
+}
+
 .rounds {
   display: flex;
   gap: 4px;
@@ -111,8 +128,11 @@
 
 .pause {
   flex: 0 0 auto;
-  min-width: var(--db-touch-target);
-  min-height: var(--db-touch-target);
+  /* The one gameplay control the shell owns (the games draw their own on the canvas), so it
+     takes the physical gameplay target the play surface publishes (#1889), falling back to
+     the shell target before that variable is set or on any page that does not publish it. */
+  min-width: var(--db-gameplay-target, var(--db-touch-target));
+  min-height: var(--db-gameplay-target, var(--db-touch-target));
   border: 2px solid var(--db-border);
   border-radius: var(--db-radius-sm);
   background: var(--db-paper);

@@ -1,4 +1,4 @@
-import { resolve } from '@duelbox/game-sdk';
+import { misjudgement, resolve } from '@duelbox/game-sdk';
 import type { WinCondition } from '@duelbox/game-sdk';
 import type { Rng, SeatId } from '@duelbox/engine';
 
@@ -42,7 +42,7 @@ export const START_PIPS = 167;
  *
  * Two hundred and twenty is a backstop rather than a rule anybody plays against: over two
  * thousand measured easy-against-easy matches it was reached not once, and the longest ran
- * 121 turns. The pairings that trade blots for a long time do reach it — 18 matches in 400
+ * 149 turns. The pairings that trade blots for a long time do reach it — 23 matches in 400
  * for normal against normal — and those settle on pips, which is the right answer for a
  * race neither side is finishing.
  *
@@ -477,12 +477,28 @@ export interface BotProfile {
   readonly hits: boolean;
   /** How much it minds leaving a blot of its own, from 0 (blind) to 1 (counts the shots). */
   readonly safety: number;
+  /**
+   * How far off the checker it meant to touch its finger can land, in **points**.
+   *
+   * The unit is a point of the board, because that is the unit the board is drawn in and
+   * rule 8 forbids expressing anything the simulation reads in pixels. Symmetric and
+   * uniform: {@link misjudgement} turns one seeded draw into a slip in `[-aimError, +aimError]`.
+   *
+   * This is not a second blunder rate and it is not a decision knob at all — see
+   * {@link aimedMove} for what it does and issue #2477 for why it exists. Measured over
+   * forty matches a tier, with blunders excluded and one-move turns skipped, the finger
+   * lands somewhere the tier did not mean **13.9%, 6.2% and 1.1%** of the time. `hard`'s
+   * 0.55 is under half a point, so it can only ever slip onto an *immediately adjacent*
+   * occupied point — and it is not zero, because a bot that cannot miss is the thing #2477
+   * was about.
+   */
+  readonly aimError: number;
 }
 
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: { blunder: 0.55, hits: false, safety: 0 },
-  normal: { blunder: 0.18, hits: true, safety: 0.5 },
-  hard: { blunder: 0, hits: true, safety: 1 },
+  easy: { blunder: 0.55, hits: false, safety: 0, aimError: 1.6 },
+  normal: { blunder: 0.18, hits: true, safety: 0.5, aimError: 1 },
+  hard: { blunder: 0, hits: true, safety: 1, aimError: 0.55 },
 });
 
 /**
@@ -547,22 +563,85 @@ function scoreMove(position: Position, seat: SeatId, code: number, profile: BotP
 const moveScratch: number[] = [];
 
 /**
- * The move a bot plays, or -1 when it has none.
+ * The move a finger lands on when it meant `wanted` and came down `slip` points off.
  *
- * Every tier sees the board a human sees. Difficulty is how well it chooses among the legal
- * moves — never extra information, never a second look at the dice.
+ * ## Why a bot needs this at all (#2477)
+ *
+ * A person names a place on the board and the game plays the legal move nearest it —
+ * `game.ts` does that in `#nearestMove`, and it is the only way either instrument commits.
+ * The bot used to skip that step entirely: it read the legal list, scored it, and returned
+ * a move code. Perfect knowledge of the legal set *and* perfect precision in reaching into
+ * it, which is exactly the privilege rule 6 forbids and the "common precision envelope" of
+ * CLAUDE.md's fairness section denies every other input family. A bot is an input family.
+ *
+ * So the decision is left alone — the fix is not to make the bot choose worse — and only
+ * the *reaching* is made fallible. The bot still works out the move it wants; then its
+ * finger comes down `slip` points away from the checker it meant, and whatever that lands
+ * on is what it plays. It aims, and it lives with the result.
+ *
+ * ## Points, not pixels, and one axis rather than two
+ *
+ * The slip is measured in points along the travel line, which is the order the board is
+ * *read*: this board runs the twenty-four points left to right along the top and then left
+ * to right along the bottom, like two lines of text, and both instruments walk it in that
+ * order — the keyboard cursor steps the legal moves in it and a finger sweeps along it.
+ * Nothing here knows how wide a point is drawn, which is rule 8.
+ *
+ * ## What it does and does not slip
+ *
+ * The primary key is the point the move *starts* from, because that is what a finger is
+ * aiming at: `#nearestMove` ranks by the source anchor first and only breaks ties on the
+ * landing point. Among the moves from whichever point it actually touched, the die nearest
+ * the one it meant is played — the die is a decision rather than a place, and a checker on
+ * the bar is one spot on the board that cannot be mis-touched at all. Ties go to the move
+ * it meant, so a slip smaller than half a point always plays it.
+ *
+ * Allocates nothing and reads `moves` in place, so it is safe on any step.
  */
-export function botMove(position: Position, rng: Rng, difficulty: BotDifficulty): number {
-  const count = legalMoves(moveScratch, position, position.seat);
-  if (count === 0) return -1;
+export function aimedMove(
+  moves: readonly number[],
+  count: number,
+  wanted: number,
+  slip: number,
+): number {
+  if (wanted < 0 || count <= 0) return wanted;
+  const aim = moveFrom(wanted) + slip;
+  const wantedDie = moveDie(wanted);
+  let best = wanted;
+  let bestPlace = slip < 0 ? -slip : slip;
+  let bestDie = 0;
+  for (let i = 0; i < count; i += 1) {
+    const code = moves[i] ?? 0;
+    const gap = moveFrom(code) - aim;
+    const place = gap < 0 ? -gap : gap;
+    if (place > bestPlace) continue;
+    const dieGap = Math.abs(moveDie(code) - wantedDie);
+    if (place === bestPlace && dieGap >= bestDie) continue;
+    best = code;
+    bestPlace = place;
+    bestDie = dieGap;
+  }
+  return best;
+}
 
+/**
+ * The move a tier *means* to play, before its finger has anything to say about it.
+ *
+ * Separate from {@link botMove} because the decision and the reach are two different
+ * faculties and the tests measure them apart: `botMove` is this, blunders, and an aim.
+ * Reads `moves`, draws nothing, allocates nothing.
+ */
+export function wantedMove(
+  moves: readonly number[],
+  count: number,
+  position: Position,
+  difficulty: BotDifficulty,
+): number {
   const profile = BOT_PROFILES[difficulty];
-  if (rng.bool(profile.blunder)) return moveScratch[rng.int(0, count)] ?? -1;
-
-  let best = moveScratch[0] ?? -1;
+  let best = moves[0] ?? -1;
   let bestScore = -Infinity;
   for (let i = 0; i < count; i += 1) {
-    const code = moveScratch[i] ?? 0;
+    const code = moves[i] ?? 0;
     const score = scoreMove(position, position.seat, code, profile);
     if (score > bestScore) {
       bestScore = score;
@@ -570,4 +649,26 @@ export function botMove(position: Position, rng: Rng, difficulty: BotDifficulty)
     }
   }
   return best;
+}
+
+/**
+ * The move a bot plays, or -1 when it has none.
+ *
+ * Every tier sees the board a human sees. Difficulty is how well it chooses among the legal
+ * moves and how steadily it reaches for the one it chose — never extra information, never a
+ * second look at the dice.
+ */
+export function botMove(position: Position, rng: Rng, difficulty: BotDifficulty): number {
+  const count = legalMoves(moveScratch, position, position.seat);
+  if (count === 0) return -1;
+
+  const profile = BOT_PROFILES[difficulty];
+  // Both draws are taken every call and before any branch on what the board looks like, so
+  // the three tiers consume the stream the same way when they agree and a difference
+  // between two traces means a different *decision* rather than a different dice sequence.
+  const careless = rng.bool(profile.blunder);
+  const slip = misjudgement(rng.float(), profile.aimError);
+  if (careless) return moveScratch[rng.int(0, count)] ?? -1;
+
+  return aimedMove(moveScratch, count, wantedMove(moveScratch, count, position, difficulty), slip);
 }

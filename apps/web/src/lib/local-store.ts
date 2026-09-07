@@ -21,6 +21,8 @@
  * read happens inside an effect, so the server's HTML and the browser's first paint agree.
  */
 
+import { stripForbiddenKeys } from './hardened-json';
+
 /** Every key the site writes starts with this, so a reader of DevTools knows whose it is. */
 export const KEY_PREFIX = 'duelbox:';
 
@@ -44,7 +46,13 @@ export function readJson(key: string): unknown {
     // handles — the same path as a parse failure, and for the same reason.
     const raw = globalThis.localStorage.getItem(key);
     if (raw === null) return null;
-    return JSON.parse(raw) as unknown;
+    // Storage is a boundary (threat model §4): whatever is under the key was written by
+    // another tab, an older build, or a console, and a crafted `__proto__`/`constructor`/
+    // `prototype` key would ride a later merge into the runtime's prototype chain. Every
+    // store reads through here, so stripping those keys once protects all of them —
+    // `last-mode`, `head-to-head`, `settings`, `favourites`, `recent`, `tournament-store`
+    // and the rest inherit the guard without each re-stating it (#2365).
+    return stripForbiddenKeys(JSON.parse(raw) as unknown);
   } catch {
     return null;
   }

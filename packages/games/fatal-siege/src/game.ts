@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
   BAND_FAR,
@@ -25,6 +26,7 @@ import {
   resetBotState,
   resetSiege,
   scoreOf,
+  abandonHold,
   setHold,
   sideOf,
   step,
@@ -190,6 +192,17 @@ export class FatalSiegeGame implements Game {
       return;
     }
     const seatInput = input.seat(seat);
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    //
+    // The engine suppresses the release, but this game does not read `actionReleased`: it
+    // hands the hold to the rules and the rules find their own edge, so a hold that merely
+    // stops *fires the gun*. `abandonHold` is the one thing `setHold` cannot say (#2501).
+    if (actionAbandoned(seatInput)) {
+      abandonHold(this.#siege, seat);
+      return;
+    }
     setHold(this.#siege, seat, seatInput.actionHeld || seatInput.actionPressed);
   }
 

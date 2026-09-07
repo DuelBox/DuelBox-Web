@@ -1,0 +1,103 @@
+# Versioning the workspace packages with Changesets (#11).
+#
+# On a push to `main`, this collects any pending changesets and opens (or updates) a
+# "Version Packages" pull request that applies the version bumps and writes the changelogs.
+# Merging that PR is what actually versions the packages — the same two-step flow the standard
+# Changesets action provides.
+#
+# ## Why this does not use `changesets/action`
+#
+# The canonical approach is `changesets/action`, but `docs/secure-coding.md` rule 9 requires
+# every CI action to be pinned to a commit SHA that has been verified, and "a plausible-looking
+# SHA from memory is worse than no pin". So this workflow uses only the three first-party actions
+# already SHA-pinned and vetted in `deploy.yml`, and does the version-and-open-PR step with the
+# `gh` CLI that ships on the runner — no new third-party action enters the supply chain.
+#
+# ## Publishing is deliberately not done
+#
+# Every package here is `private: true` (see each package.json). `.changeset/config.json` sets
+# `privatePackages.version` and `.tag` to true, so packages get versions and tags but nothing is
+# published to a registry. If publishing is ever wanted it is a separate, reviewed addition.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One release run at a time; never cancel a half-done version bump.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so version/changelog generation and the PR branch have a base.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        # Deliberately no `version:` — package.json pins `packageManager`, and passing both makes
+        # the action treat it as a conflict and refuse to install (the mistake that cost this
+        # repository 45 red CI runs; see deploy.yml).
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Version packages and open the release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          # Pending changesets are the .md files in .changeset other than README.md.
+          pending=()
+          for f in .changeset/*.md; do
+            [ "$(basename "$f")" = "README.md" ] && continue
+            pending+=("$f")
+          done
+
+          if [ ${#pending[@]} -eq 0 ]; then
+            echo "No pending changesets — nothing to version."
+            exit 0
+          fi
+          echo "Found ${#pending[@]} pending changeset(s); versioning."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Consume the changesets: bump versions, write changelogs, delete the consumed notes.
+          pnpm changeset version
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "changeset version produced no changes; nothing to open."
+            exit 0
+          fi
+
+          branch="changeset-release/main"
+          git checkout -B "$branch"
+          git add -A
+          git commit -m "Version Packages"
+          git push --force origin "$branch"
+
+          # Open the PR if none is open for this branch; a re-run just updates it via the push.
+          existing="$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number' || true)"
+          if [ -z "$existing" ]; then
+            gh pr create --base main --head "$branch" \
+              --title "Version Packages" \
+              --body "Automated by .github/workflows/release.yml. Merging this PR applies the pending changeset version bumps and changelogs. Private packages are versioned and tagged only; nothing is published to a registry."
+          else
+            echo "Release PR #$existing already open for $branch; updated by the push above."
+          fi

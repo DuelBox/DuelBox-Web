@@ -82,10 +82,60 @@ now checks the whole rack against the sweep rather than trusting the numbers.
 **Who moves first is `context.openingSeat`, never a literal `p1`.** The SDK alternates it
 across the rounds of a best-of so first-mover advantage washes out (#2466), and a game that
 assumed seat one would leave that rotation reaching nothing (#2487). It is read in
-`resetGame`, which sets the lead as well as the active seat. Measured at 50 seeds x both
-opening seats on `normal`, equal tiers: seat one takes **34.1%** of 85 decided matches,
-against 36.6% with the lead fixed to seat one, so the seat-two lean here is not the opener —
-it survives both of them and is worth an issue of its own.
+`resetGame`, which sets the lead as well as the active seat. **The two bot generators are
+handed out by opening seat rather than by chair**, which is what turns the round opened by
+`p2` into the round opened by `p1` seen from the other chair — same rack, same needles, same
+draws. Measured at 50 seeds x both opening seats on `normal`, equal tiers: seat one takes
+**exactly 50.0%** of decided matches, at any sample size.
+
+It used to take **34.1%** of 85 decided matches, and that lean was not the opener: it measured
+36.6% with the lead fixed to seat one as well. See **Seat balance** below.
+
+## Seat balance
+
+**The board is one coordinate system, and swapping the seats is the half turn** — `x` becomes
+`640 - x` as well as `y` becoming `1000 - y`. Not a reflection in the wall, and the difference
+is the whole finding: `angleOf` is covariant under the half turn and *only* under the half
+turn, because `angleOf('p2', s)` is exactly `angleOf('p1', s) + pi` for the same `s`. Every
+rule in the file has to be, and two were not (#2502).
+
+**`pickLoaded` broke its tie in board coordinates.** The rack is four rows of two, so *every*
+shot at an untouched rack is a tie between two pucks equally near the gap, and the tie went to
+whichever came first in `game.pucks` — which is the smaller board `x`. Both seats therefore
+slung from `x = 260`, where the half turn sends `x = 260` to `x = 380`. The two seats were
+shooting lanes that are reflections of each other into a needle that is a rotation of the
+other's, so one seat's needle wanted `s = 0.15` where the other's wanted `s = 0.85`; and a
+needle that sweeps up from zero and is stopped at or just before the value the bot wants lands
+a systematic quarter-frame short in `s`, which is a nudge towards the middle of the gap for one
+seat and away from it for the other — against a top-band window only 3.3 units wide. The tie is
+now broken on `acrossOf(seat, x)`, which is a side of the board as the shooter sees it.
+
+**`sweepForAngle` folded an absolute angle back to the seat's base direction.** The far seat's
+`Math.atan2` arguments are the near seat's negated, and `Math.atan2(-a, -b)` is not the double
+`Math.atan2(a, b) - Math.PI`. The two seats' targets came out a couple of ULPs apart on
+mirror-image boards, and the needle is stopped by a strict comparison that can tell them apart.
+Both seats now hand `atan2` the identical pair of numbers — how far ahead the gap is and how far
+across it sits, in the shooter's own frame. `acrossOf` adds a literal `+ 0` for the same family
+of reason: a puck exactly on the centre line gives `-1 * 0`, and `Math.atan2(-0, ahead)` is not
+`Math.atan2(0, ahead)`.
+
+**`park` walked its slots in board `x` too**, so two seats fill their racks in mirror-image
+orders and a second arriving puck lands in a slot that is not the half turn of its mirror's.
+Nothing had been measured on it; it is fixed the same way and the whole-match mirror test does
+catch it.
+
+`rules.test.ts`'s half-turn suite plays every match twice, once opened by each seat, and
+asserts frame by frame that the second **is** the first turned half a turn: who is active, which
+puck is loaded, which frame the needle is stopped on, whether each crossing was clean, and what
+it scored. Positions get a tolerance of `1e-6` board units and nothing else does — `640 - x` is
+not a lossless operation, so the continuous state cannot be bit-exact and the discrete decisions
+must be.
+
+**Why the fairness table below did not catch any of this.** It plays `playOut(tier, tier, seed)`,
+which opens every match with `p1`, and asks only that the two totals come out level *on average*
+over three thousand matches. An asymmetry that sits in the board rather than in the order passes
+that, and did: 50.2 / 50.9 / 51.1 % across the three tiers while the harness read 34.1 %. Both
+tables are kept, because the pair of them is the lesson.
 
 ## The bot
 
@@ -114,13 +164,27 @@ strength needle started, so the bot stopped the second needle at a number in a d
 
 ## What was measured
 
-**Fairness, 3000 matches per equal tier**, seat one's share of decided matches:
+**Fairness, 3000 matches per equal tier, opened by seat one every time**, seat one's share of
+decided matches. Kept because it is the table that *missed* the 34.1 % lean — see **Seat
+balance** for why:
 
 | | seat one | draws | mean score |
 |---|---|---|---|
 | easy v easy | 50.2 % | 333 | 3.98 / 3.95 |
 | normal v normal | 50.9 % | 330 | 7.43 / 7.36 |
 | hard v hard | 51.1 % | 411 | 12.57 / 12.53 |
+
+**Fairness, both opening seats**, which is the measurement that counts. 50 seeds x 2 openers on
+the balance harness, after #2502:
+
+| | seat one | decided | drawn |
+|---|---|---|---|
+| easy v easy | 50.0 % | 92 | 8 |
+| normal v normal | 50.0 % | 92 | 8 |
+| hard v hard | 50.0 % | 88 | 12 |
+
+Exactly 50.0 %, at 300 seeds as well as at 50, because it is a construction rather than a
+sample: each seed's two rounds are one match seen from the two chairs.
 
 **The ladder, 400 matches a cell, both seat orders** (the row's share):
 

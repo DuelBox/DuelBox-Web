@@ -8,8 +8,9 @@ import {
   toScreen,
   toWorld,
   seatRotated,
+  zoneSplitFor,
 } from './seat.js';
-import type { LogicalSize, SeatId } from './seat.js';
+import type { DeclaredZoneSplit, LogicalSize, Presentation, SeatId } from './seat.js';
 
 const SIZE: LogicalSize = { width: 800, height: 600 };
 
@@ -153,6 +154,75 @@ describe('seatForPoint', () => {
     for (let x = 0; x <= 800; x += 50) {
       const seat = seatForPoint(x, SIZE.height / 2, SIZE, 'horizontal', 'p1');
       expect(seat).toBe('p1');
+    }
+  });
+});
+
+describe('zoneSplitFor', () => {
+  const declared: readonly DeclaredZoneSplit[] = ['horizontal', 'vertical', 'shared-board'];
+  const seats: readonly (SeatId | null)[] = [null, 'p1', 'p2'];
+
+  it('hands the whole surface to whoever has the move', () => {
+    for (const decl of declared) {
+      expect(zoneSplitFor('shared-screen', decl, 'p1')).toBe('shared');
+      expect(zoneSplitFor('shared-screen', decl, 'p2')).toBe('shared');
+    }
+  });
+
+  it('gives two seats acting at once a zone each, on the declared axis', () => {
+    expect(zoneSplitFor('shared-screen', 'horizontal', null)).toBe('horizontal');
+    expect(zoneSplitFor('shared-screen', 'vertical', null)).toBe('vertical');
+  });
+
+  /**
+   * The bug in #2479, stated as a test.
+   *
+   * Eleven real-time games declare `shared-board` — Whack a Mole, Snake Clash, Sumo and
+   * eight more. The declaration is about the *picture*: one common board rather than two
+   * halves. Read as ownership it becomes `'shared'`, which {@link seatForPoint} answers by
+   * giving the entire surface to `bottomSeat` — so seat two stops existing. Both seats swing
+   * at those twelve holes at the same time, and the zone is the only thing that can say
+   * which of two people a tap came from.
+   */
+  it('never reads a shared-board declaration as pointer ownership', () => {
+    expect(zoneSplitFor('shared-screen', 'shared-board', null)).toBe('horizontal');
+    expect(
+      seatForPoint(400, 1, SIZE, zoneSplitFor('shared-screen', 'shared-board', null), 'p1'),
+    ).toBe('p2');
+  });
+
+  /**
+   * Single-seat has no divider at all: `docs/presentation.md` says the whole viewport is
+   * yours. Halving it there would leave a remote player mashing a dead half of their own
+   * phone — which is what the shell did, latently, for as long as it ignored `presentation`.
+   */
+  it('gives the local player the whole viewport in single-seat play', () => {
+    for (const decl of declared) {
+      for (const seat of seats) {
+        expect(zoneSplitFor('single-seat', decl, seat)).toBe('shared');
+      }
+    }
+  });
+
+  it('leaves no point on a single-seat surface belonging to the far seat', () => {
+    const split = zoneSplitFor('single-seat', 'horizontal', null);
+    for (let y = 0; y <= SIZE.height; y += 50) {
+      for (let x = 0; x <= SIZE.width; x += 100) {
+        expect(seatForPoint(x, y, SIZE, split, 'p2')).toBe('p2');
+      }
+    }
+  });
+
+  it('answers something for every combination and allocates nothing', () => {
+    const presentations: readonly Presentation[] = ['shared-screen', 'single-seat'];
+    for (const presentation of presentations) {
+      for (const decl of declared) {
+        for (const seat of seats) {
+          const split = zoneSplitFor(presentation, decl, seat);
+          expect(['horizontal', 'vertical', 'shared']).toContain(split);
+          expect(zoneSplitFor(presentation, decl, seat)).toBe(split);
+        }
+      }
     }
   });
 });

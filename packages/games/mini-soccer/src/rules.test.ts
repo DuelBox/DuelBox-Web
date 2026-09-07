@@ -13,14 +13,15 @@ import {
   PITCH_HEIGHT,
   PITCH_WIDTH,
   PLAYER_RADIUS,
+  PLAYER_SPEED,
   WALL,
   botHeading,
   createBotState,
   createGame,
   drive,
+  contest,
   goalMouth,
   inGoal,
-  kick,
   kickOff,
   otherOf,
   resetBotState,
@@ -29,7 +30,25 @@ import {
   touching,
   winnerOf,
 } from './rules.js';
-import type { BotDifficulty, Game } from './rules.js';
+import type { BotDifficulty, Game, Mover } from './rules.js';
+
+/** Far enough off the pitch that this player is touching nothing. */
+const AWAY: Mover = { x: -5000, y: -5000, vx: 0, vy: 0 };
+
+/**
+ * A live position with the ball and the two players put exactly where a test wants them.
+ *
+ * The second player defaults to somewhere off the pitch, so a test about one body pressing
+ * on the ball is about one body pressing on the ball.
+ */
+function placed(ball: Mover, p1: Mover, p2: Mover = AWAY): Game {
+  const game = createGame(new Rng(1));
+  Object.assign(game.ball, ball);
+  Object.assign(game.p1, p1);
+  Object.assign(game.p2, p2);
+  game.phase = 'playing';
+  return game;
+}
 
 const STEP = 1 / 60;
 const heading = { x: 0, y: 0 };
@@ -225,43 +244,85 @@ describe('the ball', () => {
   });
 
   it('is capped, so a rally cannot accelerate away', () => {
-    const ball = { x: 500, y: 300, vx: 5000, vy: 5000 };
-    kick(ball, { x: 400, y: 300, vx: 3000, vy: 0 });
-    expect(Math.hypot(ball.vx, ball.vy)).toBeLessThanOrEqual(MAX_BALL_SPEED + 1e-9);
+    const game = placed(
+      { x: 500, y: 300, vx: 5000, vy: 5000 },
+      { x: 440, y: 300, vx: 3000, vy: 0 },
+    );
+    contest(game);
+    expect(Math.hypot(game.ball.vx, game.ball.vy)).toBeLessThanOrEqual(MAX_BALL_SPEED + 1e-9);
   });
 });
 
-describe('kicking', () => {
+describe('the contest for the ball', () => {
   it('sends the ball away from the player who ran into it', () => {
-    const ball = { x: 520, y: 300, vx: 0, vy: 0 };
-    kick(ball, { x: 480, y: 300, vx: 0, vy: 0 });
-    expect(ball.vx, 'struck from the left, it goes right').toBeGreaterThan(0);
-    expect(Math.abs(ball.vy)).toBeLessThan(1);
+    const game = placed({ x: 520, y: 300, vx: 0, vy: 0 }, { x: 480, y: 300, vx: 0, vy: 0 });
+    expect(contest(game), 'somebody was on it').toBe(true);
+    expect(game.ball.vx, 'struck from the left, it goes right').toBeGreaterThan(0);
+    expect(Math.abs(game.ball.vy)).toBeLessThan(1);
+  });
+
+  it('reports nothing when nobody is near it', () => {
+    const game = placed({ x: 500, y: 300, vx: 0, vy: 0 }, AWAY);
+    expect(contest(game)).toBe(false);
+    expect(game.ball.vx).toBe(0);
   });
 
   it('takes some of the striker own motion, so the approach matters', () => {
     // Running onto a ball has to be different from standing in front of one, or there is
     // no skill in the approach.
-    const still = { x: 520, y: 300, vx: 0, vy: 0 };
-    const running = { x: 520, y: 300, vx: 0, vy: 0 };
-    kick(still, { x: 480, y: 300, vx: 0, vy: 0 });
-    kick(running, { x: 480, y: 300, vx: 400, vy: 0 });
-    expect(running.vx).toBeGreaterThan(still.vx);
-    expect(still.vx).toBeCloseTo(KICK_SPEED, 0);
+    const still = placed({ x: 520, y: 300, vx: 0, vy: 0 }, { x: 480, y: 300, vx: 0, vy: 0 });
+    const running = placed({ x: 520, y: 300, vx: 0, vy: 0 }, { x: 480, y: 300, vx: 400, vy: 0 });
+    contest(still);
+    contest(running);
+    expect(running.ball.vx).toBeGreaterThan(still.ball.vx);
+    expect(still.ball.vx).toBeCloseTo(KICK_SPEED, 0);
   });
 
-  it('pushes the ball clear, so it is not kicked every step', () => {
-    const ball = { x: 500, y: 300, vx: 0, vy: 0 };
-    const player = { x: 495, y: 300, vx: 0, vy: 0 };
-    kick(ball, player);
-    expect(touching(ball, player)).toBe(false);
+  it('pushes the ball clear, so it is not struck every step', () => {
+    const game = placed({ x: 500, y: 300, vx: 0, vy: 0 }, { x: 495, y: 300, vx: 0, vy: 0 });
+    contest(game);
+    expect(touching(game.ball, game.p1)).toBe(false);
   });
 
   it('handles a ball exactly on the player without dividing by zero', () => {
-    const ball = { x: 500, y: 300, vx: 0, vy: 0 };
-    kick(ball, { x: 500, y: 300, vx: 0, vy: 0 });
-    expect(Number.isFinite(ball.vx) && Number.isFinite(ball.vy)).toBe(true);
-    expect(Number.isFinite(ball.x) && Number.isFinite(ball.y)).toBe(true);
+    // No line between the centres to leave along, so a still player presses nothing and a
+    // moving one carries it forward. Answering "rightwards" — which is what this used to do
+    // for both seats — is a seat advantage parked on a case that is only unreachable today.
+    const still = placed({ x: 500, y: 300, vx: 0, vy: 0 }, { x: 500, y: 300, vx: 0, vy: 0 });
+    expect(contest(still)).toBe(false);
+    expect(still.ball.vx).toBe(0);
+
+    const running = placed({ x: 500, y: 300, vx: 0, vy: 0 }, { x: 500, y: 300, vx: 0, vy: -60 });
+    expect(contest(running)).toBe(true);
+    expect(running.ball.vy).toBeLessThan(0);
+    expect(Number.isFinite(running.ball.x) && Number.isFinite(running.ball.y)).toBe(true);
+  });
+
+  it('gives the ball to the player pressing hardest, not to seat one', () => {
+    // The bug this replaced: `if (touching p1) … else if (touching p2)`. Seat two is deep
+    // on the ball here and seat one is barely brushing it, and the ball must go seat one's
+    // way — to the left — rather than seat two's.
+    const game = placed(
+      { x: 500, y: 300, vx: 0, vy: 0 },
+      { x: 434, y: 300, vx: 0, vy: 0 },
+      { x: 540, y: 300, vx: 0, vy: 0 },
+    );
+    contest(game);
+    expect(game.ball.vx, 'pushed back the way the deeper body is facing').toBeLessThan(0);
+  });
+
+  it('holds a ball squeezed from exactly opposite sides', () => {
+    // Two equal presses cancel, so the ball stays where it is and nobody has a free kick.
+    // The old rule launched it at full pace in seat one's direction.
+    const game = placed(
+      { x: 500, y: 300, vx: 0, vy: 0 },
+      { x: 460, y: 300, vx: 0, vy: 0 },
+      { x: 540, y: 300, vx: 0, vy: 0 },
+    );
+    expect(contest(game), 'both of them are on it').toBe(true);
+    expect(game.ball.vx).toBe(0);
+    expect(game.ball.vy).toBe(0);
+    expect(game.ball.x).toBe(500);
   });
 });
 
@@ -515,6 +576,197 @@ describe('a whole match', () => {
       expect(game.ball.x).toBeLessThan(PITCH_WIDTH + 60);
       expect(game.ball.y).toBeGreaterThanOrEqual(0);
       expect(game.ball.y).toBeLessThanOrEqual(PITCH_HEIGHT);
+    }
+  });
+});
+
+/**
+ * The mirror test: turn the pitch through 180 degrees, swap the seats, and nothing changes.
+ *
+ * The pitch is its own half-turn image — the two goal mouths are the same size and the same
+ * height, the walls are symmetric, and the two kick-off marks are reflections. So for every
+ * position there is a mirrored position, and every rule here has to send one to the other.
+ * The rule that did not was the contest for the ball: `if (touching p1) … else if
+ * (touching p2)`, which is not a rule about football at all, it is a rule about which seat
+ * was named first in the source. It cost seat two **25 points of win rate on `normal` and
+ * 25 on `hard`**, and no amount of sampling `easy` — where it measured a clean 50% because
+ * the tier is too clumsy to contest anything — would ever have found it.
+ *
+ * {@link contest} is asserted **exactly**, which it can be: coordinates are drawn on a
+ * quarter-unit grid so `PITCH_WIDTH - x` loses no bits, every quantity in it is built from
+ * differences of mirrored coordinates, and negation and addition of negations are exact in
+ * IEEE arithmetic. A whole `step` has to allow a few ulps, because the drag integral and the
+ * trigonometry in the bot do not commute with the mirror to the last bit — but the discrete
+ * half of it, the phase, the result and the score, is asserted exactly.
+ */
+describe('the mirror', () => {
+  /** Positions are drawn on this grid, so a half-turn of the pitch loses no bits. */
+  const GRID = 4;
+  const REACH = PLAYER_RADIUS + BALL_RADIUS;
+
+  function turned(mover: Readonly<Mover>): Mover {
+    return {
+      x: PITCH_WIDTH - mover.x,
+      y: PITCH_HEIGHT - mover.y,
+      vx: -mover.vx,
+      vy: -mover.vy,
+    };
+  }
+
+  /** The same position turned through 180 degrees, with the two seats exchanged with it. */
+  function halfTurn(game: Readonly<Game>): Game {
+    const other = createGame(new Rng(1));
+    Object.assign(other.ball, turned(game.ball));
+    Object.assign(other.p1, turned(game.p2));
+    Object.assign(other.p2, turned(game.p1));
+    other.phase = game.phase;
+    other.clock = game.clock;
+    other.hold = game.hold;
+    other.scorer = game.scorer === null ? null : otherOf(game.scorer);
+    other.score.p1 = game.score.p2;
+    other.score.p2 = game.score.p1;
+    return other;
+  }
+
+  function onGrid(rng: Rng, high: number): number {
+    return rng.int(0, high * GRID + 1) / GRID;
+  }
+
+  /**
+   * A position nobody designed: a ball anywhere, moving any way, and two players who are
+   * usually — deliberately — right on top of it.
+   *
+   * Two players landing on the ball at once is the case the whole bug lived in, and dropping
+   * three bodies uniformly on a pitch this size would set it up about once in a thousand. So
+   * two thirds of these put a player within reach of the ball on purpose.
+   */
+  function randomPosition(rng: Rng): Game {
+    const game = createGame(new Rng(1));
+    game.phase = 'playing';
+    game.ball.x = onGrid(rng, PITCH_WIDTH);
+    game.ball.y = onGrid(rng, PITCH_HEIGHT);
+    game.ball.vx = rng.int(-900 * GRID, 900 * GRID + 1) / GRID;
+    game.ball.vy = rng.int(-900 * GRID, 900 * GRID + 1) / GRID;
+    for (const player of [game.p1, game.p2]) {
+      if (rng.int(0, 12) === 0) {
+        // Dead centre on the ball: no line between the centres, and the one case where a
+        // fixed fallback direction would be a seat advantage nothing else could see.
+        player.x = game.ball.x;
+        player.y = game.ball.y;
+      } else if (rng.int(0, 3) === 0) {
+        player.x = onGrid(rng, PITCH_WIDTH);
+        player.y = onGrid(rng, PITCH_HEIGHT);
+      } else {
+        const near = Math.round(REACH * 1.2) * GRID;
+        player.x = game.ball.x + rng.int(-near, near + 1) / GRID;
+        player.y = game.ball.y + rng.int(-near, near + 1) / GRID;
+      }
+      player.vx = rng.int(-PLAYER_SPEED * GRID, PLAYER_SPEED * GRID + 1) / GRID;
+      player.vy = rng.int(-PLAYER_SPEED * GRID, PLAYER_SPEED * GRID + 1) / GRID;
+    }
+    return game;
+  }
+
+  it('resolves a contest into the mirror of the contest, exactly', () => {
+    const rng = new Rng(20260829);
+    let contested = 0;
+    for (let trial = 0; trial < 600; trial += 1) {
+      const position = randomPosition(rng);
+      const mirrored = halfTurn(position);
+      const touched = contest(position);
+      expect(contest(mirrored), `trial ${String(trial)}`).toBe(touched);
+      if (touched) contested += 1;
+      const expected = turned(position.ball);
+      // Velocity is exact under the mirror; the clearing step adds to a mirrored coordinate
+      // rather than mirroring a sum, which is the one place a bit can be lost.
+      expect(mirrored.ball.vx, `trial ${String(trial)}`).toBe(expected.vx);
+      expect(mirrored.ball.vy, `trial ${String(trial)}`).toBe(expected.vy);
+      expect(mirrored.ball.x).toBeCloseTo(expected.x, 9);
+      expect(mirrored.ball.y).toBeCloseTo(expected.y, 9);
+    }
+    expect(
+      contested,
+      'the sweep has to actually reach the ball to be testing anything',
+    ).toBeGreaterThan(300);
+  });
+
+  it('steps a mirrored position into the mirror of the step', () => {
+    const rng = new Rng(777);
+    let goals = 0;
+    for (let trial = 0; trial < 600; trial += 1) {
+      const position = randomPosition(rng);
+      const mirrored = halfTurn(position);
+      const result = step(position, STEP, new Rng(5));
+      expect(step(mirrored, STEP, new Rng(5)), `trial ${String(trial)}`).toBe(result);
+      if (result === 'goal') goals += 1;
+      const expected = halfTurn(position);
+      expect(mirrored.score.p1, `trial ${String(trial)}`).toBe(expected.score.p1);
+      expect(mirrored.score.p2).toBe(expected.score.p2);
+      expect(mirrored.scorer).toBe(expected.scorer);
+      expect(mirrored.phase).toBe(expected.phase);
+      expect(mirrored.ball.x).toBeCloseTo(expected.ball.x, 8);
+      expect(mirrored.ball.y).toBeCloseTo(expected.ball.y, 8);
+      expect(mirrored.ball.vx).toBeCloseTo(expected.ball.vx, 8);
+      expect(mirrored.ball.vy).toBeCloseTo(expected.ball.vy, 8);
+    }
+    expect(
+      goals,
+      'and it has to score some of them, or the goal check is untested',
+    ).toBeGreaterThan(5);
+  });
+
+  it('sends the bot the mirrored way, on every decision and every tier', () => {
+    // The bot's misjudgement is drawn once a reaction interval and held, so the same roll
+    // has to mean the same mistake from either chair. Under a half-turn it does: the aim
+    // turns by pi and a wobble of `w` is still a wobble of `w`.
+    const rng = new Rng(31415);
+    const heads = { x: 0, y: 0 };
+    const mirroredHeads = { x: 0, y: 0 };
+    for (let trial = 0; trial < 300; trial += 1) {
+      const position = randomPosition(rng);
+      const mirrored = halfTurn(position);
+      for (const difficulty of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+        const roll = rng.float();
+        botHeading(heads, position, createBotState(), 'p1', BOT_PROFILES[difficulty], STEP, roll);
+        botHeading(
+          mirroredHeads,
+          mirrored,
+          createBotState(),
+          'p2',
+          BOT_PROFILES[difficulty],
+          STEP,
+          roll,
+        );
+        expect(mirroredHeads.x, `trial ${String(trial)} ${difficulty}`).toBeCloseTo(-heads.x, 9);
+        expect(mirroredHeads.y).toBeCloseTo(-heads.y, 9);
+      }
+    }
+  });
+
+  it('drives a seat the mirrored way', () => {
+    const rng = new Rng(2718);
+    for (let trial = 0; trial < 300; trial += 1) {
+      const position = randomPosition(rng);
+      const mirrored = halfTurn(position);
+      const dx = rng.int(-100, 101) / 10;
+      const dy = rng.int(-100, 101) / 10;
+      drive(position, 'p1', dx, dy, STEP);
+      drive(mirrored, 'p2', -dx, -dy, STEP);
+      expect(mirrored.p2.x, `trial ${String(trial)}`).toBeCloseTo(PITCH_WIDTH - position.p1.x, 9);
+      expect(mirrored.p2.y).toBeCloseTo(PITCH_HEIGHT - position.p1.y, 9);
+    }
+  });
+
+  it('knows a goal in either mouth the same way', () => {
+    const rng = new Rng(1618);
+    for (let trial = 0; trial < 400; trial += 1) {
+      const ball: Mover = {
+        x: onGrid(rng, PITCH_WIDTH),
+        y: onGrid(rng, PITCH_HEIGHT),
+        vx: 0,
+        vy: 0,
+      };
+      expect(inGoal(turned(ball), 'p2'), `trial ${String(trial)}`).toBe(inGoal(ball, 'p1'));
     }
   });
 });

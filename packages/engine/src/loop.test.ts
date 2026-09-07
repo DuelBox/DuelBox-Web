@@ -406,6 +406,118 @@ describe('RunLoop', () => {
   });
 });
 
+/**
+ * Assist-mode speed (#179): the multiplier scales how much wall-clock time reaches the fixed
+ * loop, and nothing about the simulation step itself.
+ *
+ * The property that makes this a legitimate assist rather than a different match is that the
+ * step size never moves — every `update` is the identical `stepSeconds` it always was, so
+ * the seeded RNG and the step order a game runs are byte-for-byte what they were at full
+ * speed, just delivered over more wall-clock seconds. These check exactly that: the step
+ * size is invariant, half speed runs half the steps for the same real time, render keeps
+ * pace with frames rather than steps, and reaching a given step count is deterministic at
+ * any speed.
+ */
+describe('RunLoop assist-mode time scaling', () => {
+  it('defaults to full speed', () => {
+    const runner = new RunLoop(new FixedLoop(new Recorder()), new FakeClock());
+    expect(runner.timeScale).toBe(1);
+  });
+
+  it('runs half the steps at half speed over the same wall-clock time', () => {
+    function run(scale: number): Recorder {
+      const recorder = new Recorder();
+      const clock = new FakeClock();
+      const runner = new RunLoop(new FixedLoop(recorder), clock);
+      runner.setTimeScale(scale);
+      runner.start();
+      // 30 frames of 16 ms of real time each.
+      for (let i = 0; i < 30; i += 1) clock.tick(16);
+      return recorder;
+    }
+    const full = run(1);
+    const half = run(0.5);
+    // Renders track frames in both, because rendering is never scaled.
+    expect(full.renders).toBe(30);
+    expect(half.renders).toBe(30);
+    // Steps: 480 ms / 16.667 ≈ 28 at full speed; 240 ms / 16.667 ≈ 14 at half. The half run
+    // is within one step of exactly half the full run's steps.
+    expect(Math.abs(half.updates - full.updates / 2)).toBeLessThanOrEqual(1);
+  });
+
+  it('never changes the step size the simulation is handed, at any speed', () => {
+    const deltas: number[] = [];
+    const loop = new FixedLoop(
+      {
+        update(dt) {
+          deltas.push(dt);
+        },
+        render() {
+          /* not under test here */
+        },
+      },
+      { stepsPerSecond: 60 },
+    );
+    const clock = new FakeClock();
+    const runner = new RunLoop(loop, clock);
+    runner.setTimeScale(0.25);
+    runner.start();
+    for (let i = 0; i < 40; i += 1) clock.tick(16);
+    expect(deltas.length).toBeGreaterThan(0);
+    // Every step is exactly one step of simulation time, quarter speed or not.
+    for (const dt of deltas) expect(dt).toBeCloseTo(1 / 60, 12);
+  });
+
+  it('reaches a given step count deterministically regardless of speed', () => {
+    // The same sequence of steps, only spread over more wall-clock time. Reaching 20 steps
+    // at quarter speed takes four times the real time it takes at full speed, and produces
+    // the identical run of step deltas.
+    function stepsFor(scale: number, msPerFrame: number): number[] {
+      const deltas: number[] = [];
+      const loop = new FixedLoop(
+        {
+          update(dt: number) {
+            deltas.push(dt);
+          },
+          render() {
+            /* counted elsewhere */
+          },
+        },
+        { stepsPerSecond: 60 },
+      );
+      const clock = new FakeClock();
+      const runner = new RunLoop(loop, clock);
+      runner.setTimeScale(scale);
+      runner.start();
+      while (deltas.length < 20) clock.tick(msPerFrame);
+      return deltas.slice(0, 20);
+    }
+    expect(stepsFor(0.25, 16)).toEqual(stepsFor(1, 16));
+  });
+
+  it('ignores a scale that is not a positive finite number', () => {
+    const runner = new RunLoop(new FixedLoop(new Recorder()), new FakeClock());
+    runner.setTimeScale(0.5);
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      runner.setTimeScale(bad);
+      expect(runner.timeScale).toBe(0.5);
+    }
+  });
+
+  it('can change speed mid-run without losing the steps already taken', () => {
+    const recorder = new Recorder();
+    const clock = new FakeClock();
+    const runner = new RunLoop(new FixedLoop(recorder), clock);
+    runner.start();
+    for (let i = 0; i < 10; i += 1) clock.tick(16);
+    const before = recorder.updates;
+    runner.setTimeScale(0.5);
+    for (let i = 0; i < 10; i += 1) clock.tick(16);
+    // Steps kept accumulating from where they were, just more slowly after the change.
+    expect(recorder.updates).toBeGreaterThan(before);
+  });
+});
+
 describe('browserClock', () => {
   it('reports a clear error when requestAnimationFrame is unavailable', () => {
     const scope = globalThis as unknown as { requestAnimationFrame?: unknown };

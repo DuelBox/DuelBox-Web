@@ -9,6 +9,7 @@ import {
   vec2,
 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -178,6 +179,18 @@ export class PopItGame implements Game {
     }
 
     const seatInput = input.seat(active);
+
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing pops on this step — but the half-chosen run would otherwise stay standing
+    // and be popped by whatever release came next. The run is dropped, exactly as `onPause`
+    // drops it (#2501). Dropped whichever instrument began it: of the two ways to be wrong,
+    // abandoning a run that was still live costs a press, and popping one the browser
+    // disowned costs the turn.
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#clearRun();
+
     if (!this.#flip.acceptsInput) return;
     this.#cursor.step(seatInput.move.x, seatInput.move.y, fixedDeltaSeconds, this.#flip.rotated);
 

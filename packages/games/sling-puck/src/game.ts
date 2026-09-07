@@ -54,6 +54,8 @@ export class SlingPuckGame implements Game {
    * asked first takes the earlier value every time, which measured 1.4 points of win rate in
    * Star Catcher. Here the seats alternate rather than run at once, so the effect would be
    * even more one-sided.
+   *
+   * **The two streams are handed out by opening seat, not by chair** — see {@link init}.
    */
   #botRng: Record<SeatId, Rng> = { p1: new Rng(1), p2: new Rng(2) };
   #presentation: Presentation = 'shared-screen';
@@ -66,17 +68,26 @@ export class SlingPuckGame implements Game {
   }
 
   init(context: GameContext): void {
-    this.#botRng = {
-      p1: new Rng(context.rng.next() | 0),
-      p2: new Rng(context.rng.next() | 0),
-    };
+    // The first stream goes to whoever opens, not to whoever is sitting in chair one.
+    //
+    // Keyed to the chair, a seed's two rounds are two different matches and seat balance
+    // stays a *measurement* — 528 decided matches to say 53.0%, with nine points of noise
+    // on it. Keyed to the opener, the round opened by `p2` is the round opened by `p1`
+    // turned half a turn: same rack, same needles, same draws, other chair. The winner is
+    // then the other seat by construction, seat one's share is exactly 50% at any sample
+    // size, and `rules.test.ts` can assert that outright instead of counting wins. Same
+    // move several real-time games in the catalogue made for the same reason.
+    const opener = context.openingSeat;
+    const first = new Rng(context.rng.next() | 0);
+    const second = new Rng(context.rng.next() | 0);
+    this.#botRng = opener === 'p2' ? { p1: second, p2: first } : { p1: first, p2: second };
     this.#presentation = context.presentation;
     this.#localSeat = context.localSeat;
     this.#bot = { p1: context.botDifficulty('p1'), p2: context.botDifficulty('p2') };
     this.#winner = null;
     resetBotState(this.#botState.p1);
     resetBotState(this.#botState.p2);
-    resetGame(this.#position, context.openingSeat);
+    resetGame(this.#position, opener);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {

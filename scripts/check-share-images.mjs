@@ -100,7 +100,12 @@ if (!existsSync(OUT)) {
 }
 
 const catalogue = JSON.parse(readFileSync(join(ROOT, 'data/catalog.generated.json'), 'utf8')).games;
-const exported = pages(OUT);
+// The embeddable /embed/<slug>/ frames (#2367) deliberately declare the game page as their
+// canonical URL — an embed is a duplicate of the game it hosts, not its own address — and are
+// never shared as content, so they carry no preview image of their own. They are therefore
+// exempt from both the self-canonical derivation and the per-page share-image requirement
+// below; the game page each one points at is checked in full.
+const exported = pages(OUT).filter((page) => !routeOf(page).startsWith('/embed/'));
 if (exported.length === 0) {
   console.error('check-share-images: no exported pages found — run `pnpm build` first.');
   process.exit(1);

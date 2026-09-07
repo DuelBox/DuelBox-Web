@@ -51,6 +51,7 @@ class ScriptedInput implements InputState {
   /** A finger going down at a point. */
   down(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -62,6 +63,7 @@ class ScriptedInput implements InputState {
   /** The same finger moving, still down. */
   dragTo(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -78,6 +80,7 @@ class ScriptedInput implements InputState {
    */
   lift(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionPressed = false;
     target.actionHeld = false;
@@ -86,6 +89,7 @@ class ScriptedInput implements InputState {
 
   idle(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionPressed = false;
     target.actionHeld = false;
@@ -96,6 +100,7 @@ class ScriptedInput implements InputState {
 
   press(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionPressed = true;
     target.actionHeld = true;
@@ -104,8 +109,23 @@ class ScriptedInput implements InputState {
 
   steer(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.move.x = x;
     target.move.y = y;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, nothing is held, and there is **no release** — a cancel and a release
+   * are opposite events since #2480.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionPressed = false;
+    target.actionHeld = false;
+    target.actionReleased = false;
+    target.pointerCancelled = true;
   }
 
   #of(seat: SeatId): MutableSeatInput {
@@ -452,6 +472,53 @@ describe('dragging a run', () => {
     game.onPause();
     game.onResume();
     expect(game.run, 'coming back to a selection you cannot remember is worse').toBeNull();
+  });
+});
+
+describe('a cancelled gesture', () => {
+  it('abandons the run rather than freezing it', () => {
+    const game = new PopItGame();
+    game.init(makeContext(11));
+    const input = new ScriptedInput();
+    settle(game, input);
+
+    const start = at(2, 1);
+    input.down('p1', start.x, start.y);
+    game.update(STEP, input);
+    const end = at(2, 3);
+    input.dragTo('p1', end.x, end.y);
+    game.update(STEP, input);
+    expect(game.run, 'a run was being chosen').toEqual({ row: 2, from: 1, to: 3 });
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.run, 'a gesture the browser disowned leaves nothing behind').toBeNull();
+  });
+
+  it('does not pop the abandoned run on the next, unrelated release', () => {
+    const game = new PopItGame();
+    game.init(makeContext(13));
+    const input = new ScriptedInput();
+    settle(game, input);
+
+    const start = at(2, 1);
+    input.down('p1', start.x, start.y);
+    game.update(STEP, input);
+    const end = at(2, 3);
+    input.dragTo('p1', end.x, end.y);
+    game.update(STEP, input);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    input.idle('p1');
+    game.update(STEP, input);
+
+    // A release from a gesture that chose nothing. Before the fix the frozen run was still
+    // standing, so this popped three bubbles and handed the turn over.
+    input.lift('p1');
+    game.update(STEP, input);
+    expect(bubblesLeft(game.position), 'nothing was popped').toBe(BUBBLE_COUNT);
+    expect(game.position.toMove, 'and the turn did not move').toBe('p1');
   });
 });
 

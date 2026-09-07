@@ -1,0 +1,81 @@
+.head {
+  padding-block: var(--db-space-7) var(--db-space-4);
+}
+
+.head h1 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-3xl);
+}
+
+/* `--db-muted`, not `--db-faint`, for the same AA reason the Terms page's date line carries:
+   13px text needs 4.5:1, and `--db-faint` does not clear it on white. */
+.updated {
+  margin-top: var(--db-space-2);
+  color: var(--db-muted);
+  font-size: var(--db-text-sm);
+}
+
+.prose {
+  max-width: 44rem;
+  padding-bottom: var(--db-space-7);
+}
+
+.prose h2 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-xl);
+  margin-top: var(--db-space-6);
+  margin-bottom: var(--db-space-3);
+}
+
+.prose p {
+  margin-bottom: var(--db-space-3);
+  line-height: 1.65;
+}
+
+.lead {
+  font-size: var(--db-text-lg);
+  color: var(--db-muted);
+}
+
+/* The table scrolls inside its own box rather than moving the page — the one responsive
+   property `docs/responsive.md` calls a bug when it breaks (no horizontal page scroll,
+   320px to 4K). */
+.tableWrap {
+  overflow-x: auto;
+  margin-bottom: var(--db-space-4);
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 20rem;
+  font-size: var(--db-text-sm);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--db-space-2) var(--db-space-3);
+  border-bottom: 1px solid var(--db-hairline);
+  white-space: nowrap;
+}
+
+.table th {
+  font-family: var(--db-font-display);
+  color: var(--db-ink);
+}
+
+.table td {
+  color: var(--db-body);
+}
+
+.fonts {
+  padding-left: var(--db-space-5);
+  list-style: disc;
+}
+
+.fonts li {
+  margin-bottom: var(--db-space-3);
+  line-height: 1.65;
+  color: var(--db-body);
+}

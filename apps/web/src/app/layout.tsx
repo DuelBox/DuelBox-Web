@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { FRAME_GUARD } from './frame-guard';
+import { BASE_PATH } from './base-path';
 import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { SITE_URL } from '@/lib/site';
 import { colour } from '@/styles/tokens';
@@ -36,6 +38,18 @@ export const metadata: Metadata = {
     'A hundred and eight games for two people. Share one screen, two of you either side ' +
     'of it, or take on a bot. No download, no account.',
   applicationName: 'DuelBox',
+  /**
+   * Written out rather than left to the file conventions, because a project page serves
+   * from `/<repo>/` and an icon href that forgets it 404s on the host this site is on.
+   * `manifest.ts` next door is picked up automatically and builds its own URLs the same way.
+   */
+  icons: {
+    icon: [
+      { url: `${BASE_PATH}/icons/icon.svg`, type: 'image/svg+xml' },
+      { url: `${BASE_PATH}/icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
+    ],
+    apple: { url: `${BASE_PATH}/icons/apple-touch-icon.png`, sizes: '180x180' },
+  },
   openGraph: {
     type: 'website',
     siteName: 'DuelBox',
@@ -84,11 +98,50 @@ export const viewport: Viewport = {
  * policy needs no widening. Everything else that used to justify a hand-written head —
  * title, description, theme colour, viewport — comes from the `metadata` and `viewport`
  * exports above, and Next writes the `<head>` itself.
+ *
+ * The one script in here is the frame guard, and it is inline and first for a reason: it is
+ * the whole of the clickjacking defence on a host that serves no `X-Frame-Options` and no
+ * CSP `frame-ancestors`, and a defence that waits for a chunk to download and React to
+ * hydrate leaves a window in which the page is framed, painted and clickable. It costs no
+ * JavaScript chunk at all — `emit-host-config.mjs` hashes it into each page's `script-src`
+ * along with Next's own bootstrap, so the strict policy covers it without being widened.
+ * See `frame-guard.ts` for what it does and does not buy.
  */
+/**
+ * Applies the saved colour-scheme override before the first paint, so a player who chose
+ * dark never sees a flash of the light ground (#76).
+ *
+ * It has to be an inline script in the markup — a `next/script` or a component effect runs
+ * after paint, which is the flash it exists to prevent — so it cannot import `settings.ts`
+ * or `theme.ts` and duplicates the storage key and the decision instead. `theme.test.ts`
+ * reads this string back and fails if it stops matching what those two files do: the same
+ * key, only `light` and `dark` stamped, `system` and everything else left to the media
+ * query in `tokens.css`. Wrapped in try/catch because storage throws in private browsing on
+ * some engines, and a theme script that throws would take the page down with it. */
+const THEME_SCRIPT = `(function(){try{
+var raw=localStorage.getItem('duelbox:settings');
+var t=raw&&JSON.parse(raw);
+var s=t&&t.version===1?t:null;
+var el=document.documentElement;
+var theme=s?s.theme:null;
+if(theme==='light'||theme==='dark')el.setAttribute('data-theme',theme);
+else el.removeAttribute('data-theme');
+var seats=s?s.seatPalette:null;
+if(seats==='colourblind')el.setAttribute('data-seat-palette','colourblind');
+else el.removeAttribute('data-seat-palette');
+}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the script above sets data-theme on <html> before React
+    // hydrates, so the attribute the browser holds differs from the one the server rendered
+    // (none). This suppresses the warning for this one element and this one attribute; it
+    // does not reach the children.
+    <html lang="en" suppressHydrationWarning>
       <body>
+        {/* First in the body so it runs during parse, before the ground is painted. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: FRAME_GUARD }} />
         <a className="db-skip" href="#main">
           Skip to content
         </a>

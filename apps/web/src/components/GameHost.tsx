@@ -12,14 +12,20 @@ import {
   RunLoop,
   browserClock,
   clampDevicePixelRatio,
-  fitViewport,
+  negotiateSharedLogical,
+  negotiateSharedViewport,
   NO_INSETS,
   viewportToLogical,
   vec2,
+  zoneSplitFor,
+  type Presentation,
+  type LogicalSize,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
+  guard,
+  createPresentationToggle,
   isSimulating,
   type Game,
   type GameContext,
@@ -28,6 +34,7 @@ import {
 } from '@duelbox/game-sdk';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
+import { readSettings } from '@/lib/settings';
 import styles from './GameHost.module.css';
 
 /**
@@ -52,6 +59,16 @@ export interface GameHostProps {
   /** Which seat this device plays. Only meaningful in single-seat presentation. */
   localSeat?: SeatId;
   presentation?: 'shared-screen' | 'single-seat';
+  /**
+   * The logical play area the *other* device declared, for a remote match (#1862).
+   *
+   * At match start the host negotiates one shared logical viewport both devices letterbox to,
+   * so neither player ever sees more of the play area than the other (CLAUDE.md rule 9). For
+   * a matched pair this equals the game's own box and the negotiation returns it unchanged;
+   * the point is that the box both devices draw is *agreed*, not assumed per screen. Omitted
+   * for local play, where there is no second device and the game's box is the shared box.
+   */
+  peerLogical?: LogicalSize;
   /** Which seat moves first this round. The match machine decides it; the host relays it. */
   openingSeat?: SeatId;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
@@ -65,6 +82,14 @@ export interface GameHostProps {
   onActiveSeat?: (seat: SeatId | null) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
+  /**
+   * A throw escaped the game's `update()` or `render()` (#151).
+   *
+   * A React error boundary cannot catch this — it happens in a `requestAnimationFrame`
+   * callback, outside React — so the host catches it, stops the loop, and reports it here.
+   * The shell raises the recovery UI; the host never decides on its own that a match is over.
+   */
+  onError?: (error: unknown) => void;
   /**
    * Record every input event, for export as a replayable trace.
    *
@@ -82,6 +107,24 @@ export interface GameHostProps {
   onTraceReady?: (getTrace: () => string) => void;
 }
 
+/**
+ * The split the shell puts the pointer surface on, for a manifest, a presentation and whoever
+ * currently has the move — delegated to the engine so the shell owns no second copy of the rule.
+ *
+ * A game with turns owns the whole pointer surface; only a real-time game on a shared screen
+ * has zones, and a single-seat player owns the whole viewport whatever the manifest says. The
+ * rule lives in {@link zoneSplitFor} because the input fuzzer has to reach the identical answer
+ * — it had its own copy, and for eleven real-time games the two copies disagreed (#2479).
+ * Exported so that agreement can be asserted rather than assumed (`data/input-fuzz.test.ts`).
+ */
+export function hostZoneSplit(
+  manifest: GameManifest,
+  presentation: Presentation,
+  activeSeat: SeatId | null,
+): ZoneSplit {
+  return zoneSplitFor(presentation, manifest.zoneSplit, activeSeat);
+}
+
 export function GameHost({
   manifest,
   createGame,
@@ -90,11 +133,13 @@ export function GameHost({
   localSeat = 'p1',
   presentation = 'shared-screen',
   openingSeat = 'p1',
+  peerLogical,
   botDifficulty,
   onTick,
   onScore,
   onActiveSeat,
   onRequestPause,
+  onError,
   recordTrace = false,
   onTraceReady,
 }: GameHostProps) {
@@ -115,6 +160,8 @@ export function GameHost({
   onActiveSeatRef.current = onActiveSeat;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
 
@@ -124,7 +171,16 @@ export function GameHost({
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const logical = manifest.logical;
+    // The one play area both players share, negotiated once before the first frame (rule 9,
+    // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
+    // box by agreement between the two devices' declarations rather than letting each device
+    // letterbox its own screen independently. For a matched pair (both on the same game) it
+    // is the game's own box; a mismatch is clamped so neither device shows a strip of world
+    // the other cannot, the same disagreement LockstepSession refuses. Everything below draws
+    // and hit-tests in this box; the simulation runs in `manifest.logical`, and the two are
+    // equal for any pair the shell would actually start.
+    const peerBox = peerLogical ?? manifest.logical;
+    const logical = negotiateSharedLogical(manifest.logical, peerBox);
     const renderer = new Canvas2DRenderer(context, logical);
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
@@ -156,8 +212,13 @@ export function GameHost({
     // has always said returning null means "no turns right now", and a game can mean it
     // for part of its life: Sea Battle has both players lay out their fleets at the same
     // time, each on their own half, and only then starts taking turns at a shared grid.
-    const zonedSplit: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
-    const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
+    //
+    // The rule itself lives in the engine, in {@link zoneSplitFor}, because the input fuzzer
+    // has to reach the identical answer — it had its own copy, and for eleven real-time games
+    // the two copies disagreed (#2479). The shell delegates rather than deriving, so there is
+    // one rule; `data/input-fuzz.test.ts` asserts the shell owns no second copy.
+    const splitFor = (seat: SeatId | null): ZoneSplit =>
+      hostZoneSplit(manifest, presentation, seat);
 
     const initialSeat = game.getActiveSeat?.() ?? null;
     const manager = new InputManager(logical, {
@@ -171,10 +232,19 @@ export function GameHost({
     const input: InputManager | InputRecorder = recorder ?? manager;
 
     gameRef.current = game;
+    // The presentation is read through a getter over this mutable, not baked in, so it can be
+    // flipped live by the dev toggle below without rebuilding the match (#1863). Switching it
+    // mid-match cannot disturb the simulation — presentation-parity.test.ts proves every game
+    // steps the identical trace across a switch — so this is safe; it only changes what is
+    // drawn. In production the toggle is stripped, so `livePresentation` never changes and this
+    // is exactly the fixed prop it used to be.
+    let livePresentation = presentation;
     const gameContext: GameContext = {
       manifest,
       rng: new Rng(seed),
-      presentation,
+      get presentation() {
+        return livePresentation;
+      },
       localSeat,
       openingSeat,
       // Read here rather than through the hook, and the difference matters: a game is
@@ -191,7 +261,18 @@ export function GameHost({
     // shell so this canvas is already inside the safe region by the time it is measured.
     // Subtracting the root insets here as well shrank the play area twice over on a
     // notched phone, and cost a getComputedStyle on every resize to do it.
-    let view = fitViewport(logical, canvas.clientWidth, canvas.clientHeight, NO_INSETS);
+    // Letterbox this device to the negotiated shared box. `negotiateSharedViewport` is the
+    // match-path seam: it re-affirms the shared box (idempotent — `logical` is already it) and
+    // fits this screen to it, so a wider or taller screen gets bars rather than more world.
+    let view = negotiateSharedViewport(
+      {
+        logical,
+        screenWidth: canvas.clientWidth,
+        screenHeight: canvas.clientHeight,
+        insets: NO_INSETS,
+      },
+      peerBox,
+    ).view;
     const scratch = vec2();
     let lastWidth = -1;
     let lastHeight = -1;
@@ -215,7 +296,10 @@ export function GameHost({
       el.height = Math.round(cssHeight * dpr);
       // Draw in CSS pixels; the backing store carries the device ratio.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      view = fitViewport(logical, cssWidth, cssHeight, NO_INSETS);
+      view = negotiateSharedViewport(
+        { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
+        peerBox,
+      ).view;
       renderer.setViewport(view);
     }
     resize(canvas, context);
@@ -345,9 +429,32 @@ export function GameHost({
     let debugFrames = 0;
     let debugCancelled = false;
     let stopDebugOverlay: (() => void) | undefined;
+    // Same shape and same fate as the debug bindings above: a `let` that survives the bundler
+    // and then goes, because once the production build folds `process.env.NODE_ENV !==
+    // 'production'` to `false` nothing writes it and the minifier drops it. It carries the
+    // dev-only presentation toggle's teardown (#1863).
+    let stopPresentationToggle: (() => void) | undefined;
+
+    /**
+     * A throw escaped game code (#151). Stop the loop and report it once.
+     *
+     * A React error boundary cannot reach a throw in these `requestAnimationFrame` callbacks,
+     * so the guard below catches it here and this is what it does with it: stop stepping the
+     * broken game — one more step would just throw again — and hand the error to the shell,
+     * which raises the recovery UI. `crashed` latches so a second callback in the same frame,
+     * or anything the stop has not torn down yet, does not report twice.
+     */
+    let crashed = false;
+    function onGameError(error: unknown): void {
+      if (crashed) return;
+      crashed = true;
+      runnerRef.current?.stop();
+      onErrorRef.current?.(error);
+    }
 
     const loop = new FixedLoop({
       update(dt) {
+        if (crashed) return;
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
@@ -356,31 +463,39 @@ export function GameHost({
           input.beginStep(dt);
           return;
         }
-        game.update(dt, inputView.sync(input.beginStep(dt)));
-        const score = game.getScore();
-        if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
-          lastP1 = score.p1;
-          lastP2 = score.p2;
-          lastWinner = score.winner;
-          onScoreRef.current?.(score.p1, score.p2, score.winner);
-        }
-        const seat = game.getActiveSeat?.() ?? null;
-        if (seat !== lastSeat) {
-          lastSeat = seat;
-          // The board changed hands, so the pointer surface does too — and a game that
-          // goes back to having no turns gets its two zones back.
-          input.setSplit(splitFor(seat));
-          input.setBoardSeat(seat ?? localSeat);
-          onActiveSeatRef.current?.(seat);
-        }
+        // Guarded, so a throw from the game becomes the recovery screen rather than a frozen
+        // board. Everything the step reads off the game — score, active seat — is inside the
+        // guard too, so a game that throws from `getScore` is caught the same way.
+        guard(() => {
+          game.update(dt, inputView.sync(input.beginStep(dt)));
+          const score = game.getScore();
+          if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
+            lastP1 = score.p1;
+            lastP2 = score.p2;
+            lastWinner = score.winner;
+            onScoreRef.current?.(score.p1, score.p2, score.winner);
+          }
+          const seat = game.getActiveSeat?.() ?? null;
+          if (seat !== lastSeat) {
+            lastSeat = seat;
+            // The board changed hands, so the pointer surface does too — and a game that
+            // goes back to having no turns gets its two zones back.
+            input.setSplit(splitFor(seat));
+            input.setBoardSeat(seat ?? localSeat);
+            onActiveSeatRef.current?.(seat);
+          }
+        }, onGameError);
       },
       render(alpha) {
+        if (crashed) return;
         // The only thing the overlay adds to the hot path, and the one number it cannot get
         // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
         if (process.env.NODE_ENV !== 'production') debugFrames += 1;
-        renderer.beginFrame();
-        game.render(renderer, alpha);
-        renderer.endFrame();
+        guard(() => {
+          renderer.beginFrame();
+          game.render(renderer, alpha);
+          renderer.endFrame();
+        }, onGameError);
         // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
         // sound from inside `update()` stays allocation-free (rule 5).
         audio().flush();
@@ -395,6 +510,13 @@ export function GameHost({
     }
 
     const runner = new RunLoop(loop, browserClock());
+    // Assist-mode speed (#179), read once at match start. It scales wall-clock time into the
+    // loop, never the step, so the simulation this match runs is identical to full speed and
+    // only slower to watch and to react to. Read directly rather than through the hook for
+    // the same reason `reducedMotion` is: the match is built inside this effect and a hook's
+    // first value would be the default. The settings-page slider is a different route, so a
+    // change takes effect on the next match, which is when this effect runs again.
+    runner.setTimeScale(readSettings().gameSpeed);
     runnerRef.current = runner;
 
     // A host rebuilt mid-match must come back running if the phase says it should be.
@@ -466,6 +588,27 @@ export function GameHost({
       }
     }
 
+    /**
+     * A development-only presentation toggle (#1863). Press F2 to flip the active presentation
+     * live and see a game's two layouts on one screen without a second device.
+     *
+     * Stripped from production by the same build-time flag as the debug overlay: webpack folds
+     * `process.env.NODE_ENV !== 'production'` to `false` and deletes the block, so no toggle,
+     * no key listener and no flip reach a player. The flip only changes what is drawn — the
+     * context reads `livePresentation` through a getter and presentation-parity proves a
+     * mid-match switch never disturbs the simulation — so it is safe to leave in dev.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      const toggle = createPresentationToggle(livePresentation, true);
+      const onPresentationKey = (event: KeyboardEvent): void => {
+        if (event.code !== 'F2') return;
+        event.preventDefault();
+        livePresentation = toggle.toggle();
+      };
+      globalThis.addEventListener('keydown', onPresentationKey);
+      stopPresentationToggle = () => globalThis.removeEventListener('keydown', onPresentationKey);
+    }
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.
@@ -478,6 +621,7 @@ export function GameHost({
       if (process.env.NODE_ENV !== 'production') {
         debugCancelled = true;
         stopDebugOverlay?.();
+        stopPresentationToggle?.();
       }
       if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;
@@ -511,6 +655,7 @@ export function GameHost({
     localSeat,
     presentation,
     openingSeat,
+    peerLogical,
     botDifficulty,
     recordTrace,
   ]);

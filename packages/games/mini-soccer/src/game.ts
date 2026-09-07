@@ -50,13 +50,32 @@ export class MiniSoccerGame implements Game {
   readonly #botP2State: BotState = createBotState();
   readonly #heading = { x: 0, y: 0 };
 
-  #rng = new Rng(1);
+  /**
+   * Three streams, and which chair gets which is decided by the **opening seat**.
+   *
+   * There was one stream, and both bots drew from it in seat order: seat one took every
+   * even draw and seat two every odd one. That is not a fair coin handed to two players,
+   * it is one coin cut in half by chair — and a seed played twice, once per opening seat,
+   * was then the *identical* match both times, so the sweep's hundred matches were fifty
+   * matches counted twice and the seat effect had nothing to average against.
+   *
+   * Now the wobble stream follows the role: {@link #rngFirst} always belongs to whoever
+   * the shell seated first, so across the two halves of a seed pair each stream sits in
+   * each chair exactly once and a stream's own luck cannot land on a seat. The match
+   * stream, which only ever nudges the kick-off, is separate so that neither bot's number
+   * of decisions can shift the ball.
+   */
+  #rngMatch = new Rng(1);
+  #rngFirst = new Rng(2);
+  #rngSecond = new Rng(3);
+  /** The seat the shell opened with, which is the seat {@link #rngFirst} belongs to. */
+  #first: SeatId = 'p1';
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
   #winner: SeatId | 'draw' | null = null;
 
   constructor() {
-    this.#position = createGame(this.#rng);
+    this.#position = createGame(this.#rngMatch);
   }
 
   /** Read-only view for the harness and the tests. */
@@ -65,11 +84,16 @@ export class MiniSoccerGame implements Game {
   }
 
   init(context: GameContext): void {
-    this.#rng = context.rng;
+    // Drawn in a fixed order from the one generator the shell owns, then handed out by
+    // role rather than by seat — see the field comments.
+    this.#rngMatch = new Rng(context.rng.next() | 0);
+    this.#rngFirst = new Rng(context.rng.next() | 0);
+    this.#rngSecond = new Rng(context.rng.next() | 0);
+    this.#first = context.openingSeat;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#winner = null;
-    resetGame(this.#position, this.#rng);
+    resetGame(this.#position, this.#rngMatch);
     resetBotState(this.#botP1State);
     resetBotState(this.#botP2State);
   }
@@ -78,7 +102,7 @@ export class MiniSoccerGame implements Game {
     if (this.#winner !== null) return;
     this.#driveSeat('p1', this.#botP1, this.#botP1State, input, fixedDeltaSeconds);
     this.#driveSeat('p2', this.#botP2, this.#botP2State, input, fixedDeltaSeconds);
-    step(this.#position, fixedDeltaSeconds, this.#rng);
+    step(this.#position, fixedDeltaSeconds, this.#rngMatch);
     this.#winner = winnerOf(this.#position);
   }
 
@@ -108,7 +132,7 @@ export class MiniSoccerGame implements Game {
   }
 
   destroy(): void {
-    resetGame(this.#position, this.#rng);
+    resetGame(this.#position, this.#rngMatch);
     this.#winner = null;
   }
 
@@ -127,7 +151,7 @@ export class MiniSoccerGame implements Game {
         seat,
         BOT_PROFILES[difficulty],
         dt,
-        this.#rng.float(),
+        (seat === this.#first ? this.#rngFirst : this.#rngSecond).float(),
       );
       drive(this.#position, seat, this.#heading.x, this.#heading.y, dt);
       return;

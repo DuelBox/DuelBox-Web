@@ -6,6 +6,8 @@
  * the last two steps using `alpha`.
  */
 
+import type { GamepadSnapshot } from './gamepad.js';
+
 const DEFAULT_STEPS_PER_SECOND = 60;
 const DEFAULT_MAX_STEPS_PER_FRAME = 5;
 
@@ -165,6 +167,37 @@ export function browserClock(): Clock {
   };
 }
 
+/**
+ * The browser adapter for {@link GamepadManager}'s injected source (#130).
+ *
+ * `navigator.getGamepads` is the one device API gamepad support needs, and this is the only
+ * place it is read — alongside `browserClock`, in the file lint exempts from the device-global
+ * ban, so the engine's `gamepad.ts` and every test of it stay `navigator`-free. It maps the
+ * live `Gamepad` objects to the plain snapshots the manager consumes.
+ *
+ * Returns an empty array where the API is absent (older engines, a locked-down context) rather
+ * than throwing, so a host can poll unconditionally and simply see no pads.
+ */
+export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
+  const scope = globalThis;
+  if (typeof scope.navigator === 'undefined' || typeof scope.navigator.getGamepads !== 'function') {
+    return () => [];
+  }
+  const getGamepads = scope.navigator.getGamepads.bind(scope.navigator);
+  return () =>
+    getGamepads().map((pad) =>
+      pad === null
+        ? null
+        : {
+            index: pad.index,
+            id: pad.id,
+            connected: pad.connected,
+            axes: pad.axes.slice(),
+            buttons: pad.buttons.map((button) => button.pressed),
+          },
+    );
+}
+
 /** Drives a FixedLoop from a Clock. Owns all wall-clock concerns. */
 export class RunLoop {
   readonly #loop: FixedLoop;
@@ -172,6 +205,8 @@ export class RunLoop {
   #running = false;
   #handle = 0;
   #lastTimeMs = 0;
+  /** Assist-mode speed (#179): wall-clock time is scaled by this before it feeds the loop. */
+  #timeScale = 1;
 
   readonly #tick = (timeMs: number): void => {
     if (!this.#running) return;
@@ -181,10 +216,17 @@ export class RunLoop {
       delta = 0;
     } else if (delta > MAX_FRAME_SECONDS) {
       // A backgrounded tab returns with a gap of many seconds; clamp it so the match
-      // does not fast-forward through the time it spent hidden.
+      // does not fast-forward through the time it spent hidden. Clamped before scaling, so
+      // the assist multiplier acts on the honest frame time rather than the clamped ceiling.
       delta = MAX_FRAME_SECONDS;
     }
-    this.#loop.advance(delta);
+    // Assist mode scales how much wall-clock time reaches the fixed loop, never the step
+    // size (#179). At half speed the loop runs half as many steps this second, each one the
+    // identical `stepSeconds` update it always was — so the simulation, its seeded RNG and
+    // its step order are untouched and the match plays slowed, not changed. Rendering is
+    // unscaled: `render` still runs every frame, interpolating with `alpha`, so slow motion
+    // stays smooth rather than stepping.
+    this.#loop.advance(delta * this.#timeScale);
     // Re-checked because update() or render() may have called stop(). Flow analysis
     // cannot see through the callback, hence the disable rather than a redundant guard.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -198,6 +240,23 @@ export class RunLoop {
 
   get running(): boolean {
     return this.#running;
+  }
+
+  /** The assist-mode speed currently in effect; 1 is full speed. */
+  get timeScale(): number {
+    return this.#timeScale;
+  }
+
+  /**
+   * Set the assist-mode speed multiplier (#179).
+   *
+   * Applies from the next frame on and can be changed mid-match, because it touches only how
+   * fast wall-clock time is fed in, not any simulation state — no reset, no lost carry. A
+   * value that is not a positive finite number is ignored rather than allowed to stall or
+   * reverse the loop; the presentation layer clamps it to a sane range before it gets here.
+   */
+  setTimeScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) this.#timeScale = scale;
   }
 
   start(): void {

@@ -61,6 +61,8 @@ class FakeInput implements InputState {
       seat.actionHeld = false;
       seat.actionReleased = false;
       seat.holdSeconds = 0;
+      seat.holdSecondsAtRelease = 0;
+      seat.pointerCancelled = false;
     }
   }
 }
@@ -199,6 +201,22 @@ function lift(input: FakeInput, seat: SeatId): void {
 }
 
 /**
+ * The browser taking the gesture away rather than the player letting go — a system swipe,
+ * palm rejection, an incoming call. The pointer is gone, nothing is held, and there is
+ * **no release**: a cancel and a release are opposite events since #2480.
+ */
+function cancel(input: FakeInput, seat: SeatId): void {
+  const target = seat === 'p1' ? input.p1 : input.p2;
+  target.pointer = null;
+  target.actionPressed = false;
+  target.actionHeld = false;
+  target.actionReleased = false;
+  target.holdSeconds = 0;
+  target.holdSecondsAtRelease = 0;
+  target.pointerCancelled = true;
+}
+
+/**
  * Wait out the arrow and the settle, and stop on the step the turn is handed on.
  *
  * Bounded, never a `while`: a synchronous spin cannot be timed out by the runner, so a
@@ -226,6 +244,12 @@ function shoot(
   rotated = false,
 ): void {
   input.clear();
+  // Wait out the turn handover before drawing. Single-seat now spends the same settle steps
+  // as a shared screen when the board hands over to the far seat (#1990 parity fix) — it just
+  // does not draw the rotation — so a draw pressed mid-handover would be swallowed. The flip
+  // begins on the first step of the new turn, so step once to let it start, then wait it out.
+  step(game, input, 1);
+  for (let i = 0; i < WAIT_CAP && !game.acceptsInput; i += 1) step(game, input);
   touch(input, seat, angle, power, rotated);
   step(game, input, holdFrames);
   lift(input, seat);
@@ -813,6 +837,38 @@ describe('pausing', () => {
     input.p1.actionReleased = true;
     step(game, input, 1);
     expect(game.arrowInFlight).toBe(false);
+  });
+});
+
+describe('a cancelled draw', () => {
+  it('lets the nock down, so the abandoned draw is not loosed by the next release', () => {
+    const game = new ArcheryMasterGame();
+    game.init(makeContext(null, null));
+    const input = new FakeInput();
+    touch(input, 'p1', 0.2, 0.8);
+    step(game, input, 10);
+
+    cancel(input, 'p1');
+    step(game, input, 1);
+    input.clear();
+    input.p1.actionReleased = true;
+    step(game, input, 1);
+    expect(game.arrowInFlight, 'nothing was loosed').toBe(false);
+  });
+
+  it('keeps the bow where it was set: a cancel drops the draw and nothing else', () => {
+    const game = new ArcheryMasterGame();
+    game.init(makeContext(null, null));
+    const input = new FakeInput();
+    touch(input, 'p1', 0.2, 0.8);
+    step(game, input, 10);
+    const angle = game.aimAngle;
+    const power = game.aimPower;
+
+    cancel(input, 'p1');
+    step(game, input, 1);
+    expect(game.aimAngle, 'the bow does not swing because a phone call arrived').toBe(angle);
+    expect(game.aimPower).toBe(power);
   });
 });
 

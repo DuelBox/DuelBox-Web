@@ -107,6 +107,18 @@ accepts instructions from any page that embeds us.
 against an allowlist, never trust `event.source`, and treat the message payload with the
 same suspicion as a peer's.
 
+**And the framing half of it does not have the headers it assumes.** `X-Frame-Options` and
+CSP `frame-ancestors` are both generated and both discarded — the site deploys to GitHub
+Pages, which serves no custom response headers, and neither control has a meta equivalent
+(#2481). So today *any* page can frame *any* route here. The stand-in is `FRAME_GUARD` in
+`apps/web/src/app/frame-guard.ts`: an inline script that hides a framed document before it
+paints, so there is nothing to overlay and nothing to click. It is a mitigation of
+clickjacking and nothing more — it does not run in an `<iframe sandbox>` without
+`allow-scripts`, which is the iframe an attacker writes, and the page is loaded either way.
+An origin allowlist for framing is not expressible in script at all; it needs the header,
+which needs a host that serves one. `scripts/header-delivery.mjs` holds the classification
+and the build fails if a header is added without one.
+
 ### 6. Third-party runtime dependencies
 
 There are none. A cold load reaches this origin and nothing else: no CDN, no analytics

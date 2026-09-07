@@ -43,13 +43,18 @@ import type { LoadedGame } from './registry';
  *
  * ## Why the seat, and not the bot
  *
- * The repository has been caught by this twice. Penalty Kicks reported a 63% "skill" gap
- * that turned out to be first-kicker advantage. Issue #2489 is the live second instance:
- * snakes-ladders measures its bot ladder from one seat order only, so its
- * `hardVersusEasy = 0.845` silently carries the first-mover edge that the same file measures
- * elsewhere - `rules.test.ts:684` records 51.2 / 53.5 / 55.0% at easy / normal / hard. A tier
- * number measured from one chair is a tier number plus a chair number, and nothing in it
- * says how much of each.
+ * The repository has been caught by this three times, and all three are now closed. Penalty
+ * Kicks reported a 63% "skill" gap that turned out to be first-kicker advantage.
+ * `snakes-ladders` measured its bot ladder from one seat order only (#2489), so its
+ * `hardVersusEasy = 0.845` silently carried the first-mover edge the same file measured
+ * elsewhere; playing both orders moved the three rungs by 1.7 to 3.9 points, which is how
+ * much chair was in the tier number. And `soccer-pool` pinned `openingSeat` to `p1` in its
+ * own sweep (#2500), which makes "seat one won" and "whoever broke won" the *same counter* -
+ * it reported 55.3% and called it a seat edge while this file, which alternates the opener,
+ * read 50.0% for the same game. Both numbers were right. Nothing could tell them apart.
+ *
+ * A tier number measured from one chair is a tier number plus a chair number, and nothing in
+ * it says how much of each.
  *
  * So this harness sits both bots on the **same tier** and asks one question: how often does
  * seat one win? At equal skill the answer must be a coin toss, whatever the game is.
@@ -158,7 +163,9 @@ import type { LoadedGame } from './registry';
  *   its line". Before that rule existed a listed game only had to land within the sample's
  *   own allowance of its recorded number - 21.2 points at fifty seeds - so six of the nine
  *   recorded games could have been repaired to a perfect 50% and kept their stale lines for
- *   ever, and `hot-potato` could have gone from its recorded 92.0% to 100% and passed.
+ *   ever, and `hot-potato` could have gone from its recorded 92.0% to 100% and passed. That
+ *   rule has since been paid for: every seat record this file once held has been repaired,
+ *   and each one failed with "this is now fair, delete its line" rather than aging quietly.
  *
  * ## Tiers
  *
@@ -171,8 +178,10 @@ import type { LoadedGame } from './registry';
  * The first run of the other two tiers produced twelve records over ten games that the
  * `normal` run cannot see, plus one game it can no longer measure at all. They are in
  * {@link OUTSIDE_THE_BAND} with their tier attached. The short version:
- * `hand-slap` gives seat one 100% on `easy`, 35% on `normal` and 12% on `hard`; `paint-fight`
- * ties every match on `normal` and `hard` and hands seat one every match on `easy`, so the
+ * `hand-slap` gave seat one 100% on `easy`, 35% on `normal` and 12% on `hard` - it did not
+ * merely lean, it *inverted*, because the tier decided which **role** won every round and the
+ * favoured role was pinned to a seat by an odd `TARGET_POINTS`; `paint-fight`
+ * tied every match on `normal` and `hard` and handed seat one every match on `easy`, so the
  * tie was hiding a total advantage rather than proving symmetry; four turn-board games become
  * a single deterministic match at `hard` because two near-perfect players play the same game
  * every time, and `tic-tac-toe` draws all hundred of them; and `checkers` stops finishing at
@@ -1018,9 +1027,11 @@ interface Exception {
   readonly id: string;
   /**
    * The tier this was measured on. **A record gates its own tier and no other.** Balance is
-   * not a property of a game, it is a property of a game and a bot ladder: `hand-slap` gives
+   * not a property of a game, it is a property of a game and a bot ladder: `hand-slap` gave
    * seat two 65% on `normal` and seat one 100% on `easy`, and a single number could only ever
-   * have been a lie about two of the three tiers.
+   * have been a lie about two of the three tiers. It reads 50.0% at all three now, but the
+   * argument for the axis is unchanged - it is why the three were seen as one bug's three
+   * faces rather than as three unrelated readings.
    */
   readonly tier: Tier;
   /** Seat one's share of decided matches, or null when nothing was ever decided. */
@@ -1093,99 +1104,36 @@ interface Exception {
  * hundred and keeps its line, because a solved game at its top tier has no balance to
  * measure whoever opens. `checkers` stops finishing at
  * all - a `termination.test.ts`-shaped finding this file can only report. And `hand-slap`
- * moves from 35% to 12% to 100% across normal, hard and easy, which is three different bugs
- * wearing one name.
+ * moved from 35% to 12% to 100% across normal, hard and easy - which read as three different
+ * bugs wearing one name, and was one: the tier decided which **role** took a round, with no
+ * variance anywhere near the comparison, and the favoured role was pinned to a seat. Fixing
+ * the seat took all three to exactly 50.0% (#2492); making the tiers play at all was a second
+ * issue (#2504), because a game decided before it starts is a fair coin flip, not a game.
  *
- * That is the whole argument for the tier axis in nine lines, and the reason the deliberate
+ * That is the whole argument for the tier axis, and the reason the deliberate
  * break that measured 92% for seat one at `hard` read as a flat 50.0% at `normal`.
  */
 const OUTSIDE_THE_BAND: readonly Exception[] = [
   {
-    id: 'paint-fight',
-    tier: 'normal',
-    share: null,
-    seeds: 1000,
-    why:
-      'every one of 1000 seeds ended 245-245 - the sweep played 2000 matches for them, half ' +
-      'of which were the other half over again. Two normal bots mirror each other exactly on ' +
-      'a symmetric board, so the territory count ties to the cell and the game cannot be ' +
-      'balance-tested at all.',
-  },
-  {
-    id: 'paint-fight',
+    id: 'checkers',
     tier: 'hard',
     share: null,
     seeds: 50,
-    why: 'ties on hard too, at 198-198, for the same mirroring reason. distinct 1, so the ' +
-      'sample size is beside the point.',
-  },
-  {
-    id: 'paint-fight',
-    tier: 'easy',
-    share: 1.0,
-    seeds: 50,
     why:
-      'easy is the one tier that decides it, and it hands seat one every one of 50 seeds. So ' +
-      'the symmetric board is not symmetric at all - the tie on normal and hard was hiding a ' +
-      'total seat-one advantage, not proving fairness. distinct 1, so the sample size is ' +
-      'beside the point. Taken before #2494; the same budget now buys 88 seeds and this is ' +
-      'due a re-measure on easy.',
-  },
-  {
-    id: 'mini-soccer',
-    tier: 'normal',
-    share: 0.756,
-    seeds: 1000,
-    why:
-      'seat one takes 76% of the 65% of matches that are decided at all - the other 35% are ' +
-      'goalless draws after the full 98 simulated seconds. Not yet root-caused.',
-  },
-  {
-    id: 'king-of-the-yard',
-    tier: 'normal',
-    share: 0.389,
-    seeds: 1000,
-    why:
-      'seat two takes 61%. Re-measured for #2494 over 1000 single-arm seeds and unchanged to ' +
-      'the tenth of a point from the 1000 pairs it was first taken at, which is the ' +
-      'demonstration that duplicating a sample does not move a mean. Sits closest to the band ' +
-      'of anything on this list, 6.1 points outside it against a sample that resolves 21.2, ' +
-      'so it measures 44.0% here - one point outside, and about one push in five reads it ' +
-      'inside the band and demands this correct line be deleted. That is a false alarm rather ' +
-      'than the rule working, and the hole it comes through is written up on ' +
-      'OUTSIDE_THE_BAND; it belongs to #2492. hard is 56%, the other side of 50 and inside ' +
-      'the band, which is worth an issue of its own.',
-  },
-  {
-    id: 'hand-slap',
-    tier: 'normal',
-    share: 0.352,
-    seeds: 1000,
-    why:
-      'seat two takes 65% on normal. A reaction game, so this is the one most likely to be a ' +
-      'real timing asymmetry between the two halves of the device rather than a bot artefact.',
-  },
-  {
-    id: 'hand-slap',
-    tier: 'easy',
-    share: 1.0,
-    seeds: 50,
-    why:
-      'and on easy the same game gives seat ONE 100.0% of 50 decided seeds - the sweep ' +
-      'reported 100 matches, but the game ignores the opening seat, so half of them were the ' +
-      'other half again and only 48 matches were distinct at all. An asymmetry that changes ' +
-      'sign with the bot tier is not one bug. Taken before #2494; the same budget now buys 88 ' +
-      'seeds on easy and this is due a re-measure.',
-  },
-  {
-    id: 'hand-slap',
-    tier: 'hard',
-    share: 0.12,
-    seeds: 50,
-    why: 'and on hard seat two takes 88% of 50 seeds, worse than the 65% it takes on normal. ' +
-      'The three tiers read 100 / 35 / 12 percent for seat one, which is the strongest ' +
-      'evidence in this file that a single-tier balance number means nothing. Taken before ' +
-      '#2494 and due a re-measure at the 88 seeds the same budget now buys on hard.',
+      'every one of 100 matches drawn, which is the right answer and is new. It used to ' +
+      'finish none of them - not one of 101, under either opening seat or with the device ' +
+      'shouted at - because two depth-five searches shuffled kings at each other for ever ' +
+      'and the game had no forty-move rule to stop them. #2502 gave it one, so the game now ' +
+      'concludes every match and this line records what it concludes: English draughts is a ' +
+      'drawn game, and two near-perfect players draw it. The draw rate falls with the tier - ' +
+      '100% on hard, 84% on normal, 38% on easy - which is the shape a drawn game has and ' +
+      'not the shape a bug has. normal and easy both decide matches and both measure exactly ' +
+      '50.0%, so neither needs a line here. distinct 2: the two openers play the same match ' +
+      'from the two chairs, so they draw in the same number of steps with the capture tallies ' +
+      'swapped - which is why this game now reads as opener-blind on hard and joins the ' +
+      'OPENER_BLIND list for exactly the reason that list says is a property rather than a ' +
+      'defect. That ratchet was already over its limit on hard before this game reached it, ' +
+      'at three against two, because tic-tac-toe draws all hundred for the same reason.',
   },
   {
     id: 'tic-tac-toe',

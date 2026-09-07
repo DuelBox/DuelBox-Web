@@ -4,6 +4,7 @@ import type { SeatId } from '@duelbox/engine';
 import {
   BOT_PROFILES,
   DODGE_COOLDOWN_SECONDS,
+  REACTION_JITTER_SECONDS,
   DODGE_SECONDS,
   MAX_READY_SECONDS,
   MIN_READY_SECONDS,
@@ -16,6 +17,7 @@ import {
   defenderOf,
   dodge,
   handsAway,
+  jitteredReaction,
   otherOf,
   readyDelay,
   resetBotState,
@@ -24,7 +26,7 @@ import {
   swing,
   winnerOf,
 } from './rules.js';
-import type { BotDifficulty, State } from './rules.js';
+import type { BotDifficulty, Outcome, Phase, State } from './rules.js';
 
 const STEP = 1 / 60;
 
@@ -257,11 +259,50 @@ describe('the bot', () => {
     expect(botAction(state, bot, BOT_PROFILES.hard, 'p2', STEP, 0)).toBe('none');
   });
 
-  it('cannot react faster than a person', () => {
+  it('cannot react faster than a person, on its luckiest swing', () => {
     // Rule 6: a bot never gets speed a human cannot have. A simple visual reaction is
     // about 0.25s, so the hard tier sits at the quick end of human rather than past it.
+    //
+    // What the rule constrains is the **fastest the bot can ever be**, not its average —
+    // and since #2504 the reaction is a distribution, so the average is no longer the
+    // fastest. Asserting the tier's middle would let a wide jitter smuggle a superhuman
+    // bot in under a perfectly human-looking number.
     for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
-      expect(BOT_PROFILES[tier].reaction, tier).toBeGreaterThanOrEqual(0.2);
+      const quickest = BOT_PROFILES[tier].reaction - REACTION_JITTER_SECONDS;
+      expect(quickest, tier).toBeGreaterThanOrEqual(0.2);
+      // And the roll that produces it really is the floor: `roll` is in [0, 1).
+      expect(jitteredReaction(BOT_PROFILES[tier], 0), tier).toBeCloseTo(quickest, 9);
+      expect(jitteredReaction(BOT_PROFILES[tier], 1), tier).toBeCloseTo(
+        BOT_PROFILES[tier].reaction + REACTION_JITTER_SECONDS,
+        9,
+      );
+      expect(jitteredReaction(BOT_PROFILES[tier], 0.5), tier).toBeCloseTo(
+        BOT_PROFILES[tier].reaction,
+        9,
+      );
+    }
+  });
+
+  it('straddles the swing at every tier, so no tier is a verdict', () => {
+    // Defect #2504, pinned. Whether a dodge beats a swing is the bot's reaction against
+    // SWING_SECONDS, and while `reaction` was a bare constant that comparison had **one
+    // answer for the whole match**: easy sat above the swing and was hit every round,
+    // normal and hard sat below it and were never hit at all. Two equal bots did not play,
+    // they alternated a decided role. A win-rate ladder cannot see this — it reported a
+    // clean monotone result the whole time.
+    //
+    // The fix is that every tier's reaction distribution must contain the swing, so every
+    // tier is a hit *rate*. This is the assertion that says so.
+    for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+      const profile = BOT_PROFILES[tier];
+      expect(
+        profile.reaction - REACTION_JITTER_SECONDS,
+        `${tier} is never quick enough`,
+      ).toBeLessThan(SWING_SECONDS);
+      expect(
+        profile.reaction + REACTION_JITTER_SECONDS,
+        `${tier} is always quick enough`,
+      ).toBeGreaterThan(SWING_SECONDS);
     }
   });
 
@@ -271,15 +312,43 @@ describe('the bot', () => {
     swing(state);
     const bot = createBotState();
     const profile = BOT_PROFILES.hard;
+    // Roll 0 is the quickest reaction this tier can draw, so this is the earliest the bot
+    // could possibly move — and it still has to watch the swing for all of it.
+    const quickest = jitteredReaction(profile, 0);
     // One step in: the swing is barely visible.
     expect(botAction(state, bot, profile, defenderOf(state), STEP, 0)).toBe('none');
-    // Watched for less than its reaction time: still nothing.
-    for (let i = 0; i * STEP < profile.reaction - STEP * 2; i += 1) {
+    expect(bot.reaction, 'the reaction was drawn on the first sight of the swing').toBeCloseTo(
+      quickest,
+      9,
+    );
+    // Watched for less than that: still nothing.
+    for (let i = 0; i * STEP < quickest - STEP * 2; i += 1) {
       expect(botAction(state, bot, profile, defenderOf(state), STEP, 0)).toBe('none');
     }
   });
 
-  it('dodges once it has watched the swing for its reaction time', () => {
+  it('draws one reaction per swing rather than one per step', () => {
+    // Re-rolling every step would make the reaction a per-step lottery that a long swing
+    // always eventually wins, which is a different bug wearing the same fix.
+    const state = createState();
+    goLive(state);
+    swing(state);
+    const bot = createBotState();
+    const profile = BOT_PROFILES.easy;
+    // The first sight of the swing draws a slow reaction; every later step offers a fast
+    // one and must be ignored.
+    expect(botAction(state, bot, profile, defenderOf(state), STEP, 1)).toBe('none');
+    const drawn = bot.reaction;
+    expect(drawn).toBeCloseTo(profile.reaction + REACTION_JITTER_SECONDS, 9);
+    for (let i = 0; i * STEP < drawn - STEP * 2; i += 1) {
+      expect(botAction(state, bot, profile, defenderOf(state), STEP, 0), 'the roll is spent').toBe(
+        'none',
+      );
+      expect(bot.reaction).toBeCloseTo(drawn, 9);
+    }
+  });
+
+  it('dodges once it has watched the swing for the reaction it drew', () => {
     const state = createState();
     goLive(state);
     swing(state);
@@ -290,7 +359,7 @@ describe('the bot', () => {
       dodged = botAction(state, bot, profile, defenderOf(state), STEP, 0) === 'dodge';
     }
     expect(dodged).toBe(true);
-    expect(bot.watched).toBeGreaterThanOrEqual(profile.reaction);
+    expect(bot.watched).toBeGreaterThanOrEqual(bot.reaction);
   });
 
   it('forgets a swing it was watching once the round ends', () => {
@@ -318,17 +387,74 @@ describe('the bot', () => {
     expect(botAction(state, bot, profile, state.attacker, 1 / 30, coarse * 0.99)).toBe('swing');
   });
 
-  it('clears its watch on reset', () => {
+  it('clears its watch and its drawn reaction on reset', () => {
     const bot = createBotState();
     bot.watched = 0.5;
+    bot.reaction = 0.5;
     resetBotState(bot);
     expect(bot.watched).toBe(0);
+    expect(bot.reaction).toBe(0);
   });
 
   it('declares its tiers in a sensible order', () => {
     expect(BOT_PROFILES.easy.reaction).toBeGreaterThan(BOT_PROFILES.normal.reaction);
     expect(BOT_PROFILES.normal.reaction).toBeGreaterThan(BOT_PROFILES.hard.reaction);
     expect(BOT_PROFILES.easy.flinchRate).toBeGreaterThan(BOT_PROFILES.hard.flinchRate);
+  });
+
+  it('turns every tier into a hit rate rather than a verdict', () => {
+    // Defect #2504's actual numbers, measured rather than asserted from the arithmetic.
+    // One swing at a time, the same roll sequence handed to all three tiers, so the only
+    // thing that differs between the columns is the tier.
+    //
+    // Before the fix these read 0.0%, 100.0%, 100.0% — a verdict per tier, and the reason
+    // two equal bots at `easy` or `hard` never actually played. A tier that returns to 0%
+    // or 100%, or that becomes indistinguishable from its neighbour, is the bug again.
+    const SWINGS = 20000;
+    const share: Record<BotDifficulty, number> = { easy: 0, normal: 0, hard: 0 };
+    for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+      const rng = new Rng(20260829);
+      // `step` only draws while a point settles, which this loop never reaches.
+      const unused = new Rng(1);
+      let dodged = 0;
+      for (let i = 0; i < SWINGS; i += 1) {
+        const state = createState();
+        goLive(state);
+        swing(state);
+        const bot = createBotState();
+        // One roll per swing is all the bot draws, so handing it the same number every
+        // step changes nothing and keeps the three tiers on the identical sequence.
+        const roll = rng.float();
+        while (state.phase === 'swinging') {
+          const action = botAction(state, bot, BOT_PROFILES[tier], defenderOf(state), STEP, roll);
+          if (action === 'dodge') dodge(state);
+          step(state, STEP, unused);
+        }
+        if (state.outcome === 'dodged') dodged += 1;
+      }
+      share[tier] = dodged / SWINGS;
+    }
+
+    // The design rates are `(0.35 - reaction + 0.10) / 0.20`: 15%, 40% and 65%. Twenty
+    // thousand swings puts one standard error at a third of a point, so one point of slack
+    // is a sampling allowance rather than a shrug — a tier that drifts further has moved.
+    // Two thousand was tried first and this seed happened to run 2.1 points hot at
+    // `normal`, which is under two sigma there and would have been a tolerance chosen to
+    // fit the sample rather than the design.
+    // Recorded in SPEC.md alongside what they were before the fix: 0%, 100%, 100%.
+    const design: Record<BotDifficulty, number> = { easy: 0.15, normal: 0.4, hard: 0.65 };
+    for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
+      const where = `${tier} dodged ${(share[tier] * 100).toFixed(1)}% of swings`;
+      expect(share[tier], where).toBeGreaterThan(design[tier] - 0.01);
+      expect(share[tier], where).toBeLessThan(design[tier] + 0.01);
+      // Every one of them is a rate, not a verdict.
+      expect(share[tier], where).toBeGreaterThan(0);
+      expect(share[tier], where).toBeLessThan(1);
+    }
+    // And clearly ordered: a tier its neighbour cannot be told apart from is a failed fix
+    // just as surely as a tier that decides every round.
+    expect(share.normal - share.easy, 'easy and normal are too close').toBeGreaterThan(0.2);
+    expect(share.hard - share.normal, 'normal and hard are too close').toBeGreaterThan(0.2);
   });
 
   it('beats the weaker tier over a series', () => {
@@ -413,3 +539,202 @@ describe('determinism', () => {
     expect(a.round).toBe(b.round);
   });
 });
+
+/* ------------------------------------------------------------------------------------ */
+/* The half-turn                                                                         */
+/* ------------------------------------------------------------------------------------ */
+
+const PHASES: readonly Phase[] = ['ready', 'live', 'swinging', 'settling'];
+const OUTCOMES: readonly Outcome[] = [null, 'hit', 'dodged', 'flinch'];
+
+/**
+ * The board seen from the other chair: every seat swapped, nothing else touched.
+ *
+ * Hand Slap has no geometry to reflect - the whole state is roles, timers and scores - so
+ * the half-turn is exactly "relabel p1 as p2". Anything that survives a win-rate ladder
+ * but not this is a real seat bias, and a ladder cannot tell one from a small sample.
+ */
+function mirrorInto(from: Readonly<State>, to: State): void {
+  to.phase = from.phase;
+  to.attacker = otherOf(from.attacker);
+  to.timer = from.timer;
+  to.dodgeCooldown = from.dodgeCooldown;
+  to.dodgeRemaining = from.dodgeRemaining;
+  to.outcome = from.outcome;
+  to.scorer = from.scorer === null ? null : otherOf(from.scorer);
+  to.p1 = from.p2;
+  to.p2 = from.p1;
+  to.round = from.round;
+}
+
+/**
+ * Everything a step can touch, to six places.
+ *
+ * `toFixed` is used rather than a numeric compare on purpose: it prints `-0` differently
+ * from `0`, and a signed zero arriving from one seat and not the other is one of the ways
+ * a mirrored board has been caught parting company in this repository.
+ */
+function describeState(state: Readonly<State>): string {
+  const six = (value: number): string =>
+    Number.isFinite(value) ? value.toFixed(6) : String(value);
+  return [
+    state.phase,
+    state.attacker,
+    six(state.timer),
+    six(state.dodgeCooldown),
+    six(state.dodgeRemaining),
+    String(state.outcome),
+    String(state.scorer),
+    String(state.p1),
+    String(state.p2),
+    String(state.round),
+  ].join('/');
+}
+
+/**
+ * An arbitrary but legal board.
+ *
+ * Every duration is a whole number of fixed steps, so `timer -= dt` lands **exactly** on
+ * zero rather than near it. The thresholds this game turns on - a timer expiring, a dodge
+ * wearing off, a cooldown clearing - are all reached by construction here rather than by
+ * coincidence, which is the only way a mirror test can see them.
+ */
+function scramble(state: State, rng: Rng): void {
+  const phase = PHASES[rng.int(0, PHASES.length)] as Phase;
+  state.phase = phase;
+  state.attacker = rng.bool(0.5) ? 'p1' : 'p2';
+  // A live round has no deadline, exactly as `step` sets it.
+  state.timer = phase === 'live' ? Number.POSITIVE_INFINITY : rng.int(0, 40) * STEP;
+  state.dodgeCooldown = rng.int(0, 40) * STEP;
+  state.dodgeRemaining = rng.int(0, 30) * STEP;
+  state.outcome = OUTCOMES[rng.int(0, OUTCOMES.length)] as Outcome;
+  state.scorer = rng.bool(0.3) ? null : rng.bool(0.5) ? 'p1' : 'p2';
+  state.p1 = rng.int(0, TARGET_POINTS);
+  state.p2 = rng.int(0, TARGET_POINTS);
+  state.round = rng.int(0, 12);
+}
+
+describe('the half-turn', () => {
+  it('steps a mirrored board to the mirror of the stepped board', () => {
+    const rng = new Rng(20260829);
+    const state = createState();
+    const other = createState();
+    const expected = createState();
+    for (let trial = 0; trial < 600; trial += 1) {
+      scramble(state, rng);
+      mirrorInto(state, other);
+      // The same seeded stream on both sides: the seat order must not change which
+      // number a round's wait is drawn from.
+      const seed = trial * 131 + 7;
+      step(state, STEP, new Rng(seed));
+      step(other, STEP, new Rng(seed));
+      mirrorInto(state, expected);
+      expect(describeState(other), `trial ${String(trial)}`).toBe(describeState(expected));
+    }
+  });
+
+  it('accepts a mirrored swing and a mirrored dodge identically', () => {
+    const rng = new Rng(4242);
+    const state = createState();
+    const other = createState();
+    const expected = createState();
+    for (let trial = 0; trial < 600; trial += 1) {
+      scramble(state, rng);
+      mirrorInto(state, other);
+      const swung = swing(state);
+      expect(swing(other), `swing, trial ${String(trial)}`).toBe(swung);
+      mirrorInto(state, expected);
+      expect(describeState(other), `swing, trial ${String(trial)}`).toBe(describeState(expected));
+
+      scramble(state, rng);
+      mirrorInto(state, other);
+      const dodged = dodge(state);
+      expect(dodge(other), `dodge, trial ${String(trial)}`).toBe(dodged);
+      mirrorInto(state, expected);
+      expect(describeState(other), `dodge, trial ${String(trial)}`).toBe(describeState(expected));
+    }
+  });
+
+  it('makes a bot decide the mirrored thing on a mirrored board', () => {
+    const rng = new Rng(31337);
+    const state = createState();
+    const other = createState();
+    for (const tier of Object.keys(BOT_PROFILES) as BotDifficulty[]) {
+      for (let trial = 0; trial < 400; trial += 1) {
+        scramble(state, rng);
+        mirrorInto(state, other);
+        // The same roll to both, because the whole point is that the roll is handed out
+        // by role rather than by seat.
+        const roll = rng.float();
+        const watched = rng.int(0, 40) * STEP;
+        for (const seat of ['p1', 'p2'] as SeatId[]) {
+          const here = createBotState();
+          const there = createBotState();
+          here.watched = watched;
+          there.watched = watched;
+          const mine = botAction(state, here, BOT_PROFILES[tier], seat, STEP, roll);
+          const theirs = botAction(other, there, BOT_PROFILES[tier], otherOf(seat), STEP, roll);
+          expect(theirs, `${tier} trial ${String(trial)} ${seat}`).toBe(mine);
+          expect(there.watched, `${tier} trial ${String(trial)} ${seat} watch`).toBe(here.watched);
+          // The jitter too: a reaction drawn from the roll must be the same number in both
+          // chairs, or the seeded stream has become seat-dependent again.
+          expect(there.reaction, `${tier} trial ${String(trial)} ${seat} reaction`).toBe(
+            here.reaction,
+          );
+        }
+      }
+    }
+  });
+
+  it('plays a whole match to the mirrored result when the other seat opens', () => {
+    // End to end, and the assertion a win-rate ladder can never make: not "seat one won
+    // about half", but "this exact match, opened from the other chair, is this exact
+    // match with the names swapped".
+    for (const tier of Object.keys(BOT_PROFILES) as BotDifficulty[]) {
+      for (let s = 0; s < 40; s += 1) {
+        const seed = 1000003 + s * 7919;
+        const forward = playRules(seed, 'p1', tier);
+        const backward = playRules(seed, 'p2', tier);
+        const where = `${tier} seed ${String(seed)}`;
+        expect(backward.winner, where).toBe(
+          forward.winner === 'p1' ? 'p2' : forward.winner === 'p2' ? 'p1' : forward.winner,
+        );
+        expect(backward.p1, where).toBe(forward.p2);
+        expect(backward.p2, where).toBe(forward.p1);
+        expect(backward.steps, where).toBe(forward.steps);
+      }
+    }
+  });
+});
+
+interface Played {
+  readonly winner: SeatId | 'draw' | null;
+  readonly p1: number;
+  readonly p2: number;
+  readonly steps: number;
+}
+
+/**
+ * Two bots of one tier, driven straight from the rules with the rolls handed out **by
+ * role**: the attacker draws first, then the defender.
+ *
+ * Drawing by seat instead - p1 always first - is what made a seed and its mirror two
+ * different matches, and it is invisible to every other test in this file.
+ */
+function playRules(seed: number, opener: SeatId, tier: BotDifficulty): Played {
+  const state = createState(opener);
+  const rng = new Rng(seed);
+  const bots = { p1: createBotState(), p2: createBotState() };
+  const profile = BOT_PROFILES[tier];
+  for (let i = 0; i < 60 * 600; i += 1) {
+    for (const seat of [state.attacker, defenderOf(state)]) {
+      const action = botAction(state, bots[seat], profile, seat, STEP, rng.float());
+      if (action === 'swing' && seat === state.attacker) swing(state);
+      else if (action === 'dodge' && seat === defenderOf(state)) dodge(state);
+    }
+    step(state, STEP, rng);
+    const winner = winnerOf(state);
+    if (winner !== null) return { winner, p1: state.p1, p2: state.p2, steps: i + 1 };
+  }
+  return { winner: null, p1: state.p1, p2: state.p2, steps: 60 * 600 };
+}

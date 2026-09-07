@@ -1,0 +1,19 @@
+/* Shown only when a non-allowlisted origin has framed the embed: no board, just a way to
+   reach the game on DuelBox itself. */
+.blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--db-space-3);
+  height: 100%;
+  padding: var(--db-space-5);
+  text-align: center;
+  font-family: var(--db-font-body);
+  color: var(--db-ink);
+}
+
+.blocked a {
+  font-weight: 600;
+  color: var(--db-brand);
+}

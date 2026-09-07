@@ -118,6 +118,50 @@ hands **[ours]**.
 Whoever is caught starts the next round, which hands them the throw and is the closest
 thing this game has to a comeback rule.
 
+**Round one's holder is `context.openingSeat`**, never a literal `p1` — see below.
+
+## Seat balance
+
+Measured by `apps/web/src/data/balance-aggregate.test.ts`, fifty seed pairs, both bots on
+the same tier, seat one's share of decided matches:
+
+| tier | before | after |
+|---|---|---|
+| easy | **94.0%** | **50.0%** |
+| normal | 96.0% (92.0% at 1000 seeds) | **50.0%** |
+| hard | 58.0% | **50.0%** |
+
+It is a **parity** bug, and the comeback rule above is the half of it that hides the other
+half. Two equal bots make the same number of throws in a twelve-second fuse — five on
+`easy`, seven on `normal` — and that count is **odd**, so the seat caught is the seat that
+did *not* start the round. The loser then opens the next round, so the catch alternates
+seat by seat; and `TARGET_ROUNDS` is **three, also odd**. Compose the two and the seat that
+held the potato first wins 3-2 in every match that is not disturbed by a missed throw.
+`resetGame` handed that seat to a literal `p1`, so seat one won 94 to 96 of every hundred.
+`hard` is only 58% because its bots miss often enough to break the parity sometimes — the
+same bug, sampled through more noise, which is why one tier is never an answer.
+
+Three changes, all structural rather than tuned:
+
+- **The first holder is `context.openingSeat`.** The shell already alternates the opener
+  between the rounds of a best-of; this reads it.
+- **The bots' rolls are drawn by role — holder first, then the seat waiting — never by
+  seat.** Both draw from the one match generator, so whoever is driven first takes the
+  first number, and driving `p1` first made a seed opened from one chair a different match
+  from the same seed opened from the other.
+- **`step` no longer names a seat.** When a settling round could not say who was caught it
+  fell back to a literal `'p1'`. That line is unreachable in real play — settling is only
+  ever entered by a catch — but a seat written as a constant is not covariant under the
+  half-turn, and the mirror test in `rules.test.ts` reaches it and fails on it. The
+  fallback is now `game.holder`.
+
+Together those make a seed and its mirror **one match and its exact reflection**, so the
+50.0% above is a symmetry proof rather than a measurement: `game.test.ts` asserts winner,
+scoreline *and step count* mirror for every seed at every tier, and `rules.test.ts` asserts
+the same one step at a time over 600 random boards whose fuse, flight and settle are whole
+numbers of fixed steps — so a fuse expiring on the very step a flight lands, the case that
+decides who is caught, happens by construction rather than by luck.
+
 ## Controls
 
 | | Pointer | Keyboard |

@@ -49,6 +49,7 @@ class ScriptedInput implements InputState {
 
   point(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -58,6 +59,7 @@ class ScriptedInput implements InputState {
 
   lift(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionHeld = false;
     target.actionReleased = true;
@@ -65,6 +67,7 @@ class ScriptedInput implements InputState {
 
   hold(seat: SeatId, seconds: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = true;
     target.actionReleased = false;
     target.holdSeconds = seconds;
@@ -72,6 +75,7 @@ class ScriptedInput implements InputState {
 
   release(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = false;
     target.actionReleased = true;
     target.holdSeconds = 0;
@@ -79,6 +83,7 @@ class ScriptedInput implements InputState {
 
   quiet(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionReleased = false;
     target.actionHeld = false;
     target.holdSeconds = 0;
@@ -89,6 +94,22 @@ class ScriptedInput implements InputState {
 
   steer(seat: SeatId, x: number): void {
     this.#of(seat).move.x = x;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, the action is not held, and there is **no release** — a cancel and a
+   * release are opposite events since #2480.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionPressed = false;
+    target.actionHeld = false;
+    target.actionReleased = false;
+    target.holdSeconds = 0;
+    target.holdSecondsAtRelease = 0;
+    target.pointerCancelled = true;
   }
 
   #of(seat: SeatId): MutableSeatInput {
@@ -323,6 +344,53 @@ describe('aiming with a keyboard', () => {
     expect(game.power).toBe(0);
     game.onResume();
     expect(game.position.phase).toBe('aiming');
+  });
+});
+
+describe('a cancelled gesture', () => {
+  it('abandons the stroke rather than freezing it', () => {
+    const game = new MiniGolfGame();
+    game.init(makeContext(101));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    expect(game.power, 'the hold built a stroke').toBeCloseTo(1, 5);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.power, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+  });
+
+  it('does not play the abandoned stroke on the next, unrelated release', () => {
+    const game = new MiniGolfGame();
+    game.init(makeContext(103));
+    const input = new ScriptedInput();
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    input.cancel('p1');
+    game.update(STEP, input);
+
+    input.quiet('p1');
+    game.update(STEP, input);
+    input.release('p1');
+    game.update(STEP, input);
+    expect(game.position.phase, 'nothing was struck').toBe('aiming');
+  });
+
+  it('keeps the aim: a cancel drops the charge and nothing else', () => {
+    const game = new MiniGolfGame();
+    game.init(makeContext(107));
+    const input = new ScriptedInput();
+    input.steer('p1', 1);
+    for (let i = 0; i < 10; i += 1) game.update(STEP, input);
+    input.quiet('p1');
+    input.hold('p1', HOLD_FOR_FULL_POWER);
+    game.update(STEP, input);
+    const aimed = game.aimAngle;
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.aimAngle, 'the line does not move because a phone call arrived').toBe(aimed);
   });
 });
 

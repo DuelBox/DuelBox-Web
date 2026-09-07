@@ -22,20 +22,39 @@ const IDLE_SEAT: SeatInput = {
 
 const idle: InputState = { seat: () => IDLE_SEAT };
 
-function context(seed: number, p1: BotDifficulty | null, p2: BotDifficulty | null): GameContext {
+function context(
+  seed: number,
+  p1: BotDifficulty | null,
+  p2: BotDifficulty | null,
+  openingSeat: SeatId,
+): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty: (seat: SeatId) => (seat === 'p1' ? p1 : p2),
   };
 }
 
+/**
+ * Odd seeds open near, even seeds open far — the alternation the shell does between the
+ * rounds of a best-of (`GameContext.openingSeat`).
+ *
+ * Pinning this to `p1`, which this file used to do, makes "seat one won" and "the seat that
+ * shot first won" the same counter, and then no measurement here can tell a chair from a
+ * first shot. That is what #2500 turned out to be in Soccer Pool, where the seat figure in
+ * SPEC.md was the opening advantage wearing a seat's name.
+ */
+function openerFor(seed: number): SeatId {
+  return seed % 2 === 0 ? 'p2' : 'p1';
+}
+
 function playMatch(seed: number, p1: BotDifficulty, p2: BotDifficulty) {
   const game = new BasketballGame();
-  game.init(context(seed, p1, p2));
+  const openingSeat = openerFor(seed);
+  game.init(context(seed, p1, p2, openingSeat));
   let steps = 0;
   for (; steps < 60 * 600; steps += 1) {
     game.update(STEP, idle);
@@ -44,6 +63,7 @@ function playMatch(seed: number, p1: BotDifficulty, p2: BotDifficulty) {
   const court = game.court;
   return {
     steps,
+    openingSeat,
     winner: game.getScore().winner,
     p1: court.p1Points,
     p2: court.p2Points,
@@ -75,6 +95,8 @@ describe('measurement', () => {
     // measured is a mistake in the harness, and reading `undefined` out of it silently would
     // make the ladder's assertions pass on nothing at all.
     const share = new Map<string, number>();
+    /** Per tier, the share of decided matches taken by whoever shot first. */
+    const opener = new Map<string, number>();
     const shareOf = (a: BotDifficulty, b: BotDifficulty): number => {
       const value = share.get(`${a}v${b}`);
       if (value === undefined) throw new Error(`${a} v ${b} was never measured`);
@@ -90,10 +112,12 @@ describe('measurement', () => {
       let levelOnPoints = 0;
       let stillLevel = 0;
       let p1Wins = 0;
+      let openerWins = 0;
       const matches = 400;
       for (let i = 0; i < matches; i += 1) {
         const r = playMatch(1000 + i * 17, tier, tier);
         if (r.winner === 'p1') p1Wins += 1;
+        if (r.winner === r.openingSeat) openerWins += 1;
         shots += r.p1Shots + r.p2Shots;
         baskets += r.p1Baskets + r.p2Baskets;
         swishes += r.p1Swishes + r.p2Swishes;
@@ -110,11 +134,13 @@ describe('measurement', () => {
           `steps avg ${(totalSteps / matches).toFixed(0)} max ${maxSteps} ` +
           `level on points ${((levelOnPoints / matches) * 100).toFixed(1)}% ` +
           `still level after the swish tiebreak ${((stillLevel / matches) * 100).toFixed(1)}% ` +
-          `seat one takes ${((p1Wins / (matches - stillLevel)) * 100).toFixed(1)}% of decided`,
+          `seat one takes ${((p1Wins / (matches - stillLevel)) * 100).toFixed(1)}% of decided ` +
+          `first shot takes ${((openerWins / (matches - stillLevel)) * 100).toFixed(1)}% of decided`,
       );
       made[tier] = baskets / shots;
       longest[tier] = maxSteps;
       share.set(`${tier}v${tier}`, 1 - p1Wins / (matches - stillLevel));
+      opener.set(tier, openerWins / (matches - stillLevel));
       // The tiebreak is the score's fine resolution, not decoration: two seats of the same
       // standard reach the same total often, and a clean drop is the second gradient the aim
       // needle is already being played for. It has to separate a real share of those.
@@ -200,9 +226,22 @@ describe('measurement', () => {
     }
 
     // Neither end of the court is worth more, which is the one result a turn game that
-    // rotates its board has to have. Seat one shoots first, and that is worth nothing.
+    // rotates its board has to have.
     for (const tier of tiers) {
       expect(Math.abs(shareOf(tier, tier) - 0.5), `${tier} favours a seat`).toBeLessThan(0.1);
+    }
+
+    // And shooting first is worth nothing either — the claim this block used to make in a
+    // comment while pinning the opener to `p1`, which made it unmeasurable. Basketball
+    // gives away no break: both seats take the same number of shots at the same hoop, and
+    // going first only means finishing first. Held separately from the seat figure above
+    // because they are separate claims, and in a pinned sweep they are one number (#2500).
+    for (const tier of tiers) {
+      const took = opener.get(tier)!;
+      expect(
+        Math.abs(took - 0.5),
+        `${tier}: the seat that shot first took ${(took * 100).toFixed(1)}% of decided`,
+      ).toBeLessThan(0.1);
     }
   }, 120000);
 });

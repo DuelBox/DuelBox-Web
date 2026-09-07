@@ -75,6 +75,22 @@ export interface DebugSeatReading {
  * overlay is what can turn two readings into a frame rate — and handing it the raw numbers
  * keeps every division in one file, next to the test that checks the arithmetic.
  */
+/**
+ * One input family's measured event-to-simulation latency (#133), from `LatencyMeter`.
+ *
+ * Shown so an unfair input path is a number a reader can see rather than a suspicion: a
+ * reaction game where the pointer arrives a frame later than the keyboard is exactly the
+ * thing `docs/input-parity.md` needs measured, and this is where the measurement surfaces.
+ */
+export interface DebugLatencyReading {
+  /** 'keyboard' | 'pointer' | 'gamepad'. */
+  readonly family: string;
+  readonly samples: number;
+  readonly meanMs: number;
+  readonly lastMs: number;
+  readonly maxMs: number;
+}
+
 export interface DebugReading {
   /** Wall-clock milliseconds, which is what makes the counters below into rates. */
   readonly at: number;
@@ -88,6 +104,14 @@ export interface DebugReading {
   /** Whether the run loop is being driven right now, which a countdown or a pause stops. */
   readonly running: boolean;
   readonly seats: readonly DebugSeatReading[];
+  /**
+   * Per-family input latency, or absent when no meter is attached.
+   *
+   * Optional so a host that does not wire the latency harness — every host in production,
+   * where the whole overlay is folded out — needs no change, and the overlay simply prints no
+   * latency rows. A family with no samples yet is skipped rather than shown as "0ms".
+   */
+  readonly latency?: readonly DebugLatencyReading[];
 }
 
 export type DebugSampler = () => DebugReading;
@@ -146,7 +170,28 @@ export function formatDebugReading(
       ` ${measured} actual`,
     `steps ${reading.steps}  loop ${reading.running ? 'running' : 'stopped'}`,
     ...reading.seats.map(formatSeat),
+    ...formatLatency(reading.latency),
   ];
+}
+
+/**
+ * One line per input family that has been measured, showing mean, last and worst latency.
+ *
+ * A family with no samples is left out entirely rather than shown as zero — nothing has been
+ * pressed on it, and "0.00ms" would read as "instant" rather than "unmeasured", the same
+ * mistake the fps row avoids by printing "--".
+ */
+function formatLatency(latency: DebugReading['latency']): readonly string[] {
+  if (latency === undefined) return [];
+  const lines: string[] = [];
+  for (const entry of latency) {
+    if (entry.samples <= 0) continue;
+    lines.push(
+      `lat ${entry.family.padEnd(8)} ${entry.meanMs.toFixed(2)}ms mean` +
+        `  ${entry.lastMs.toFixed(2)} last  ${entry.maxMs.toFixed(2)} max  n=${entry.samples}`,
+    );
+  }
+  return lines;
 }
 
 /**

@@ -347,6 +347,72 @@ export function SettingsPanel() {
         </div>
       </section>
 
+      <section className={styles.section} aria-labelledby={`${id}-display`}>
+        <h2 id={`${id}-display`}>Display and play</h2>
+
+        {/* #76. Applied the instant it changes through the shared settings listener, and
+            the inline script in the page head applies the saved choice before the first
+            paint, so switching here never flashes the other ground. */}
+        <SelectRow
+          id={`${id}-theme`}
+          label="Theme"
+          value={settings.theme}
+          onChange={(theme) => {
+            change({ theme: theme as Settings['theme'] });
+          }}
+          options={[
+            { value: 'system', label: 'Match my device' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+        />
+        <p className={styles.note}>
+          &ldquo;Match my device&rdquo; follows your system&apos;s light or dark setting and changes
+          with it. Light and Dark override it.
+        </p>
+
+        {/* #174. Flows to the shell here and to the games through the engine's seat palette,
+            so the scoreboard and the board agree. Shape and label still tell the seats apart
+            whichever palette is on — this only widens the colour gap. */}
+        <SelectRow
+          id={`${id}-seats`}
+          label="Seat colours"
+          value={settings.seatPalette}
+          onChange={(seatPalette) => {
+            change({ seatPalette: seatPalette as Settings['seatPalette'] });
+          }}
+          options={[
+            { value: 'default', label: 'Standard (red and blue)' },
+            { value: 'colourblind', label: 'Colour-blind friendly (amber and blue)' },
+          ]}
+        />
+        <p className={styles.note}>
+          The standard red and blue are hard to tell apart with red–green colour blindness. The
+          alternative keeps the two seats far apart in colour as well as in shape.
+        </p>
+
+        {/* #179. Assist mode. The value is a wall-clock multiplier the loop applies to the
+            fixed step, so the match plays in slow motion without changing the simulation —
+            the same game, more time to read it and to react. Never faster than full. */}
+        <SelectRow
+          id={`${id}-speed`}
+          label="Game speed"
+          value={String(settings.gameSpeed)}
+          onChange={(speed) => {
+            change({ gameSpeed: Number(speed) });
+          }}
+          options={[
+            { value: '1', label: 'Full speed' },
+            { value: '0.75', label: 'Relaxed (three-quarter speed)' },
+            { value: '0.5', label: 'Slow (half speed)' },
+          ]}
+        />
+        <p className={styles.note}>
+          Slows every real-time game down so there is more time to react. Turn-based games are
+          untouched, and a change takes effect on the next match you start.
+        </p>
+      </section>
+
       <section className={styles.section} aria-labelledby={`${id}-data`}>
         <h2 id={`${id}-data`}>Your data</h2>
         <p className={styles.note}>
@@ -660,6 +726,51 @@ function Switch({
         </span>
         <span className={styles.word}>{checked ? 'On' : 'Off'}</span>
       </button>
+    </div>
+  );
+}
+
+/**
+ * A labelled choice from a short list, as a native select.
+ *
+ * A native `<select>` rather than a custom control on purpose: it is keyboard operable,
+ * screen-reader labelled and touch-friendly for free, it is a fraction of the shell budget a
+ * bespoke listbox would cost, and — like every other control on this page — it applies on
+ * change, so there is no Apply button to disagree with the value shown. The label is a real
+ * `<label htmlFor>`, so tapping the words focuses the control.
+ */
+function SelectRow({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className={styles.row}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <select
+        id={id}
+        className={styles.select}
+        value={value}
+        onChange={(event) => {
+          onChange(event.currentTarget.value);
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

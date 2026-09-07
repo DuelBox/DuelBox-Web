@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_SETTINGS,
+  MIN_GAME_SPEED,
   readSettings,
   resetSettings,
   SETTINGS_KEY,
@@ -38,7 +39,17 @@ describe('the defaults', () => {
   it('start with sound on and vibration off', () => {
     // Sound is what a player expects from a game. A phone buzzing against the table
     // between two people is a surprise, so vibration is opted into (#135).
-    expect(DEFAULT_SETTINGS).toEqual({ muted: false, volume: 1, haptics: false });
+    expect(DEFAULT_SETTINGS).toEqual({
+      muted: false,
+      volume: 1,
+      haptics: false,
+      // The three accessibility fields default to "as the device or the design already
+      // is", so a first-time visitor is unaffected: the theme follows the device (#76),
+      // the seats keep the brand palette (#174), and the match runs at full speed (#179).
+      theme: 'system',
+      seatPalette: 'default',
+      gameSpeed: 1,
+    });
   });
 });
 
@@ -64,7 +75,17 @@ describe('reading and writing settings', () => {
     writeSettings({ volume: 0.4 });
     writeSettings({ muted: true });
     writeSettings({ haptics: true });
-    expect(readSettings()).toEqual({ muted: true, volume: 0.4, haptics: true });
+    writeSettings({ theme: 'dark' });
+    writeSettings({ seatPalette: 'colourblind' });
+    writeSettings({ gameSpeed: 0.75 });
+    expect(readSettings()).toEqual({
+      muted: true,
+      volume: 0.4,
+      haptics: true,
+      theme: 'dark',
+      seatPalette: 'colourblind',
+      gameSpeed: 0.75,
+    });
   });
 
   it('returns what it kept, not what it was asked for', () => {
@@ -73,11 +94,36 @@ describe('reading and writing settings', () => {
     expect(readSettings().volume).toBe(0);
   });
 
+  it('clamps assist speed into [MIN_GAME_SPEED, 1] and never faster than full', () => {
+    // Assist slows a match; it never speeds one up, because a faster match is a harder
+    // match and would hand the quicker device an edge cross-device (#179).
+    expect(writeSettings({ gameSpeed: 2 }).gameSpeed).toBe(1);
+    expect(writeSettings({ gameSpeed: 0.1 }).gameSpeed).toBe(MIN_GAME_SPEED);
+    expect(writeSettings({ gameSpeed: 0.75 }).gameSpeed).toBe(0.75);
+  });
+
+  it('keeps only the theme and palette names it knows', () => {
+    // An enumerated field from a build that shipped a fourth option must not leave the
+    // reader holding a string it cannot map to a stylesheet.
+    expect(writeSettings({ theme: 'dark' }).theme).toBe('dark');
+    expect(writeSettings({ theme: 'midnight' as never }).theme).toBe('system');
+    expect(writeSettings({ seatPalette: 'colourblind' }).seatPalette).toBe('colourblind');
+    expect(writeSettings({ seatPalette: 'neon' as never }).seatPalette).toBe('default');
+  });
+
   it('stores a version under its own key', () => {
     writeSettings({ muted: true });
     const raw: unknown = JSON.parse(globalThis.localStorage.getItem(SETTINGS_KEY) ?? '{}');
     expect(SETTINGS_KEY).toBe('duelbox:settings');
-    expect(raw).toEqual({ version: 1, muted: true, volume: 1, haptics: false });
+    expect(raw).toEqual({
+      version: 1,
+      muted: true,
+      volume: 1,
+      haptics: false,
+      theme: 'system',
+      seatPalette: 'default',
+      gameSpeed: 1,
+    });
   });
 
   it('resets to the defaults by forgetting, not by writing them', () => {
@@ -102,13 +148,38 @@ describe('surviving whatever is actually in storage', () => {
 
   it('takes the default for a field that is wrong and keeps the ones that are right', () => {
     // Field by field: a volume this build cannot read should cost the player their
-    // volume, not their mute as well.
+    // volume, not their mute as well. The same holds across the accessibility fields —
+    // a garbage theme and a garbage speed fall back without touching the palette choice.
     install(
       fakeStorage({
-        [SETTINGS_KEY]: '{"version":1,"muted":true,"volume":"loud","haptics":"yes"}',
+        [SETTINGS_KEY]:
+          '{"version":1,"muted":true,"volume":"loud","haptics":"yes",' +
+          '"theme":42,"seatPalette":"colourblind","gameSpeed":"fast"}',
       }),
     );
-    expect(readSettings()).toEqual({ muted: true, volume: 1, haptics: false });
+    expect(readSettings()).toEqual({
+      muted: true,
+      volume: 1,
+      haptics: false,
+      theme: 'system',
+      seatPalette: 'colourblind',
+      gameSpeed: 1,
+    });
+  });
+
+  it('reads back the fields added later as their defaults from an old blob', () => {
+    // A settings blob written before theme, palette and speed existed is still a valid
+    // version-1 blob: the absent fields read as their defaults rather than as null, which
+    // is why the version did not have to move.
+    install(fakeStorage({ [SETTINGS_KEY]: '{"version":1,"muted":true,"volume":0.5}' }));
+    expect(readSettings()).toEqual({
+      muted: true,
+      volume: 0.5,
+      haptics: false,
+      theme: 'system',
+      seatPalette: 'default',
+      gameSpeed: 1,
+    });
   });
 
   it('clamps a stored volume into range and refuses one that is not a number', () => {

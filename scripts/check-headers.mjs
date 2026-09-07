@@ -11,25 +11,44 @@
  * `security-headers.mjs` contains what `security-headers.mjs` contains would pass happily
  * on a build where `emit-host-config.mjs` never ran.
  *
- * ## What it cannot tell you
+ * ## And that is still the wrong assertion on its own
  *
- * That a header reached a browser. It checks that the files say the right thing, and this
- * project deploys to **GitHub Pages, which serves no custom response headers at all** — so
- * `_headers` and `vercel.json` are generated, checked here, and then discarded by the host.
- * Of the set below only the CSP survives, because it travels in each page's `<meta>` tag,
- * and HSTS, which Pages adds itself on a `github.io` domain. `frame-ancestors`, COOP, COEP,
- * CORP and Permissions-Policy do not.
+ * Everything above proves the *file* is right. It cannot prove anybody reads the file, and
+ * on GitHub Pages nobody does — Pages serves no custom response headers, so `_headers` and
+ * `vercel.json` are both inert and every header this script has just confirmed reaches no
+ * visitor at all. A guard green about the wrong thing is this repository's signature
+ * failure and this was an instance of it.
  *
- * That is worth stating where the check lives, because a green step named "check headers"
- * reads like a live-site guarantee and is not one. Only `curl -sI` against the origin can
- * say that, which is the verification step in `docs/deploy.md`. Issue #2481 tracks the
- * choice between moving to a host that reads `_headers` and accepting the gap knowingly.
+ * So section 5 asserts the inverse, from `scripts/header-delivery.mjs`: every generated
+ * header must be classified by *how it is delivered*, the declared deploy target must still
+ * match what `deploy.yml` actually does, and the two things that survive a header-less host
+ * — the meta CSP and the meta referrer policy — must be present in every page along with
+ * the frame guard that partly stands in for the `X-Frame-Options` nobody serves. Then the
+ * served-versus-discarded table is printed, on every build, in plain words.
+ *
+ * ## What even that cannot tell you
+ *
+ * That a header reached a browser. Every section here checks that the *files* say the right
+ * thing — the inverse assertion included, which reads the artefact and the workflow, not the
+ * live origin. A green step named "check headers" reads like a live-site guarantee and is
+ * not one: only `curl -sI` against the origin can say a header arrived, which is the
+ * verification step in `docs/deploy.md`. Issue #2481 tracks the choice between moving to a
+ * host that reads `_headers` and accepting the gap knowingly.
  */
 
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SECURITY_HEADERS } from './security-headers.mjs';
+import {
+  DEPLOY_TARGET,
+  FRAME_GUARD_MARKER,
+  HOSTS,
+  classificationProblems,
+  detectDeployTarget,
+  formatDeliveryReport,
+  metaEquivalents,
+} from './header-delivery.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -120,8 +139,11 @@ async function main() {
   must(pages.length > 0, 'the export contains no HTML at all');
 
   let hashedPages = 0;
+  /** Kept so section 5 can ask the same pages about delivery without re-reading 150 files. */
+  const pageText = new Map();
   for (const page of pages) {
     const html = await readFile(page, 'utf8');
+    pageText.set(page, html);
     const label = page.slice(out.length) || '/';
     const match = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html);
     if (match === null) {
@@ -182,6 +204,59 @@ async function main() {
     }
   }
 
+  // 5. The inverse assertion: what this host actually delivers.
+  //
+  // Sections 1–4 prove the artefact is right. This one is about whether anything reads it.
+
+  // 5a. Nothing may be added to the generated set without saying how it travels. This is the
+  //     check that stops the gap going back to being a comment: add a header to
+  //     `security-headers.mjs`, and the build refuses it until it is classified.
+  for (const problem of classificationProblems()) failures.push(problem);
+
+  // 5b. The declared deploy target must still be what the workflow does. Move the deploy and
+  //     every "reaches nobody" below becomes a lie; this is what makes that impossible to do
+  //     quietly.
+  const workflow = await readFile(join(root, '.github', 'workflows', 'deploy.yml'), 'utf8').catch(
+    () => '',
+  );
+  const actual = detectDeployTarget(workflow);
+  must(
+    actual === DEPLOY_TARGET,
+    `.github/workflows/deploy.yml deploys to ${actual ?? 'a host this check does not recognise'}` +
+      `, but scripts/header-delivery.mjs says ${DEPLOY_TARGET} — re-classify which headers are ` +
+      'served before the report below starts lying',
+  );
+
+  // 5c. On a host that serves no response headers, the meta equivalents are the delivery.
+  //     Assert them in the artefact for the same reason the headers are asserted there: the
+  //     source having them proves nothing about a build where the emit did not run.
+  const host = HOSTS[DEPLOY_TARGET];
+  if (host !== undefined && !host.servesResponseHeaders) {
+    for (const { header, tag } of metaEquivalents()) {
+      if (header === 'Content-Security-Policy') continue; // covered page-by-page above
+      const missing = pages.filter((page) => !pageText.get(page)?.includes(tag));
+      must(
+        missing.length === 0,
+        `${String(missing.length)} page(s) carry no ${header} meta tag, which on ${host.label} ` +
+          `is the only way it reaches anyone — first: ${missing[0]?.slice(out.length) ?? '?'}`,
+      );
+    }
+
+    // `X-Frame-Options` and CSP `frame-ancestors` are both header-only and both discarded
+    // here, so the frame guard is the entire clickjacking defence. If it is not in the page,
+    // there is none — and the table below would still print "partly mitigated".
+    // After a literal `<script>`: the same source also appears, JSON-escaped and inert, in
+    // the RSC flight payload of every page. See the note on FRAME_GUARD_MARKER.
+    const guardTag = `<script>${FRAME_GUARD_MARKER}`;
+    const unguarded = pages.filter((page) => !pageText.get(page)?.includes(guardTag));
+    must(
+      unguarded.length === 0,
+      `${String(unguarded.length)} page(s) ship without the frame guard, and on ${host.label} ` +
+        'nothing else refuses framing — first: ' +
+        `${unguarded[0]?.slice(out.length) ?? '?'}`,
+    );
+  }
+
   if (failures.length > 0) {
     console.error(`check-headers: ${String(failures.length)} problem(s)\n`);
     for (const failure of failures) console.error(`  ✗ ${failure}`);
@@ -194,6 +269,8 @@ async function main() {
       `${String(pages.length)} pages with a policy (${String(hashedPages)} hashed), ` +
       'security.txt current',
   );
+  console.log('');
+  console.log(formatDeliveryReport());
 }
 
 await main();

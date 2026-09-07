@@ -280,6 +280,98 @@ describe('a person', () => {
   });
 });
 
+describe('a gesture the browser takes away', () => {
+  it('drops the charge instead of firing it', () => {
+    // A `pointercancel` — a system edge swipe, palm rejection, an incoming call — is the
+    // browser saying the gesture did not happen. The engine suppresses the release, but this
+    // game does not read one: it hands a hold to the rules and the rules find their own edge,
+    // so before #2501 a hold that merely stopped read as a release and **fired the gun** at
+    // whatever the charge had reached.
+    const game = new FatalSiegeGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    openUp(game, view, manager);
+
+    manager.pointerDown(1, 120, BOARD - 60);
+    drive(game, view, manager, 20);
+    const turret = sideOf(game.siege, 'p1').turret;
+    expect(turret.aiming, 'the gun is charging').toBe(true);
+    expect(turret.range).toBeGreaterThan(RANGE_MIN);
+
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(turret.loaded, 'the shot is still in the gun').toBe(true);
+    expect(turret.aiming, 'and the charge was let down').toBe(false);
+    expect(turret.range).toBe(RANGE_MIN);
+    game.destroy();
+  });
+
+  it('does not fire on the release the abandoned hold never made', () => {
+    const game = new FatalSiegeGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    openUp(game, view, manager);
+
+    manager.pointerDown(1, 120, BOARD - 60);
+    drive(game, view, manager, 20);
+    manager.pointerCancel(1);
+    drive(game, view, manager, 30);
+    expect(sideOf(game.siege, 'p1').turret.loaded, 'still loaded a half second later').toBe(true);
+    game.destroy();
+  });
+
+  it('leaves a hold the action key is still making alone', () => {
+    // The engine raises `pointerCancelled` for any cancelled pointer, not only the last one
+    // down, and keeps `actionHeld` true while another source still holds the action. A cancel
+    // that ended nothing must abandon nothing.
+    const game = new FatalSiegeGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    openUp(game, view, manager);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    const turret = sideOf(game.siege, 'p1').turret;
+    const charged = turret.range;
+    expect(charged).toBeGreaterThan(RANGE_MIN);
+
+    manager.pointerDown(1, 120, BOARD - 60);
+    drive(game, view, manager, 1);
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(turret.aiming, 'the key was not cancelled').toBe(true);
+    expect(turret.range, 'so its charge stands').toBeGreaterThan(charged);
+    game.destroy();
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('lets the charge down instead of firing it', () => {
+    // `InputManager.clear()` with no `onPause` is a real path, not a hypothetical: the shell
+    // calls it on a released modifier chord and on a lost window, before any pause is
+    // requested. The key never receives its key-up and `clear` deletes the release edge too,
+    // so before #2501 the charge froze in total silence. Worse here: this game finds its own release
+    // edge in the rules, so the hold merely stopping *fired the gun*.
+    const game = new FatalSiegeGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    openUp(game, view, manager);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    const turret = sideOf(game.siege, 'p1').turret;
+    expect(turret.aiming, 'the key is charging the gun').toBe(true);
+    expect(turret.range).toBeGreaterThan(RANGE_MIN);
+
+    manager.clear();
+    drive(game, view, manager, 1);
+    expect(turret.loaded, 'the shot is still in the gun').toBe(true);
+    expect(turret.aiming, 'and the charge was let down').toBe(false);
+    expect(turret.range).toBe(RANGE_MIN);
+    game.destroy();
+  });
+});
+
 describe('a full match', () => {
   it('reaches a decision at every tier', () => {
     for (const tier of TIERS) {

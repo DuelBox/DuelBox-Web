@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Rng } from '@duelbox/engine';
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
@@ -7,6 +8,8 @@ import {
   CELL_SIZE,
   FAN_SPREAD,
   COLUMNS,
+  START_MARKS,
+  START_SPREAD,
   LOOKAHEAD_SECONDS,
   ROLLER_RADIUS,
   ROUND_SECONDS,
@@ -32,7 +35,11 @@ import {
   step,
   winnerOf,
 } from './rules.js';
-import type { BotDifficulty } from './rules.js';
+import type { BotDifficulty, Game, Roller } from './rules.js';
+import type { SeatId } from '@duelbox/engine';
+
+/** Every tier, because a seat advantage can change sign between them. */
+const DIFFICULTIES: BotDifficulty[] = ['easy', 'normal', 'hard'];
 
 const STEP = 1 / 60;
 
@@ -57,9 +64,9 @@ describe('the board', () => {
     expect(inBounds(0, ROWS)).toBe(false);
   });
 
-  it('starts the two rollers in opposite corners, facing away', () => {
-    // The same position under a half-turn of the board, so neither seat has an edge and
-    // neither is aimed at the other.
+  it('starts the two rollers on marks that are half-turn images of each other', () => {
+    // The same pair of positions under a half-turn of the board, so neither seat has an
+    // edge and neither is aimed at the other, whichever roll each one draws.
     const game = createGame();
     expect(game.p1.x).toBeLessThan(BOARD_WIDTH / 2);
     expect(game.p2.x).toBeGreaterThan(BOARD_WIDTH / 2);
@@ -67,12 +74,31 @@ describe('the board', () => {
     expect(BOARD_HEIGHT - game.p2.y).toBeCloseTo(game.p1.y, 6);
   });
 
+  it('seats the opening seat on the first mark, whichever seat that is', () => {
+    // The whole of the seat symmetry rests on this: the marks and the streams go to roles,
+    // and nothing else in the rules can tell one seat from the other.
+    const opened = createGame();
+    resetGame(opened, 'p2', 0.25, 0.75);
+    expect(opened.p2.x).toBe(START_MARKS[0].x);
+    expect(opened.p1.x).toBe(START_MARKS[1].x);
+    expect(opened.p2.heading).toBe(START_MARKS[0].heading + (0.25 - 0.5) * START_SPREAD);
+    expect(opened.p1.heading).toBe(START_MARKS[1].heading + (0.75 - 0.5) * START_SPREAD);
+  });
+
+  it('draws an opening heading from the roll rather than repeating one', () => {
+    const low = createGame();
+    resetGame(low, 'p1', 0, 0);
+    const high = createGame();
+    resetGame(high, 'p1', 0.999, 0.999);
+    expect(high.p1.heading - low.p1.heading).toBeCloseTo(0.999 * START_SPREAD, 6);
+  });
+
   it('starts over on reset', () => {
     const game = createGame();
     paintAt(game, 'p1', 400, 400);
     game.elapsed = 20;
     game.phase = 'over';
-    resetGame(game);
+    resetGame(game, 'p1', 0.5, 0.5);
     expect(countBare(game)).toBe(CELLS);
     expect(game.elapsed).toBe(0);
     expect(game.phase).toBe('playing');
@@ -277,12 +303,10 @@ describe('the whistle', () => {
 });
 
 describe('the bot', () => {
-  const DIFFICULTIES: BotDifficulty[] = ['easy', 'normal', 'hard'];
-
   it('steers within full lock', () => {
     for (const difficulty of DIFFICULTIES) {
       const game = createGame();
-      const amount = botSteer(game, 'p1', difficulty);
+      const amount = botSteer(game, 'p1', difficulty, new Rng(1));
       expect(amount).toBeGreaterThanOrEqual(-1);
       expect(amount).toBeLessThanOrEqual(1);
     }
@@ -350,23 +374,44 @@ describe('the bot', () => {
     expect(BOT_PROFILES.hard.lookahead).toBe(LOOKAHEAD_SECONDS);
   });
 
-  it('out-paints a weaker tier, and ties with itself', () => {
+  it('out-paints a weaker tier', () => {
     // Head to head is the only honest measure here: a roller alone on the board is not
     // playing this game, and the hardest tier spends much of its effort denying the other
     // player rather than maximising its own count.
-    const play = (a: BotDifficulty, b: BotDifficulty): number => {
+    const play = (a: BotDifficulty, b: BotDifficulty, seed: number): number => {
       const game = createGame();
+      const rngA = new Rng(seed);
+      const rngB = new Rng(seed + 1);
+      resetGame(game, 'p1', rngA.float(), rngB.float());
       for (let i = 0; i < 60 * ROUND_SECONDS && game.phase === 'playing'; i += 1) {
-        steer(game.p1, botSteer(game, 'p1', a), STEP);
-        steer(game.p2, botSteer(game, 'p2', b), STEP);
+        steer(game.p1, botSteer(game, 'p1', a, rngA), STEP);
+        steer(game.p2, botSteer(game, 'p2', b, rngB), STEP);
         step(game, STEP);
       }
       return (countOwned(game, 'p1') - countOwned(game, 'p2')) / CELLS;
     };
-    expect(play('hard', 'easy'), 'hard out-paints easy').toBeGreaterThan(0.15);
-    expect(play('hard', 'normal'), 'and normal').toBeGreaterThan(0.15);
-    expect(play('normal', 'easy'), 'normal out-paints easy').toBeGreaterThan(0.15);
-    expect(Math.abs(play('hard', 'hard')), 'and neither seat has an edge').toBeLessThan(0.1);
+    /**
+     * The mean share of the board a beats b by, over four seeded rounds.
+     *
+     * Four rather than one, because a round is no longer a fixed script — the opening
+     * heading and the bot's tie-breaks come from the seed — so one round is a sample of
+     * one. Four is as many as the `hard` search can be asked for inside the suite's
+     * thirty-second timeout.
+     */
+    const sweep = (a: BotDifficulty, b: BotDifficulty): number => {
+      let total = 0;
+      for (let seed = 1; seed <= 4; seed += 1) total += play(a, b, seed * 977);
+      return total / 4;
+    };
+    expect(sweep('hard', 'easy'), 'hard out-paints easy').toBeGreaterThan(0.15);
+    expect(sweep('hard', 'normal'), 'and normal').toBeGreaterThan(0.15);
+    expect(sweep('normal', 'easy'), 'normal out-paints easy').toBeGreaterThan(0.15);
+    // There was a fourth line here — `Math.abs(play('hard', 'hard')) < 0.1`, "and neither
+    // seat has an edge" — and it could not have failed however lopsided the game was: two
+    // identical deterministic bots on a board that was its own half-turn image played out
+    // as exact mirrors and tied to the cell, so it measured exactly 0 every time. The claim
+    // it was making is now proved rather than sampled, in `describe('the mirror')` below
+    // and in game.test.ts, and a sample of four rounds would be a worse guard than either.
   });
 
   it('spaces its fan densely near straight ahead', () => {
@@ -421,5 +466,210 @@ describe('seats', () => {
     expect(otherOf('p1')).toBe('p2');
     expect(rollerOf(createGame(), 'p2').heading).toBeCloseTo(Math.PI, 6);
     expect(SPEED).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The mirror test: nothing in this file may be able to tell the two seats apart.
+ *
+ * A win-rate ladder cannot see the defect this catches. This game measured a **flat draw,
+ * every match, on `normal` and `hard`** — 245-245 to the cell over two thousand matches —
+ * and that was read as proof of symmetry when it was the opposite: the board starts as its
+ * own half-turn image, the bot used no randomness at all, and so both rollers played the
+ * identical round rotated 180 degrees and the counts could not do anything *but* tie. The
+ * one asymmetry underneath, `step` painting p1's disc before p2's and handing every cell
+ * the two rollers crossed together to whoever went second, was invisible for exactly the
+ * same reason: the overlap was symmetric too. Two bugs, each hiding the other, behind a
+ * number that looked like a proof.
+ *
+ * So this asserts the property directly rather than sampling the outcome, in the two forms
+ * that are checkable to the bit:
+ *
+ * - **Relabel.** Exchange the two seats' labels — every cell's owner, both rollers — and
+ *   every function here must produce the exchange of what it produced. Nothing is rotated,
+ *   nothing is reflected, so there is no floating-point slack to hide in and every
+ *   assertion below is exact.
+ * - **Half-turn.** Turn the board through 180 degrees as well. Coordinates are drawn on a
+ *   quarter-unit grid, where `BOARD_WIDTH - x` is exact in a double, so this is exact too.
+ */
+describe('the mirror', () => {
+  /** Positions are drawn on this grid, so that a half-turn of the board loses no bits. */
+  const GRID = 4;
+
+  function copyRoller(target: Roller, source: Readonly<Roller>): void {
+    target.x = source.x;
+    target.y = source.y;
+    target.heading = source.heading;
+    target.painted = source.painted;
+  }
+
+  /** The same position with the two seats' labels exchanged, and nothing else touched. */
+  function relabel(game: Readonly<Game>): Game {
+    const other = createGame();
+    for (let cell = 0; cell < CELLS; cell += 1) {
+      const owner = game.cells[cell] ?? null;
+      other.cells[cell] = owner === null ? null : otherOf(owner);
+    }
+    copyRoller(other.p1, game.p2);
+    copyRoller(other.p2, game.p1);
+    other.phase = game.phase;
+    other.elapsed = game.elapsed;
+    other.winner =
+      game.winner === null || game.winner === 'draw' ? game.winner : otherOf(game.winner);
+    return other;
+  }
+
+  /** The board turned through 180 degrees, seats exchanged with it. */
+  function halfTurn(game: Readonly<Game>): Game {
+    const other = relabel(game);
+    const cells = other.cells.slice();
+    for (let cell = 0; cell < CELLS; cell += 1) {
+      other.cells[cell] = cells[cellAt(COLUMNS - 1 - columnOf(cell), ROWS - 1 - rowOf(cell))]!;
+    }
+    for (const roller of [other.p1, other.p2]) {
+      roller.x = BOARD_WIDTH - roller.x;
+      roller.y = BOARD_HEIGHT - roller.y;
+      roller.heading += Math.PI;
+    }
+    return other;
+  }
+
+  /** Everything a comparison needs, as one string, so a failure prints the difference. */
+  function fingerprint(game: Readonly<Game>): string {
+    const rollers = [game.p1, game.p2]
+      .map((r) => `${String(r.x)},${String(r.y)},${String(r.painted)}`)
+      .join('|');
+    return `${game.cells.map((owner) => owner ?? '.').join('')} ${rollers} ${game.phase} ${String(game.winner)}`;
+  }
+
+  /**
+   * A board nobody designed: every cell independently bare, mine or theirs, and two rollers
+   * dropped anywhere on it.
+   *
+   * Half the time the second roller is put **on top of** the first, because the cells two
+   * discs cover at once are the only ones whose owner the paint order could ever decide,
+   * and two rollers landing within 112 units of each other by chance is a one-in-twenty-five
+   * event. A random sweep that never sets up the case cannot test it.
+   */
+  function randomBoard(rng: Rng): Game {
+    const game = createGame();
+    for (let cell = 0; cell < CELLS; cell += 1) {
+      const roll = rng.int(0, 3);
+      game.cells[cell] = roll === 0 ? null : roll === 1 ? 'p1' : 'p2';
+    }
+    game.p1.x = rng.int(0, BOARD_WIDTH * GRID + 1) / GRID;
+    game.p1.y = rng.int(0, BOARD_HEIGHT * GRID + 1) / GRID;
+    if (rng.bool()) {
+      const near = ROLLER_RADIUS * 2 * GRID;
+      game.p2.x = game.p1.x + rng.int(-near, near + 1) / GRID;
+      game.p2.y = game.p1.y + rng.int(-near, near + 1) / GRID;
+    } else {
+      game.p2.x = rng.int(0, BOARD_WIDTH * GRID + 1) / GRID;
+      game.p2.y = rng.int(0, BOARD_HEIGHT * GRID + 1) / GRID;
+    }
+    for (const roller of [game.p1, game.p2]) {
+      roller.heading = (rng.int(0, 4096) / 4096) * Math.PI * 2;
+    }
+    return game;
+  }
+
+  it('steps a relabelled board into the relabelling of the step', () => {
+    // The one that catches the paint order. `step` used to walk ['p1', 'p2'] and paint in
+    // that order, so every cell both discs covered went to p2 — and relabelling the seats
+    // hands it to p2 again, which is the other roller. Exact, not close: no rotation here.
+    const rng = new Rng(20260829);
+    for (let trial = 0; trial < 400; trial += 1) {
+      const board = randomBoard(rng);
+      const mirrored = relabel(board);
+      step(board, STEP);
+      step(mirrored, STEP);
+      expect(fingerprint(relabel(board)), `trial ${String(trial)}`).toBe(fingerprint(mirrored));
+    }
+  });
+
+  it('paints the half-turn of a disc into the half-turn of the board', () => {
+    const rng = new Rng(31337);
+    for (let trial = 0; trial < 400; trial += 1) {
+      const board = randomBoard(rng);
+      const mirrored = halfTurn(board);
+      const { p1, p2 } = board;
+      expect(paintAt(board, 'p1', p1.x, p1.y, p2.x, p2.y)).toBe(
+        paintAt(
+          mirrored,
+          'p2',
+          BOARD_WIDTH - p1.x,
+          BOARD_HEIGHT - p1.y,
+          BOARD_WIDTH - p2.x,
+          BOARD_HEIGHT - p2.y,
+        ),
+      );
+      expect(halfTurn(board).cells, `trial ${String(trial)}`).toEqual(mirrored.cells);
+    }
+  });
+
+  it('scores a heading the same from either seat', () => {
+    const rng = new Rng(4242);
+    for (let trial = 0; trial < 200; trial += 1) {
+      const board = randomBoard(rng);
+      const mirrored = relabel(board);
+      for (const profile of Object.values(BOT_PROFILES)) {
+        const heading = board.p1.heading;
+        expect(scoreHeading(mirrored, 'p2', heading, profile)).toBe(
+          scoreHeading(board, 'p1', heading, profile),
+        );
+      }
+    }
+  });
+
+  it('takes the same decision from either seat, on every bot decision', () => {
+    // Every tier, both seats, hundreds of boards — and the same stream position on both
+    // sides, because the tie-break is the one thing in the bot that reads a generator.
+    const rng = new Rng(90210);
+    for (let trial = 0; trial < 200; trial += 1) {
+      const board = randomBoard(rng);
+      const mirrored = relabel(board);
+      for (const difficulty of DIFFICULTIES) {
+        const seed = rng.int(0, 1_000_000);
+        expect(botSteer(mirrored, 'p2', difficulty, new Rng(seed))).toBe(
+          botSteer(board, 'p1', difficulty, new Rng(seed)),
+        );
+      }
+    }
+  });
+
+  it('calls the whistle the same way from either seat', () => {
+    const rng = new Rng(5150);
+    for (let trial = 0; trial < 200; trial += 1) {
+      const board = randomBoard(rng);
+      const mirrored = relabel(board);
+      callTime(board);
+      callTime(mirrored);
+      const expected =
+        board.winner === 'draw' || board.winner === null ? board.winner : otherOf(board.winner);
+      expect(mirrored.winner).toBe(expected);
+    }
+  });
+
+  it('plays a whole round the same way with the seats exchanged', () => {
+    // The end-to-end version: forty-five simulated seconds, both bots searching, and the
+    // final board must be the exact relabelling. This is the assertion the old flat draw
+    // was pretending to be.
+    const trace = (first: SeatId, seed: number): string => {
+      const board = createGame();
+      const one = new Rng(seed);
+      const two = new Rng(seed + 1);
+      resetGame(board, first, one.float(), two.float());
+      const rngFor = (seat: SeatId): Rng => (seat === first ? one : two);
+      while (board.phase === 'playing') {
+        for (const seat of ['p1', 'p2'] as SeatId[]) {
+          steer(rollerOf(board, seat), botSteer(board, seat, 'normal', rngFor(seat)), STEP);
+        }
+        step(board, STEP);
+      }
+      return fingerprint(first === 'p1' ? board : relabel(board));
+    };
+    for (let seed = 1; seed <= 4; seed += 1) {
+      expect(trace('p2', seed * 7919), `seed ${String(seed)}`).toBe(trace('p1', seed * 7919));
+    }
   });
 });

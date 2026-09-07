@@ -8,6 +8,7 @@ import {
   vec2,
 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -198,6 +199,17 @@ export class DartsGame implements Game {
 
     const seatInput = input.seat(active);
     if (!this.#flip.acceptsInput) return;
+
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    //
+    // `#pointerAiming` exists only because a finger is on the glass, so it goes — and with
+    // it the release branch that would otherwise throw this dart at whatever the abandoned
+    // drag left the aim on. The aim stays: it commits nothing on its own now, this game
+    // already carries it from one dart to the next, and moving the reticle for an
+    // interruption the player did not cause punishes them twice (#2501).
+    if (actionAbandoned(seatInput)) this.#pointerAiming = false;
 
     // Drag to aim, release to throw — the pointer idiom for this archetype. Aiming and
     // committing are separate acts, so a player can take as long as they like over the
