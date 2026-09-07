@@ -56,12 +56,19 @@ import type { Result } from 'axe-core';
  */
 
 /**
- * The tags #181 asks for: A and AA at both WCAG 2.0 and 2.1, plus Deque's own best-practice
- * set, which is where the landmark and heading-order rules live. AAA is deliberately absent —
- * it contains rules the product has decided against on purpose, and a gate nobody can pass
- * is a gate somebody turns off.
+ * The tags #181 asks for: A and AA at WCAG 2.0 and 2.1, and now 2.2 (#182), plus Deque's
+ * own best-practice set, which is where the landmark and heading-order rules live. AAA is
+ * deliberately absent — it contains rules the product has decided against on purpose, and a
+ * gate nobody can pass is a gate somebody turns off.
+ *
+ * `wcag22a`/`wcag22aa` add the automatable share of WCAG 2.2: axe machine-checks 2.4.11
+ * Focus Not Obscured (Minimum), 2.5.8 Target Size (Minimum) and 3.3.8 Accessible
+ * Authentication among them. The 2.2 criteria a scanner cannot judge — 2.4.13 Focus
+ * Appearance, 2.5.7 Dragging Movements, 3.2.6 Consistent Help, 3.3.7 Redundant Entry — are
+ * reviewed by hand in `docs/wcag-audit.md`, which lists a pass or a defect against every
+ * one and is the deliverable this tag change is half of.
  */
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'];
+const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa', 'best-practice'];
 
 /**
  * Rules turned off, with the reason each one is off.

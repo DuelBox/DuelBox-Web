@@ -23,6 +23,7 @@ import {
 } from '@/lib/head-to-head';
 import { readPlayerNames } from '@/lib/player-names';
 import { readSettings } from '@/lib/settings';
+import { useGameplayTouchTarget } from '@/lib/touch-target';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio, audio } from '@/lib/audio';
 import { ducksMatchAudio, shellCueFor } from '@/lib/match-cues';
@@ -214,6 +215,11 @@ export function PlaySurface({ slug }: { slug: string }) {
     undefined,
     initialMatchState,
   );
+
+  // The physical size a gameplay control should be on this device (#1889). Read in an
+  // effect inside the hook and kept current across a DPR change, so it is the shell target
+  // on the first paint and the device-aware size a frame later.
+  const gameplayTarget = useGameplayTouchTarget();
 
   useEffect(() => {
     let cancelled = false;
@@ -679,7 +685,15 @@ export function PlaySurface({ slug }: { slug: string }) {
   };
 
   return (
-    <div className={styles.surface}>
+    <div
+      className={styles.surface}
+      // The physical gameplay target (#1889), published as a custom property the play
+      // controls read. Computed from the device's pixel ratio in the presentation layer, so
+      // a control jabbed at across a table holds its size in millimetres rather than in a
+      // pixel count that a dense screen shrinks. Falls back to the shell target where a
+      // control does not opt in.
+      style={{ ['--db-gameplay-target' as string]: `${String(gameplayTarget)}px` }}
+    >
       {/* The tournament's standing, on the one screen during a leg where it is what the
           pair are talking about: the moment a game ends. It is deliberately not up while
           the board is live — the match HUD is the score that matters then, and a phone two
