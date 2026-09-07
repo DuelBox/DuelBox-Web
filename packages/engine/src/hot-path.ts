@@ -39,8 +39,6 @@ import { resolveContact } from './resolve.js';
 import type { Body } from './resolve.js';
 import { ParticlePool } from './particle.js';
 import type { EmitterConfig } from './particle.js';
-import { ScreenShake } from './juice.js';
-import { TweenSequence } from './tween.js';
 import { Rng } from './rng.js';
 
 export interface RepresentativeLoopOptions {
@@ -78,8 +76,6 @@ export class RepresentativeLoop {
 
   readonly #hash: SpatialHash;
   readonly #particles: ParticlePool;
-  readonly #shake: ScreenShake;
-  readonly #tween: TweenSequence;
   readonly #rng: Rng;
 
   // Persistent scratch reused every pair; never reallocated.
@@ -108,15 +104,6 @@ export class RepresentativeLoop {
     // Cell around four radii keeps a handful of bodies per cell.
     this.#hash = new SpatialHash(radius * 4);
     this.#particles = new ParticlePool(capacity);
-    this.#shake = new ScreenShake(this.#rng, { maxAmplitudeLogical: 2, decaySeconds: 0.4 });
-    this.#tween = new TweenSequence({
-      from: 0,
-      steps: [
-        { kind: 'to', to: 1, durationSeconds: 0.5 },
-        { kind: 'delay', durationSeconds: 0.1 },
-        { kind: 'to', to: 0, durationSeconds: 0.5 },
-      ],
-    });
 
     for (let i = 0; i < n; i += 1) {
       this.#x[i] = radius + this.#rng.float() * (world - 2 * radius);
@@ -188,9 +175,6 @@ export class RepresentativeLoop {
 
     // Presentation systems advance on the same step.
     this.#particles.step(dt);
-    this.#shake.step(dt);
-    this.#tween.step(dt);
-    if (this.#tween.done) this.#tween.reset();
 
     // A small deterministic emission, so the pool is genuinely exercised.
     if (this.#stepCount % 4 === 0) {

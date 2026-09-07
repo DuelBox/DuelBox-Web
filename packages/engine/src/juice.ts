@@ -1,278 +1,439 @@
+import type { Easing, MotionPreference } from './tween.js';
+import { easeInQuad, easeOutCubic } from './tween.js';
+import type { Renderer } from './renderer.js';
+
 /**
- * Juice primitives: screen shake, hit-stop, and flash.
+ * Screen shake, hit-stop and flash: the three pieces of impact feedback every action game
+ * wants, built on the tween library and constrained by the two rules that matter (#114).
  *
- * These three effects account for most of the felt gap between a prototype and a
- * shipped game. They are built once here and reused everywhere, each driven by a
- * single 0..1 intensity so a game says "how hard" and nothing else.
+ * ## What hit-stop can and cannot be here, which is the whole design
  *
- * They are strictly presentation. Not one of them touches the simulation: shake
- * produces a render offset, flash an overlay opacity, hit-stop a *presentation*
- * time scale that slows tweens and particles — never the fixed step. The board a
- * game simulates is byte-identical whether or not any of these are running, which
- * is what keeps a cross-device match honest (rule 8) and is proven by a test that
- * steps the same simulation with and without juice and compares.
+ * Hit-stop, as the term is normally used, freezes the world for a few frames at the moment of
+ * contact so the hit reads as a hit. The obvious implementation is to stop stepping the
+ * simulation. It is worth writing down carefully why that is not what this module does,
+ * because the usual one-line answer — "it would break determinism" — is **wrong**, and a
+ * reader who believes it will reject the right fix for the wrong reason.
  *
- * They are deterministic. Shake draws its direction from the seeded {@link Rng},
- * so two devices given the same seed and the same triggers shake through the same
- * offsets. Nothing here reads a wall clock; everything advances on the fixed delta.
+ * A freeze counted in simulation *steps*, triggered by a simulation event, is perfectly
+ * deterministic. `FixedLoop` never lets wall time into a step; a game that set
+ * `#frozenSteps = 5` inside `update()` and returned early for the next five would freeze on
+ * the same five steps on a 60 Hz phone and a 144 Hz laptop, and the loop's spiral-of-death
+ * guard only ever discards time, never invents it, so both devices stay on whole-step
+ * boundaries either way. Two clients replaying the same inputs would agree exactly. So it is
+ * not determinism that rules it out. Three other things do, and each of them alone is enough:
  *
- * They compose safely. Firing an effect while it is already running saturates
- * rather than stacks, so the offset is bounded by a fixed amplitude however many
- * hits land at once — a gameplay-relevant element is never shaken out of reach.
+ * 1. **It could never be switched off, so it could never be juice.** `GameContext.reducedMotion`
+ *    may change what is drawn and nothing else. A freeze inside `update()` is a change to how
+ *    many steps the match takes; honouring the preference by removing it would mean a player
+ *    with reduced motion set played a *different match* — different ball positions, different
+ *    outcomes, and every replay and lockstep trace mismatched against a player without it.
+ *    So the preference could not reach it, and #175 could never turn it off. An effect that
+ *    exists to add feel and cannot be turned off is not an effect, it is a rule.
+ * 2. **It is not local, and juice must be.** Two people share one device. A freeze stops both
+ *    seats: the player who was hit loses five steps of their own defence because the player
+ *    who landed the hit earned a flourish. That is a balance decision — it belongs in a game's
+ *    rules, gets a spec, and goes through `pnpm balance:audit` — and it must not arrive as a
+ *    side effect of a library called "juice".
+ * 3. **A library cannot police the trigger.** The freeze above is deterministic *only* because
+ *    the trigger came from the simulation. A game that started one from something it noticed
+ *    while drawing — an overlap in interpolated positions, a particle crossing a line — would
+ *    diverge on the first frame the two devices rendered at different rates, and nothing in a
+ *    shared class can tell the two cases apart.
  *
- * Under reduced motion the two *moving* effects (shake, and the shove hit-stop can
- * imply) stop moving and hand back a non-motion `cue` in their place, so the moment
- * still reads — as a border pulse or a flash the renderer chooses — rather than
- * vanishing. Flash is itself a non-motion cue and stays.
+ * So {@link HitStop} freezes the **drawing** and lets the world run underneath. While it
+ * holds, the game returns from `render()` without drawing anything; the canvas keeps the last
+ * frame it was given, because nothing cleared it. The simulation is untouched, the preference
+ * can switch it off, and one seat's hit costs the other seat nothing.
+ *
+ * **The honest cost, stated rather than hidden:** the world does not wait, so when the hold
+ * ends the picture jumps forward by however long it lasted. That is why {@link HitStop} caps
+ * a hold at {@link MAX_HOLD_SECONDS} — about seven steps at sixty hertz — and why the cap is
+ * not configurable. Within that, the jump reads as the snap of an impact; much beyond it, it
+ * reads as a dropped frame, which is a different thing and not a good one. A version with no
+ * jump is possible — draw at a time that lags simulation time and catches up afterwards — but
+ * it needs a history of past states to interpolate between, which no game in this repository
+ * keeps, so it is not offered rather than half-offered.
+ *
+ * ## Reduced motion is here from the first line, not added afterwards
+ *
+ * #175 is open because effects like these did not exist, so there has been nothing to switch
+ * off. Each of the three arrives with its answer already decided, and each one keeps saying
+ * what it was saying:
+ *
+ *   - **Shake** is a transform, so it is switched off where the engine already switches
+ *     transforms off: `Canvas2DRenderer.pushShake` zeroes the displacement under reduced
+ *     motion exactly as `pushRotation` snaps a part-way board to its resting angle. The shake
+ *     class itself is never told, exactly as `SeatFlip` is never told, so a preference changed
+ *     mid-match is followed in both directions rather than frozen at whatever `init` saw.
+ *     What the shake was saying — *that was a hit, and this is how hard* — is carried by
+ *     {@link Shake.intensity}, which is unconditional and is meant to be drawn.
+ *   - **Flash** is a level, not a transform, so the renderer cannot filter it and
+ *     {@link Flash.levelFor} does. With motion it is a pulse that falls away; without, it is a
+ *     steady mark held for the identical window. Same colour, same duration, same meaning, no
+ *     ramp — rule 7's argument applied to time instead of colour.
+ *   - **Hit-stop** is a decision, and {@link HitStop.holdingFor} answers false under reduced
+ *     motion, because the catch-up jump on release is precisely the sudden movement the
+ *     preference is asking not to be shown.
+ *
+ * {@link Impact} exists so that the motion channel cannot be raised on its own: one
+ * `strike()` raises all three, so a game that shakes on a hit has already flashed on it, and
+ * the player with motion switched off is still told.
+ *
+ * ## Rule 5
+ *
+ * Everything here follows `tween.ts` and `vec2.ts`: state pre-allocated in the constructor,
+ * positional numbers on every per-step and per-event entry point, and nothing but primitives
+ * crossing the boundary. There is no randomness — the shake is a fixed pair of sinusoids, not
+ * noise — both because `Math.random` is banned and because drawing must never advance the
+ * match's seeded `Rng`: a picture that consumed random numbers would change the simulation
+ * every time a frame was drawn.
  */
 
-import type { Rng } from './rng.js';
+const TAU = Math.PI * 2;
 
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
+/**
+ * The two rates the shake oscillates at, in hertz.
+ *
+ * Both are comfortably under the thirty hertz that a sixty hertz simulation can represent, so
+ * the displacement is a shake rather than an aliasing artefact that changes character with the
+ * step rate. They are coprime, so the two axes do not retrace the same short figure — over the
+ * fraction of a second a shake lasts, the path never repeats and it reads as noise without
+ * anybody having to draw any.
+ */
+const SHAKE_X_HZ = 13;
+const SHAKE_Y_HZ = 17;
 
-function assertPositiveFinite(value: number, name: string): void {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new RangeError(`${name} must be a positive finite number, received ${String(value)}`);
-  }
-}
+/**
+ * How bright the steady mark is that stands in for a flash when motion is off.
+ *
+ * Half. A pulse starts at full and falls away, so over the same window it delivers roughly
+ * half its peak; matching that keeps the substitute as prominent as the thing it replaces
+ * without being a brighter interruption than the effect it is sparing the player.
+ */
+const STEADY_LEVEL = 0.5;
 
-function assertNonNegativeFinite(value: number, name: string): void {
+/**
+ * The longest the picture may be held. Seven steps at sixty hertz.
+ *
+ * Not configurable, and the note at the top of this file is why: the world keeps running
+ * under a hold, so every held second is a second of movement that arrives at once when it
+ * ends. This is the length at which that still reads as impact.
+ */
+export const MAX_HOLD_SECONDS = 0.12;
+
+function assertNonNegative(value: number, name: string): void {
   if (!Number.isFinite(value) || value < 0) {
-    throw new RangeError(`${name} must be a non-negative finite number, received ${String(value)}`);
+    throw new RangeError(`${name} must be a non-negative number, received ${String(value)}`);
   }
 }
 
-export interface ScreenShakeOptions {
+export interface ShakeOptions {
   /**
-   * Largest render offset, in LOGICAL units, at full trauma. The offset never
-   * exceeds this whatever the trauma, so a game element can be shaken but never
-   * pushed further than the game allows for.
+   * Envelope applied to the fraction of the shake still to run, so the peak displacement
+   * falls from the magnitude to nothing. Defaults to {@link easeInQuad}, which dies away
+   * quickly and then tails off — a hit that is over rather than a wobble that subsides.
    */
-  readonly maxAmplitudeLogical: number;
-  /** Seconds a single full-trauma hit takes to decay to still. */
-  readonly decaySeconds: number;
+  readonly decay?: Easing;
 }
 
 /**
- * A render offset that jitters and decays.
+ * A displacement that dies away, in logical units.
  *
- * `add(intensity)` raises the trauma; trauma decays to zero over `decaySeconds`
- * and the offset is `maxAmplitude * trauma^2 * noise`, so a small hit barely
- * registers and a big one is felt without ever leaving the arena. Squaring trauma
- * is the standard trick that makes the tail fall away smoothly instead of clipping.
- *
- * The offset is what the renderer adds to its transform. It is never added to a
- * body: the simulation does not know shake exists.
+ * Logical, never pixels: rule 8. A shake of `0.02 * logical.width` looks the same on a phone
+ * and a 4K monitor, and a shake written in pixels would be a different gesture on each.
  */
-export class ScreenShake {
-  readonly #rng: Rng;
-  readonly #maxAmplitude: number;
-  readonly #decaySeconds: number;
+export class Shake {
+  readonly #decay: Easing;
+  /** Peak displacement of the running shake, in logical units; zero when nothing runs. */
+  #magnitude = 0;
+  #durationSeconds = 0;
+  #elapsed = 0;
 
-  #trauma = 0;
-  #offsetX = 0;
-  #offsetY = 0;
-  #reducedMotion = false;
-
-  constructor(rng: Rng, options: ScreenShakeOptions) {
-    assertPositiveFinite(options.maxAmplitudeLogical, 'maxAmplitudeLogical');
-    assertPositiveFinite(options.decaySeconds, 'decaySeconds');
-    this.#rng = rng;
-    this.#maxAmplitude = options.maxAmplitudeLogical;
-    this.#decaySeconds = options.decaySeconds;
+  constructor(options?: ShakeOptions) {
+    this.#decay = options?.decay ?? easeInQuad;
   }
 
-  /** Current trauma in [0, 1]. Also the non-motion cue level under reduced motion. */
-  get trauma(): number {
-    return this.#trauma;
+  get active(): boolean {
+    return this.#elapsed < this.#durationSeconds;
   }
 
   /**
-   * A non-motion signal in [0, 1] the renderer can show instead of movement — a
-   * border pulse, an edge flash. Equal to trauma, and available whether or not
-   * reduced motion is on, so the cue is consistent across preferences.
+   * How hard the shake is hitting right now, in [0, 1]. Zero when nothing runs.
+   *
+   * **This is the information, and it is not motion.** Draw something from it — a rim that
+   * thickens, a piece that brightens, a bar that jumps — and the player who has motion
+   * switched off is told what the shake was telling everybody else. A game that reads only
+   * the offsets below has built a signal that one of its players cannot receive.
    */
-  get cue(): number {
-    return this.#trauma;
+  get intensity(): number {
+    if (!this.active) return 0;
+    return this.#decay(1 - this.#elapsed / this.#durationSeconds);
   }
 
-  /** Render offset X in logical units. Always 0 under reduced motion. */
+  /**
+   * Horizontal displacement in logical units, in [-magnitude, magnitude].
+   *
+   * Unconditional, on every device, exactly as `SeatFlip.angle` is. The player who asked for
+   * reduced motion is served downstream by `Canvas2DRenderer.pushShake`, which is handed this
+   * and draws nothing with it — one mechanism for the preference, live, and reaching a game
+   * that never mentions it. Use {@link applyShake} rather than reading these by hand.
+   */
   get offsetX(): number {
-    return this.#offsetX;
+    return this.#magnitude * this.intensity * Math.sin(TAU * SHAKE_X_HZ * this.#elapsed);
   }
 
-  /** Render offset Y in logical units. Always 0 under reduced motion. */
   get offsetY(): number {
-    return this.#offsetY;
-  }
-
-  get reducedMotion(): boolean {
-    return this.#reducedMotion;
+    return this.#magnitude * this.intensity * Math.sin(TAU * SHAKE_Y_HZ * this.#elapsed);
   }
 
   /**
-   * Add a hit of the given intensity. Simultaneous hits saturate at full trauma
-   * rather than summing past it, so the offset stays bounded by the max amplitude.
+   * Start a shake, unless a stronger one is already running.
+   *
+   * The strongest wins outright rather than the two adding up. Three hits in quick succession
+   * are three reasons to shake, not three shakes to perform, and a library that summed them
+   * would turn a busy moment into something nobody designed and some players cannot look at.
+   * Comparison is against the *current* amplitude, so a small kick lands once the big one has
+   * decayed past it, which is the behaviour a rally of small impacts wants.
    */
-  add(intensity: number): void {
-    this.#trauma = clamp01(this.#trauma + clamp01(intensity));
+  kick(magnitude: number, seconds: number): void {
+    assertNonNegative(magnitude, 'magnitude');
+    assertNonNegative(seconds, 'seconds');
+    if (magnitude <= this.#magnitude * this.intensity) return;
+    this.#magnitude = magnitude;
+    this.#durationSeconds = seconds;
+    this.#elapsed = 0;
   }
 
-  /**
-   * Switch the non-motion presentation. Motion stops immediately (the offset is
-   * zeroed) but trauma keeps decaying, so `cue` still falls away naturally.
-   */
-  setReducedMotion(reduced: boolean): void {
-    this.#reducedMotion = reduced;
-    if (reduced) {
-      this.#offsetX = 0;
-      this.#offsetY = 0;
-    }
-  }
-
-  /** Advance by one fixed step. Draws two seeded samples per step while shaking. Allocates nothing. */
+  /** Advance by one fixed simulation step. Takes the delta and nothing else. */
   step(fixedDeltaSeconds: number): void {
-    assertNonNegativeFinite(fixedDeltaSeconds, 'fixedDeltaSeconds');
-    if (this.#trauma > 0) {
-      const decay = fixedDeltaSeconds / this.#decaySeconds;
-      this.#trauma = this.#trauma > decay ? this.#trauma - decay : 0;
-    }
-    if (this.#reducedMotion || this.#trauma === 0) {
-      this.#offsetX = 0;
-      this.#offsetY = 0;
-      return;
-    }
-    // Squared trauma: the tail eases out rather than clipping to zero.
-    const amplitude = this.#maxAmplitude * this.#trauma * this.#trauma;
-    // float() is [0,1); map to [-1, 1). Two independent draws keep x and y uncorrelated.
-    this.#offsetX = amplitude * (this.#rng.float() * 2 - 1);
-    this.#offsetY = amplitude * (this.#rng.float() * 2 - 1);
+    assertNonNegative(fixedDeltaSeconds, 'fixedDeltaSeconds');
+    if (!this.active) return;
+    this.#elapsed += fixedDeltaSeconds;
+    // Compared against the field rather than re-read from `active`: the getter was narrowed
+    // by the guard above and the typed lint holds it there through the mutation.
+    if (this.#elapsed >= this.#durationSeconds) this.clear();
   }
 
-  /** Clear all shake at once. */
-  reset(): void {
-    this.#trauma = 0;
-    this.#offsetX = 0;
-    this.#offsetY = 0;
+  /** Stop dead. For a round reset, not for a preference. */
+  clear(): void {
+    this.#magnitude = 0;
+    this.#durationSeconds = 0;
+    this.#elapsed = 0;
   }
 }
 
-export interface HitStopOptions {
-  /** Seconds a full-intensity hit holds presentation still. */
-  readonly maxHoldSeconds: number;
+export interface FlashOptions {
+  /**
+   * Envelope applied to the fraction still to run. Defaults to {@link easeOutCubic}, which
+   * holds near full for most of the window and then goes — a flash that is seen rather than
+   * a glow that fades.
+   */
+  readonly decay?: Easing;
 }
 
 /**
- * A brief hold on *presentation* time after an impact.
+ * A level in [0, 1] that a game paints something with: a rim, a tint, a highlight.
  *
- * Classic hit-stop freezes the whole game for a few frames; that would desync a
- * cross-device match and is forbidden here. This hit-stop instead reports a
- * presentation time scale in {0, 1}: while it holds, the renderer advances its
- * tweens, particles and shake by `dt * timeScale` (i.e. not at all), but the
- * fixed simulation steps on exactly as it always does. The impact reads as a
- * held frame without a single simulation step being skipped or repeated.
+ * The engine does not draw it, on purpose. A full-screen white pulse is the wrong shape for a
+ * device two people are sharing and it is a photosensitivity hazard besides; what suits one
+ * game is a rim on the struck half and what suits another is the piece itself brightening.
+ * The library owns the timing, which is the part that has to be identical everywhere and has
+ * to answer to the preference; the picture stays with the game.
+ */
+export class Flash {
+  readonly #decay: Easing;
+  #durationSeconds = 0;
+  #elapsed = 0;
+
+  constructor(options?: FlashOptions) {
+    this.#decay = options?.decay ?? easeOutCubic;
+  }
+
+  get active(): boolean {
+    return this.#elapsed < this.#durationSeconds;
+  }
+
+  /** The pulse: full at the start, nothing at the end. Unconditional, on every device. */
+  get intensity(): number {
+    if (!this.active) return 0;
+    return this.#decay(1 - this.#elapsed / this.#durationSeconds);
+  }
+
+  /**
+   * The non-motion form: a constant level held for exactly the window the pulse would have
+   * occupied, then nothing.
+   *
+   * Constant is the point. It appears once and disappears once, so there is no ramp and no
+   * flicker, and it occupies the same span of steps as the pulse so the two are
+   * interchangeable — a game draws whichever it is given and never lays out for two shapes.
+   */
+  get steady(): number {
+    return this.active ? STEADY_LEVEL : 0;
+  }
+
+  /** Whichever of the two the device has asked for. This is what a game draws. */
+  levelFor(motion: MotionPreference): number {
+    return motion.reducedMotion === true ? this.steady : this.intensity;
+  }
+
+  /**
+   * Raise a flash. One that would not outlast the flash already running is ignored; a longer
+   * one takes over from full, so a second hit re-lights rather than fading out on schedule.
+   */
+  raise(seconds: number): void {
+    assertNonNegative(seconds, 'seconds');
+    const remaining = this.active ? this.#durationSeconds - this.#elapsed : 0;
+    if (seconds <= remaining) return;
+    this.#durationSeconds = seconds;
+    this.#elapsed = 0;
+  }
+
+  step(fixedDeltaSeconds: number): void {
+    assertNonNegative(fixedDeltaSeconds, 'fixedDeltaSeconds');
+    if (!this.active) return;
+    this.#elapsed += fixedDeltaSeconds;
+    // Compared against the field rather than re-read from `active`: the getter was narrowed
+    // by the guard above and the typed lint holds it there through the mutation.
+    if (this.#elapsed >= this.#durationSeconds) this.clear();
+  }
+
+  clear(): void {
+    this.#durationSeconds = 0;
+    this.#elapsed = 0;
+  }
+}
+
+/**
+ * A hold on the picture, counted on the fixed timestep and capped at {@link MAX_HOLD_SECONDS}.
  *
- * Simultaneous hits take the longer hold rather than summing, so a flurry does
- * not freeze the screen for a second.
+ * Read it at the top of `render()` and return without drawing while it holds. The simulation
+ * is not consulted and is not affected; see the note at the top of this file for the whole
+ * argument, including why a version that stops the world is deterministic and still wrong.
  */
 export class HitStop {
-  readonly #maxHold: number;
   #remaining = 0;
 
-  constructor(options: HitStopOptions) {
-    assertPositiveFinite(options.maxHoldSeconds, 'maxHoldSeconds');
-    this.#maxHold = options.maxHoldSeconds;
-  }
-
-  /** True while presentation is held. */
-  get frozen(): boolean {
+  /** True while the picture should be held. Unconditional — {@link HitStop.holdingFor} filters. */
+  get holding(): boolean {
     return this.#remaining > 0;
   }
 
-  /** Seconds of hold left. */
   get remainingSeconds(): number {
     return this.#remaining;
   }
 
   /**
-   * Presentation time scale in {0, 1}: 0 while frozen, 1 otherwise. Multiply a
-   * presentation dt by this; never a simulation dt.
+   * Whether to hold this frame, given what the device has asked for.
+   *
+   * False under reduced motion, always. A hold that ends throws the whole world forward by
+   * however long it lasted, and that jump is the sudden movement the preference exists to
+   * avoid — so the effect is not merely reduced, it is declined. Nothing is lost by declining
+   * it: {@link Impact.strike} raises the flash on the same call, and the flash's steady form
+   * covers the same window.
    */
-  get timeScale(): number {
-    return this.#remaining > 0 ? 0 : 1;
+  holdingFor(motion: MotionPreference): boolean {
+    return motion.reducedMotion === true ? false : this.holding;
   }
 
-  /** Trigger a hold of `intensity` * maxHold seconds. Takes the longer of the two if already held. */
-  add(intensity: number): void {
-    const hold = clamp01(intensity) * this.#maxHold;
-    if (hold > this.#remaining) this.#remaining = hold;
+  /** Hold for `seconds`, clamped to the cap, extending rather than shortening a running hold. */
+  hold(seconds: number): void {
+    assertNonNegative(seconds, 'seconds');
+    const capped = seconds > MAX_HOLD_SECONDS ? MAX_HOLD_SECONDS : seconds;
+    if (capped > this.#remaining) this.#remaining = capped;
   }
 
-  /** Advance by one fixed step. Allocates nothing. */
   step(fixedDeltaSeconds: number): void {
-    assertNonNegativeFinite(fixedDeltaSeconds, 'fixedDeltaSeconds');
-    if (this.#remaining > 0) {
-      this.#remaining =
-        this.#remaining > fixedDeltaSeconds ? this.#remaining - fixedDeltaSeconds : 0;
-    }
+    assertNonNegative(fixedDeltaSeconds, 'fixedDeltaSeconds');
+    if (this.#remaining === 0) return;
+    this.#remaining -= fixedDeltaSeconds;
+    if (this.#remaining < 0) this.#remaining = 0;
   }
 
-  reset(): void {
+  clear(): void {
     this.#remaining = 0;
   }
 }
 
-export interface FlashOptions {
-  /** Seconds a full-intensity flash takes to fade to nothing. */
-  readonly fadeSeconds: number;
+export interface ImpactOptions {
+  /** Seconds to hold the picture per strike. Clamped to {@link MAX_HOLD_SECONDS}. */
+  readonly holdSeconds?: number;
+  readonly shake?: ShakeOptions;
+  readonly flash?: FlashOptions;
+}
+
+/** Three steps at sixty hertz: long enough to register, short enough that the catch-up snaps. */
+const DEFAULT_HOLD_SECONDS = 0.05;
+
+/**
+ * The three primitives raised together, so that the one a player may not be shown is never
+ * the only one raised.
+ *
+ * This is rule 7's structure rather than its letter. Colour is never the only signal because
+ * a player may not be able to receive colour; motion must never be the only signal because a
+ * player may have asked not to receive motion. A `strike()` raises the shake, the flash and
+ * the hold at once, so the shake cannot be the only thing carrying the news — and a game that
+ * wants only one of them reaches for that one class directly, which is a visible decision
+ * rather than an omission.
+ */
+export class Impact {
+  readonly shake: Shake;
+  readonly flash: Flash;
+  readonly hitStop: HitStop;
+  readonly #holdSeconds: number;
+
+  constructor(options?: ImpactOptions) {
+    const hold = options?.holdSeconds ?? DEFAULT_HOLD_SECONDS;
+    assertNonNegative(hold, 'holdSeconds');
+    this.#holdSeconds = hold;
+    this.shake = new Shake(options?.shake);
+    this.flash = new Flash(options?.flash);
+    this.hitStop = new HitStop();
+  }
+
+  get active(): boolean {
+    return this.shake.active || this.flash.active || this.hitStop.holding;
+  }
+
+  /**
+   * Something was hit. `magnitude` is the peak shake in logical units; `seconds` is how long
+   * the shake and the flash last.
+   */
+  strike(magnitude: number, seconds: number): void {
+    this.shake.kick(magnitude, seconds);
+    this.flash.raise(seconds);
+    this.hitStop.hold(this.#holdSeconds);
+  }
+
+  step(fixedDeltaSeconds: number): void {
+    this.shake.step(fixedDeltaSeconds);
+    this.flash.step(fixedDeltaSeconds);
+    this.hitStop.step(fixedDeltaSeconds);
+  }
+
+  clear(): void {
+    this.shake.clear();
+    this.flash.clear();
+    this.hitStop.clear();
+  }
 }
 
 /**
- * A screen-wide overlay opacity that spikes and fades.
+ * Displace everything drawn until the matching {@link releaseShake} by the shake's offset.
  *
- * `alpha` is what the renderer paints the overlay at — 0 is invisible, 1 is a
- * full wash of whatever colour the renderer chooses. A flash is not motion, so
- * it is left on under reduced motion, where it doubles as the non-motion cue a
- * shake hands off to.
+ * A free function rather than something a game calls on the renderer, because `pushShake` is
+ * optional on {@link Renderer} — required members would break the fifty-odd hand-written
+ * renderers in the games' tests all at once, which is the reason `GameContext.reducedMotion`
+ * is optional too. Handling that here means one `?.` in the engine instead of two in every
+ * game, and it means the pair stays balanced: a renderer that implements neither no-ops both.
  *
- * Simultaneous flashes take the brighter rather than summing past full, so the
- * overlay never blows past opaque.
+ * The preference is applied by the renderer, not here. Call this after `clear()` and before
+ * the world, so the background stays put and the play area moves against it.
  */
-export class Flash {
-  readonly #fadeSeconds: number;
-  #alpha = 0;
+export function applyShake(renderer: Renderer, shake: Shake): void {
+  renderer.pushShake?.(shake.offsetX, shake.offsetY);
+}
 
-  constructor(options: FlashOptions) {
-    assertPositiveFinite(options.fadeSeconds, 'fadeSeconds');
-    this.#fadeSeconds = options.fadeSeconds;
-  }
-
-  /** Overlay opacity in [0, 1]. */
-  get alpha(): number {
-    return this.#alpha;
-  }
-
-  /** Flash at `intensity`. Takes the brighter of the two if one is already fading. */
-  add(intensity: number): void {
-    const a = clamp01(intensity);
-    if (a > this.#alpha) this.#alpha = a;
-  }
-
-  /** Advance by one fixed step. Allocates nothing. */
-  step(fixedDeltaSeconds: number): void {
-    assertNonNegativeFinite(fixedDeltaSeconds, 'fixedDeltaSeconds');
-    if (this.#alpha > 0) {
-      const fade = fixedDeltaSeconds / this.#fadeSeconds;
-      this.#alpha = this.#alpha > fade ? this.#alpha - fade : 0;
-    }
-  }
-
-  reset(): void {
-    this.#alpha = 0;
-  }
+/** Undo the most recent {@link applyShake}. Pair them exactly, including when nothing shook. */
+export function releaseShake(renderer: Renderer): void {
+  renderer.popShake?.();
 }

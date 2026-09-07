@@ -140,35 +140,16 @@ still says the site fetches three typefaces from Google's CDN on every cold load
 "Self-host the fonts the site's own CSP was blocking". The threat model needs that row
 updated; this policy is the one that matches the code.
 
-### What "offline-capable" honestly means
+### What "offline" means here, and what it does not
 
-**Superseded on 29 August 2026, and the previous text is kept below because the correction is
-the point.** What this section used to say was:
-
-> There is no service worker and no cache manifest. Offline capability is exactly this: once
-> a page and its chunks are in the tab, the match runs with no further requests at all. A
-> cold load with no connection, or a hard reload, depended entirely on the browser's ordinary
-> HTTP cache, and nothing in this repository guaranteed it.
-
-That was accurate and it made three shipped documents wrong — CLAUDE.md's first paragraph,
-ADR 0002's fourth property, and the privacy page's "works with no connection at all" — because
-all three describe a product whose tab you can close. `apps/web/public/sw.js` now exists and
-they are true. `docs/pwa.md` is the design record; what matters here is what it means for a
-visitor's data:
-
-- **A cold start works** for the site itself and for every game that device has played. The
-  browser holds copies of the files it already downloaded, in its own Cache Storage, on the
-  device. Proved by `e2e/offline.spec.ts`, which opens a game with every request refused,
-  from a page that was never loaded online, and plays it to a scored result.
-- **A game the device has never opened is not there**, deliberately: precaching all 108 would
-  be several megabytes of somebody's data allowance spent on games they did not choose. They
-  are cached as they are played, and the catalogue says which ones a device has.
-- **The worker adds no data flow.** It never requests anything the page did not, it never
-  touches another origin, and it sends nothing anywhere; `scripts/check-zero-cost.mjs`
-  fails the build if `sw.js` names a remote origin, intercepts a cross-origin request, or
-  fetches a URL it composed itself rather than one the page asked for.
-- **It is more to clear.** "Clearing site data" now removes cached copies of pages and game
-  code as well as the one `localStorage` key, which is why the page says so.
+There is no service worker and no cache manifest. Once a page and its chunk are in the tab a
+match runs with no further requests at all — the simulation, the bots and the physics are all
+on the device, proved by `e2e/offline.spec.ts`, which aborts every request after load and
+plays a bot match through to a scored result. That is **not the same as working offline**: a
+cold load with no connection, or a hard reload of a page that was never opened, depends
+entirely on the browser's ordinary HTTP cache, and nothing in this repository guarantees it.
+The README, CLAUDE.md and ADR 0002 describe the product in the same terms, so no document
+promises an offline cache this build does not ship.
 
 ### The one data flow that does exist
 

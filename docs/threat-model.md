@@ -121,30 +121,31 @@ and the build fails if a header is added without one.
 
 ### 6. Third-party runtime dependencies
 
-There are none. We used to fetch three typefaces from Google's CDN on every cold load — a
-request to someone else's server on the critical path, sending every visitor's IP and
-User-Agent there on the way to a page that otherwise collects nothing.
+There are none. A cold load reaches this origin and nothing else: no CDN, no analytics
+beacon, no embedded map, no font host. Nothing about a visitor — not their IP, not their
+User-Agent — is disclosed to anybody but whoever serves the pages.
 
-**Mitigated.** The typefaces are self-hosted (`apps/web/src/styles/fonts/*.woff2`, linked
-from `layout.tsx`), and `scripts/check-zero-cost.mjs` fails the build on any network call
-from the shell, the SDK, the engine or a game.
+**Mitigated, and by construction rather than by care.** This section used to say we fetch
+three typefaces from Google's CDN on every cold load and that #187 covered self-hosting
+them. #2469 did it: the three families are `.woff2` files in the repository, licensed in
+`apps/web/assets.license.json` as rule 3 requires, declared in `styles/fonts.css` with
+relative URLs that Next emits under `_next/static/media/`, and the `<link>` and
+`preconnect` pair that used to reach `fonts.googleapis.com` are gone from `layout.tsx`.
+The CSP was never widened to accommodate them and still reads `style-src 'self'
+'unsafe-inline'` and `font-src 'self'`.
 
-Three things had gone stale around this and were fixed together, which is worth recording
-because the pattern is more dangerous than the original dependency was:
+Two guards keep it that way, and both fail rather than warn. `csp-origins.test.ts` walks
+the markup, the stylesheets and the built export for every position that *loads*
+something and fails if it names an origin the policy does not permit — which is how the
+font problem was found in the first place, because a CSP does not error, it silently
+drops the subresource and the page renders in whatever face the device defaults to.
+`e2e/fonts.spec.ts` watches the network on a real cold load and fails if a single request
+goes to `fonts.googleapis.com` or `fonts.gstatic.com`.
 
-- This section still said "Not mitigated" long after the fonts were brought in-house.
-- `e2e/offline.spec.ts` still **excluded** `fonts.(gstatic|googleapis).com` from its
-  blocked-request assertion. That exemption was written for a dependency that no longer
-  existed, and while it stood, the one test that would have caught a Google font link
-  coming back was the one test that could not see it.
-- `checkNoNetworkInGameplay` scanned only three directories under `packages/`, and filtered
-  on `extname(p) === '.ts'` — so `apps/web/src` was never scanned at all and no `.tsx` file
-  anywhere was, which is every React component in the repository. A `fetch` in a component
-  passed the build. It now scans the shell and `packages/ui` as well, matches `.tsx`, and
-  looks for `RTCPeerConnection` — which requirement 5 below has always implied.
-
-An exemption outliving its reason is not neutral. It is a hole in the guard that would have
-caught the thing coming back.
+**Residual.** The host still sees the requests for the pages themselves; that is GitHub
+Pages, it is named on the privacy page, and it is not a third party in the sense this
+section is about. The day something here does reach another origin, it is this paragraph
+that has to be rewritten first — the same test that would fail the build points at it.
 
 ## What the architecture removes
 

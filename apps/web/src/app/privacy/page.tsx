@@ -19,11 +19,17 @@ export const metadata: Metadata = {
  *
  * - **"Scores and settings"**. Nothing stores a score. At the time there was one key,
  *   `duelbox:last-mode`, holding the mode, bot tier and match length last chosen per game.
- *   There are now six — the setup, favourites, recent games, settings, the head-to-head
- *   record and the two names — and every one of them is written through
- *   `lib/local-store.ts`, the only module in the product that calls `localStorage`. The
- *   section below lists all six, and `privacy-claims.test.ts` fails the moment a second
- *   writer appears, so the list cannot fall behind quietly.
+ *   There are now seven — the setup, favourites, recent games, settings, the head-to-head
+ *   record, the two names and a tournament in progress — and every one of them is written
+ *   through `lib/local-store.ts`, the only module in the product that calls `localStorage`.
+ *
+ *   The section below lists all seven, and it fell behind at six the day the tournament
+ *   (#157) added the seventh: `privacy-claims.test.ts` was watching the *funnel*, so a new
+ *   store built on `local-store.ts` — which is every store, by construction — arrived
+ *   without disturbing it, and the docstring here went on saying the list could not fall
+ *   behind quietly. It now counts the items against `PLAYER_DATA_KEYS`, which is the same
+ *   list export, import and erase walk, so a key that travels in an export and is not named
+ *   here fails on every push. That is CLAUDE.md's tenth entry.
  *
  *   The head-to-head (#160, #162) is the one to read carefully, because it is the closest
  *   the product has come to keeping a result: it is a count of matches won, lost and drawn
@@ -31,10 +37,9 @@ export const metadata: Metadata = {
  *   individual result is written down — a tally of six wins does not say which six, or
  *   when, or by how much. The sentence below says so, and it is a description of
  *   `lib/head-to-head.ts` rather than a promise about it.
- * - **"works with no connection at all"**. Once an overstatement — a page already open kept
- *   working, but a reload with the network down failed because there was no service worker
- *   (#2445). One now ships (`public/sw.js`), so the site and every game already opened work
- *   offline, and the paragraph below describes that cache rather than promising a backlog item.
+ * - **"works with no connection at all"**. True of a page already open, and only that:
+ *   there is no service worker, so a reload with the network down fails (#2445). A privacy
+ *   page is the wrong place to promise a feature that is on the backlog.
  * - **"a content delivery network"**. It is GitHub Pages. Naming the host is the whole
  *   value of the paragraph — a reader deciding whether to trust it needs to know whose
  *   logs their request lands in, and "a content delivery network" names nobody.
@@ -47,7 +52,7 @@ export default function PrivacyPage() {
     <div className="db-wrap">
       <header className={styles.head}>
         <h1>Privacy</h1>
-        <p className={styles.updated}>Last updated 7 September 2026</p>
+        <p className={styles.updated}>Last updated 6 September 2026</p>
       </header>
 
       <div className={styles.prose}>
@@ -64,7 +69,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Six things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Seven things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -85,12 +90,20 @@ export default function PrivacyPage() {
             The two names you type for the seats, if you type any. They are shown on this device and
             never leave it.
           </li>
+          <li>
+            A tournament you have started, while it lasts: which games were drawn, in what order,
+            which side took each one that has been played, and whether you are playing each other or
+            a bot. It is written down so that a tournament survives closing the tab — every leg is a
+            different page — and it is erased the moment you finish or leave it.
+          </li>
         </ul>
         <p>
-          Scores are not part of it. No result of any match is written down anywhere, on your device
+          Scores are not part of it. No match&apos;s score is written down anywhere, on your device
           or ours — a running tally is held in memory while you play and is gone when you close the
           tab. The head-to-head above is a count of matches, not a record of any of them: it knows
-          you have won six and not which six, when, or by how much.
+          you have won six and not which six, when, or by how much. A tournament in progress is the
+          one thing here that remembers who won a particular game, because a line-up nobody can
+          score is not a tournament, and it goes when the tournament does.
         </p>
         <p>
           All of it is yours to move or remove. The settings page lets you export the lot as a file,
@@ -110,11 +123,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           Once a page has loaded, playing it needs nothing further from the network: the game, the
-          bot and the physics all run on your device. Your browser also keeps a copy of the site and
-          of each game you open, so after the first visit the whole thing works with no connection
-          at all — it reopens and plays, including a game you played before on a device that has
-          been switched off since. A game you have never opened is not saved yet and will say so
-          rather than pretend. Clearing your browser&apos;s site data removes those copies.
+          bot and the physics all run on your device. That is not the same as working offline. There
+          is no offline cache yet, so reloading the page or opening it fresh does need a connection.
         </p>
 
         <h2>Children</h2>

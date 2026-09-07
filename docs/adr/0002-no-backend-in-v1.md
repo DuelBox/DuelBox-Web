@@ -1,4 +1,4 @@
-# ADR 0002 — No backend in v1: static, accountless, offline-capable
+# ADR 0002 — No backend in v1: static and accountless
 
 **Status:** accepted
 **Date:** 2026-08-29
@@ -27,7 +27,7 @@ something that does not exist and, on the constitution as written, is not planne
   written in one file: `apps/web/src/lib/last-mode.ts`.
 
 CLAUDE.md's first paragraph has said this since the repository was created — "two people
-on one device in one tab… No accounts. Offline-capable." `docs/threat-model.md` already
+on one device in one tab… No accounts." `docs/threat-model.md` already
 reasons from it, and names what the shape removes. What has never existed is a decision
 record, so nothing stopped the backlog being written for a different product, and nothing
 told a reader which of those issues to act on.
@@ -50,7 +50,7 @@ be nice:
    Nothing is gated, because there is nothing to gate behind.
 3. **No database.** Everything a player accumulates lives on the device that made it, in
    `localStorage`, under a versioned schema validated on read.
-4. **Offline-capable.** After the first load a match needs nothing from us. Proved by
+4. **No network during play.** After the first load a match needs nothing further from us during a match. Shown by
    `e2e/offline.spec.ts`, which aborts every request after load and plays a bot match
    through to a scored result.
 

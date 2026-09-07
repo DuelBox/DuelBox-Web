@@ -1,7 +1,7 @@
 # CWE Top 25 verification matrix
 
 OWASP categories are broad; the CWE Top 25 is specific enough to check off one by one, and a
-matrix is what turns "we care about security" into evidence (#2391). This maps each of the 25
+matrix is what turns "we care about security" into evidence (#2391). This maps every one of the CWE/SANS Top Twenty-Five
 against **this** codebase: applicable or not, and — where applicable — the named mitigation and
 the automated guard that proves it. Entries marked not applicable carry a written justification,
 because "not applicable" with no reason is where a real exposure hides.

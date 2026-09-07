@@ -56,6 +56,32 @@ export type { GridCursorOptions } from './cursor.js';
 export { SeatFlip } from './flip.js';
 export type { SeatFlipOptions } from './flip.js';
 
+export {
+  Tween,
+  linear,
+  smoothstep,
+  smootherstep,
+  easeInQuad,
+  easeOutQuad,
+  easeInOutQuad,
+  easeInCubic,
+  easeOutCubic,
+  easeInOutCubic,
+  easeOutBack,
+} from './tween.js';
+export type { Easing, TweenOptions, MotionPreference } from './tween.js';
+
+export {
+  Shake,
+  Flash,
+  HitStop,
+  Impact,
+  applyShake,
+  releaseShake,
+  MAX_HOLD_SECONDS,
+} from './juice.js';
+export type { ShakeOptions, FlashOptions, ImpactOptions } from './juice.js';
+
 export { SEAT_PALETTE, seatPalette } from './palette.js';
 export type { SeatPalette } from './palette.js';
 
@@ -154,33 +180,6 @@ export type {
 
 export { LockstepSession, configFingerprint, mixNumber } from './lockstep.js';
 export type { LockstepOptions, MatchConfig, SessionStatus } from './lockstep.js';
-
-export {
-  linear,
-  quadIn,
-  quadOut,
-  quadInOut,
-  cubicIn,
-  cubicOut,
-  cubicInOut,
-  quartIn,
-  quartOut,
-  quartInOut,
-  smootherstep,
-  EASINGS,
-  Tween,
-  TweenSequence,
-} from './tween.js';
-export type {
-  Easing,
-  EasingName,
-  TweenOptions,
-  SequenceStep,
-  TweenSequenceOptions,
-} from './tween.js';
-
-export { ScreenShake, HitStop, Flash } from './juice.js';
-export type { ScreenShakeOptions, HitStopOptions, FlashOptions } from './juice.js';
 
 export { SceneNode } from './scene.js';
 

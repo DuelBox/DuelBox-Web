@@ -207,4 +207,4 @@ Generated from manifest data — 108 games, 46 latency-tolerant, 54 lockstep, 8 
 - **Launch subset decided.** Recommended above (the 46 latency-tolerant games first). It is a
   recommendation for the owner to ratify, not a build decision this document can make alone —
   none of the netcode it depends on exists yet, and `docs/play-configurations.md` records that
-  Remote is the one configuration that is not offline-capable.
+  Remote is the one configuration that needs a live connection during play.

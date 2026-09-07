@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { FRAME_GUARD } from './frame-guard';
-import { SERVICE_WORKER_CLIENT } from './service-worker-client';
 import { BASE_PATH } from './base-path';
 import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { SITE_URL } from '@/lib/site';
@@ -18,9 +17,25 @@ export const metadata: Metadata = {
     default: 'DuelBox — 108 games for two players',
     template: '%s — DuelBox',
   },
+  // Two claims were wrong here, and this is the object every one of the 223 exported pages
+  // inherits when it does not set its own — so a sentence in it is the most-repeated
+  // sentence on the site, and the least-read by anybody in a position to notice.
+  //
+  // "Play across two devices" is a feature this build does not have. `PlayMode` in
+  // `lib/match-setup.ts` is `'friend' | 'bot'`, the catalogue's whole mode vocabulary is
+  // `friend`, `bot` and `solo`, and there is no pairing route, no signalling and no
+  // concrete transport anywhere in `apps/web`; `lib/landing.ts` carries the long form of
+  // the evidence, because #102 took the same claim off the hero and out of the three
+  // cards. Taking it off the visible page and leaving it in the description every route
+  // inherits would have left the landing page contradicting its own `<meta>` tag.
+  //
+  // "A hundred and seven games" was the second, and it disagreed with the title two lines
+  // above it: `CATALOGUE.length` is 108. `metadata-claims.test.ts` now holds both — the
+  // count against the catalogue, and the mode wording against `PlayMode` — because a
+  // number written out in words is a number nothing recomputes.
   description:
-    'A hundred and seven games for two people. Share one screen, play across two devices, ' +
-    'or take on a bot. No download, no account.',
+    'A hundred and eight games for two people. Share one screen, two of you either side ' +
+    'of it, or take on a bot. No download, no account.',
   applicationName: 'DuelBox',
   /**
    * Written out rather than left to the file conventions, because a project page serves
@@ -38,7 +53,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'DuelBox',
     title: 'DuelBox — 108 games for two players',
-    description: 'Share one screen, play across two devices, or take on a bot.',
+    description: 'Share one screen, two of you either side of it, or take on a bot.',
     // The card every route inherits unless it names its own (#2453). A route that sets its
     // own `openGraph` replaces this object rather than merging with it, which is why the
     // two that do — a game's page and a category hub — each carry `images` of their own.
@@ -47,7 +62,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'DuelBox — 108 games for two players',
-    description: 'Share one screen, play across two devices, or take on a bot.',
+    description: 'Share one screen, two of you either side of it, or take on a bot.',
     images: [SITE_SHARE_IMAGE],
   },
 };
@@ -90,13 +105,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <script dangerouslySetInnerHTML={{ __html: FRAME_GUARD }} />
-        {/*
-          Registration, the update prompt and the offline indicator, inline for the same two
-          reasons the frame guard is: it costs the shell budget nothing, and it has to work
-          in the conditions it exists for — no connection, possibly no hydration. See
-          `service-worker-client.ts`.
-        */}
-        <script dangerouslySetInnerHTML={{ __html: SERVICE_WORKER_CLIENT }} />
         <a className="db-skip" href="#main">
           Skip to content
         </a>
