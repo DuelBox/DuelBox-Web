@@ -19,6 +19,8 @@ import type { MetadataRoute } from 'next';
  * in `docs/brand-icons.md`.
  */
 
+export const dynamic = 'force-static';
+
 export default function manifest(): MetadataRoute.Manifest {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
   return {
