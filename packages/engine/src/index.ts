@@ -59,8 +59,9 @@ export {
   isInsideLogical,
   clampDevicePixelRatio,
   negotiateSharedLogical,
+  negotiateSharedViewport,
 } from './viewport.js';
-export type { SafeAreaInsets, Viewport } from './viewport.js';
+export type { SafeAreaInsets, Viewport, DeviceScreen, SharedViewport } from './viewport.js';
 
 export {
   createContact,

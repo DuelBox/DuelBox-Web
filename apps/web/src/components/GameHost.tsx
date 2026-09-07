@@ -12,10 +12,12 @@ import {
   RunLoop,
   browserClock,
   clampDevicePixelRatio,
-  fitViewport,
+  negotiateSharedLogical,
+  negotiateSharedViewport,
   NO_INSETS,
   viewportToLogical,
   vec2,
+  type LogicalSize,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
@@ -52,6 +54,16 @@ export interface GameHostProps {
   /** Which seat this device plays. Only meaningful in single-seat presentation. */
   localSeat?: SeatId;
   presentation?: 'shared-screen' | 'single-seat';
+  /**
+   * The logical play area the *other* device declared, for a remote match (#1862).
+   *
+   * At match start the host negotiates one shared logical viewport both devices letterbox to,
+   * so neither player ever sees more of the play area than the other (CLAUDE.md rule 9). For
+   * a matched pair this equals the game's own box and the negotiation returns it unchanged;
+   * the point is that the box both devices draw is *agreed*, not assumed per screen. Omitted
+   * for local play, where there is no second device and the game's box is the shared box.
+   */
+  peerLogical?: LogicalSize;
   /** Which seat moves first this round. The match machine decides it; the host relays it. */
   openingSeat?: SeatId;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
@@ -90,6 +102,7 @@ export function GameHost({
   localSeat = 'p1',
   presentation = 'shared-screen',
   openingSeat = 'p1',
+  peerLogical,
   botDifficulty,
   onTick,
   onScore,
@@ -124,7 +137,16 @@ export function GameHost({
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const logical = manifest.logical;
+    // The one play area both players share, negotiated once before the first frame (rule 9,
+    // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
+    // box by agreement between the two devices' declarations rather than letting each device
+    // letterbox its own screen independently. For a matched pair (both on the same game) it
+    // is the game's own box; a mismatch is clamped so neither device shows a strip of world
+    // the other cannot, the same disagreement LockstepSession refuses. Everything below draws
+    // and hit-tests in this box; the simulation runs in `manifest.logical`, and the two are
+    // equal for any pair the shell would actually start.
+    const peerBox = peerLogical ?? manifest.logical;
+    const logical = negotiateSharedLogical(manifest.logical, peerBox);
     const renderer = new Canvas2DRenderer(context, logical);
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
@@ -191,7 +213,13 @@ export function GameHost({
     // shell so this canvas is already inside the safe region by the time it is measured.
     // Subtracting the root insets here as well shrank the play area twice over on a
     // notched phone, and cost a getComputedStyle on every resize to do it.
-    let view = fitViewport(logical, canvas.clientWidth, canvas.clientHeight, NO_INSETS);
+    // Letterbox this device to the negotiated shared box. `negotiateSharedViewport` is the
+    // match-path seam: it re-affirms the shared box (idempotent — `logical` is already it) and
+    // fits this screen to it, so a wider or taller screen gets bars rather than more world.
+    let view = negotiateSharedViewport(
+      { logical, screenWidth: canvas.clientWidth, screenHeight: canvas.clientHeight, insets: NO_INSETS },
+      peerBox,
+    ).view;
     const scratch = vec2();
     let lastWidth = -1;
     let lastHeight = -1;
@@ -215,7 +243,10 @@ export function GameHost({
       el.height = Math.round(cssHeight * dpr);
       // Draw in CSS pixels; the backing store carries the device ratio.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      view = fitViewport(logical, cssWidth, cssHeight, NO_INSETS);
+      view = negotiateSharedViewport(
+        { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
+        peerBox,
+      ).view;
       renderer.setViewport(view);
     }
     resize(canvas, context);
@@ -511,6 +542,7 @@ export function GameHost({
     localSeat,
     presentation,
     openingSeat,
+    peerLogical,
     botDifficulty,
     recordTrace,
   ]);
