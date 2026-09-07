@@ -59,8 +59,28 @@ interface Unit {
   readonly lines: Line[];
 }
 
+/**
+ * Every file under a directory, and an absent directory is no files rather than a throw.
+ *
+ * `apps/web/public` is the reason for the tolerance, and it is not hypothetical: nothing in
+ * it is tracked. The 109 share images are generated into `public/og/` before every build and
+ * gitignored, so on a fresh checkout the directory does not exist at all — and CI runs
+ * `pnpm test` *before* `pnpm build`, so this file scanned it in the one place it was
+ * guaranteed to be missing. It passed on every development machine, where a build had
+ * already created it, and failed on the first CI run with `ENOENT: scandir`.
+ *
+ * A missing directory is also the honest answer to the question being asked: a service
+ * worker that is not on disk is a service worker that does not exist, which is exactly what
+ * the caller wants to know.
+ */
 function walk(dir: string, keep: (path: string) => boolean, found: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) walk(path, keep, found);
     else if (keep(path)) found.push(path);
