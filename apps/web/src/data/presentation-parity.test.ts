@@ -198,27 +198,14 @@ function reportLines(label: string, ids: readonly string[]): string {
  */
 const KNOWN_DIVERGENCES: ReadonlyMap<string, { readonly arms: readonly ArmName[]; readonly why: string }> =
   new Map([
-    [
-      'archery',
-      {
-        arms: ['human', 'bots'],
-        why: 'the flip gate returns out of the whole turn, so shared-screen spends 0.36s per turn change that single-seat does not (scored 8-32 vs 0-32 on the same trace)',
-      },
-    ],
-    [
-      'archery-master',
-      {
-        arms: ['human', 'bots', 'far-hand'],
-        why: "same frozen turn; its own comment claims the flip changes 'nothing about what happens', and two bots finish 14-12 shared-screen against 18-12 single-seat. The only game the far-seat arm cannot find a control mapping for either, for the same reason: the loss is steps, not coordinates",
-      },
-    ],
-    [
-      'soccer-pool',
-      {
-        arms: ['human', 'bots'],
-        why: 'same frozen turn; the sequence of events matches but every one of them lands on a different step',
-      },
-    ],
+    // archery (#2014), archery-master (#2018) and soccer-pool (#1990) were here. All three had
+    // the same defect: `if (!flip.acceptsInput) return;` returned out of the whole of `update`,
+    // and the shot clock and the bot both sat below it — so shared-screen spent the flip's 0.36s
+    // per turn change that single-seat did not, and the two presentations stepped different
+    // matches. Fixed by making the turn handover presentation-independent: it runs the same
+    // steps in both, and single-seat simply does not draw the board turning (see each game's
+    // #facesActiveSeat / #viewRotated). The list is empty on purpose — a game that regresses is
+    // added back here with its reason, never left to fail silently.
   ]);
 
 /**

@@ -223,14 +223,14 @@ export class ArcheryMasterGame implements Game {
     this.#flightSteps = 0;
     this.#settleSteps = 0;
     this.#beginTurn();
-    this.#flip.snap(this.#shouldRotate());
+    this.#flip.snap(this.#facesActiveSeat());
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
-    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.retarget(this.#facesActiveSeat());
     this.#flip.step(fixedDeltaSeconds);
     if (this.#matchWinner !== null) return;
 
@@ -258,8 +258,9 @@ export class ArcheryMasterGame implements Game {
 
     // The board is turning: a tap on it now would land somewhere nobody aimed. The bot
     // waits through it too — it may not act on a step a person is not allowed to act on
-    // (CLAUDE.md rule 6) — and the rack is held still for both of them alike, so the flip
-    // changes how long a match takes on the wall clock and nothing about what happens in it.
+    // (CLAUDE.md rule 6) — and the rack is held still for both of them alike. The handover
+    // is simulation, not decoration: it runs the same steps whether or not the board is
+    // drawn turning (see #facesActiveSeat), so both presentations step the identical match.
     if (!this.#flip.acceptsInput) return;
     this.#turnSteps += 1;
     this.#clockSteps -= 1;
@@ -278,7 +279,7 @@ export class ArcheryMasterGame implements Game {
     // dead to a thumb.
     const pointer = seatInput.pointer;
     if (pointer !== null) {
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#viewRotated());
       this.#aim.angle = clamp((this.#pointerWorld.x - PAD_CX) / PAD_HALF_W, -1, 1) * AIM_LIMIT;
       this.#aim.power = clamp((this.#pointerWorld.y - PAD_Y) / PAD_H, 0, 1);
     }
@@ -316,7 +317,7 @@ export class ArcheryMasterGame implements Game {
   render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_SKY);
-    renderer.pushRotation(this.#flip.angle);
+    renderer.pushRotation(this.#presentation === 'single-seat' ? 0 : this.#flip.angle);
     this.#drawField(renderer);
     this.#drawRack(renderer);
     this.#drawReachLine(renderer);
@@ -380,6 +381,17 @@ export class ArcheryMasterGame implements Game {
 
   get arrowInFlight(): boolean {
     return this.#flightSteps > 0;
+  }
+
+  /**
+   * Whether the seat to move may act yet, or the board is still handing the turn over.
+   *
+   * False through the handover in both presentations (single-seat draws no rotation but
+   * spends the same steps — see {@link #facesActiveSeat}), so a caller waiting for the shot
+   * clock to start does not have to know the flip's duration.
+   */
+  get acceptsInput(): boolean {
+    return this.#flip.acceptsInput;
   }
 
   get lastShotCount(): number {
@@ -574,9 +586,28 @@ export class ArcheryMasterGame implements Game {
     this.#beginTurn();
   }
 
-  /** The orientation the field should be in, which the flip tweens towards. */
-  #shouldRotate(): boolean {
-    return seatRotated(this.#active, this.#presentation, this.#localSeat);
+  /**
+   * Whether the board turns to face the seat to move.
+   *
+   * Presentation-independent on purpose. The turn handover — the rack settling to face
+   * whoever now has the shot, and the input it suppresses while it settles — is simulation,
+   * not decoration: the shot clock and the bot both sit behind `acceptsInput`, so it must
+   * cost the same steps in both presentations or the two step different matches (CLAUDE.md
+   * rule 8, enforced by presentation-parity.test.ts). Single-seat spends those steps too; it
+   * simply does not draw the rack turning (docs/presentation.md), which is {@link #viewRotated}'s
+   * job and this method's non-concern. This is what the old comment on the flip gate got
+   * wrong: it changes when a turn hands over, which is simulation, not only the wall clock.
+   */
+  #facesActiveSeat(): boolean {
+    return seatRotated(this.#active, 'shared-screen', this.#localSeat);
+  }
+
+  /**
+   * Whether the picture and the pointer mapping are turned. Never in single-seat, where the
+   * local player owns the whole viewport upright even while the handover flip runs underneath.
+   */
+  #viewRotated(): boolean {
+    return this.#presentation === 'shared-screen' && this.#flip.rotated;
   }
 
   // -------------------------------------------------------------------------
