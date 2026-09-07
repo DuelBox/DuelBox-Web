@@ -172,3 +172,41 @@ describe('the shared validators', () => {
     }
   });
 });
+
+describe('refusing a prototype-pollution payload from storage (#2365)', () => {
+  beforeEach(() => {
+    install(fakeStorage());
+  });
+  afterEach(() => {
+    delete (Object.prototype as Record<string, unknown>)['polluted'];
+    vi.restoreAllMocks();
+  });
+
+  it('strips a __proto__ key a hostile tab wrote under our key', () => {
+    install(fakeStorage({ [KEY]: '{"__proto__":{"polluted":1},"version":1,"keep":2}' }));
+    const parsed = readJson(KEY) as Record<string, unknown>;
+    expect(Object.prototype.hasOwnProperty.call(parsed, '__proto__')).toBe(false);
+    // The legitimate data survives; only the dangerous key is gone.
+    expect(parsed['version']).toBe(1);
+    expect(parsed['keep']).toBe(2);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('strips a constructor.prototype payload nested inside a versioned value', () => {
+    install(
+      fakeStorage({
+        [KEY]: '{"version":1,"games":{"constructor":{"prototype":{"polluted":1}}}}',
+      }),
+    );
+    const parsed = readVersioned(KEY, 1);
+    expect(parsed).not.toBeNull();
+    const games = (parsed as Record<string, unknown>)['games'] as Record<string, unknown>;
+    expect(Object.keys(games)).toEqual([]);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('still round-trips a value with no dangerous keys', () => {
+    writeJson(KEY, { version: 1, games: { chess: { mode: 'bot' } } });
+    expect(readJson(KEY)).toEqual({ version: 1, games: { chess: { mode: 'bot' } } });
+  });
+});

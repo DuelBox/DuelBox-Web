@@ -310,3 +310,29 @@ describe('the summary', () => {
     expect(playerDataSummary().games).toBe(2);
   });
 });
+
+describe('refusing a prototype-pollution payload on import (#2365)', () => {
+  beforeEach(() => {
+    install(fakeStorage());
+  });
+  afterEach(() => {
+    delete (Object.prototype as Record<string, unknown>)['polluted'];
+    vi.restoreAllMocks();
+  });
+
+  it('imports a poisoned file without polluting Object.prototype', () => {
+    // A __proto__ payload at the envelope and inside `data`, plus a legitimate favourites
+    // value that must still land. Written as raw JSON so `__proto__` is an own key rather
+    // than the object-literal form that would set a prototype instead.
+    const file =
+      `{"format":${JSON.stringify(PLAYER_DATA_FORMAT)},"version":${String(PLAYER_DATA_VERSION)},` +
+      `"__proto__":{"polluted":1},` +
+      `"data":{"__proto__":{"polluted":1},` +
+      `${JSON.stringify(FAVOURITES_KEY)}:{"version":1,"slugs":["chess"]}}}`;
+    const result = importPlayerData(file);
+    expect('imported' in result).toBe(true);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    // The clean value beside the payload still imported and reads back.
+    expect(readFavourites()).toEqual(['chess']);
+  });
+});

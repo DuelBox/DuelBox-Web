@@ -230,6 +230,32 @@ export function exportTrace(trace: Trace): string {
   return JSON.stringify(trace, null, 2);
 }
 
+/** Keys that reach an object's prototype chain, refused anywhere in a parsed trace. */
+const FORBIDDEN_KEYS: readonly string[] = ['__proto__', 'constructor', 'prototype'];
+
+/**
+ * Throws if any object in a parsed value carries a prototype-polluting key, at any depth.
+ *
+ * `JSON.parse` leaves such a key as a plain own property rather than mutating a prototype, so
+ * this walk sees it via `Object.keys` and refuses it before the trace is trusted. The `seen`
+ * set guards a cyclic graph; `JSON.parse` never produces one, but the walk is written not to
+ * assume that.
+ */
+function assertNoForbiddenKeys(value: unknown, seen: Set<object>): void {
+  if (typeof value !== 'object' || value === null) return;
+  if (seen.has(value)) return;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value as unknown[]) assertNoForbiddenKeys(item, seen);
+    return;
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (FORBIDDEN_KEYS.includes(key)) throw new Error(`trace carries a forbidden key "${key}"`);
+    assertNoForbiddenKeys(record[key], seen);
+  }
+}
+
 /**
  * Read a trace back, refusing anything that is not one.
  *
@@ -240,6 +266,12 @@ export function exportTrace(trace: Trace): string {
  */
 export function importTrace(text: string): Trace {
   const raw: unknown = JSON.parse(text);
+  // A trace is a file a person was sent, and a `__proto__`, `constructor` or `prototype`
+  // key in it can only be an attempt to reach the runtime's prototype chain through a later
+  // read — no honest trace carries one (CWE-1321, #2365). Refused before any of the
+  // structure below is trusted, with the same shape of message as every other malformed
+  // input here: this is the one boundary a person watches, so it rejects rather than strips.
+  assertNoForbiddenKeys(raw, new Set());
   if (typeof raw !== 'object' || raw === null) throw new Error('trace is not an object');
   const value = raw as Record<string, unknown>;
   if (value['version'] !== 1)

@@ -22,6 +22,7 @@
  */
 
 import { FAVOURITES_KEY, readFavourites } from './favourites';
+import { stripForbiddenKeys } from './hardened-json';
 import { HEAD_TO_HEAD_KEY, readRecord } from './head-to-head';
 import { LAST_MODE_KEY, rememberedGames } from './last-mode';
 import { isRecord, readJson, readVersioned, removeJson, writeJson } from './local-store';
@@ -102,7 +103,11 @@ export function importPlayerData(
 ): { readonly imported: readonly string[] } | { readonly error: string } {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    // An imported file is chosen by the player but written by anyone — it is the one input
+    // here that did not come from this site's own storage — so the pollution keys are
+    // stripped before any of it is read or re-stored (#2365). The stores each re-validate
+    // on their next read as well; this closes the gap in between.
+    parsed = stripForbiddenKeys(JSON.parse(text));
   } catch {
     return { error: 'That file is not valid JSON.' };
   }

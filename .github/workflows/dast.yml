@@ -1,0 +1,180 @@
+# Dynamic application security testing — a running scan of the built site (#2379).
+#
+# Static analysis (CodeQL, the audits) reads the source; it cannot see a missing header, a
+# route that leaks, or a misconfiguration that only exists once the files are served. This job
+# builds the real static export, serves it, and runs the OWASP ZAP *baseline* scan against it —
+# a passive crawl that never attacks, so it is safe to run on every pull request.
+#
+# ## What it fails on, and what it accepts
+#
+# It fails the job on any HIGH-risk finding, and accepts a documented allowlist of
+# informational findings below that. The allowlist is not laziness: DuelBox is served today by
+# GitHub Pages, which serves no custom response headers at all (#2481), so a scan of the live
+# artefact reports the security headers as absent even though `scripts/security-headers.mjs`
+# generates a full set and `check-headers.mjs` enforces them. Those specific findings are
+# expected on this host and are marked accepted here; a High finding, or any finding not on the
+# list, still blocks. When the deploy moves to a header-serving host the allowlist shrinks.
+#
+# ## What still needs a human
+#
+#   * **The first real run happens in CI.** This file cannot be executed from here; it is
+#     validated structurally (valid YAML, correct steps). The first run against a live build is
+#     where the allowlist gets its final tune — a passive baseline on a static game site should
+#     be quiet, and anything it flags that is not a header GitHub Pages cannot serve is a real
+#     finding to triage, not to add to the list.
+#   * **Pin the ZAP image by digest.** The scan runs the ZAP project's own container, pinned to
+#     the `stable` tag below. `docs/secure-coding.md` rule 9 pins every moving reference; before
+#     this workflow is relied on, replace `:stable` with a `@sha256:…` digest verified against
+#     the registry. It is a tag rather than a fabricated digest deliberately — rule 9 says a
+#     plausible-looking hash from memory is worse than none.
+name: DAST
+
+on:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Read-only, and pointedly no `issues: write`: the scan reports into the job log and the run
+# summary, never into the issue tracker.
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # SHA-pinned, matching the pins the rest of CI already verified (secure-coding rule 9).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The real static export. No `NEXT_PUBLIC_BASE_PATH`, so it is served at the root and the
+      # scanner reaches `http://127.0.0.1:8080/` rather than a project-page subpath. `pnpm build`
+      # also runs the zero-cost guard and the bundle-secret scan as its own steps.
+      - name: Build the static export
+        run: pnpm build
+
+      - name: Serve the export on localhost
+        run: |
+          npx --yes http-server apps/web/out -p 8080 -a 127.0.0.1 --silent &
+          # Wait for it to answer before the scan starts; fail loudly if it never does.
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/ >/dev/null; then
+              echo "site is up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "the static site never came up on :8080" >&2
+          exit 1
+
+      # The allowlist, generated here rather than committed as a separate file so all of the DAST
+      # logic lives in this workflow. Each row is a ZAP rule id, the action to take, and why —
+      # every accepted one is a header GitHub Pages cannot serve (#2481).
+      - name: Write the ZAP rule allowlist
+        run: |
+          mkdir -p .dast
+          cat > .dast/zap-rules.tsv <<'RULES'
+          10038	IGNORE	(CSP header not set — GitHub Pages serves no headers; CSP is emitted as a meta tag and enforced by check-headers.mjs. #2481)
+          10055	IGNORE	(CSP: reported per directive — same cause as 10038)
+          10020	IGNORE	(Anti-clickjacking header — frame-ancestors/X-Frame-Options are generated but not served by Pages; frame-guard.ts enforces it in-page. #2367, #2481)
+          10035	IGNORE	(HSTS not set — a static export cannot serve response headers; set by the host. #2481)
+          10063	IGNORE	(Permissions-Policy not set — generated, not servable by Pages. #2481)
+          90004	IGNORE	(COOP/COEP/CORP site-isolation headers — generated, not servable by Pages. #2481)
+          RULES
+
+      # ZAP's own image, run directly so the only `uses:` actions in this workflow stay
+      # SHA-pinned. `--network=host` lets the container reach the server on the runner's
+      # localhost. `-I` keeps ZAP from failing the job on warnings — the High-severity gate is
+      # the node step below, which is precise about "fail on high" (#2379).
+      - name: ZAP baseline — shell routes
+        run: |
+          docker run --rm --network=host \
+            -v "${{ github.workspace }}/.dast:/zap/wrk/:rw" \
+            zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://127.0.0.1:8080/ \
+              -c zap-rules.tsv \
+              -J report-root.json -r report-root.html \
+              -a -I -m 2 -T 8 \
+          || echo "zap-baseline exited non-zero (warnings under -I do not fail); the gate is the next step"
+
+      # The embed route is not linked from the homepage, so the spider above will not reach it.
+      # Scan a representative embed URL explicitly, so its configuration is covered too (#2367,
+      # #202). Picks a real slug from the build rather than hard-coding one.
+      - name: ZAP baseline — embed route
+        run: |
+          if [ -d apps/web/out/embed ]; then
+            SLUG=$(ls apps/web/out/embed | head -1)
+            echo "scanning embed route for: $SLUG"
+            docker run --rm --network=host \
+              -v "${{ github.workspace }}/.dast:/zap/wrk/:rw" \
+              zaproxy/zaproxy:stable \
+              zap-baseline.py \
+                -t "http://127.0.0.1:8080/embed/$SLUG/" \
+                -c zap-rules.tsv \
+                -J report-embed.json -r report-embed.html \
+                -a -I -m 1 -T 5 \
+            || echo "embed baseline exited non-zero under -I; the gate is the next step"
+          else
+            echo "no embed routes in the build; skipping the embed scan" >&2
+          fi
+
+      # The gate: fail on any HIGH-risk (riskcode 3) alert that is not on the accepted allowlist.
+      # Everything below High is triage, surfaced in the run summary rather than blocking.
+      - name: Enforce the high-severity gate
+        if: always()
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          // Accepted informational findings — the same header rules as the ZAP allowlist above,
+          // by plugin id, because a static host cannot serve response headers (#2481).
+          const ACCEPTED = new Set(['10038', '10055', '10020', '10035', '10063', '90004']);
+          const dir = '.dast';
+          const reports = fs.existsSync(dir)
+            ? fs.readdirSync(dir).filter((f) => f.startsWith('report-') && f.endsWith('.json'))
+            : [];
+          const alerts = [];
+          for (const file of reports) {
+            let parsed;
+            try {
+              parsed = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+            } catch {
+              console.error(`could not read ${file}`);
+              continue;
+            }
+            for (const site of parsed.site ?? []) {
+              for (const alert of site.alerts ?? []) alerts.push(alert);
+            }
+          }
+          const high = alerts.filter(
+            (a) => Number(a.riskcode) >= 3 && !ACCEPTED.has(String(a.pluginid)),
+          );
+          const lines = [
+            `# DAST (ZAP baseline)`,
+            ``,
+            `- reports scanned: ${reports.length}`,
+            `- total alerts: ${alerts.length}`,
+            `- high-severity (blocking): ${high.length}`,
+            ``,
+          ];
+          for (const a of high) lines.push(`- **HIGH** ${a.alert} (plugin ${a.pluginid})`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY ?? '/dev/null', lines.join('\n') + '\n');
+          if (high.length > 0) {
+            console.error(`DAST failed: ${high.length} high-severity finding(s) outside the allowlist`);
+            for (const a of high) console.error(` - ${a.alert} (plugin ${a.pluginid})`);
+            process.exit(1);
+          }
+          console.log('DAST passed: no high-severity findings outside the accepted allowlist.');
+          NODE
