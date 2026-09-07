@@ -54,12 +54,44 @@ import { defineConfig } from 'vitest/config';
  */
 const underCoverage = process.env.DUELBOX_COVERAGE === '1';
 
+/**
+ * Leave the main thread a core on CI, because it is the one that cannot be starved.
+ *
+ * `verify` began failing with **every one of its 355 test files passing** and
+ * `Error: [vitest-worker]: Timeout calling "onTaskUpdate"`. Vitest sets
+ * `process.exitCode = 1` for an unhandled error whatever the results say, so the job went
+ * red on a suite that had just gone green — and `deploy.yml` fires on a *successful* CI
+ * run, so nothing reached visitors either.
+ *
+ * It is not a slow test. The comment above describes the case where one test body blocks
+ * its worker past birpc's hard-coded sixty seconds, and that is not what is happening:
+ * measured across the whole suite, **no single test case exceeds thirty seconds**, and the
+ * four slowest *files* are 134 s, 97 s, 56 s and 47 s of many short cases each.
+ *
+ * What is starved is the main thread. It runs the Vite transform, the collection and every
+ * worker's `onTaskUpdate`, and Vitest's default asks for one worker per core minus one —
+ * so on a four-core runner three workers and the main thread contend for four cores while
+ * 1,176 seconds of test bodies are pushed through in 488 seconds of wall clock. A worker's
+ * report then waits on a main thread that is busy, and sixty seconds is not a long time to
+ * wait when the queue is that deep.
+ *
+ * Two workers on CI leaves the main thread room to answer. The cost is wall clock and it is
+ * bounded: `verify` has a fifteen-minute budget and was using eight.
+ *
+ * Not `dangerouslyIgnoreUnhandledErrors`. That flag is set for the coverage run and its
+ * justification is written above: the push gate runs the identical files with it OFF, so a
+ * real unhandled rejection still fails CI on every commit. Turning it on here would delete
+ * that sentence's meaning and silence the next genuine one.
+ */
+const onCi = process.env.CI === 'true' || process.env.CI === '1';
+
 export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.ts'],
     environment: 'node',
     testTimeout: underCoverage ? 600_000 : 30_000,
     dangerouslyIgnoreUnhandledErrors: underCoverage,
+    ...(onCi && !underCoverage ? { maxWorkers: 2, minWorkers: 1 } : {}),
     coverage: {
       provider: 'v8',
       include: ['packages/engine/src/**/*.ts', 'packages/**/src/**/rules.ts'],
