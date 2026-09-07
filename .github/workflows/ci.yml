@@ -47,9 +47,37 @@ jobs:
   #
   # This does not close #2459 — e2e itself is still ~11 minutes and that issue asks for 8
   # overall. It stops the gate failing for the wrong reason while that is worked on.
+  # ## Sharded, because this job spent months one slow minute from red
+  #
+  # The note above describes splitting e2e out of `verify` when that job reached 97% of its
+  # timeout. The same thing happened again to the job it created: measured across eight
+  # consecutive runs this job took **18, 19, 19, 19, 19 and 19 minutes against its own
+  # 20-minute limit**, on `main` as well as on branches, and then a batch that added
+  # sixteen tests took it to exactly 20 and it was cancelled mid-suite. A cancelled job
+  # reads like an infrastructure flake rather than like a budget that ran out, which is
+  # precisely the failure mode that made the last split necessary.
+  #
+  # Raising the limit was the wrong fix twice over: it buys one batch of headroom, and the
+  # number it raises is the only signal anybody gets that the suite is growing. 35 more
+  # games are still to come.
+  #
+  # So the suite is split across three runners by Playwright's own sharding, which divides
+  # by test rather than by file and therefore stays balanced as specs are added. Wall clock
+  # goes to roughly a third; the total billed minutes are unchanged apart from three builds
+  # instead of one, which is the price of the wall clock. `fail-fast: false` so one shard
+  # going red still lets the other two report — a suite that stops at the first failure
+  # tells you about one broken thing per run.
+  #
+  # This still does not close #2459, which asks for 8 minutes overall. It stops the gate
+  # failing for the wrong reason while that is worked on.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    name: e2e (${{ matrix.shard }}/3)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -60,14 +88,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # The suite drives the real static artefact rather than a dev server, so it needs the
       # build even though `verify` also produces one — the two jobs run in parallel and
-      # share nothing.
+      # share nothing. Each shard builds its own for the same reason.
       - run: pnpm build
       # Smoke-test the real static artefact, not a dev server, so a green run is
       # evidence the deployed site works.
       # WebKit is the engine iOS Safari ships, and two people sharing a phone is the
       # primary case — a chromium window sized like a phone is not the same test.
       - run: npx playwright install --with-deps chromium webkit
-      - run: pnpm e2e
+      # No `--` before the flag: pnpm 9 consumes that itself and the argument never reaches
+      # Playwright, which then runs the whole suite on every shard — three full runs that
+      # each look like a pass. Checked with `--list`: 153 + 152 + 152 = the 457 the
+      # unsharded command reports.
+      - run: pnpm e2e --shard=${{ matrix.shard }}/3
 
   audit:
     runs-on: ubuntu-latest
