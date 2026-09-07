@@ -98,11 +98,15 @@
   border-radius: 2px;
 }
 
+/* "Round 2 of 3", between the two scoreboards. `--db-faint` on the HUD's `--db-surface` is
+   2.45:1 — the worst ratio on the site, on the one line that says how far through a match
+   the pair are, read at arm's length by two people sharing a phone. `--db-body` is 7.6:1
+   there; `--db-muted` would still be 4.38:1 and miss AA, because the band is tinted. */
 .label {
   font-size: var(--db-text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--db-faint);
+  color: var(--db-body);
 }
 
 .pause {

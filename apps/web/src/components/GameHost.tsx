@@ -332,6 +332,20 @@ export function GameHost({
     let lastWinner: SeatId | 'draw' | null = null;
     let lastSeat: SeatId | null | undefined;
 
+    /**
+     * The three bindings the debug overlay of #119 needs, and the only three lines of it
+     * that are not already inside a branch a bundler deletes.
+     *
+     * They survive webpack — a `let` is not a dead branch — and then go, because once every
+     * `if (process.env.NODE_ENV !== 'production')` below has been folded away nothing reads
+     * or writes them and the minifier drops them as unused. Put through this project's own
+     * webpack and its own minifier, this shape emits bytes identical to the same code
+     * written with no debug lines in it at all.
+     */
+    let debugFrames = 0;
+    let debugCancelled = false;
+    let stopDebugOverlay: (() => void) | undefined;
+
     const loop = new FixedLoop({
       update(dt) {
         // The shell's clock runs in every live phase; the simulation only while playing.
@@ -361,6 +375,9 @@ export function GameHost({
         }
       },
       render(alpha) {
+        // The only thing the overlay adds to the hot path, and the one number it cannot get
+        // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
+        if (process.env.NODE_ENV !== 'production') debugFrames += 1;
         renderer.beginFrame();
         game.render(renderer, alpha);
         renderer.endFrame();
@@ -386,6 +403,69 @@ export function GameHost({
     // hang wherever it was, with no error and nothing in the console.
     if (phaseRef.current === 'countdown' || phaseRef.current === 'playing') runner.start();
 
+    /**
+     * The debug overlay (#119), switched on with `?debug=1` and absent from production.
+     *
+     * The gate is the trace panel's: a query parameter, so somebody looking at a stutter can
+     * turn it on where the stutter is. The *delivery* is deliberately not the trace panel's.
+     * `TracePanel` is a component the play surface renders behind a flag — right for a tool
+     * a player has to be able to reach on the deployed site, and wrong here, because a
+     * component behind a prop still ships and only its rendering is skipped. The acceptance
+     * criterion for this one is zero bytes.
+     *
+     * So every part of it lives inside this test. `process.env.NODE_ENV` is a string literal
+     * by the time webpack parses this file, so the branch folds to `if (false)` and is
+     * deleted *before* the `import()` inside it is resolved: no chunk is emitted and
+     * `debug/DebugOverlay` is never compiled. That is also why the query parameter is read
+     * here rather than in `PlaySurface` and handed down — a prop is a value that has to
+     * exist in production for the sake of the branch that ignores it, and a `?debug=1` the
+     * shell reads and passes to nobody is the same bytes by another name.
+     *
+     * Read in an effect, like every other reader of `location` in this app: the play page is
+     * statically exported, and reading the URL during a render makes the server's HTML and
+     * the browser's first paint disagree.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      if (new URLSearchParams(globalThis.location.search).get('debug') === '1') {
+        void import('./debug/DebugOverlay')
+          .then(({ mountDebugOverlay }) => {
+            // Strict mode mounts, unmounts and remounts every effect in development, which
+            // is exactly where this code runs. Without the flag the discarded host's
+            // overlay outlives it and two boxes stack up in the corner.
+            if (debugCancelled) return;
+            stopDebugOverlay = mountDebugOverlay(() => ({
+              at: performance.now(),
+              frames: debugFrames,
+              steps: loop.totalSteps,
+              stepMs: loop.stepSeconds * 1000,
+              running: runner.running,
+              // The seat ids are written out rather than taken from the engine's `SEATS`,
+              // because an import at the top of this file ships whether or not this branch
+              // does. `localSeat` above defaults the same way for the same reason.
+              seats: (['p1', 'p2'] as const).map((seat) => {
+                const view = inputView.seat(seat);
+                const pointer = view.pointer;
+                return {
+                  seat,
+                  moveX: view.move.x,
+                  moveY: view.move.y,
+                  actionHeld: view.actionHeld,
+                  holdSeconds: view.holdSeconds,
+                  // Copied rather than passed on: the view's vectors are reused every step
+                  // so that reading input allocates nothing, and a reading kept across
+                  // samples would quietly become a reading of the present.
+                  pointer: pointer === null ? null : { x: pointer.x, y: pointer.y },
+                  pointerCount: view.pointerCount ?? 0,
+                };
+              }),
+            }));
+          })
+          .catch(() => {
+            // A development tool that will not load is not a reason to take the match down.
+          });
+      }
+    }
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.
@@ -395,6 +475,10 @@ export function GameHost({
 
     return () => {
       runner.stop();
+      if (process.env.NODE_ENV !== 'production') {
+        debugCancelled = true;
+        stopDebugOverlay?.();
+      }
       if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;
       loopRef.current = null;

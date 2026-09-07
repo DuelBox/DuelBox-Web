@@ -26,6 +26,16 @@ const out = join(root, 'apps', 'web', 'out');
  */
 const SESSION_BUDGET_KB = 700;
 
+/**
+ * The one string that identifies the debug overlay in a bundle.
+ *
+ * It is the overlay element's `id`, not a constant declared for this check to find, so a
+ * build that does contain the overlay cannot have shaken it out: if the module ships, the
+ * marker ships with it. Class names are hashed by the CSS pipeline and identifiers are
+ * mangled by the minifier; a string literal is the one thing that survives both intact.
+ */
+const DEBUG_OVERLAY_MARKER = 'duelbox-debug-overlay';
+
 /** Anything that would put gameplay behind a round trip. */
 const NETWORK_CLIENTS = [
   'axios',
@@ -254,12 +264,112 @@ async function checkPagesArePrerendered() {
   }
 }
 
+/**
+ * The debug overlay costs a player nothing, because it is not there (#119).
+ *
+ * The acceptance criterion for that issue is zero bytes in the production bundle, and zero
+ * bytes is a property of the *build* rather than of the source. Nothing else in this
+ * repository can tell the difference between an overlay that does not render and an overlay
+ * that is not there: both look identical on the deployed site, and only one of them is free.
+ * So the overlay is reached exclusively through an `import()` inside
+ * `if (process.env.NODE_ENV !== 'production')`, which webpack folds to `if (false)` and
+ * deletes before resolving what is inside it — and this is the check that the fold happened
+ * rather than the argument that it should have.
+ *
+ * Three parts, and the first is the one that makes the other two mean anything. A search of
+ * a build for a string that nothing has ever contained passes forever, which is the failure
+ * mode CLAUDE.md records six of.
+ */
+async function checkDebugOverlayIsNotShipped() {
+  const property = 'The debug overlay is not in the production bundle';
+  const debugDir = join(root, 'apps', 'web', 'src', 'components', 'debug');
+  const overlay = join(debugDir, 'DebugOverlay.ts');
+
+  // One: the marker still identifies the overlay. If the overlay is genuinely gone, this
+  // check has nothing left to do and should go with it rather than pass by default.
+  let source;
+  try {
+    source = await readFile(overlay, 'utf8');
+  } catch {
+    fail(
+      property,
+      'apps/web/src/components/debug/DebugOverlay.ts is missing — if the overlay was removed,' +
+        ' remove this check too rather than leaving it searching for nothing',
+    );
+    return;
+  }
+  if (!source.includes(DEBUG_OVERLAY_MARKER)) {
+    fail(
+      property,
+      `DebugOverlay.ts no longer contains "${DEBUG_OVERLAY_MARKER}", so searching the build` +
+        ' for it would prove nothing. Restore the marker or pick a new one here.',
+    );
+    return;
+  }
+
+  // Two: nothing reaches the overlay except through a dynamic import. A static import is
+  // what puts a module in the graph regardless of any flag guarding its use, and it is
+  // worth naming here — at the line that caused it — rather than leaving it to be found as
+  // an unexplained string in a chunk. A `import type` is erased by the compiler and allowed.
+  const sources = (
+    await walk(join(root, 'apps', 'web', 'src'), (p) => ['.ts', '.tsx'].includes(extname(p)))
+  ).filter((path) => !path.startsWith(debugDir));
+  for (const path of sources) {
+    // Comments come out first: this repository explains its reasoning at length, and the
+    // module is named in prose in more than one place.
+    const code = (await readFile(path, 'utf8'))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    const mentions = [...code.matchAll(/debug\/DebugOverlay/g)].length;
+    if (mentions === 0) continue;
+    const dynamic = [...code.matchAll(/import\(\s*['"][^'"]*debug\/DebugOverlay['"]\s*\)/g)].length;
+    const typeOnly = [
+      ...code.matchAll(/import\s+type\s[^;]*?from\s*['"][^'"]*debug\/DebugOverlay['"]/g),
+    ].length;
+    if (mentions !== dynamic + typeOnly) {
+      fail(
+        property,
+        `${path.slice(root.length + 1)} reaches the overlay other than through a guarded` +
+          ' import() — a static import ships it whatever the flag around its use says',
+      );
+    }
+  }
+
+  // Three: the build emitted nothing carrying it. HTML as well as scripts, because an
+  // overlay rendered during the export would land in the served markup rather than a chunk.
+  const emitted = await walk(out, (p) => ['.js', '.html'].includes(extname(p)));
+  const scripts = emitted.filter((p) => extname(p) === '.js');
+  if (scripts.length === 0) {
+    fail(property, 'no scripts found in apps/web/out — run `pnpm build` first');
+    return;
+  }
+  const carrying = [];
+  for (const path of emitted) {
+    if ((await readFile(path, 'utf8')).includes(DEBUG_OVERLAY_MARKER)) {
+      carrying.push(path.slice(out.length + 1));
+    }
+  }
+  if (carrying.length > 0) {
+    fail(
+      property,
+      `the overlay is in ${String(carrying.length)} emitted file(s) — ${carrying.join(', ')}` +
+        ' — so every player is downloading a development tool',
+    );
+  } else {
+    console.log(
+      `  debug overlay: absent from all ${String(scripts.length)} emitted script(s) and` +
+        ` ${String(emitted.length - scripts.length)} exported page(s)`,
+    );
+  }
+}
+
 console.log('check-zero-cost:');
 await checkNoServerRuntime();
 await checkNoDynamicRoutes();
 await checkNoNetworkInGameplay();
 await checkSessionBudget();
 await checkPagesArePrerendered();
+await checkDebugOverlayIsNotShipped();
 
 if (failures.length > 0) {
   console.error(`\ncheck-zero-cost: ${String(failures.length)} property violated\n`);

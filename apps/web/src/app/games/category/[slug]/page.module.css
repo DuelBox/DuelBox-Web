@@ -2,10 +2,19 @@
    a reader arriving from a search result should not have to learn a second layout. */
 .crumbs {
   display: flex;
+  /* See the same rule on the game page: the link is taller than the separator beside it. */
+  align-items: center;
   gap: var(--db-space-2);
   padding-block: var(--db-space-5) var(--db-space-4);
   font-size: var(--db-text-sm);
   color: var(--db-muted);
+}
+
+/* The way back to the catalogue, at the size everything else on the page is (#178). */
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
 }
 
 .head {

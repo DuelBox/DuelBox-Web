@@ -139,9 +139,13 @@
   background: var(--db-surface);
 }
 
+/* `--db-body` rather than `--db-muted`, because the card it sits in is `--db-surface` and
+   `--db-muted` is 4.38:1 there — under AA for 13px text. These are the labels that say what
+   "Reset everything" is about to erase, so they are the last text on the page that should be
+   hard to read. */
 .count dt {
   font-size: var(--db-text-sm);
-  color: var(--db-muted);
+  color: var(--db-body);
 }
 
 .count dd {
