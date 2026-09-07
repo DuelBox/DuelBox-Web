@@ -354,7 +354,7 @@ canvas {
   border: 0;
   border-radius: var(--db-radius-pill);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

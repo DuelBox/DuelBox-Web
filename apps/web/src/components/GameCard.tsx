@@ -32,13 +32,20 @@ const MODE_LABEL: Record<string, string> = {
  * card.
  *
  * The same measurement found the other half of #185 unaddressed, and it is not this file's
- * to fix either: those route payloads are 3.7 KB gzipped each, and browsing all 108 cards
- * fetches all 108 of them — 397 KB speculated on a visitor who presses one. `prefetch`
+ * to fix either: those route payloads are 4.6 KB gzipped each, and browsing all 108 cards
+ * fetches all 108 of them — 487 KB speculated on a visitor who presses one. `prefetch`
  * here is the switch, but it is not a free one, because Next 15 turns hover and
  * touch-start prefetching off along with the viewport kind rather than in place of it.
  * That figure is now `speculatedBytes` in `size-budget.json`, held from the build by
  * `check-size.mjs` and from a real browse by `e2e/prefetch.spec.ts`, so it cannot grow
  * while the decision waits. Nothing else changed: it is bounded, not fixed.
+ *
+ * The 3.7 KB and 397 KB this paragraph first carried were measured a day earlier, against
+ * main at 4333bc7. Merging main moved the payload to 4.6 KB without touching this file or
+ * any card: the root layout now carries two before-paint inline scripts, and every one of
+ * the 108 payloads carries the whole root-layout tree, so the pair costs 67.6 KB
+ * speculated. `size-budget.json` records the measurement; #2545 holds the cost. Which is
+ * the point — the number moved under the file that quotes it, and only the budget saw.
  *
  * ## What this card does not show, and why
  *

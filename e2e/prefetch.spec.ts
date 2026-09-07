@@ -40,8 +40,13 @@ import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
  * those payloads cost. They are not JavaScript, so `scripts/check-size.mjs` walked straight
  * past them, and a browse of the catalogue fetches all 108: **more than twice the 182 KB
  * ADR 0001 budgets for a whole first session**, spent before anybody has pressed anything.
- * Raising the per-route payload from under four kilobytes to ten, or adding `prefetch` to
- * another hundred links, would have left this file, `pnpm build` and `check-size` all green.
+ * Raising the per-route payload, or adding `prefetch` to another hundred links, would have
+ * left this file, `pnpm build` and `check-size` all green — and one of those two did
+ * happen while this test was being written. A payload weighed under four kilobytes when
+ * the paragraph above was first drafted and weighs 4.6 KB now, because the root layout
+ * gained two before-paint inline scripts and every payload carries the whole layout tree.
+ * Nothing failed. `speculatedBytes` in `size-budget.json` carries that measurement, and
+ * this test is the half of it that watches a real router rather than the export.
  *
  * So the first test weighs them. The total is held against `speculatedBytes` in
  * `size-budget.json`, beside the JavaScript numbers, and `check-size.mjs` holds the same

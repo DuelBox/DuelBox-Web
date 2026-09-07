@@ -1,3 +1,4 @@
+import { colour } from '../styles/tokens';
 /**
  * The clickjacking posture of the site, and the allowlist the embeddable surface is built on
  * (#2367, CWE-1021).
@@ -251,7 +252,10 @@ export const FRAME_GUARD = [
   'if(w.location.pathname.indexOf("/embed/")!==-1)return;',
   'var d=w.document,s=d.createElement("style");',
   's.textContent="html{visibility:hidden!important}#db-framed{visibility:visible!important;',
-  'position:fixed;inset:0;background:#fff;color:#111;font:1rem/1.5 system-ui,sans-serif;padding:2rem}";',
+  // The palette, not a second spelling of it. This string is injected before any stylesheet
+  // exists, so it cannot use a custom property — but it can read the same module the
+  // stylesheet is generated from, which is the whole point of the rule in tokens.test.ts.
+  `position:fixed;inset:0;background:${colour.paper};color:${colour.ink};font:1rem/1.5 system-ui,sans-serif;padding:2rem}";`,
   '(d.head||d.documentElement).appendChild(s);',
   'd.addEventListener("DOMContentLoaded",function(){',
   'var n=d.createElement("div");n.id="db-framed";',

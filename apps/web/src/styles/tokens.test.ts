@@ -335,6 +335,9 @@ describe('colour lives in the palette', () => {
       raw,
       `read the colour from styles/tokens.ts rather than spelling it again: ${raw.join(', ')}`,
     ).toEqual([]);
+  });
+});
+
 describe("the catalogue card's seat marks", () => {
   // Rule 7 applies to the shell as much as to a game, and this is the seat signal a player
   // meets first. The greyscale harness in `apps/web/src/data` walks games and never looks

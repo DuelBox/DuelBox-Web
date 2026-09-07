@@ -166,7 +166,7 @@ export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
  * `lib/flags.ts` holds the list and reconciles a game's two names, so a switch written
  * `memory` and a lookup written `memory-match` are the same question.
  */
-const AVAILABLE: Record<string, Loader> = Object.fromEntries(
+const AVAILABLE: Record<string, Loader> = /*#__PURE__*/ Object.fromEntries(
   Object.entries(LOADERS).filter(([id]) => killSwitchFor(id) === null),
 );
 
