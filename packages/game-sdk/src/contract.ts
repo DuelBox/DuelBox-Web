@@ -45,6 +45,29 @@ export interface GameContext {
    * Real-time games have no opener and may ignore this.
    */
   readonly openingSeat: SeatId;
+  /**
+   * Whether this player has asked their system for reduced motion (#175).
+   *
+   * **Passed in rather than read, and that is not a style preference.** CLAUDE.md rule 10
+   * says no game branches on the device, and lint bans `matchMedia` outright inside
+   * `packages/` — the host asks the browser and hands the answer over, exactly as it does
+   * with the presentation and the local seat. A game that reached for the media query
+   * itself would also be a game that behaves differently under a test harness with no DOM.
+   *
+   * **It may only change what is DRAWN.** Never the simulation: not a speed, not a
+   * duration counted in steps, not a distance, not a random draw. Two devices with
+   * different accessibility settings must still step the identical match, or rule 8 and
+   * every replay, lockstep trace and determinism test break at once. Screen shake, flashes,
+   * particle bursts and the board's half-turn are presentation and may all go; what they
+   * were telling the player must not, so a game that shakes on a hit needs a non-motion
+   * way to say the same thing (rule 7's argument, applied to time instead of colour).
+   *
+   * Optional on the interface and always present in practice, for the reason
+   * `SeatInputView.pointerCount` is: this context is implemented structurally by hand in
+   * game tests, and a required field is a breaking change to all of them at once. Read it
+   * as `context.reducedMotion ?? false`.
+   */
+  readonly reducedMotion?: boolean;
   /** Difficulty of the bot occupying a seat, or null when a human holds it. */
   botDifficulty(seat: SeatId): 'easy' | 'normal' | 'hard' | null;
 }

@@ -27,6 +27,7 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import { audio } from '@/lib/audio';
+import { prefersReducedMotion } from '@/lib/reduced-motion';
 import styles from './GameHost.module.css';
 
 /**
@@ -176,6 +177,12 @@ export function GameHost({
       presentation,
       localSeat,
       openingSeat,
+      // Read here rather than through the hook, and the difference matters: a game is
+      // handed its context once, inside this effect, and cannot be told again. A hook's
+      // state is still `false` on the render that schedules this effect, so a player who
+      // asked their system for reduced motion would get a full-motion match and only the
+      // next one would honour it. The direct read answers before the game exists (#175).
+      reducedMotion: prefersReducedMotion(),
       botDifficulty: (seat) => botDifficulty?.[seat] ?? null,
     };
     game.init(gameContext);
