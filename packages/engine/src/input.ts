@@ -434,6 +434,19 @@ export class InputManager {
   readonly #state = new InputState(this.#p1State, this.#p2State);
   /** Scratch for the movement vector, so beginStep allocates nothing. */
   readonly #move: Vec2 = vec2();
+  /**
+   * The step's delta, handed to `#applySeat` through a slot rather than as an argument.
+   *
+   * Rule 5, and the allocation it avoids is one nothing in this file writes. A
+   * floating-point value crossing a call the optimiser has declined to inline cannot travel
+   * as a raw double: it is materialised on the heap first, and `#applySeat` is far past any
+   * inlining budget. Measured on V8 26, `beginStep` allocated one 16-byte number every step
+   * — every step of every match in the collection, since every game reaches input through
+   * this method — for a value that never leaves this object. A typed slot is written and
+   * read as a raw double, so nothing is materialised, and `allocation.test.ts` holds it at
+   * zero rather than leaving it to be re-noticed.
+   */
+  readonly #stepDelta = new Float64Array(1);
 
   constructor(
     logical: LogicalSize,
@@ -643,16 +656,22 @@ export class InputManager {
    * Sampling on the step boundary rather than on the event is what makes the edges
    * exact: `actionPressed` and `actionReleased` are true for exactly one step no
    * matter how many events, repeats included, arrived since the last one.
+   *
+   * The sentence above has been in this docstring since the method was written and was
+   * measurably untrue until #122; `#stepDelta` records what it cost. It is now measured on
+   * every push rather than asserted here, which is the only form of the claim worth having.
    */
   beginStep(fixedDeltaSeconds: number): Readonly<InputState> {
     let delta = fixedDeltaSeconds;
     if (!Number.isFinite(delta) || delta < 0) delta = 0;
-    this.#applySeat(this.#p1State, this.#p1Sources, delta);
-    this.#applySeat(this.#p2State, this.#p2Sources, delta);
+    this.#stepDelta[0] = delta;
+    this.#applySeat(this.#p1State, this.#p1Sources);
+    this.#applySeat(this.#p2State, this.#p2Sources);
     return this.#state;
   }
 
-  #applySeat(out: SeatInputState, sources: SeatSources, delta: number): void {
+  #applySeat(out: SeatInputState, sources: SeatSources): void {
+    const delta = this.#stepDelta[0]!; // invariant: a one-slot array always has slot 0
     const keys = sources.keys;
     const taps = sources.latchedKeys;
     const move = this.#move;
