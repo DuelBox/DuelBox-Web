@@ -35,7 +35,12 @@ interface DeviceSpec {
 /** Devices that differ in every way that decides this: aspect, size, density, and a notch. */
 const DEVICES: readonly DeviceSpec[] = [
   { label: 'small phone portrait', width: 320, height: 568 },
-  { label: 'notched phone portrait', width: 393, height: 852, insets: { top: 59, right: 0, bottom: 34, left: 0 } },
+  {
+    label: 'notched phone portrait',
+    width: 393,
+    height: 852,
+    insets: { top: 59, right: 0, bottom: 34, left: 0 },
+  },
   { label: 'phone landscape', width: 852, height: 393 },
   { label: 'tablet portrait', width: 768, height: 1024 },
   { label: 'laptop', width: 1440, height: 900 },

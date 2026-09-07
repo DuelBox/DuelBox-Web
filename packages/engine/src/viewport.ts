@@ -240,6 +240,11 @@ export function negotiateSharedViewport(
   peerLogical: { width: number; height: number },
 ): SharedViewport {
   const logical = negotiateSharedLogical(local.logical, peerLogical);
-  const view = fitViewport(logical, local.screenWidth, local.screenHeight, local.insets ?? NO_INSETS);
+  const view = fitViewport(
+    logical,
+    local.screenWidth,
+    local.screenHeight,
+    local.insets ?? NO_INSETS,
+  );
   return { logical, view };
 }

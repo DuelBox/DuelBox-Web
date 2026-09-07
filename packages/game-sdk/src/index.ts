@@ -32,12 +32,7 @@ export type {
   MatchScore,
 } from './contract.js';
 
-export {
-  defaultLayout,
-  resolveLayout,
-  placeLayout,
-  mirrorRect,
-} from './layout.js';
+export { defaultLayout, resolveLayout, placeLayout, mirrorRect } from './layout.js';
 export type {
   LayoutRect,
   ControlRole,

@@ -172,7 +172,10 @@ describe('the new crossplay manifest fields are optional', () => {
 
 describe('minViewport', () => {
   it('parses a well-formed viewport', () => {
-    const parsed = parseGameManifest({ ...baseManifest(), minViewport: { width: 480, height: 640 } });
+    const parsed = parseGameManifest({
+      ...baseManifest(),
+      minViewport: { width: 480, height: 640 },
+    });
     expect(parsed.minViewport).toEqual({ width: 480, height: 640 });
   });
 
@@ -216,9 +219,9 @@ describe('deviceClasses', () => {
   });
 
   it('refuses an unknown class and an empty list', () => {
-    expect(() =>
-      parseGameManifest({ ...baseManifest(), deviceClasses: ['watch'] }),
-    ).toThrow(/deviceClasses/);
+    expect(() => parseGameManifest({ ...baseManifest(), deviceClasses: ['watch'] })).toThrow(
+      /deviceClasses/,
+    );
     expect(() => parseGameManifest({ ...baseManifest(), deviceClasses: [] })).toThrow(
       /deviceClasses/,
     );
@@ -250,7 +253,9 @@ describe('the schema still refuses what it always did', () => {
   it('rejects an unknown top-level field, new ones included', () => {
     // `.strict()` is what makes a typo a build error rather than a silently ignored field, so
     // the additive change must not have loosened it.
-    expect(() => parseGameManifest({ ...baseManifest(), minViewportt: { width: 1, height: 1 } })).toThrow();
+    expect(() =>
+      parseGameManifest({ ...baseManifest(), minViewportt: { width: 1, height: 1 } }),
+    ).toThrow();
     expect(() => parseGameManifest({ ...baseManifest(), somethingNew: true })).toThrow();
   });
 

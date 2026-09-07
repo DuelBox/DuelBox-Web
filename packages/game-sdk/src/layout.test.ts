@@ -56,9 +56,19 @@ class TwinAim implements Game {
     return {
       playArea: { x: 0, y: height / 4, width, height: height / 2 },
       controlZones: [
-        { id: 'pad-p1', seat: 'p1', rect: { x: 200, y: 1000, width: 400, height: 180 }, role: 'aim' },
+        {
+          id: 'pad-p1',
+          seat: 'p1',
+          rect: { x: 200, y: 1000, width: 400, height: 180 },
+          role: 'aim',
+        },
         { id: 'pad-p2', seat: 'p2', rect: { x: 200, y: 20, width: 400, height: 180 }, role: 'aim' },
-        { id: 'board', seat: 'both', rect: { x: 0, y: height / 4, width, height: height / 2 }, role: 'custom' },
+        {
+          id: 'board',
+          seat: 'both',
+          rect: { x: 0, y: height / 4, width, height: height / 2 },
+          role: 'custom',
+        },
       ],
       hud: [
         { id: 'score-p1', seat: 'p1', rect: { x: 0, y: 920, width, height: 60 } },

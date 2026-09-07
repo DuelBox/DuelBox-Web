@@ -264,7 +264,12 @@ export function GameHost({
     // match-path seam: it re-affirms the shared box (idempotent — `logical` is already it) and
     // fits this screen to it, so a wider or taller screen gets bars rather than more world.
     let view = negotiateSharedViewport(
-      { logical, screenWidth: canvas.clientWidth, screenHeight: canvas.clientHeight, insets: NO_INSETS },
+      {
+        logical,
+        screenWidth: canvas.clientWidth,
+        screenHeight: canvas.clientHeight,
+        insets: NO_INSETS,
+      },
       peerBox,
     ).view;
     const scratch = vec2();
