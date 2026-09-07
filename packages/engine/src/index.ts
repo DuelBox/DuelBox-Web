@@ -27,8 +27,21 @@ export {
 } from './vec2.js';
 export type { Vec2 } from './vec2.js';
 
-export { FixedLoop, RunLoop, browserClock } from './loop.js';
+export { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
 export type { Clock, LoopCallbacks, LoopOptions } from './loop.js';
+
+export { LatencyMeter, INPUT_FAMILIES } from './latency.js';
+export type { InputFamily, LatencyStats } from './latency.js';
+
+export { GamepadManager } from './gamepad.js';
+export type {
+  GamepadSnapshot,
+  GamepadSource,
+  GamepadReading,
+  GamepadEvent,
+  GamepadEventKind,
+  GamepadManagerOptions,
+} from './gamepad.js';
 
 export {
   SEATS,
@@ -133,6 +146,7 @@ export {
   scalarEnvelopeFor,
   quantiseScalar,
   DEFAULT_BINDINGS,
+  bindingConflicts,
 } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';
 

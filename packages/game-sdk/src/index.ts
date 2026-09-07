@@ -102,3 +102,11 @@ export { actionAbandoned } from './gesture.js';
 
 export { sanitisePlayerName, isValidPlayerName, MAX_NAME_LENGTH } from './player-text.js';
 export type { SanitiseResult, SanitiseReason } from './player-text.js';
+export { DragAim, PressGesture, HoldToAct } from './gesture.js';
+export type {
+  DragAimOptions,
+  DragAimResult,
+  PressGestureOptions,
+  PressKind,
+  HoldToActOptions,
+} from './gesture.js';

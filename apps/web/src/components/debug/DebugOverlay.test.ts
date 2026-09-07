@@ -71,6 +71,30 @@ describe('the read-out', () => {
     expect(formatDebugReading(reading({ steps: 42 }), null)[1]).toContain('steps 42');
   });
 
+  it('adds a latency row per measured family and omits an unmeasured one (#133)', () => {
+    const lines = formatDebugReading(
+      reading({
+        latency: [
+          { family: 'keyboard', samples: 30, meanMs: 8.2, lastMs: 9, maxMs: 14 },
+          { family: 'pointer', samples: 12, meanMs: 11.5, lastMs: 10, maxMs: 20 },
+          // Never pressed: no sample, so no row — "0.00ms" would read as "instant".
+          { family: 'gamepad', samples: 0, meanMs: 0, lastMs: 0, maxMs: 0 },
+        ],
+      }),
+      null,
+    );
+    expect(lines).toHaveLength(4); // fps, steps, (no seats), keyboard, pointer
+    expect(lines[2]).toBe('lat keyboard 8.20ms mean  9.00 last  14.00 max  n=30');
+    expect(lines[3]).toBe('lat pointer  11.50ms mean  10.00 last  20.00 max  n=12');
+    expect(lines.some((l) => l.includes('gamepad'))).toBe(false);
+  });
+
+  it('adds no latency rows when no meter is attached', () => {
+    const lines = formatDebugReading(reading(), null);
+    expect(lines).toHaveLength(2);
+    expect(lines.some((l) => l.startsWith('lat'))).toBe(false);
+  });
+
   it('gives each seat a row saying what it is pressing', () => {
     const lines = formatDebugReading(
       reading({

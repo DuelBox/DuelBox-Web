@@ -6,6 +6,8 @@
  * the last two steps using `alpha`.
  */
 
+import type { GamepadSnapshot } from './gamepad.js';
+
 const DEFAULT_STEPS_PER_SECOND = 60;
 const DEFAULT_MAX_STEPS_PER_FRAME = 5;
 
@@ -163,6 +165,37 @@ export function browserClock(): Clock {
       cancelFrame(handle);
     },
   };
+}
+
+/**
+ * The browser adapter for {@link GamepadManager}'s injected source (#130).
+ *
+ * `navigator.getGamepads` is the one device API gamepad support needs, and this is the only
+ * place it is read — alongside `browserClock`, in the file lint exempts from the device-global
+ * ban, so the engine's `gamepad.ts` and every test of it stay `navigator`-free. It maps the
+ * live `Gamepad` objects to the plain snapshots the manager consumes.
+ *
+ * Returns an empty array where the API is absent (older engines, a locked-down context) rather
+ * than throwing, so a host can poll unconditionally and simply see no pads.
+ */
+export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
+  const scope = globalThis;
+  if (typeof scope.navigator === 'undefined' || typeof scope.navigator.getGamepads !== 'function') {
+    return () => [];
+  }
+  const getGamepads = scope.navigator.getGamepads.bind(scope.navigator);
+  return () =>
+    getGamepads().map((pad) =>
+      pad === null
+        ? null
+        : {
+            index: pad.index,
+            id: pad.id,
+            connected: pad.connected,
+            axes: pad.axes.slice(),
+            buttons: pad.buttons.map((button) => button.pressed),
+          },
+    );
 }
 
 /** Drives a FixedLoop from a Clock. Owns all wall-clock concerns. */
