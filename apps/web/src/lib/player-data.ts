@@ -28,6 +28,7 @@ import { isRecord, readJson, readVersioned, removeJson, writeJson } from './loca
 import { PLAYER_NAMES_KEY } from './player-names';
 import { readRecent, RECENT_KEY } from './recent';
 import { SETTINGS_KEY } from './settings';
+import { TOURNAMENT_KEY } from './tournament-store';
 
 /** Identifies an export as ours, so a file of something else is refused before it is read. */
 export const PLAYER_DATA_FORMAT = 'duelbox-player-data';
@@ -42,6 +43,11 @@ export const PLAYER_DATA_VERSION = 1;
  * player who moves to another device and finds their favourites but not the record of
  * every match they have played would have been handed the smaller half of their data,
  * and a record that did not travel is the obvious gap in "all of it is yours to move".
+ *
+ * A tournament in progress travels for a sharper version of the same reason. It is the one
+ * thing stored here that is *unfinished*: a pair three games into seven who move to another
+ * device, or press erase without meaning to, have lost something they cannot rebuild by
+ * playing, because the line-up was drawn at random and the games already played are gone.
  */
 export const PLAYER_DATA_KEYS: readonly string[] = [
   LAST_MODE_KEY,
@@ -50,6 +56,7 @@ export const PLAYER_DATA_KEYS: readonly string[] = [
   SETTINGS_KEY,
   HEAD_TO_HEAD_KEY,
   PLAYER_NAMES_KEY,
+  TOURNAMENT_KEY,
 ];
 
 /** The settings store's own version, checked here only to count it as present. */

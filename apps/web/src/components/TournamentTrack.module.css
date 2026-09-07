@@ -1,0 +1,156 @@
+/*
+ * The tournament progress track.
+ *
+ * Seven nodes, the score under them and the tournament's own controls under that. Nothing
+ * here moves: there is no transition and no keyframe in this file, which is the cheapest
+ * possible answer to reduced motion and the only one that needs no lever pulling.
+ *
+ * Every state a node can be in differs by shape and by border weight as well as by colour
+ * (CLAUDE.md rule 7). The seat marks themselves are drawn by `SeatGlyph` — a disc and a
+ * rounded square — so a finished game says whose it was in greyscale.
+ */
+
+.track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--db-space-2);
+  width: 100%;
+}
+
+.head {
+  margin: 0;
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-base);
+  font-weight: 600;
+  color: var(--db-ink);
+  text-align: center;
+}
+
+.nodes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--db-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * A node is a fixed circle rather than a flexible one: seven of them have to read as a
+ * track, and a row whose members are different widths reads as seven unrelated badges.
+ */
+.node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius-pill);
+  background: var(--db-paper);
+}
+
+/* Played and still to come are told apart by fill as well as by what is inside them, so
+   the track has a visible front edge even at arm's length. */
+.node[data-state='later'] {
+  background: var(--db-surface);
+}
+
+/* The game being played now: the one node with the brand's border, which is a weight
+   change as much as a hue change. */
+.node[data-state='now'] {
+  border-color: var(--db-brand);
+  background: var(--db-brand-tint);
+}
+
+/*
+ * The characters that stand in for a seat glyph: an equals sign for a drawn game, a caret
+ * for the one being played, a dot for one still to come.
+ *
+ * `--db-muted` at 4.65:1 rather than `--db-faint` at 2.45:1. These are small marks on a
+ * light node and they are the only thing in the node that says which state it is in, so
+ * they are held to the same ratio as body text even though they are one character long.
+ */
+.mark {
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-sm);
+  line-height: 1;
+  color: var(--db-muted);
+}
+
+.node[data-state='now'] .mark {
+  color: var(--db-brand-deep);
+  font-weight: 700;
+}
+
+.score {
+  margin: 0;
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-sm);
+  color: var(--db-body);
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--db-space-3);
+  width: 100%;
+}
+
+/*
+ * Both controls carry the touch-target token in full, because this sits on a screen two
+ * people are sharing and the difference between "play the next game" and "leave the
+ * tournament" is not one a mis-tap should be able to make.
+ *
+ * `inline-flex` on both, because one of them is a link: `min-height` does nothing to an
+ * inline box, which is how a 20px-tall link that looks like a button gets shipped.
+ */
+.play,
+.leave {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-4);
+  border-radius: var(--db-radius);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.play {
+  border: none;
+  background: var(--db-brand);
+  color: var(--db-paper);
+  box-shadow: 0 4px 0 var(--db-brand-deep);
+}
+
+.leave {
+  border: 2px solid var(--db-border);
+  background: var(--db-paper);
+  color: var(--db-ink);
+}
+
+/*
+ * A phone held sideways.
+ *
+ * `PlaySurface.module.css` turns the play surface into a row at this height, so the track
+ * becomes a column beside the board rather than a band above it. Height is the scarce axis
+ * here and width is what a landscape phone has spare — the same trade the two scoreboards
+ * make, and the same reason: surplus space holds chrome (CLAUDE.md rule 9).
+ */
+@media (max-height: 30rem) and (orientation: landscape) {
+  .track {
+    width: auto;
+    max-width: 9rem;
+  }
+
+  .nodes {
+    max-width: 7rem;
+  }
+}
