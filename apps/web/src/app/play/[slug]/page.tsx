@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
 import { PlaySurface } from '@/components/PlaySurface';
@@ -37,6 +38,36 @@ export default async function PlayPage({ params }: { params: Promise<{ slug: str
         the ones a client component happens to render.
       */}
       <h1 className="db-visually-hidden">Play {game?.name ?? slug}</h1>
+      {/*
+        What a visitor with scripting off is told, instead of being told to wait.
+
+        `PlaySurface` starts at `loadState === 'loading'` and only leaves it from an effect,
+        so with no script its panel says "Loading …" and never resolves — on the destination
+        every card on the site links to, with the footer hidden by `globals.css` and the
+        header the only way out. A game is a canvas driven by a fixed-timestep loop and there
+        is no version of it that runs without script; that is a limit rather than a defect.
+        Saying so was the part that was missing, and `e2e/no-javascript.spec.ts` asserts this
+        is what the page shows.
+
+        Here rather than in `PlaySurface`, for the reason the heading above is here: this is a
+        server component, so it is in the exported HTML and costs neither budget a byte — the
+        size guard walks JavaScript alone. The browser renders a `<noscript>` only when
+        scripting is off, so a visitor with script sees none of it.
+      */}
+      <noscript>
+        <div className="db-panel">
+          <h2>A game needs JavaScript</h2>
+          <p>
+            Every match runs in your own browser — the rules, the bot and the physics are all on
+            this device — so with scripting switched off there is nothing here to play.
+          </p>
+          <p>
+            The rest of the site works without it. Every game has a page of its own with its rules
+            and its controls written out: start from <Link href="/games/">all the games</Link>, or
+            read <Link href="/how-to-play/">How to play</Link>.
+          </p>
+        </div>
+      </noscript>
       <PlaySurface slug={slug} />
     </div>
   );

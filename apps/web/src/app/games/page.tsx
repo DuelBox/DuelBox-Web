@@ -44,9 +44,15 @@ export default function GamesPage() {
           <h1>All games</h1>
           <QuickPlay slugs={PLAYABLE} className={styles.surprise} />
         </div>
+        {/* "Most also play across two devices" was the third site of the claim #102 took off
+            the landing page, and the only one on a route a visitor reaches by pressing
+            something. It was wrong twice over: there is no cross-device play in this build at
+            all, and "most" understated the half that is true — every one of the 108 carries
+            `bot`, not most of them. `app/metadata-claims.test.ts` counts the catalogue and
+            fails this sentence if a game ever arrives without one. */}
         <p className={styles.count}>
           {CATALOGUE.length} games across {categoryCount} categories. Every one plays with two
-          people on one device, and most also play across two devices or against a bot.
+          people on one device, and every one also takes a bot in the second seat.
         </p>
       </header>
 

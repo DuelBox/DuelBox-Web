@@ -38,11 +38,19 @@ const ALL_ENGINES = process.env.DUELBOX_ALL_ENGINES === '1';
  * keeps eighteen static pages from costing the verify job nine repeat test-runs — the
  * budget CLAUDE.md records as already having been overspent once.
  *
+ * `no-javascript.spec.ts` (#103) qualifies on the same reading and one more of its own. It
+ * asks what the served HTML contains and where its links go, with scripting switched off —
+ * and a page running no script is the case where two engines have the least left to
+ * disagree about, since what remains is a document and its anchors. It switches scripting
+ * off with `test.use({ javaScriptEnabled: false })`, which is a **context** option rather
+ * than a project: a project would have run every other spec in the suite a fifth time to
+ * learn nothing.
+ *
  * `record.spec.ts` deliberately is NOT here, and it is the useful contrast: it plays a
  * match to its end, so it exercises the canvas, the loop and the page lifecycle, which is
  * exactly the code that differs between engines.
  */
-const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
+const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts', '**/no-javascript.spec.ts'];
 
 /**
  * The axe-core scan, on Chromium alone, on the same argument as `CONTENT_ONLY` above.
