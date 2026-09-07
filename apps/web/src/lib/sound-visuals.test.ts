@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { SOUND_EVENTS } from '@duelbox/engine';
+import { SOUND_EVENTS, soundEventSpec } from '@duelbox/engine';
 import { VISUAL_COUNTERPARTS, emittedCuesIn, undeclaredCuesIn } from './sound-visuals';
 
 /**
@@ -99,6 +99,31 @@ describe('what a game emits', () => {
       offenders,
       'a game emits a cue that is not a declared game cue — add it to packages/engine/src/sound-events.ts with a visual counterpart, or stop emitting it',
     ).toEqual([]);
+  });
+
+  it('leaves every game playable with sound off, because every cue it emits has a visual (#180)', () => {
+    // #180's acceptance, made machine-checkable: a game is playable with sound off exactly
+    // when nothing it signals is carried by sound alone, i.e. every cue it emits also has a
+    // visual counterpart. `VISUAL_COUNTERPARTS` is typed total over the vocabulary, so this
+    // holds by construction for any declared cue; here it is checked against what the games
+    // *actually* emit, so the guarantee is over the catalogue rather than over the type.
+    //
+    // Vacuously true today — no game emits a cue — which is the honest state: full per-game
+    // verification against real sounds is blocked on the audio bus that does not exist yet
+    // (#169/#170), and this becomes load-bearing the day the first cue is wired. See
+    // docs/audio-visual-cues.md.
+    const missing: string[] = [];
+    for (const path of files) {
+      for (const cue of emittedCuesIn(readFileSync(path, 'utf8'))) {
+        const spec = soundEventSpec(cue);
+        // A shell-owned cue is the shell's to draw and is covered by the counterpart table
+        // above; a game-owned cue must have a row, which the type guarantees but this names.
+        if (spec?.owner === 'game' && !(cue in VISUAL_COUNTERPARTS)) {
+          missing.push(`${relative(root, path)}: ${cue}`);
+        }
+      }
+    }
+    expect(missing, 'a game emits a cue with no visual counterpart').toEqual([]);
   });
 });
 
