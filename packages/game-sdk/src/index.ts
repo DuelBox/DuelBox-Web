@@ -4,10 +4,14 @@ export {
   PRESENTATIONS,
   ORIENTATIONS,
   ZONE_SPLITS,
+  DEVICE_CLASSES,
   gameManifestSchema,
   parseGameManifest,
+  supportedPresentations,
+  supportsViewport,
+  supportsDeviceClass,
 } from './manifest.js';
-export type { GameManifest, GameArchetype, PlayMode } from './manifest.js';
+export type { GameManifest, GameArchetype, PlayMode, DeviceClass } from './manifest.js';
 
 export type {
   Game,
