@@ -81,8 +81,7 @@ const BUDGET = JSON.parse(readFileSync(join(ROOT, 'size-budget.json'), 'utf8'));
 // The routes a visitor reaches only after choosing a game. Everything else is the shell.
 // `/play/[slug]` is the one; if a second post-choice route appears, it belongs here, and
 // the shell number should drop when it is added rather than rise.
-const isPostChoiceRoute = (route) =>
-  route.startsWith('/play/') || route.startsWith('/embed/');
+const isPostChoiceRoute = (route) => route.startsWith('/play/') || route.startsWith('/embed/');
 
 function walk(dir) {
   const found = [];
