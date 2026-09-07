@@ -62,10 +62,40 @@ export const viewport: Viewport = {
  * title, description, theme colour, viewport — comes from the `metadata` and `viewport`
  * exports above, and Next writes the `<head>` itself.
  */
+/**
+ * Applies the saved colour-scheme override before the first paint, so a player who chose
+ * dark never sees a flash of the light ground (#76).
+ *
+ * It has to be an inline script in the markup — a `next/script` or a component effect runs
+ * after paint, which is the flash it exists to prevent — so it cannot import `settings.ts`
+ * or `theme.ts` and duplicates the storage key and the decision instead. `theme.test.ts`
+ * reads this string back and fails if it stops matching what those two files do: the same
+ * key, only `light` and `dark` stamped, `system` and everything else left to the media
+ * query in `tokens.css`. Wrapped in try/catch because storage throws in private browsing on
+ * some engines, and a theme script that throws would take the page down with it. */
+const THEME_SCRIPT = `(function(){try{
+var raw=localStorage.getItem('duelbox:settings');
+var t=raw&&JSON.parse(raw);
+var s=t&&t.version===1?t:null;
+var el=document.documentElement;
+var theme=s?s.theme:null;
+if(theme==='light'||theme==='dark')el.setAttribute('data-theme',theme);
+else el.removeAttribute('data-theme');
+var seats=s?s.seatPalette:null;
+if(seats==='colourblind')el.setAttribute('data-seat-palette','colourblind');
+else el.removeAttribute('data-seat-palette');
+}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the script above sets data-theme on <html> before React
+    // hydrates, so the attribute the browser holds differs from the one the server rendered
+    // (none). This suppresses the warning for this one element and this one attribute; it
+    // does not reach the children.
+    <html lang="en" suppressHydrationWarning>
       <body>
+        {/* First in the body so it runs during parse, before the ground is painted. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <a className="db-skip" href="#main">
           Skip to content
         </a>

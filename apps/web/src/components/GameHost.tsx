@@ -28,6 +28,7 @@ import {
 } from '@duelbox/game-sdk';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
+import { readSettings } from '@/lib/settings';
 import styles from './GameHost.module.css';
 
 /**
@@ -395,6 +396,13 @@ export function GameHost({
     }
 
     const runner = new RunLoop(loop, browserClock());
+    // Assist-mode speed (#179), read once at match start. It scales wall-clock time into the
+    // loop, never the step, so the simulation this match runs is identical to full speed and
+    // only slower to watch and to react to. Read directly rather than through the hook for
+    // the same reason `reducedMotion` is: the match is built inside this effect and a hook's
+    // first value would be the default. The settings-page slider is a different route, so a
+    // change takes effect on the next match, which is when this effect runs again.
+    runner.setTimeScale(readSettings().gameSpeed);
     runnerRef.current = runner;
 
     // A host rebuilt mid-match must come back running if the phase says it should be.

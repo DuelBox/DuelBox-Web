@@ -7,6 +7,12 @@
  */
 
 :root {
+  /* The default palette is the light one, so the light values live on bare `:root` and the
+     dark overrides sit in the two blocks below (system-dark, and an explicit dark toggle).
+     `tokens.ts` mirrors these light values and `tokens.test.ts` matches on the first
+     definition of each token, so the light value must stay first in the file. */
+  color-scheme: light;
+
   /* Brand and players. Pip is player one, Bo is player two, everywhere, in every game. */
   --db-brand: #4b3beb;
   --db-brand-deep: #3a2dd0;
@@ -36,6 +42,15 @@
   --db-paper: #ffffff;
 
   --db-focus: #4b3beb;
+  /* The focus ring is two colours, not one (#176). A single indigo ring is below 3:1 on
+     some backgrounds the site actually uses — indigo on the indigo brand button, indigo on
+     a dark surface — so `:focus-visible` in globals.css draws `--db-focus-ring` as the
+     outline and `--db-focus-halo` as a casing hugging the control. The pair is chosen so
+     that for every background token at least one of the two clears 3:1; `focus-ring.test.ts`
+     re-derives that and fails if it ever stops holding. `--db-focus` stays the brand indigo
+     for anything that wants the identity colour rather than the guaranteed ring. */
+  --db-focus-ring: #2a1f8f;
+  --db-focus-halo: #ffffff;
   --db-danger: #d93a31;
   --db-success: #1a7a4d;
 
@@ -100,6 +115,144 @@
   --db-safe-right: env(safe-area-inset-right, 0px);
   --db-safe-bottom: env(safe-area-inset-bottom, 0px);
   --db-safe-left: env(safe-area-inset-left, 0px);
+}
+
+/**
+ * The dark theme (#76).
+ *
+ * Only the tokens that must change for a dark ground are overridden; the spacing, radius,
+ * type and breakpoint tokens are scheme-independent and inherit from `:root` above. The
+ * hues are lifted a little — a mid-saturated colour that reads on white is muddy on
+ * near-black — and the neutral ramp is inverted so `--db-ink` is now the light text and
+ * `--db-surface` the dark ground.
+ *
+ * There are two selectors and they carry the identical declarations on purpose, so both a
+ * device set to dark with no choice made and a player who chose dark get the same palette.
+ * The inline script in `layout.tsx` resolves `system` to an explicit `data-theme` before
+ * the first paint, so `[data-theme='dark']` is the path a visitor with script actually
+ * takes; the media query is the no-script fallback, and `:not([data-theme='light'])` lets
+ * an explicit light choice still win under a dark device. `theme.test.ts` fails if the two
+ * blocks ever drift apart, which is the price of not being able to share one declaration
+ * across a media-query boundary in plain CSS.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --db-brand: #8b7dff;
+  --db-brand-deep: #a99dff;
+  --db-brand-tint: #20204a;
+
+  --db-p1: #ff6b60;
+  --db-p1-deep: #c9352c;
+  --db-p1-tint: #3a1c1a;
+
+  --db-p2: #3cc0f0;
+  --db-p2-deep: #1687b8;
+  --db-p2-tint: #10303c;
+
+  --db-sun: #ffcf5c;
+  --db-sun-tint: #3a2f14;
+  --db-grass: #48d68d;
+  --db-grass-tint: #123727;
+
+  --db-ink: #eef0f7;
+  --db-body: #c3c8d8;
+  --db-muted: #9298ac;
+  --db-faint: #6b7186;
+  --db-hairline: #242732;
+  --db-border: #2c303c;
+  --db-surface: #0f1118;
+  --db-paper: #171a23;
+
+  --db-focus: #8b7dff;
+  --db-focus-ring: #8b7dff;
+  --db-focus-halo: #0b0d14;
+  --db-danger: #ff6b60;
+  --db-success: #48d68d;
+
+  --db-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --db-shadow: 0 6px 18px -8px rgb(0 0 0 / 60%);
+  --db-shadow-lg: 0 18px 40px -20px rgb(0 0 0 / 70%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --db-brand: #8b7dff;
+    --db-brand-deep: #a99dff;
+    --db-brand-tint: #20204a;
+
+    --db-p1: #ff6b60;
+    --db-p1-deep: #c9352c;
+    --db-p1-tint: #3a1c1a;
+
+    --db-p2: #3cc0f0;
+    --db-p2-deep: #1687b8;
+    --db-p2-tint: #10303c;
+
+    --db-sun: #ffcf5c;
+    --db-sun-tint: #3a2f14;
+    --db-grass: #48d68d;
+    --db-grass-tint: #123727;
+
+    --db-ink: #eef0f7;
+    --db-body: #c3c8d8;
+    --db-muted: #9298ac;
+    --db-faint: #6b7186;
+    --db-hairline: #242732;
+    --db-border: #2c303c;
+    --db-surface: #0f1118;
+    --db-paper: #171a23;
+
+    --db-focus: #8b7dff;
+    --db-focus-ring: #8b7dff;
+    --db-focus-halo: #0b0d14;
+    --db-danger: #ff6b60;
+    --db-success: #48d68d;
+
+    --db-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+    --db-shadow: 0 6px 18px -8px rgb(0 0 0 / 60%);
+    --db-shadow-lg: 0 18px 40px -20px rgb(0 0 0 / 70%);
+  }
+}
+
+/**
+ * The colour-blind seat palette for the shell (#174).
+ *
+ * `data-seat-palette='colourblind'` is set on `<html>` by the same inline script and live
+ * applier that handle the theme, from the player's stored choice — there is no device
+ * signal for it, so unlike the dark theme it needs no media-query fallback: it is a choice,
+ * and a choice needs script to have been made at all. The seat identity colours (base and
+ * deep) hold across both themes because amber and deep blue read on a light and a dark
+ * ground alike; only the tints, which are washes, get a dark variant below. These hexes are
+ * the same amber and blue `@duelbox/engine`'s `SEAT_PALETTES.colourblind` gives the games,
+ * so the scoreboard and the board agree. Placed after the dark blocks so it wins the seat
+ * colours under either theme by source order at equal specificity.
+ */
+:root[data-seat-palette='colourblind'] {
+  --db-p1: #ffc107;
+  --db-p1-deep: #c79705;
+  --db-p1-tint: #fff5d6;
+
+  --db-p2: #0d4ea6;
+  --db-p2-deep: #0a3d81;
+  --db-p2-tint: #e4ecf8;
+}
+
+:root[data-theme='dark'][data-seat-palette='colourblind'] {
+  --db-p1-tint: #3a2f14;
+  --db-p2-tint: #10233f;
+}
+
+/* System theme on a dark device, with the colour-blind palette chosen: the explicit
+   selector above cannot match because there is no data-theme, so the dark washes come from
+   here instead. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-seat-palette='colourblind'] {
+    --db-p1-tint: #3a2f14;
+    --db-p2-tint: #10233f;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

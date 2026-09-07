@@ -172,6 +172,8 @@ export class RunLoop {
   #running = false;
   #handle = 0;
   #lastTimeMs = 0;
+  /** Assist-mode speed (#179): wall-clock time is scaled by this before it feeds the loop. */
+  #timeScale = 1;
 
   readonly #tick = (timeMs: number): void => {
     if (!this.#running) return;
@@ -181,10 +183,17 @@ export class RunLoop {
       delta = 0;
     } else if (delta > MAX_FRAME_SECONDS) {
       // A backgrounded tab returns with a gap of many seconds; clamp it so the match
-      // does not fast-forward through the time it spent hidden.
+      // does not fast-forward through the time it spent hidden. Clamped before scaling, so
+      // the assist multiplier acts on the honest frame time rather than the clamped ceiling.
       delta = MAX_FRAME_SECONDS;
     }
-    this.#loop.advance(delta);
+    // Assist mode scales how much wall-clock time reaches the fixed loop, never the step
+    // size (#179). At half speed the loop runs half as many steps this second, each one the
+    // identical `stepSeconds` update it always was — so the simulation, its seeded RNG and
+    // its step order are untouched and the match plays slowed, not changed. Rendering is
+    // unscaled: `render` still runs every frame, interpolating with `alpha`, so slow motion
+    // stays smooth rather than stepping.
+    this.#loop.advance(delta * this.#timeScale);
     // Re-checked because update() or render() may have called stop(). Flow analysis
     // cannot see through the callback, hence the disable rather than a redundant guard.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -198,6 +207,23 @@ export class RunLoop {
 
   get running(): boolean {
     return this.#running;
+  }
+
+  /** The assist-mode speed currently in effect; 1 is full speed. */
+  get timeScale(): number {
+    return this.#timeScale;
+  }
+
+  /**
+   * Set the assist-mode speed multiplier (#179).
+   *
+   * Applies from the next frame on and can be changed mid-match, because it touches only how
+   * fast wall-clock time is fed in, not any simulation state — no reset, no lost carry. A
+   * value that is not a positive finite number is ignored rather than allowed to stall or
+   * reverse the loop; the presentation layer clamps it to a sane range before it gets here.
+   */
+  setTimeScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) this.#timeScale = scale;
   }
 
   start(): void {

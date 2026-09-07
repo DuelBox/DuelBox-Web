@@ -219,6 +219,25 @@
   font: inherit;
 }
 
+/* The theme, seat-colour and speed choosers. Sized like the text field so the section reads
+   as one column of controls, and given the same touch target as everything else on the page
+   — a browser draws a select shorter than that by default. `color-scheme: inherit` lets the
+   native option list follow the site's dark theme rather than the OS default. */
+.select {
+  flex: 0 1 16rem;
+  min-width: 0;
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-3);
+  border: 2px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-paper);
+  color: var(--db-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color-scheme: inherit;
+}
+
 .games {
   display: grid;
   gap: var(--db-space-2);

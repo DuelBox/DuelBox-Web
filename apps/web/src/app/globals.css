@@ -46,11 +46,24 @@ a:hover {
   color: var(--db-brand-deep);
 }
 
-/* A visible focus ring on every background the site uses. Removing it is never correct;
-   :focus-visible already limits it to keyboard use. */
+/* A visible focus ring on every background the site uses (#176). Removing it is never
+   correct; :focus-visible already limits it to keyboard use.
+
+   Two colours, not one. A single indigo ring drops below the 3:1 a focus indicator owes
+   (WCAG 2.4.11) on backgrounds the site actually presents a control on — indigo on the
+   indigo brand button, indigo on a dark surface. So the ring is `--db-focus-ring` as the
+   outline, sitting against the page, and `--db-focus-halo` as a solid casing hugging the
+   control, sitting against the control's own fill. The pair is chosen so that on every
+   background token at least one of the two clears 3:1; `focus-ring.test.ts` re-derives that
+   from the tokens and fails if it stops holding, in either theme.
+
+   The outline also survives Windows forced-colors mode, where box-shadow is dropped but
+   outline is kept and recoloured to the system highlight — so the casing is the enhancement
+   and the outline is the floor. */
 :focus-visible {
-  outline: 3px solid var(--db-focus);
+  outline: 3px solid var(--db-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--db-focus-halo);
   border-radius: 4px;
 }
 

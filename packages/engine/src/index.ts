@@ -48,8 +48,14 @@ export type { GridCursorOptions } from './cursor.js';
 export { SeatFlip } from './flip.js';
 export type { SeatFlipOptions } from './flip.js';
 
-export { SEAT_PALETTE, seatPalette } from './palette.js';
-export type { SeatPalette } from './palette.js';
+export {
+  SEAT_PALETTE,
+  SEAT_PALETTES,
+  seatPalette,
+  setActiveSeatPalette,
+  activeSeatPaletteId,
+} from './palette.js';
+export type { SeatPalette, SeatPaletteId } from './palette.js';
 
 export {
   NO_INSETS,

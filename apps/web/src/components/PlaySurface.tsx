@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { SeatId } from '@duelbox/engine';
+import { setActiveSeatPalette, type SeatId } from '@duelbox/engine';
 import {
   initialMatchState,
   reduce,
@@ -22,6 +22,7 @@ import {
   type Tally,
 } from '@/lib/head-to-head';
 import { readPlayerNames } from '@/lib/player-names';
+import { readSettings } from '@/lib/settings';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio, audio } from '@/lib/audio';
 import { ducksMatchAudio, shellCueFor } from '@/lib/match-cues';
@@ -216,6 +217,12 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // Select the seat palette before the game chunk loads (#174). A game may read
+    // `SEAT_PALETTE.p1.base` into a module-level constant as its file is evaluated, so the
+    // choice has to be in effect before the dynamic import inside `loadGame` resolves and
+    // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
+    // has already been read. It is a no-op on the default and cheap either way.
+    setActiveSeatPalette(readSettings().seatPalette);
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;
