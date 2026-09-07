@@ -70,7 +70,7 @@ cross-device declares itself same-class-only rather than shipping unfair.
 
 ```
 apps/web            site shell, routing, landing, catalog, game host
-packages/engine     loop, renderer, physics, input, seats, audio
+packages/engine     loop, renderer, physics, input, seats, audio (synthesised, no files)
 packages/game-sdk   the Game contract every game implements
 packages/games/*    one folder per game, one chunk per game
 packages/ui         shared components

@@ -243,6 +243,84 @@ describe('a person', () => {
   });
 });
 
+describe('a gesture the browser takes away', () => {
+  it('drops the sight instead of firing the rocket', () => {
+    // A `pointercancel` — a system edge swipe, palm rejection, an incoming call — is the
+    // browser saying the gesture did not happen. The engine suppresses the release, but this
+    // game does not read one: it hands a hold to the rules and the rules find their own edge,
+    // so before #2501 a hold that merely stopped read as a release and **fired the rocket**
+    // at whatever the sight had reached.
+    const game = new ExplosiveFestivalGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    open(game, view, manager);
+
+    manager.pointerDown(1, 120, GROUND - 60);
+    drive(game, view, manager, 20);
+    const launcher = launcherOf(game.ground, 'p1');
+    expect(launcher.aiming, 'the sight is running').toBe(true);
+    expect(launcher.range).toBeGreaterThan(MIN_RANGE);
+
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(launcher.rockets, 'the rocket is still on the cart').toBe(ROCKETS);
+    expect(launcher.aiming, 'and the sight was dropped').toBe(false);
+    expect(launcher.range).toBe(MIN_RANGE);
+    game.destroy();
+  });
+
+  it('leaves a hold the action key is still making alone', () => {
+    // The engine raises `pointerCancelled` for any cancelled pointer, not only the last one
+    // down, and keeps `actionHeld` true while another source still holds the action. A cancel
+    // that ended nothing must abandon nothing.
+    const game = new ExplosiveFestivalGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    open(game, view, manager);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    const launcher = launcherOf(game.ground, 'p1');
+    const sighted = launcher.range;
+    expect(sighted).toBeGreaterThan(MIN_RANGE);
+
+    manager.pointerDown(1, 120, GROUND - 60);
+    drive(game, view, manager, 1);
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(launcher.aiming, 'the key was not cancelled').toBe(true);
+    expect(launcher.range, 'so its sight keeps running').not.toBe(MIN_RANGE);
+    game.destroy();
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('lets the sight down instead of firing the rocket', () => {
+    // `InputManager.clear()` with no `onPause` is a real path, not a hypothetical: the shell
+    // calls it on a released modifier chord and on a lost window, before any pause is
+    // requested. The key never receives its key-up and `clear` deletes the release edge too,
+    // so before #2501 the charge froze in total silence. Worse here: this game finds its own release
+    // edge in the rules, so the hold merely stopping *fired the rocket*.
+    const game = new ExplosiveFestivalGame();
+    const { manager, view } = inputs();
+    game.init(context());
+    open(game, view, manager);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    const launcher = launcherOf(game.ground, 'p1');
+    expect(launcher.aiming, 'the key is running the sight').toBe(true);
+    expect(launcher.range).toBeGreaterThan(MIN_RANGE);
+
+    manager.clear();
+    drive(game, view, manager, 1);
+    expect(launcher.rockets, 'the rocket is still on the cart').toBe(ROCKETS);
+    expect(launcher.aiming, 'and the sight was dropped').toBe(false);
+    expect(launcher.range).toBe(MIN_RANGE);
+    game.destroy();
+  });
+});
+
 describe('a full match', () => {
   it('reaches a decision at every tier', () => {
     for (const tier of TIERS) {

@@ -63,13 +63,14 @@ function makeContext(
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
   presentation: 'shared-screen' | 'single-seat' = 'shared-screen',
+  openingSeat: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation,
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
@@ -552,5 +553,81 @@ describe('the manifest', () => {
     // One button pressed at a moment of your choosing: no aiming, no tracking, no rapid
     // repeat. The bluff decides it rather than raw speed, so no family has an edge.
     expect(manifest.sameInputClassOnly).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------------------------ */
+/* The half-turn                                                                         */
+/* ------------------------------------------------------------------------------------ */
+
+interface Played {
+  readonly winner: SeatId | 'draw' | null;
+  readonly p1: number;
+  readonly p2: number;
+  readonly steps: number;
+}
+
+/** Two bots of one tier, nobody touching the device, from a given opening seat. */
+function playBots(seed: number, opener: SeatId, tier: BotDifficulty): Played {
+  const game = new HandSlapGame();
+  const input = new ScriptedInput();
+  game.init(makeContext(seed, tier, tier, 'shared-screen', opener));
+  try {
+    for (let i = 0; i < 60 * 600; i += 1) {
+      game.update(STEP, input);
+      const score = game.getScore();
+      if (score.winner !== null) {
+        return { winner: score.winner, p1: score.p1, p2: score.p2, steps: i + 1 };
+      }
+    }
+    const score = game.getScore();
+    return { winner: score.winner, p1: score.p1, p2: score.p2, steps: 60 * 600 };
+  } finally {
+    game.destroy();
+  }
+}
+
+describe('the half-turn', () => {
+  it('plays a seed to the mirrored result when the other seat opens', () => {
+    // The assertion the balance sweep cannot make. It counts wins over fifty seeds and
+    // reports a percentage; this pairs each seed with its own mirror and requires the two
+    // matches to be the same match with the names swapped, seed by seed and tier by tier.
+    // A game that passes this is 50.0% by construction rather than by measurement.
+    const tiers: BotDifficulty[] = ['easy', 'normal', 'hard'];
+    for (const tier of tiers) {
+      for (let s = 0; s < 40; s += 1) {
+        const seed = 1000003 + s * 7919;
+        const forward = playBots(seed, 'p1', tier);
+        const backward = playBots(seed, 'p2', tier);
+        const where = `${tier} seed ${String(seed)}`;
+        expect(forward.winner, `${where} decided nothing`).not.toBeNull();
+        expect(backward.winner, where).toBe(
+          forward.winner === 'p1' ? 'p2' : forward.winner === 'p2' ? 'p1' : forward.winner,
+        );
+        expect(backward.p1, where).toBe(forward.p2);
+        expect(backward.p2, where).toBe(forward.p1);
+        expect(backward.steps, where).toBe(forward.steps);
+      }
+    }
+  });
+
+  it('splits a paired sweep exactly, at every tier', () => {
+    // The same numbers `balance-aggregate.test.ts` prints, computed here so a regression
+    // is caught in the game's own suite rather than only in the catalogue-wide sweep.
+    const tiers: BotDifficulty[] = ['easy', 'normal', 'hard'];
+    for (const tier of tiers) {
+      let seatOne = 0;
+      let decided = 0;
+      for (let s = 0; s < 40; s += 1) {
+        const seed = 1000003 + s * 7919;
+        for (const opener of ['p1', 'p2'] as SeatId[]) {
+          const result = playBots(seed, opener, tier);
+          if (result.winner === 'p1' || result.winner === 'p2') decided += 1;
+          if (result.winner === 'p1') seatOne += 1;
+        }
+      }
+      expect(decided, `${tier} decided ${String(decided)}`).toBe(80);
+      expect(seatOne, `${tier} gave seat one ${String(seatOne)} of ${String(decided)}`).toBe(40);
+    }
   });
 });

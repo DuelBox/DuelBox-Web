@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
+import { misjudgement } from '@duelbox/game-sdk';
 import {
   BOT_PROFILES,
   COLUMNS,
@@ -14,6 +15,7 @@ import {
   SNAKE_BUDGET,
   START,
   WIN_CONDITION,
+  aimedDie,
   boardColumn,
   boardRow,
   botDie,
@@ -36,6 +38,7 @@ import {
   settle,
   settleKind,
   snakeAt,
+  wantedDie,
   winnerOf,
 } from './rules.js';
 import type { BotDifficulty, Position } from './rules.js';
@@ -76,10 +79,37 @@ function playMatch(seed: number, p1: BotDifficulty, p2: BotDifficulty): MatchRes
   return { winner: winnerOf(position), turns };
 }
 
-function winRate(p1: BotDifficulty, p2: BotDifficulty, matches: number): number {
+/**
+ * How often `tier` beats `other`, with the seat order taken out of the answer.
+ *
+ * Issue #2489: this used to seat `tier` in p1 every time, so every number it produced was a
+ * tier gap **plus** the first-mover edge that {@link seatOneRate} measures separately — and
+ * the two were quoted as if the first were the whole of it. A pairing is now played from
+ * both chairs on the same seed and the two averaged, which is what `packages/games/
+ * soccer-pool/src/bot.test.ts` does and what Backgammon's SPEC table has always done.
+ *
+ * Ordering the ladder never needed this. The absolute numbers, which SPEC.md quotes, did.
+ */
+function winRate(tier: BotDifficulty, other: BotDifficulty, matches: number): number {
   let wins = 0;
   for (let seed = 1; seed <= matches; seed += 1) {
-    if (playMatch(seed * 7919, p1, p2).winner === 'p1') wins += 1;
+    if (playMatch(seed * 7919, tier, other).winner === 'p1') wins += 1;
+    if (playMatch(seed * 7919, other, tier).winner === 'p2') wins += 1;
+  }
+  return wins / (matches * 2);
+}
+
+/**
+ * How often the seat that rolls first wins, at equal skill.
+ *
+ * The measurement {@link winRate} used to be silently carrying. It has to be its own
+ * function, because averaging the two seat orders of a mirror pairing gives 50% by
+ * construction and would report the edge as absent rather than as measured.
+ */
+function seatOneRate(tier: BotDifficulty, matches: number): number {
+  let wins = 0;
+  for (let seed = 1; seed <= matches; seed += 1) {
+    if (playMatch(seed * 7919, tier, tier).winner === 'p1') wins += 1;
   }
   return wins / matches;
 }
@@ -644,6 +674,11 @@ describe('the bot', () => {
     // Agreement with the best immediate move, over the same thousand positions. This is the
     // difficulty made visible as a *decision* rate rather than as a win rate, so a change to
     // the board cannot quietly flatten the tiers while the win rates still look plausible.
+    //
+    // It measures the decision and the aim together — 55.9%, 78.2% and 90.4% as measured —
+    // which is why `hard` does not sit at 100%: it always knows which die it wants and its
+    // finger asks for the other one about one time in seventeen (#2477). The test below
+    // separates the two, and the floor here is a floor rather than a description.
     const agreement = (tier: BotDifficulty): number => {
       const rng = new Rng(4004);
       const bot = new Rng(9009);
@@ -666,32 +701,110 @@ describe('the bot', () => {
     const hard = agreement('hard');
     expect(easy).toBeLessThan(0.75);
     expect(normal).toBeGreaterThan(easy + 0.1);
-    expect(hard).toBeGreaterThan(0.9);
+    expect(hard, `hard agreed ${String(hard)}`).toBeGreaterThan(0.87);
   });
 
   it('beats the weaker tier over enough matches to mean something', () => {
-    // 240 matches a pairing. A dice race cannot be dominated the way a search game can, so
-    // the numbers to expect are modest — the ordering is what matters, and it is stable.
+    // 240 seeds a pairing, each played from both chairs, so 480 matches and no first-mover
+    // edge inside the answer (#2489). A dice race cannot be dominated the way a search game
+    // can, so the numbers to expect are modest — the ordering is what matters, and it is
+    // stable. Measured at 400 seeds: 81.5%, 74.3% and 63.1%.
     const hardVersusEasy = winRate('hard', 'easy', 240);
     const normalVersusEasy = winRate('normal', 'easy', 240);
     const hardVersusNormal = winRate('hard', 'normal', 240);
-    expect(hardVersusEasy).toBeGreaterThan(0.75);
-    expect(normalVersusEasy).toBeGreaterThan(0.7);
-    expect(hardVersusNormal).toBeGreaterThan(0.58);
+    expect(hardVersusEasy, `hard took ${String(hardVersusEasy)} off easy`).toBeGreaterThan(0.75);
+    expect(normalVersusEasy, `normal took ${String(normalVersusEasy)}`).toBeGreaterThan(0.68);
+    expect(hardVersusNormal, `hard took ${String(hardVersusNormal)}`).toBeGreaterThan(0.56);
     expect(hardVersusEasy).toBeGreaterThan(hardVersusNormal);
   });
 
   it('leaves the seat that rolls first a small edge, and no more', () => {
     // A race decided in about nine turns a side is won by whoever gets there first, so the
     // seat that opens has an edge that no amount of skill removes. Measured rather than
-    // assumed: 51.2% at easy, 53.5% at normal, 55.0% at hard over 400 matches a pairing.
+    // assumed: 50.7% at easy, 55.0% at normal, 55.8% at hard over 400 matches a pairing.
     // It grows with skill because better play shortens the race. It is the same order as
-    // moving first in Checkers, and it is small next to the 84.5% a hard tier takes off an
+    // moving first in Checkers, and it is small next to the 81.5% a hard tier takes off an
     // easy one — so the tiers, not the seat order, are what decides a match.
+    //
+    // This is `seatOneRate` and not `winRate` on purpose: `winRate` averages the two seat
+    // orders, which would return exactly 50% for a mirror pairing and report the edge as
+    // absent rather than as measured.
     for (const tier of ['easy', 'normal', 'hard'] as BotDifficulty[]) {
-      const mirror = winRate(tier, tier, 240);
+      const mirror = seatOneRate(tier, 240);
       expect(mirror, `${tier} against itself`).toBeGreaterThan(0.45);
       expect(mirror, `${tier} against itself`).toBeLessThan(0.62);
     }
+  });
+
+  it('taps for the die it meant when its finger lands on it', () => {
+    // From 1 a two is the foot of the ladder at 3 and a six is a plain 7. With no slip the
+    // tap asks for the square it was aimed at, whichever that is.
+    const position = place('p1', 1, [2, 6]);
+    expect(aimedDie(position, 0, 0, 0)).toBe(0);
+    expect(aimedDie(position, 1, 0, 0)).toBe(1);
+  });
+
+  it('taps for the other die when its finger lands nearer that one', () => {
+    // The ladder at 3 lifts to 19; the plain 7 is four columns along the bottom row. A slip
+    // big enough to cross most of that asks for the other die. It has to be a slip along the
+    // *columns*: the ladder is aimed at by its foot as much as by its top — that is what the
+    // ghost on square 3 is drawn for — and its foot is directly below where it leaves you.
+    const position = place('p1', 1, [2, 6]);
+    expect(destinationFor(position, 'p1', 0)).toBe(19);
+    expect(destinationFor(position, 'p1', 1)).toBe(7);
+    expect(aimedDie(position, 0, 3, 0)).toBe(1);
+    expect(aimedDie(position, 1, -3, 0)).toBe(0);
+  });
+
+  it('cannot mis-tap two dice that go to the same square', () => {
+    // 19% of turns. Both ghosts sit on one square, so there is nothing there to get wrong,
+    // however wide the slip.
+    const position = place('p1', 10, [3, 3]);
+    expect(destinationFor(position, 'p1', 0)).toBe(destinationFor(position, 'p1', 1));
+    for (const slip of [-8, -2, 0, 2, 8]) {
+      expect(aimedDie(position, 0, slip, slip)).toBe(0);
+      expect(aimedDie(position, 1, slip, slip)).toBe(1);
+    }
+  });
+
+  it('asks for the die it did not mean sometimes, and less often the harder it is', () => {
+    // Issue #2477. The aim measured on its own: a thousand positions a tier, the slip drawn
+    // from a stream of its own, and blunders left out — a blunder is not a miss, it is not
+    // having looked. Turns where both dice go to the same square are skipped, because
+    // nobody can get those wrong.
+    //
+    // Measured: easy 27.5%, normal 13.0%, hard 5.9%. Every tier can miss, which is the
+    // whole of what #2477 asked for; how often is what separates them.
+    const missRate = (tier: BotDifficulty): number => {
+      const rng = new Rng(4004);
+      const hand = new Rng(9009);
+      const spread = BOT_PROFILES[tier].aimError;
+      let missed = 0;
+      let counted = 0;
+      for (let i = 0; i < 4000; i += 1) {
+        const dice = [rng.int(1, 7), rng.int(1, 7)];
+        const position = place('p1', rng.int(0, FIELDS - 6), dice);
+        if (destinationFor(position, 'p1', 0) === destinationFor(position, 'p1', 1)) continue;
+        if (hand.bool(BOT_PROFILES[tier].blunder)) continue;
+        const column = misjudgement(hand.float(), spread);
+        const row = misjudgement(hand.float(), spread);
+        counted += 1;
+        const wanted = wantedDie(position, tier);
+        if (aimedDie(position, wanted, column, row) !== wanted) missed += 1;
+      }
+      expect(counted, `${tier} never faced a choice`).toBeGreaterThan(200);
+      return missed / counted;
+    };
+    const easy = missRate('easy');
+    const normal = missRate('normal');
+    const hard = missRate('hard');
+    expect(easy, `easy missed ${String(easy)}`).toBeGreaterThan(0.2);
+    expect(easy).toBeLessThan(0.36);
+    expect(normal, `normal missed ${String(normal)}`).toBeGreaterThan(0.08);
+    expect(normal).toBeLessThan(0.2);
+    expect(hard, `hard missed ${String(hard)}`).toBeGreaterThan(0.02);
+    expect(hard).toBeLessThan(0.1);
+    expect(easy).toBeGreaterThan(normal);
+    expect(normal).toBeGreaterThan(hard);
   });
 });

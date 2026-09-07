@@ -75,8 +75,15 @@ function readAll(): Record<string, StoredSetup> {
   const games = versioned ? parsed['games'] : parsed;
   if (!isRecord(games)) return {};
 
-  const out: Record<string, StoredSetup> = {};
+  // `Object.create(null)` rather than `{}`, and `__proto__` skipped outright (#2365):
+  // `JSON.parse` makes `__proto__` an own enumerable property, so `Object.entries` yields
+  // it, and `out['__proto__'] = value` does not create a key — it replaces this map's
+  // prototype. `sanitise()` already reduces each value to known fields, so it was never
+  // exploitable, but resting on that ordering is fragile and storage is untrusted input, so
+  // it is hardened anyway.
+  const out: Record<string, StoredSetup> = Object.create(null) as Record<string, StoredSetup>;
   for (const [slug, value] of Object.entries(games)) {
+    if (slug === '__proto__') continue;
     out[slug] = versioned ? sanitise(value) : isPlayMode(value) ? { mode: value } : {};
   }
   return out;

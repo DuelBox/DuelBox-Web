@@ -76,3 +76,8 @@ export {
 export type { BotTier, BotDifficulty } from './bot-difficulty.js';
 
 export { guard, errorMessage } from './guard.js';
+
+export { actionAbandoned } from './gesture.js';
+
+export { sanitisePlayerName, isValidPlayerName, MAX_NAME_LENGTH } from './player-text.js';
+export type { SanitiseResult, SanitiseReason } from './player-text.js';

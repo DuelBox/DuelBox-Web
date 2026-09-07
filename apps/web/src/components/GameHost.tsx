@@ -16,6 +16,8 @@ import {
   NO_INSETS,
   viewportToLogical,
   vec2,
+  zoneSplitFor,
+  type Presentation,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
@@ -89,6 +91,24 @@ export interface GameHostProps {
    * up would either re-render the shell sixty times a second or hand it something stale.
    */
   onTraceReady?: (getTrace: () => string) => void;
+}
+
+/**
+ * The split the shell puts the pointer surface on, for a manifest, a presentation and whoever
+ * currently has the move — delegated to the engine so the shell owns no second copy of the rule.
+ *
+ * A game with turns owns the whole pointer surface; only a real-time game on a shared screen
+ * has zones, and a single-seat player owns the whole viewport whatever the manifest says. The
+ * rule lives in {@link zoneSplitFor} because the input fuzzer has to reach the identical answer
+ * — it had its own copy, and for eleven real-time games the two copies disagreed (#2479).
+ * Exported so that agreement can be asserted rather than assumed (`data/input-fuzz.test.ts`).
+ */
+export function hostZoneSplit(
+  manifest: GameManifest,
+  presentation: Presentation,
+  activeSeat: SeatId | null,
+): ZoneSplit {
+  return zoneSplitFor(presentation, manifest.zoneSplit, activeSeat);
 }
 
 export function GameHost({
@@ -168,8 +188,13 @@ export function GameHost({
     // has always said returning null means "no turns right now", and a game can mean it
     // for part of its life: Sea Battle has both players lay out their fleets at the same
     // time, each on their own half, and only then starts taking turns at a shared grid.
-    const zonedSplit: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
-    const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
+    //
+    // The rule itself lives in the engine, in {@link zoneSplitFor}, because the input fuzzer
+    // has to reach the identical answer — it had its own copy, and for eleven real-time games
+    // the two copies disagreed (#2479). The shell delegates rather than deriving, so there is
+    // one rule; `data/input-fuzz.test.ts` asserts the shell owns no second copy.
+    const splitFor = (seat: SeatId | null): ZoneSplit =>
+      hostZoneSplit(manifest, presentation, seat);
 
     const initialSeat = game.getActiveSeat?.() ?? null;
     const manager = new InputManager(logical, {

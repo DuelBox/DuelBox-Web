@@ -492,6 +492,35 @@ describe('the pointer line is true', () => {
   });
 });
 
+describe('a gesture the browser takes away', () => {
+  it('never becomes a drop, on that step or any later one', () => {
+    // The engine suppresses the release on a cancel, and it also resets its own "was held"
+    // edge — so no later `actionReleased` can arrive without a fresh press, and a fresh press
+    // re-anchors the grip. The stale `grip.held` is therefore unreachable rather than merely
+    // unlikely, and this is the test that says so. It is a characterisation of #2501 in this
+    // game, not a fix: nothing in `game.ts` changed for it.
+    const { game, manager, view } = carrying();
+    const before = game.match.p1.count;
+
+    manager.pointerDown(1, FIELD_WIDTH / 2 + 150, NEAR_Y);
+    tick(game, manager, view, 30);
+    manager.pointerCancel(1);
+    tick(game, manager, view, 5);
+    expect(game.match.p1.count, 'the cancel drops nothing').toBe(before);
+    expect(game.match.p1.stance).toBe('carrying');
+
+    // And the next tap is still a tap: a turn, not the long press that was abandoned.
+    const facing = game.match.p1.held.facing;
+    manager.pointerDown(2, FIELD_WIDTH / 2 + 150, NEAR_Y);
+    tick(game, manager, view);
+    manager.pointerUp(2);
+    tick(game, manager, view);
+    expect(game.match.p1.count, 'a tap turns, it does not drop').toBe(before);
+    expect(game.match.p1.held.facing, 'and it did turn').toBe(-facing);
+    game.destroy();
+  });
+});
+
 describe('a key and a thumb are worth the same', () => {
   it('walk the animal to exactly the same place on the same schedule', () => {
     // Rule 10 in one assertion. The two instruments say different things — a key names a

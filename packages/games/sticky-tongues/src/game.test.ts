@@ -433,6 +433,47 @@ describe('steering and the tongue are separate channels', () => {
   });
 });
 
+describe('a gesture the browser takes away', () => {
+  it('fires nothing on the step it is taken', () => {
+    const game = new StickyTonguesGame();
+    game.init(makeContext(107));
+    const input = realInput();
+    const view = new InputView();
+
+    input.pointerDown(1, 300, 900);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+
+    input.pointerCancel(1);
+    const cancelled = view.sync(input.beginStep(STEP));
+    expect(cancelled.seat('p1').pointerCancelled, 'the engine says it was taken').toBe(true);
+    expect(cancelled.seat('p1').actionReleased, 'a cancel is never a release').toBe(false);
+    game.update(STEP, cancelled);
+    expect(shotsTaken(game)).toBe(0);
+  });
+
+  it('leaves the next tap free to fire instead of measuring it from the abandoned press', () => {
+    // The harm is not only that the abandoned gesture might fire. It is that it is still
+    // standing: the next press does not re-anchor, so the player's tap is measured from a
+    // press point they left behind, read as a drag, and does nothing at all.
+    const game = new StickyTonguesGame();
+    game.init(makeContext(108));
+    const input = realInput();
+    const view = new InputView();
+
+    input.pointerDown(1, 200, 700);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    input.pointerCancel(1);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+
+    // A fresh tap, well beyond a tap radius of the abandoned press.
+    input.pointerDown(2, 500, 900);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    input.pointerUp(2);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    expect(frogOf(game.state, 'p1').shooting, 'the tap is a tap again').toBe(true);
+  });
+});
+
 describe('the two instruments', () => {
   /**
    * Steering is the sign of the gap on each axis and nothing else — nine headings, which is

@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
 import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
-import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
+import type { GameContext, InputState, MatchScore, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import { DRAG_DEADZONE, PaintFightGame } from './game.js';
-import { BOARD_HEIGHT, BOARD_WIDTH, CELLS, ROUND_SECONDS, countBare, countOwned } from './rules.js';
+import {
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+  CELLS,
+  ROUND_SECONDS,
+  START_SPREAD,
+  countBare,
+  countOwned,
+} from './rules.js';
 import type { BotDifficulty } from './rules.js';
 
 const STEP = 1 / 60;
@@ -76,13 +84,14 @@ function makeContext(
   seed: number,
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
+  openingSeat: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
@@ -163,7 +172,11 @@ describe('steering', () => {
     game.init(makeContext(5));
     const input = new ScriptedInput();
     const before = game.position.p1.heading;
-    expect(before, 'p1 starts facing along +x').toBe(0);
+    // Not zero any more: the opening heading is drawn from the seed. What matters is that a
+    // drag inside the deadzone does not move it, whatever it happens to be.
+    expect(Math.abs(before), 'within a quarter turn of its mark').toBeLessThan(
+      START_SPREAD / 2 + 1e-9,
+    );
     input.down('p1', 100, 900);
     game.update(STEP, input);
     input.dragTo('p1', 100, 900 + DRAG_DEADZONE / 2);
@@ -412,5 +425,61 @@ describe('the manifest', () => {
     expect(manifest.id).toBe('paint-fight');
     expect(manifest.archetype).toBe('rt-split');
     expect(manifest.logical.width).toBe(BOARD_WIDTH);
+  });
+});
+
+/**
+ * Seat one's share of a pair of rounds is exactly one half, and it is exact by construction.
+ *
+ * The balance sweep plays every seed twice, once per opening seat, and takes seat one's
+ * share of what was decided. This game gives that share the value 0.5 *identically* rather
+ * than approximately: the marks and the two bot streams are handed out by opening seat, and
+ * nothing else in the rules can tell p1 from p2, so the second round of a pair is the first
+ * one with the labels exchanged. Whichever seat wins one, the other wins the other.
+ *
+ * That is worth more than a measurement of 50%, because a measurement of 50% is what this
+ * game reported for two thousand matches while handing seat one every decided one of them
+ * on `easy`.
+ */
+describe('a seed and its mirror', () => {
+  const TIERS: BotDifficulty[] = ['easy', 'normal', 'hard'];
+
+  function finish(seed: number, opener: SeatId, tier: BotDifficulty): MatchScore {
+    const game = new PaintFightGame();
+    game.init(makeContext(seed, tier, tier, opener));
+    const input = new ScriptedInput();
+    for (let i = 0; i < 60 * (ROUND_SECONDS + 10); i += 1) {
+      game.update(STEP, input);
+      if (game.getScore().winner !== null) break;
+    }
+    return game.getScore();
+  }
+
+  it.each(TIERS)('is the same round with the labels exchanged on %s', (tier) => {
+    for (let seed = 1; seed <= 2; seed += 1) {
+      const opened = finish(seed * 4093, 'p1', tier);
+      const swapped = finish(seed * 4093, 'p2', tier);
+      expect(swapped.p1, `seed ${String(seed)}`).toBe(opened.p2);
+      expect(swapped.p2).toBe(opened.p1);
+      expect(swapped.winner).toBe(
+        opened.winner === 'draw' || opened.winner === null
+          ? opened.winner
+          : opened.winner === 'p1'
+            ? 'p2'
+            : 'p1',
+      );
+    }
+  });
+
+  it('decides a round rather than tying it, now that the seed reaches the opening', () => {
+    // Both rollers used to be driven by the same deterministic search from positions that
+    // were exact half-turn images, so every match on `normal` and `hard` ended 245-245 and
+    // the sweep had nothing to measure. A round has to be able to have a winner before
+    // asking who wins it means anything.
+    let decided = 0;
+    for (let seed = 1; seed <= 4; seed += 1) {
+      if (finish(seed * 7919, 'p1', 'normal').winner !== 'draw') decided += 1;
+    }
+    expect(decided, 'four rounds, and not one of them a dead heat').toBe(4);
   });
 });

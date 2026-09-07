@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -271,6 +272,16 @@ export class ArcheryMasterGame implements Game {
     }
 
     const seatInput = input.seat(this.#active);
+
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing is loosed on this step — but the draw it had built would otherwise stay
+    // standing and be loosed by whatever release came next. The nock is let down, exactly as
+    // `onPause` lets it down; the sight is left where it is, because the player set it and an
+    // interruption must not also take that away (#2501).
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#drawSteps = 0;
 
     // Where the finger is *is* where the bow is set: the pad is read absolutely, because a
     // finger held still has no drag to read and a relative scheme would go dead. Anywhere

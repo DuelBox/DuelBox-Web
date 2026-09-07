@@ -18,6 +18,5 @@
   "dependencies": {
     "@duelbox/engine": "workspace:*",
     "zod": "^3.24.1"
-  },
-  "sideEffects": false
+  }
 }

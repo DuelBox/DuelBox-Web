@@ -31,9 +31,10 @@ export const metadata: Metadata = {
  *   individual result is written down — a tally of six wins does not say which six, or
  *   when, or by how much. The sentence below says so, and it is a description of
  *   `lib/head-to-head.ts` rather than a promise about it.
- * - **"works with no connection at all"**. True of a page already open, and only that:
- *   there is no service worker, so a reload with the network down fails (#2445). A privacy
- *   page is the wrong place to promise a feature that is on the backlog.
+ * - **"works with no connection at all"**. Once an overstatement — a page already open kept
+ *   working, but a reload with the network down failed because there was no service worker
+ *   (#2445). One now ships (`public/sw.js`), so the site and every game already opened work
+ *   offline, and the paragraph below describes that cache rather than promising a backlog item.
  * - **"a content delivery network"**. It is GitHub Pages. Naming the host is the whole
  *   value of the paragraph — a reader deciding whether to trust it needs to know whose
  *   logs their request lands in, and "a content delivery network" names nobody.
@@ -46,7 +47,7 @@ export default function PrivacyPage() {
     <div className="db-wrap">
       <header className={styles.head}>
         <h1>Privacy</h1>
-        <p className={styles.updated}>Last updated 6 September 2026</p>
+        <p className={styles.updated}>Last updated 7 September 2026</p>
       </header>
 
       <div className={styles.prose}>
@@ -109,8 +110,11 @@ export default function PrivacyPage() {
         </p>
         <p>
           Once a page has loaded, playing it needs nothing further from the network: the game, the
-          bot and the physics all run on your device. That is not the same as working offline. There
-          is no offline cache yet, so reloading the page or opening it fresh does need a connection.
+          bot and the physics all run on your device. Your browser also keeps a copy of the site and
+          of each game you open, so after the first visit the whole thing works with no connection
+          at all — it reopens and plays, including a game you played before on a device that has
+          been switched off since. A game you have never opened is not saved yet and will say so
+          rather than pretend. Clearing your browser&apos;s site data removes those copies.
         </p>
 
         <h2>Children</h2>

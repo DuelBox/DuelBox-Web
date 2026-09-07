@@ -54,6 +54,7 @@ class ScriptedInput implements InputState {
 
   down(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -64,6 +65,7 @@ class ScriptedInput implements InputState {
 
   dragTo(seat: SeatId, x: number, y: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = target.pointer ?? vec2();
     target.pointer.x = x;
     target.pointer.y = y;
@@ -75,6 +77,7 @@ class ScriptedInput implements InputState {
   /** The finger lifting: the pointer is gone on this step, as the engine reports it. */
   lift(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionPressed = false;
     target.actionHeld = false;
@@ -83,6 +86,7 @@ class ScriptedInput implements InputState {
 
   hold(seat: SeatId, seconds: number): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionHeld = true;
     target.actionPressed = false;
@@ -92,6 +96,7 @@ class ScriptedInput implements InputState {
 
   release(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.actionHeld = false;
     target.actionPressed = false;
     target.actionReleased = true;
@@ -103,12 +108,29 @@ class ScriptedInput implements InputState {
 
   idle(seat: SeatId): void {
     const target = this.#of(seat);
+    target.pointerCancelled = false;
     target.pointer = null;
     target.actionPressed = false;
     target.actionHeld = false;
     target.actionReleased = false;
     target.holdSeconds = 0;
     target.move.x = 0;
+  }
+
+  /**
+   * The gesture taken away rather than let go, exactly as `InputManager` reports it: the
+   * pointer is gone, the action is not held, and there is **no release** — a cancel and a
+   * release are opposite events since #2480.
+   */
+  cancel(seat: SeatId): void {
+    const target = this.#of(seat);
+    target.pointer = null;
+    target.actionPressed = false;
+    target.actionHeld = false;
+    target.actionReleased = false;
+    target.holdSeconds = 0;
+    target.holdSecondsAtRelease = 0;
+    target.pointerCancelled = true;
   }
 
   #of(seat: SeatId): MutableSeatInput {
@@ -333,6 +355,39 @@ describe('aiming with a keyboard', () => {
     input.hold('p1', 99);
     game.update(STEP, input);
     expect(game.aim.power).toBe(1);
+  });
+});
+
+describe('a cancelled gesture', () => {
+  it('abandons the throw rather than freezing it', () => {
+    const game = new CornholeGame();
+    game.init(makeContext(101));
+    const input = new ScriptedInput();
+    input.hold('p1', 1);
+    game.update(STEP, input);
+    expect(game.aim.power, 'the hold loaded the bag').toBeGreaterThan(0);
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    expect(game.aim.power, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+    expect(game.aim.ready, 'and nothing is armed to throw').toBe(false);
+  });
+
+  it('does not throw the abandoned bag on the next, unrelated release', () => {
+    const game = new CornholeGame();
+    game.init(makeContext(103));
+    const input = new ScriptedInput();
+    input.hold('p1', 1);
+    game.update(STEP, input);
+    const thrown = game.position.bags.length;
+
+    input.cancel('p1');
+    game.update(STEP, input);
+    input.idle('p1');
+    game.update(STEP, input);
+    input.release('p1');
+    game.update(STEP, input);
+    expect(game.position.bags.length, 'no bag left the hand').toBe(thrown);
   });
 });
 

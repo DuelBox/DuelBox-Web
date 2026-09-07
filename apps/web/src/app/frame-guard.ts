@@ -227,3 +227,35 @@ export function checkFrame(win: FrameWindow, allowlist: readonly string[]): Fram
     selfOrigin: context.selfOrigin,
   });
 }
+
+/**
+ * The synchronous, header-free clickjacking defence injected inline into every page by
+ * `app/layout.tsx`. On a host that serves no response headers (GitHub Pages, #2481), this is
+ * what actually stops another site framing a DuelBox page: the first line hides `<html>`
+ * during parse, before anything paints, and the notice is attached once the body exists.
+ *
+ * It ships in each page's markup rather than a bundled chunk, so it is written terse and its
+ * reasoning lives in the block comment on the WIP-side history rather than here.
+ *
+ * The one exemption is the embed route (#2367): `/embed/<slug>/` is the single surface a
+ * framed page is *meant* to be, so the buster returns early there and lets `EmbedFrame`'s own
+ * best-effort origin allowlist (`checkFrame` / `EMBED_ALLOWED_ORIGINS` above) decide whether
+ * to show the game or a "open in a new tab" backlink. That is the "path allowlist" the WIP
+ * comment always said the exemption would be — an origin allowlist means nothing to a framed
+ * page, which cannot read its embedder's origin; only a response-header `frame-ancestors`
+ * (which this host does not serve) is a real boundary, so the embed's in-page check is a
+ * best-effort courtesy, not a security control.
+ */
+export const FRAME_GUARD = [
+  '(function(){var w=window;if(w.top===w.self)return;',
+  'if(w.location.pathname.indexOf("/embed/")!==-1)return;',
+  'var d=w.document,s=d.createElement("style");',
+  's.textContent="html{visibility:hidden!important}#db-framed{visibility:visible!important;',
+  'position:fixed;inset:0;background:#fff;color:#111;font:1rem/1.5 system-ui,sans-serif;padding:2rem}";',
+  '(d.head||d.documentElement).appendChild(s);',
+  'd.addEventListener("DOMContentLoaded",function(){',
+  'var n=d.createElement("div");n.id="db-framed";',
+  'var a=d.createElement("a");a.href=w.location.href;a.target="_blank";a.rel="noopener";',
+  'a.textContent="Open DuelBox in a new tab";',
+  'n.append("DuelBox does not run inside a frame. ",a);d.body.appendChild(n)})})()',
+].join('');

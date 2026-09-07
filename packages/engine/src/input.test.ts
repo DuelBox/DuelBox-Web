@@ -834,6 +834,89 @@ describe('InputManager clear', () => {
   });
 });
 
+describe('a clear that takes the action away from the keyboard', () => {
+  // `clear()` is a pause, a lost focus, or a released modifier chord. It deletes both edges
+  // at once — the key is gone, so the hold cannot continue, and `wasActionHeld` is zeroed,
+  // so the release can never be published. A game charging a shot on the action key was
+  // therefore left with a drawn bow and nothing to tell it to let the string down. The
+  // cancellation was raised only for a seat with a *pointer* down until #2501.
+
+  it('raises pointerCancelled for a seat holding only the action key', () => {
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+    manager.beginStep(DT);
+    manager.beginStep(DT);
+    expect(manager.state.seat('p1').holdSeconds).toBeCloseTo(DT, 12);
+
+    manager.clear();
+    const cleared = manager.beginStep(DT);
+    expect(cleared.seat('p1').pointerCancelled, 'the gesture was taken away').toBe(true);
+    expect(cleared.seat('p1').actionReleased, 'and a pause may never fire the shot').toBe(false);
+    expect(cleared.seat('p1').actionHeld).toBe(false);
+    expect(cleared.seat('p1').holdSeconds).toBe(0);
+    // The seat that was doing nothing is told nothing.
+    expect(cleared.seat('p2').pointerCancelled).toBe(false);
+  });
+
+  it('raises it for an action whose key-up landed between two steps', () => {
+    // The release was owed and is now undeliverable: `clear` zeroes `wasActionHeld`, so
+    // `actionReleased = !cancelled && !held && (was || latched)` can never become true for
+    // it. Without the cancellation this is a charge that freezes in total silence.
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+    manager.beginStep(DT);
+    manager.keyUp('Space');
+    manager.clear();
+    const cleared = manager.beginStep(DT);
+    expect(cleared.seat('p1').pointerCancelled).toBe(true);
+    expect(cleared.seat('p1').actionReleased).toBe(false);
+  });
+
+  it('raises nothing at all for a seat that was idle', () => {
+    const manager = new InputManager(SIZE);
+    manager.keyDown('KeyD');
+    manager.beginStep(DT);
+
+    manager.clear();
+    const cleared = manager.beginStep(DT);
+    expect(cleared.seat('p1').pointerCancelled, 'a direction key is not an action').toBe(false);
+    expect(cleared.seat('p2').pointerCancelled).toBe(false);
+  });
+
+  it('is one step only, and a genuine release still works afterwards', () => {
+    // The other direction, and the one a fix like this breaks: a cancellation must not leave
+    // the seat unable to commit anything ever again.
+    const manager = new InputManager(SIZE);
+    manager.keyDown('Space');
+    manager.beginStep(DT);
+    manager.clear();
+    expect(manager.beginStep(DT).seat('p1').pointerCancelled).toBe(true);
+    expect(manager.beginStep(DT).seat('p1').pointerCancelled, 'and only that step').toBe(false);
+
+    manager.keyDown('Space');
+    const pressed = manager.beginStep(DT);
+    expect(pressed.seat('p1').actionPressed).toBe(true);
+    expect(pressed.seat('p1').actionHeld).toBe(true);
+    manager.beginStep(DT);
+
+    manager.keyUp('Space');
+    const released = manager.beginStep(DT);
+    expect(released.seat('p1').actionReleased, 'letting go still commits').toBe(true);
+    expect(released.seat('p1').pointerCancelled).toBe(false);
+    expect(released.seat('p1').holdSecondsAtRelease).toBeCloseTo(DT, 12);
+  });
+
+  it('says the same thing for a finger, which is what it always said', () => {
+    const manager = new InputManager(SIZE);
+    manager.pointerDown(1, 200, P1_ZONE_Y);
+    manager.beginStep(DT);
+    manager.clear();
+    const cleared = manager.beginStep(DT);
+    expect(cleared.seat('p1').pointerCancelled).toBe(true);
+    expect(cleared.seat('p1').actionReleased).toBe(false);
+  });
+});
+
 describe('InputManager allocation discipline', () => {
   it('returns the same state and seat records every step', () => {
     const manager = new InputManager(SIZE);

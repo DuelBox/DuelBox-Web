@@ -1,4 +1,4 @@
-import { SEAT_PALETTE, vec2 } from '@duelbox/engine';
+import { Rng, SEAT_PALETTE, vec2 } from '@duelbox/engine';
 import type { SeatId, Vec2 } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
@@ -40,6 +40,20 @@ export class PaintFightGame implements Game {
   /** Where each seat's current drag began, or null when nothing is down. */
   readonly #dragOrigin: Record<SeatId, Vec2 | null> = { p1: null, p2: null };
 
+  /**
+   * One stream a roller, handed out by **role** rather than by seat.
+   *
+   * {@link #rngFirst} always belongs to whichever seat the shell opened with. Everything in
+   * `rules.ts` treats the two seats as interchangeable, so this and the starting mark are
+   * the only two things that tell them apart — which makes a seed played with the opening
+   * seat swapped the identical round with the labels swapped, and seat one's share of the
+   * pair exactly one half rather than approximately one half. That is the difference
+   * between a balance measurement and a balance proof.
+   */
+  #rngFirst = new Rng(1);
+  #rngSecond = new Rng(2);
+  #first: SeatId = 'p1';
+
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
   #matchWinner: SeatId | 'draw' | null = null;
@@ -52,13 +66,25 @@ export class PaintFightGame implements Game {
   }
 
   init(context: GameContext): void {
+    // Drawn in a fixed order from the one generator the shell owns, then given to the two
+    // roles. A real-time game has no opener in the turn sense, and the contract says so —
+    // but it is still the one seat label the shell alternates, and that makes it exactly
+    // the right key for handing out two otherwise interchangeable streams.
+    this.#rngFirst = new Rng(context.rng.next() | 0);
+    this.#rngSecond = new Rng(context.rng.next() | 0);
+    this.#first = context.openingSeat;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#matchWinner = null;
     this.#settleSteps = 0;
     this.#dragOrigin.p1 = null;
     this.#dragOrigin.p2 = null;
-    resetGame(this.#position);
+    resetGame(this.#position, this.#first, this.#rngFirst.float(), this.#rngSecond.float());
+  }
+
+  /** The stream that belongs to a seat this round. */
+  #rngFor(seat: SeatId): Rng {
+    return seat === this.#first ? this.#rngFirst : this.#rngSecond;
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {
@@ -81,7 +107,7 @@ export class PaintFightGame implements Game {
       const difficulty = seat === 'p1' ? this.#botP1 : this.#botP2;
       const amount =
         difficulty !== null
-          ? botSteer(this.#position, seat, difficulty)
+          ? botSteer(this.#position, seat, difficulty, this.#rngFor(seat))
           : this.#humanSteer(seat, input);
       steer(rollerOf(this.#position, seat), amount, fixedDeltaSeconds);
     }
@@ -142,7 +168,7 @@ export class PaintFightGame implements Game {
   onResume(): void {}
 
   destroy(): void {
-    resetGame(this.#position);
+    resetGame(this.#position, this.#first, 0.5, 0.5);
     this.#matchWinner = null;
     this.#settleSteps = 0;
     this.#dragOrigin.p1 = null;

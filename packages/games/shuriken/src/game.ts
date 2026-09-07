@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId, Vec2 } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -22,6 +23,7 @@ import {
   offBoard,
   resetBotPlan,
   resetState,
+  spinTo,
   standingFor,
   step,
   throwShuriken,
@@ -160,6 +162,22 @@ export class ShurikenGame implements Game {
     // is moving under them, and a tap would name a direction they did not mean.
     if (!this.#flip.acceptsInput) return;
     const seatInput = input.seat(active);
+
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    //
+    // Everything the gesture built goes, spin included: spin is a *charge*, wound on by the
+    // sweep and spent by the throw, so left on the blade it is thrown by whatever release
+    // arrives next. The aim stays — it commits nothing on its own now, this game already
+    // carries it from one attempt to the next, and swinging the sight for an interruption
+    // the player did not cause punishes them twice (#2501).
+    if (actionAbandoned(seatInput)) {
+      this.#pointerAiming = false;
+      this.#pointerDown = false;
+      this.#lastPointerX = THROW_X;
+      spinTo(this.#state, 0);
+    }
 
     const pointer = seatInput.pointer;
     if (pointer !== null) {

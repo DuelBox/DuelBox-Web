@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
+import type { SeatId } from '@duelbox/engine';
 import {
   BAND_DECAY,
   BASE_SWEEP,
@@ -28,7 +29,7 @@ import {
   tryThrow,
   winnerOf,
 } from './rules.js';
-import type { BotDifficulty, Game } from './rules.js';
+import type { BotDifficulty, Game, Phase } from './rules.js';
 
 const STEP = 1 / 60;
 
@@ -489,3 +490,196 @@ describe('a whole match', () => {
     expect(game.holder).toBe('p2');
   });
 });
+
+/* ------------------------------------------------------------------------------------ */
+/* The half-turn                                                                         */
+/* ------------------------------------------------------------------------------------ */
+
+const PHASES: readonly Phase[] = ['holding', 'flying', 'settling'];
+
+/**
+ * The board seen from the other chair.
+ *
+ * There is nothing geometric to reflect: one bar, read the same way up by both seats, and
+ * the only seat-owned things in the whole state are who is holding it, who was caught, and
+ * the two round counts. So the half-turn is exactly "relabel p1 as p2" - which makes any
+ * failure of this test a pure seat bias with nowhere to hide.
+ */
+function mirrorInto(from: Readonly<Game>, to: Game): void {
+  to.phase = from.phase;
+  to.holder = otherOf(from.holder);
+  to.fuse = from.fuse;
+  to.flight = from.flight;
+  to.settle = from.settle;
+  to.marker = from.marker;
+  to.band = from.band;
+  to.bandCentre = from.bandCentre;
+  to.throws = from.throws;
+  to.caught = from.caught === null ? null : otherOf(from.caught);
+  to.rounds.p1 = from.rounds.p2;
+  to.rounds.p2 = from.rounds.p1;
+}
+
+/**
+ * Everything a step can touch, to nine places.
+ *
+ * Printed rather than compared numerically so a signed zero from one seat and a plain zero
+ * from the other cannot pass: `(-0).toFixed(9)` and `(0).toFixed(9)` are different strings.
+ */
+function describeGame(game: Readonly<Game>): string {
+  const nine = (value: number): string => value.toFixed(9);
+  return [
+    game.phase,
+    game.holder,
+    nine(game.fuse),
+    nine(game.flight),
+    nine(game.settle),
+    nine(game.marker),
+    nine(game.band),
+    nine(game.bandCentre),
+    String(game.throws),
+    String(game.caught),
+    String(game.rounds.p1),
+    String(game.rounds.p2),
+  ].join('/');
+}
+
+/**
+ * An arbitrary but legal board.
+ *
+ * The fuse, the flight and the settle are whole numbers of fixed steps, so each of them
+ * reaches its threshold **exactly** rather than approximately - a fuse that expires on the
+ * same step as a flight lands is the case that decides who is caught, and it happens here
+ * by construction. The marker is placed on the band edge as often as it is placed at
+ * random, because `distance <= game.band` is the other threshold the game turns on.
+ */
+function scramble(game: Game, rng: Rng): void {
+  game.phase = PHASES[rng.int(0, PHASES.length)] as Phase;
+  game.holder = rng.bool(0.5) ? 'p1' : 'p2';
+  game.fuse = rng.int(0, 30) * STEP;
+  game.flight = rng.int(0, 30) * STEP;
+  game.settle = rng.int(0, 30) * STEP;
+  game.throws = rng.int(0, 12);
+  game.band = bandAfter(game.throws);
+  game.bandCentre = placeBand(rng, game.band);
+  const roll = rng.float();
+  if (roll < 0.25) game.marker = game.bandCentre;
+  else if (roll < 0.5) game.marker = (game.bandCentre + game.band) % 1;
+  else if (roll < 0.75) game.marker = (game.bandCentre - game.band + 1) % 1;
+  else game.marker = rng.float();
+  game.caught = rng.bool(0.3) ? null : rng.bool(0.5) ? 'p1' : 'p2';
+  game.rounds.p1 = rng.int(0, TARGET_ROUNDS);
+  game.rounds.p2 = rng.int(0, TARGET_ROUNDS);
+}
+
+describe('the half-turn', () => {
+  it('steps a mirrored board to the mirror of the stepped board', () => {
+    const rng = new Rng(20260829);
+    const game = createGame(new Rng(1));
+    const other = createGame(new Rng(1));
+    const expected = createGame(new Rng(1));
+    for (let trial = 0; trial < 600; trial += 1) {
+      scramble(game, rng);
+      mirrorInto(game, other);
+      const seed = trial * 131 + 7;
+      const mine = step(game, STEP, new Rng(seed));
+      const theirs = step(other, STEP, new Rng(seed));
+      expect(theirs, `trial ${String(trial)}`).toBe(mine);
+      mirrorInto(game, expected);
+      expect(describeGame(other), `trial ${String(trial)}`).toBe(describeGame(expected));
+    }
+  });
+
+  it('answers a mirrored throw identically', () => {
+    const rng = new Rng(4242);
+    const game = createGame(new Rng(1));
+    const other = createGame(new Rng(1));
+    const expected = createGame(new Rng(1));
+    for (let trial = 0; trial < 600; trial += 1) {
+      scramble(game, rng);
+      mirrorInto(game, other);
+      const seed = trial * 977 + 3;
+      for (const seat of ['p1', 'p2'] as SeatId[]) {
+        const mine = tryThrow(game, seat, new Rng(seed));
+        const theirs = tryThrow(other, otherOf(seat), new Rng(seed));
+        expect(theirs, `trial ${String(trial)} ${seat}`).toBe(mine);
+        mirrorInto(game, expected);
+        expect(describeGame(other), `trial ${String(trial)} ${seat}`).toBe(describeGame(expected));
+      }
+    }
+  });
+
+  it('makes a bot decide the mirrored thing on a mirrored board', () => {
+    const rng = new Rng(31337);
+    const game = createGame(new Rng(1));
+    const other = createGame(new Rng(1));
+    for (const tier of Object.keys(BOT_PROFILES) as BotDifficulty[]) {
+      for (let trial = 0; trial < 400; trial += 1) {
+        scramble(game, rng);
+        mirrorInto(game, other);
+        // One roll to both seats: the stream must be handed out by role, not by seat.
+        const roll = rng.float();
+        const watched = rng.int(0, 30) * STEP;
+        for (const seat of ['p1', 'p2'] as SeatId[]) {
+          const here = createBotState();
+          const there = createBotState();
+          here.watched = watched;
+          there.watched = watched;
+          const mine = botThrows(game, here, BOT_PROFILES[tier], seat, STEP, roll);
+          const theirs = botThrows(other, there, BOT_PROFILES[tier], otherOf(seat), STEP, roll);
+          expect(theirs, `${tier} trial ${String(trial)} ${seat}`).toBe(mine);
+          expect(there.watched, `${tier} trial ${String(trial)} ${seat} watch`).toBe(here.watched);
+        }
+      }
+    }
+  });
+
+  it('plays a whole match to the mirrored result when the other seat opens', () => {
+    for (const tier of Object.keys(BOT_PROFILES) as BotDifficulty[]) {
+      for (let s = 0; s < 25; s += 1) {
+        const seed = 1000003 + s * 7919;
+        const forward = playRules(seed, 'p1', tier);
+        const backward = playRules(seed, 'p2', tier);
+        const where = `${tier} seed ${String(seed)}`;
+        expect(forward.winner, `${where} decided nothing`).not.toBeNull();
+        expect(backward.winner, where).toBe(forward.winner === 'p1' ? 'p2' : 'p1');
+        expect(backward.p1, where).toBe(forward.p2);
+        expect(backward.p2, where).toBe(forward.p1);
+        expect(backward.steps, where).toBe(forward.steps);
+      }
+    }
+  });
+});
+
+interface Played {
+  readonly winner: SeatId | null;
+  readonly p1: number;
+  readonly p2: number;
+  readonly steps: number;
+}
+
+/**
+ * Two bots of one tier, driven straight from the rules with the roll handed out **by
+ * role**: the holder draws first.
+ *
+ * Only the holder can throw, so only the holder's roll can ever matter - but the other
+ * seat drawing one first still shifts every number the holder sees, which is how a seed
+ * and its mirror became two different matches.
+ */
+function playRules(seed: number, opener: SeatId, tier: BotDifficulty): Played {
+  const rng = new Rng(seed);
+  const game = createGame(rng, opener);
+  const bots = { p1: createBotState(), p2: createBotState() };
+  const profile = BOT_PROFILES[tier];
+  for (let i = 0; i < 60 * 600; i += 1) {
+    for (const seat of [game.holder, otherOf(game.holder)]) {
+      if (botThrows(game, bots[seat], profile, seat, STEP, rng.float())) tryThrow(game, seat, rng);
+    }
+    step(game, STEP, rng);
+    const winner = winnerOf(game);
+    if (winner !== null) {
+      return { winner, p1: game.rounds.p1, p2: game.rounds.p2, steps: i + 1 };
+    }
+  }
+  return { winner: null, p1: game.rounds.p1, p2: game.rounds.p2, steps: 60 * 600 };
+}

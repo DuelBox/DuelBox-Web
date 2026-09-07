@@ -20,8 +20,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const web = join(here, '..');
 const privacy = readFileSync(join(web, 'app', 'privacy', 'page.tsx'), 'utf8');
 
-/** The page's prose, with the file's own explanatory comments taken out. */
-const prose = privacy.replace(/\/\*[\s\S]*?\*\//g, '');
+/**
+ * The page's prose: the file's own explanatory comments taken out, and whitespace collapsed
+ * the way the rendered HTML collapses it — so a phrase the browser shows on one line is one
+ * string here too, rather than one the source happened to wrap across an indented newline.
+ */
+const prose = privacy.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
 
 function sources(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -59,12 +63,20 @@ describe('what the privacy page says about storage', () => {
 });
 
 describe('what the privacy page says about the network', () => {
-  it('does not promise offline, because there is no service worker', () => {
-    const registrations = sources(web).filter((path) =>
-      /serviceWorker/.test(readFileSync(path, 'utf8')),
+  it('promises offline only because a service worker now backs it', () => {
+    // The inversion the previous version's message anticipated: a service worker landed
+    // (#2445 / the 29–30 August session), so the page is now allowed to describe offline —
+    // and does. A claim the code cannot keep is what this file exists to catch, in either
+    // direction.
+    const registrations = sources(web)
+      .filter((path) => /serviceWorker/.test(readFileSync(path, 'utf8')))
+      .map((path) => relative(web, path));
+    expect(registrations, 'the offline claim needs a service worker behind it').toEqual([
+      'app/service-worker-client.ts',
+    ]);
+    expect(prose, 'the page should describe the offline cache the worker provides').toMatch(
+      /with no connection/i,
     );
-    expect(registrations, 'a service worker exists — the page may now say offline').toEqual([]);
-    expect(prose).not.toMatch(/with no connection at all/i);
   });
 
   it('names the host rather than gesturing at one', () => {

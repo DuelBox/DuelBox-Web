@@ -64,6 +64,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CSP_STATIC_DIRECTIVES, headerEntries } from './security-headers.mjs';
+import { formatDeliveryReport, metaEquivalents } from './header-delivery.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -179,6 +180,45 @@ function injectMetaCsp(html, csp) {
   if (html.includes('http-equiv="Content-Security-Policy"')) {
     return html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, tag);
   }
+  return injectHead(html, tag);
+}
+
+/**
+ * The headers that have a real meta equivalent, put in the page for the same reason the CSP
+ * is: this site deploys to a host that serves no response headers, so a header that is only
+ * a header reaches nobody. `scripts/header-delivery.mjs` decides which qualify and builds
+ * each tag from the header's own value, so there is one copy of the string in the repository.
+ *
+ * Today that is `Referrer-Policy` and nothing else. It is not a long list because the list
+ * is short: of the eight fixed headers, seven have no meta form that any browser has ever
+ * honoured, and writing one anyway would be worse than the gap — a tag that looks like
+ * protection and is not.
+ *
+ * Position matters the same way the CSP's does. `<meta name="referrer">` governs requests
+ * made after it, so it goes at the top of the head, ahead of every stylesheet, font and
+ * script the page pulls.
+ */
+function injectMetaEquivalents(html) {
+  let result = html;
+  for (const { header, tag } of metaEquivalents()) {
+    if (header === 'Content-Security-Policy') continue; // per-page; injected above
+    // Everything up to `content=` identifies the tag, so re-running the emit over an
+    // already-emitted export replaces rather than accumulates.
+    const identity = tag.slice(0, tag.indexOf(' content='));
+    const existing = new RegExp(`${identity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^>]*>`);
+    if (existing.test(result)) {
+      result = result.replace(existing, tag);
+      continue;
+    }
+    const injected = injectHead(result, tag);
+    if (injected === null) return null;
+    result = injected;
+  }
+  return result;
+}
+
+/** Immediately after `<head>`, or `null` if the document has no head to put it in. */
+function injectHead(html, tag) {
   const head = html.indexOf('<head>');
   if (head < 0) return null;
   return html.slice(0, head + '<head>'.length) + tag + html.slice(head + '<head>'.length);
@@ -286,7 +326,8 @@ async function main() {
     hashed += hashes.length;
     const csp = buildPageCsp(hashes);
     widestPolicy = Math.max(widestPolicy, csp.length);
-    const injected = injectMetaCsp(html, csp);
+    const withMeta = injectMetaEquivalents(html);
+    const injected = withMeta === null ? null : injectMetaCsp(withMeta, csp);
     if (injected === null) {
       console.error(`emit-host-config: ${urlPathOf(page)} has no <head> to put the policy in`);
       process.exitCode = 1;
@@ -329,8 +370,14 @@ async function main() {
   console.log(
     `emit-host-config: ${String(entries.length)} headers (widest ${String(widestHeader)} bytes), ` +
       `${String(pages.length)} pages carrying ${String(hashed)} inline-script hash(es) ` +
-      `(widest policy ${String(widestPolicy)} bytes), security.txt written`,
+      `(widest policy ${String(widestPolicy)} bytes), ` +
+      `${String(metaEquivalents().length)} meta equivalent(s), security.txt written`,
   );
+
+  // The files above are correct and, on the host this repository deploys to, unread. Say so
+  // on every build rather than leaving it in a workflow comment nobody executes.
+  console.log('');
+  console.log(formatDeliveryReport());
 }
 
 await main();

@@ -9,6 +9,7 @@ import {
   BOARD_WIDTH,
   KICKS_EACH,
   READY_SECONDS,
+  WIND_DEADLINE,
   ballOf,
   distanceToCup,
 } from './rules.js';
@@ -292,6 +293,99 @@ describe('the one gesture', () => {
     manager.keyUp('Enter');
     drive(game, view, manager, 2);
     expect(game.match.kicks).toBe(0);
+    game.destroy();
+  });
+});
+
+describe('a gesture the browser takes away', () => {
+  it('lets the gauge down instead of leaving it filling', () => {
+    // The engine suppresses the release, so nothing is kicked on the step itself. But the
+    // wind is not a value this game reads back — it is a *phase*, and `step` fills the gauge
+    // on its own clock while it lasts. Left standing, the abandoned press keeps winding and
+    // `WIND_DEADLINE` kicks it: a shot the player never took, at a weight they never chose.
+    const game = new GolfFootballGame();
+    game.init(context());
+    const { manager, view } = inputs();
+    drive(game, view, manager, Math.ceil(READY_SECONDS * 60) + 20);
+    expect(game.match.phase).toBe('aiming');
+
+    manager.pointerDown(1, 120, 640);
+    drive(game, view, manager, 30);
+    expect(game.match.phase, 'the gauge is filling').toBe('winding');
+    expect(game.match.power).toBeGreaterThan(0);
+
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(game.match.phase, 'the wind was abandoned').toBe('aiming');
+    expect(game.match.power).toBe(0);
+    expect(game.match.kicks, 'and nothing was kicked').toBe(0);
+    game.destroy();
+  });
+
+  it('does not kick the abandoned wind on the next, unrelated release', () => {
+    const game = new GolfFootballGame();
+    game.init(context());
+    const { manager, view } = inputs();
+    drive(game, view, manager, Math.ceil(READY_SECONDS * 60) + 20);
+
+    manager.pointerDown(1, 120, 640);
+    drive(game, view, manager, 40);
+    manager.pointerCancel(1);
+    // Long enough for `WIND_DEADLINE` to come round. Before the fix the phase was still
+    // `winding`, so the gauge kept filling on its own and the deadline kicked the ball —
+    // a shot taken by a clock on behalf of a player who had put the phone down.
+    drive(game, view, manager, Math.ceil(WIND_DEADLINE * 60) + 10);
+    expect(game.match.kicks, 'the abandoned wind never became a kick').toBe(0);
+    game.destroy();
+  });
+
+  it('leaves a wind the action key is still making alone', () => {
+    // The engine raises `pointerCancelled` for any cancelled pointer, not only the last one
+    // down, and keeps `actionHeld` true while another source still holds the action. A cancel
+    // that ended nothing must abandon nothing.
+    const game = new GolfFootballGame();
+    game.init(context());
+    const { manager, view } = inputs();
+    drive(game, view, manager, Math.ceil(READY_SECONDS * 60) + 20);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    const wound = game.match.power;
+    expect(game.match.phase).toBe('winding');
+    expect(wound).toBeGreaterThan(0);
+
+    manager.pointerDown(1, 120, 640);
+    drive(game, view, manager, 1);
+    manager.pointerCancel(1);
+    drive(game, view, manager, 1);
+    expect(game.match.phase, 'the key was not cancelled').toBe('winding');
+    expect(game.match.power, 'so its gauge keeps filling').toBeGreaterThan(wound);
+    game.destroy();
+  });
+});
+
+describe('a clear that takes the action away from the keyboard', () => {
+  it('lets the gauge down instead of leaving it filling', () => {
+    // `InputManager.clear()` with no `onPause` is a real path, not a hypothetical: the shell
+    // calls it on a released modifier chord and on a lost window, before any pause is
+    // requested. The key never receives its key-up and `clear` deletes the release edge too,
+    // so before #2501 the charge froze in total silence. Worse here: the wind is a phase that keeps
+    // filling on its own clock, so `WIND_DEADLINE` would have kicked it unaided.
+    const game = new GolfFootballGame();
+    game.init(context());
+    const { manager, view } = inputs();
+    drive(game, view, manager, Math.ceil(READY_SECONDS * 60) + 20);
+
+    manager.keyDown('Space');
+    drive(game, view, manager, 20);
+    expect(game.match.phase, 'the key is winding').toBe('winding');
+    expect(game.match.power).toBeGreaterThan(0);
+
+    manager.clear();
+    drive(game, view, manager, 1);
+    expect(game.match.phase, 'the wind was abandoned').toBe('aiming');
+    expect(game.match.power).toBe(0);
+    expect(game.match.kicks, 'and nothing was kicked').toBe(0);
     game.destroy();
   });
 });

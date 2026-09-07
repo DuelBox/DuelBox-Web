@@ -258,10 +258,42 @@ export interface BotState {
   /** Where the target was last time it looked, so it can estimate their motion. */
   lastTargetX: number;
   lastTargetY: number;
+  /**
+   * Whose motion {@link lastTargetX} is a record of, or null when the bot has not been
+   * watching anybody.
+   *
+   * **A velocity needs two observations, and this is what says whether there are two.**
+   * Without it the first frame of every chase differenced the prey's position against
+   * `lastTargetX = 0` — the top-left corner of the yard — and called the result a velocity.
+   * At a `normal` reaction of 0.26 s that is about 1700 units a second out of a yard 900
+   * units wide, and the bot then aimed a quarter of a second ahead of it: a target far
+   * outside the yard, in the direction of *increasing* x and y, every time.
+   *
+   * That is a bias with a compass bearing rather than a seat, which is what made it a seat
+   * bias: the yard's two seats are mirror images in x, and a wrong answer that always points
+   * the same absolute way is a wrong answer that helps whichever seat is standing on that
+   * side. It fired on the first chase of every match and again on every chase after a spell
+   * of wearing the crown, because nothing cleared the stale reading in between. Worth **3.3
+   * points** of the eleven this game was leaning by: 46.7% for seat one over a
+   * thousand seeds with it back, against 50.3% without.
+   *
+   * The fix is to say what is true: with one observation the estimate is zero, and the
+   * second observation is the first real one. Zero is also the only *covariant* answer —
+   * every other constant would be a point in board coordinates, and a point in board
+   * coordinates is not a point either seat agrees with.
+   */
+  tracking: SeatId | null;
 }
 
 export function createBotState(): BotState {
-  return { headingX: 0, headingY: 0, judgement: createJudgement(), lastTargetX: 0, lastTargetY: 0 };
+  return {
+    headingX: 0,
+    headingY: 0,
+    judgement: createJudgement(),
+    lastTargetX: 0,
+    lastTargetY: 0,
+    tracking: null,
+  };
 }
 
 export function resetBotState(bot: BotState): void {
@@ -270,6 +302,7 @@ export function resetBotState(bot: BotState): void {
   resetJudgement(bot.judgement);
   bot.lastTargetX = 0;
   bot.lastTargetY = 0;
+  bot.tracking = null;
 }
 
 /**
@@ -298,26 +331,50 @@ export function botHeading(
 
     if (game.wearer === seat) {
       // Wearing it: head for the furthest corner from the chaser.
+      //
+      // Read as "the far side from the chaser" rather than "the far side of the yard from
+      // the chaser": `chaser.x - me.x` reverses sign under the half turn that swaps the
+      // seats, where `chaser.x` on its own does not, so a rule stated against the yard's
+      // midline is a rule the two seats read differently the moment a chaser stands on it —
+      // and the crown is dropped on that midline, every match, by construction.
       const chaser = seat === 'p1' ? game.p2 : game.p1;
-      targetX = chaser.x < YARD_WIDTH / 2 ? YARD_WIDTH - WALL : WALL;
-      targetY = chaser.y < YARD_HEIGHT / 2 ? YARD_HEIGHT - WALL : WALL;
+      const awayX = me.x - chaser.x;
+      const awayY = me.y - chaser.y;
+      // Level on an axis means no preference on that axis, and that third case is the whole
+      // repair. `me.x - chaser.x` reverses sign under the reflection and zero is its fixed
+      // point, so a corner chosen at zero can only be chosen in absolute board terms — which
+      // is a corner the two seats read differently. Players do stand exactly level here: both
+      // clamp to the same wall, and the crown is dropped on the midline every match.
+      targetX = awayX === 0 ? me.x : awayX > 0 ? YARD_WIDTH - WALL : WALL;
+      targetY = awayY === 0 ? me.y : awayY > 0 ? YARD_HEIGHT - WALL : WALL;
+      bot.tracking = null;
     } else if (game.wearer === null) {
       targetX = game.crown.x;
       targetY = game.crown.y;
+      bot.tracking = null;
     } else {
       // Chasing: aim where they are going, not where they are.
       const prey = game.wearer === 'p1' ? game.p1 : game.p2;
-      const preyVx = (prey.x - bot.lastTargetX) / Math.max(profile.reaction, 1e-3);
-      const preyVy = (prey.y - bot.lastTargetY) / Math.max(profile.reaction, 1e-3);
+      // One observation is a position, not a velocity. See `BotState.tracking`.
+      const watched = bot.tracking === game.wearer;
+      const preyVx = watched ? (prey.x - bot.lastTargetX) / Math.max(profile.reaction, 1e-3) : 0;
+      const preyVy = watched ? (prey.y - bot.lastTargetY) / Math.max(profile.reaction, 1e-3) : 0;
       targetX = prey.x + preyVx * profile.lead;
       targetY = prey.y + preyVy * profile.lead;
       bot.lastTargetX = prey.x;
       bot.lastTargetY = prey.y;
+      bot.tracking = game.wearer;
     }
 
-    const angle = Math.atan2(targetY - me.y, targetX - me.x) + misjudgement(roll, profile.wobble);
-    bot.headingX = Math.cos(angle);
-    bot.headingY = Math.sin(angle);
+    // Standing on the target is the one input `Math.atan2` answers arbitrarily — `atan2(0, 0)`
+    // is `0`, which is due east, which is a heading in board terms rather than in either
+    // seat's. Keep the heading already committed to instead; it is a frame at most, because
+    // the only way to be exactly on the thing you are running from is to be touching it.
+    if (targetX !== me.x || targetY !== me.y) {
+      const angle = Math.atan2(targetY - me.y, targetX - me.x) + misjudgement(roll, profile.wobble);
+      bot.headingX = Math.cos(angle);
+      bot.headingY = Math.sin(angle);
+    }
   }
 
   out.x = bot.headingX;

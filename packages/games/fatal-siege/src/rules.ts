@@ -594,6 +594,26 @@ export function setHold(siege: Siege, seat: SeatId, held: boolean): void {
   sideOf(siege, seat).turret.want = held;
 }
 
+/**
+ * The gesture taken away rather than let go: drop the charge **without firing it**.
+ *
+ * `setHold(..., false)` cannot express this. {@link stepTurret} derives its own release edge
+ * from `!want && held`, so a hold that simply stops reads as a release and the gun fires —
+ * which is the whole of #2480 reimplemented one layer down, and #2501 is the half of it that
+ * lives in the games. A cancel must commit nothing, so the edge is erased along with the
+ * charge: `held` goes false beside `want`, and the sight drops back to the bottom of its
+ * gauge. The gun's traverse is untouched — the range is the charge, the road is the aim, and
+ * an interruption takes only the first.
+ */
+export function abandonHold(siege: Siege, seat: SeatId): void {
+  const turret = sideOf(siege, seat).turret;
+  turret.want = false;
+  turret.held = false;
+  turret.aiming = false;
+  turret.range = RANGE_MIN;
+  turret.charge = CHARGE_SPEED;
+}
+
 export interface StepResult {
   /** True on a step a shot left a gun. */
   fired: boolean;

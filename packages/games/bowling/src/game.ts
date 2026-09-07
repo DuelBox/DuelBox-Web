@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -178,6 +179,18 @@ export class BowlingGame implements Game {
    * Darts — a player who has met one of them already knows this one.
    */
   #updateAim(fixedDeltaSeconds: number, seatInput: ReturnType<InputState['seat']>): void {
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing fires on this step — but the charge the gesture had built would otherwise
+    // stay standing and be fired by whatever release came next. Drop the charge; leave the
+    // aim, which the player set and which an interruption must not also take away (#2501).
+    // `#resetAim` is exactly that pair here: the power, and the drag anchor the gesture
+    // was measured from. Leaving the anchor would measure the *next* drag from a press the
+    // player has already abandoned.
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#resetAim();
+
     const pointer = seatInput.pointer;
     if (pointer !== null) {
       toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);

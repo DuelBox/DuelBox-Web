@@ -1,4 +1,4 @@
-import { resolve } from '@duelbox/game-sdk';
+import { misjudgement, resolve } from '@duelbox/game-sdk';
 import type { WinCondition } from '@duelbox/game-sdk';
 import type { Rng, SeatId } from '@duelbox/engine';
 
@@ -354,6 +354,18 @@ export interface BotProfile {
    * it is standing on).
    */
   readonly foresight: number;
+  /**
+   * How far off the square it meant to reach its finger can land, in **squares**.
+   *
+   * A square, not a pixel: `boardColumn` and `boardRow` are unitless and the renderer
+   * scales them, so this is the same number on a phone and on a laptop, which is rule 8.
+   * Symmetric and uniform on each axis — {@link misjudgement} turns one seeded draw into a
+   * slip in `[-aimError, +aimError]`, and the column and the row get one draw each.
+   *
+   * Not a second blunder rate: it never changes which die the tier *wants*, only whether
+   * the tap that asks for it lands on the other one. See {@link aimedDie} and issue #2477.
+   */
+  readonly aimError: number;
 }
 
 /**
@@ -365,9 +377,9 @@ export interface BotProfile {
  * saying plainly that it is not done.
  */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
-  easy: Object.freeze({ blunder: 0.8, foresight: 0 }),
-  normal: Object.freeze({ blunder: 0.2, foresight: 0 }),
-  hard: Object.freeze({ blunder: 0, foresight: 0.7 }),
+  easy: Object.freeze({ blunder: 0.8, foresight: 0, aimError: 2.6 }),
+  normal: Object.freeze({ blunder: 0.2, foresight: 0, aimError: 1.3 }),
+  hard: Object.freeze({ blunder: 0, foresight: 0.7, aimError: 0.8 }),
 });
 
 /** A move that ends the match. Larger than any field, so nothing outbids winning. */
@@ -425,27 +437,117 @@ export function scoreDie(
 }
 
 /**
- * The die a bot moves by, or -1 when there is nothing to choose.
+ * Squared distance from a square of the board to a point on it, in squares.
  *
- * Every tier sees the board a human sees and the dice a human rolled. Difficulty is how
- * well it reads them, and nothing else.
+ * Squared because only the comparison is wanted and a square root is not — the same reason
+ * `#dieFor` squares it. The cells are square, so this is proportional to the distance on
+ * the drawn board however the renderer scales it.
  */
-export function botDie(position: Position, rng: Rng, difficulty: BotDifficulty): number {
-  if (position.phase !== 'choosing') return -1;
-  const profile = BOT_PROFILES[difficulty];
-  // Drawn even at a blunder rate of zero, so the three tiers consume the stream the same
-  // way when they agree and a trace difference means a different *decision*.
-  const careless = rng.bool(profile.blunder);
-  if (careless) return rng.int(0, DICE);
+function squareGap(field: number, column: number, row: number): number {
+  const dx = boardColumn(field) - column;
+  const dy = boardRow(field) - row;
+  return dx * dx + dy * dy;
+}
 
+/** The nearer of a die's landing square and where it leaves you, as `#dieFor` reads it. */
+function reachOf(
+  position: Position,
+  seat: SeatId,
+  index: number,
+  column: number,
+  row: number,
+): number {
+  const landing = squareGap(landingFor(position, seat, index), column, row);
+  const arrival = squareGap(destinationFor(position, seat, index), column, row);
+  return landing < arrival ? landing : arrival;
+}
+
+/**
+ * The die a finger asks for when it meant `wanted` and came down a slip of squares away.
+ *
+ * ## Why a bot needs this at all (#2477)
+ *
+ * The tap this game is built around is "take me there": a finger anywhere but a die box
+ * picks the die whose landing — or whose snake or ladder destination — is nearest it, and
+ * `game.ts` does that in `#dieFor`. The bot used to skip the gesture and hand back an
+ * index, which is perfect precision in reaching for a choice, and CLAUDE.md's fairness
+ * section denies that to every other input family: nobody may aim finer than anybody else,
+ * and a bot is an input family. Rule 6 is the same statement about information.
+ *
+ * So the *decision* is untouched — the tiers still read the board exactly as well as they
+ * did — and only the reaching is made fallible. The bot works out the square it wants to be
+ * on, its finger comes down a slip away from it, and it plays whichever die that tap asks
+ * for. Two dice that draw the same pair of ghosts cannot be mis-tapped at all — 19% of
+ * turns, usually a double — and that is right: there is nothing there to get wrong.
+ *
+ * The metric is `#dieFor`'s, in the units `boardColumn` and `boardRow` are already in: the
+ * nearer of the landing square and the arrival square, so a ladder or a snake is aimed at
+ * by where it *leaves* you as much as by where you step. Ties go to the die it meant.
+ *
+ * Allocates nothing.
+ */
+export function aimedDie(
+  position: Position,
+  wanted: number,
+  slipColumn: number,
+  slipRow: number,
+): number {
+  const seat = position.seat;
+  const meant = destinationFor(position, seat, wanted);
+  const column = boardColumn(meant) + slipColumn;
+  const row = boardRow(meant) + slipRow;
+
+  let best = wanted;
+  // The die it meant is measured first, so a tie can only ever go to it.
+  let bestGap = reachOf(position, seat, wanted, column, row);
+  for (let index = 0; index < DICE; index += 1) {
+    if (index === wanted) continue;
+    const near = reachOf(position, seat, index, column, row);
+    if (near < bestGap) {
+      best = index;
+      bestGap = near;
+    }
+  }
+  return best;
+}
+
+/**
+ * The die a tier *means* to take, before its finger has anything to say about it.
+ *
+ * Separate from {@link botDie} because the decision and the reach are two different
+ * faculties and the tests measure them apart: `botDie` is this, blunders, and an aim.
+ * Draws nothing and allocates nothing.
+ */
+export function wantedDie(position: Position, difficulty: BotDifficulty): number {
+  const foresight = BOT_PROFILES[difficulty].foresight;
   let best = 0;
   let bestScore = -Infinity;
   for (let index = 0; index < DICE; index += 1) {
-    const score = scoreDie(position, position.seat, index, profile.foresight);
+    const score = scoreDie(position, position.seat, index, foresight);
     if (score > bestScore) {
       bestScore = score;
       best = index;
     }
   }
   return best;
+}
+
+/**
+ * The die a bot moves by, or -1 when there is nothing to choose.
+ *
+ * Every tier sees the board a human sees and the dice a human rolled. Difficulty is how
+ * well it reads them and how steadily it taps for what it read, and nothing else.
+ */
+export function botDie(position: Position, rng: Rng, difficulty: BotDifficulty): number {
+  if (position.phase !== 'choosing') return -1;
+  const profile = BOT_PROFILES[difficulty];
+  // All three draws are taken even at a blunder rate of zero and before any branch, so the
+  // three tiers consume the stream the same way when they agree and a trace difference
+  // means a different *decision*.
+  const careless = rng.bool(profile.blunder);
+  const slipColumn = misjudgement(rng.float(), profile.aimError);
+  const slipRow = misjudgement(rng.float(), profile.aimError);
+  if (careless) return rng.int(0, DICE);
+
+  return aimedDie(position, wantedDie(position, difficulty), slipColumn, slipRow);
 }

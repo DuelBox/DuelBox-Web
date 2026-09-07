@@ -264,11 +264,15 @@ interface SeatSources {
    */
   pointerLatched: boolean;
   /**
-   * Whether a pointer owned by this seat was cancelled since the last step.
+   * Whether this seat's action was taken away since the last step.
    *
    * Latched like the others so a cancel that lands between two steps is still reported —
    * losing it would put the gesture back exactly where it was before #2480, with the game
    * still holding an aim nothing will ever tell it to drop.
+   *
+   * Raised by {@link InputManager.pointerCancel} for a cancelled pointer, and by
+   * {@link InputManager.clear} for **any** source that was holding the action — a key as
+   * much as a finger. See `clear` for why the keyboard belongs here too.
    */
   cancelLatched: boolean;
 }
@@ -302,6 +306,19 @@ function releaseKeys(sources: SeatSources): void {
   latched.left = false;
   latched.right = false;
   latched.action = false;
+}
+
+/**
+ * Whether this seat's action is, or was, live with nothing having told the game it ended.
+ *
+ * The three terms are three ways for a charge to be in flight when the world is taken away:
+ * a finger on the glass, a key physically down, and — the one that is easy to miss — an
+ * action the last step reported as held whose key-up landed between two steps and has not
+ * been published yet. All three must produce a cancellation, or the game is left holding a
+ * charge with nothing to tell it to drop one.
+ */
+function actionLive(sources: SeatSources): boolean {
+  return sources.pointerCount > 0 || sources.keys.action || sources.wasActionHeld;
 }
 
 function releaseSources(sources: SeatSources): void {
@@ -620,21 +637,34 @@ export class InputManager {
    * not deliver a press. The cost is that a key still physically held when focus
    * returns counts as up until it repeats or is pressed again — the right trade,
    * since the browser does not reliably deliver the key-up that happened elsewhere.
+   *
+   * **A seat whose action was live is told its gesture was taken away.** That is the whole
+   * of the trade above made survivable: this method deletes both edges at once — the
+   * release cannot be published because `wasActionHeld` has just been zeroed, and the hold
+   * cannot continue because the key is gone — so a game charging a shot would otherwise be
+   * left with a drawn bow and nothing to tell it to let the string down, forever.
+   * `pointerCancelled` is that telling, and `actionAbandoned` in the SDK is how a game
+   * reads it.
+   *
+   * It was raised only for a seat with a *pointer* down until #2501, which left the
+   * keyboard half of the same bug intact: opening the pause menu with the action key held
+   * froze the charge silently, and the next release fired it. A key and a finger are one
+   * intent everywhere else in this file (`held = keys.action || pointerDown`) and they are
+   * one intent here.
    */
   clear(): void {
-    // Read before the wipe: a seat holding a pointer when the world is taken away has had
-    // its gesture cancelled in exactly the sense `pointerCancel` means, and must be told
-    // so on the next step. Without it a paused aim stays armed in the game, waiting for a
-    // release that can never come.
-    const p1Live = this.#p1Sources.pointerCount > 0;
-    const p2Live = this.#p2Sources.pointerCount > 0;
+    // Read before the wipe: a seat whose action was live when the world was taken away has
+    // had its gesture cancelled in exactly the sense `pointerCancel` means, whichever
+    // instrument was holding it, and must be told so on the next step.
+    const p1Held = actionLive(this.#p1Sources);
+    const p2Held = actionLive(this.#p2Sources);
     this.#ownership.releaseAll();
     releaseSources(this.#p1Sources);
     releaseSources(this.#p2Sources);
     resetSeatInputState(this.#p1State);
     resetSeatInputState(this.#p2State);
-    this.#p1Sources.cancelLatched = p1Live;
-    this.#p2Sources.cancelLatched = p2Live;
+    this.#p1Sources.cancelLatched = p1Held;
+    this.#p2Sources.cancelLatched = p2Held;
   }
 
   /**

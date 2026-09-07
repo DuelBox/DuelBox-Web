@@ -10,8 +10,9 @@
  * whoever hits it rather than sending them to read this file.
  */
 
+import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join, dirname, resolve, extname } from 'node:path';
+import { join, dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,69 @@ const NETWORK_CLIENTS = [
   '@tanstack/react-query',
   'swr',
 ];
+
+/**
+ * The one file allowed to call `fetch()`, and what it must prove in exchange.
+ *
+ * A service worker's whole job is to answer a `fetch` event, and it answers it by calling
+ * `fetch`. So the rule above and the feature are in genuine conflict, and there are exactly
+ * two ways to resolve it. One is to soften the pattern — drop `.js`, skip `public/`, allow
+ * `fetch` where a comment says it is fine — and that is the worst available outcome: a
+ * security guard widened to fit a feature stays wide for everything that comes after,
+ * including the thing it was written to stop.
+ *
+ * The other is this. The exemption is one path, and it is not a free pass: it swaps the
+ * blanket ban for three narrower properties that say *what kind* of network code is allowed,
+ * and the build fails if the file stops satisfying them. The claim being protected is
+ * `docs/adr/0002` property 4 and the privacy page's "no server that receives anything from
+ * you" — a cache is compatible with both; a client is not.
+ *
+ * Each check was watched failing on purpose, by editing `sw.js` to break it and running the
+ * build. A guard nobody has seen fail is a guard nobody has seen.
+ */
+const NETWORK_EXEMPT = new Map([
+  [
+    'apps/web/public/sw.js',
+    (code, withLineComments) => {
+      const problems = [];
+      // 1. It must refuse to intercept anything cross-origin. Without this line the worker
+      //    could observe, copy or rewrite a request to any other origin the page makes.
+      if (!/url\.origin\s*!==\s*self\.location\.origin/.test(code)) {
+        problems.push(
+          'no longer bails out on a cross-origin request — a service worker that intercepts ' +
+            'other origins is a client, and this one is only allowed to be a cache',
+        );
+      }
+      // 2. It must name no remote host at all. Every URL it touches has to be one the page
+      //    asked for, and a literal `https://…` in here is the shape of the thing this
+      //    repository has no server for.
+      //
+      //    Read from the text with only *block* comments removed, not the fully stripped
+      //    code. The caller's line-comment stripper is a regex, and `'https://example.com'`
+      //    contains `//`: it turns the string into `'https:` and the check can never fire on
+      //    the exact literal it exists to catch. Found by inserting one and watching this
+      //    pass. Line comments are left in because the pattern needs a quote immediately
+      //    before the scheme, so a bare URL in prose is not a match.
+      const remote = /['"`]https?:\/\//.exec(withLineComments);
+      if (remote !== null) {
+        problems.push(`names a remote origin: ${remote[0]} — it may only serve this one`);
+      }
+      // 3. It must fetch only what it was handed. A `fetch` on a URL the worker composed
+      //    itself, rather than on the event's own request or a member of the precache list,
+      //    is a request the page never made.
+      for (const call of code.matchAll(/\bfetch\s*\(([^)]*)\)/g)) {
+        const argument = (call[1] ?? '').trim();
+        if (!/^request$/.test(argument)) {
+          problems.push(
+            `calls fetch(${argument}) — the exemption covers answering the page's own ` +
+              'request and nothing else',
+          );
+        }
+      }
+      return problems;
+    },
+  ],
+]);
 
 const failures = [];
 
@@ -135,26 +199,80 @@ async function checkNoDynamicRoutes() {
 /** Gameplay runs on the player's device, so gameplay code has no reason to reach the network. */
 async function checkNoNetworkInGameplay() {
   const property = 'Gameplay never touches the network';
+  // `docs/threat-model.md` requirement 5 and CLAUDE.md both say this is enforced, so it has
+  // to actually be. Two gaps made that an over-claim:
+  //
+  //   - **`apps/web/src` was not scanned at all**, so the entire shell - the thing that
+  //     loads and hosts every game - was outside a rule written about gameplay.
+  //   - **`extname(p) === '.ts'` excludes every `.tsx` file**, which is every React
+  //     component in the repository. A `fetch` in a component passed the build.
+  //
+  // Widening it found no violation, which is the good outcome and also the point: the
+  // property was true and unenforced, and "true today" is not what a guard is for. This is
+  // the seventh time this repository has found a rule it believed was checked and was not.
+  //
+  // `apps/web/public` joined the list when the service worker was written, and it is the
+  // more interesting half of that change. A new directory of shipped code that no guard
+  // scanned is precisely the blind spot this function had twice already, and adding the
+  // worker without adding its directory would have created a third one on the same day it
+  // was closed.
+  //
+  // Extensions are per directory rather than global. `packages/games` contains each
+  // package's `dist/`, so scanning `.js` there would read a hundred bundles to learn
+  // nothing; `apps/web/public` is plain JavaScript and there is nothing else to read.
   const dirs = [
-    join(root, 'packages', 'engine', 'src'),
-    join(root, 'packages', 'game-sdk', 'src'),
-    join(root, 'packages', 'games'),
+    [join(root, 'packages', 'engine', 'src'), ['.ts', '.tsx']],
+    [join(root, 'packages', 'game-sdk', 'src'), ['.ts', '.tsx']],
+    [join(root, 'packages', 'games'), ['.ts', '.tsx']],
+    [join(root, 'apps', 'web', 'src'), ['.ts', '.tsx']],
+    [join(root, 'apps', 'web', 'public'), ['.js']],
   ];
-  for (const dir of dirs) {
-    const sources = (await walk(dir, (p) => extname(p) === '.ts')).filter(
-      (p) => !p.endsWith('.test.ts'),
+  // `walk` returns [] for a directory that is not there, so a path listed above that stops
+  // existing - or never existed - would scan nothing and report success. That is the same
+  // shape as the bug this function just had, one line further up, and it is worth failing
+  // on: `packages/ui` was in this list for exactly as long as it took to discover that
+  // CLAUDE.md's layout table describes a directory the repository has never had.
+  for (const [dir] of dirs) {
+    if (!existsSync(dir)) {
+      fail(property, `${dir.slice(root.length + 1)} is configured for scanning but does not exist`);
+    }
+  }
+  // An exemption for a file that is no longer there is a hole nobody is watching. Fail on it
+  // for the same reason a directory that stopped existing fails above.
+  for (const exempt of NETWORK_EXEMPT.keys()) {
+    if (!existsSync(join(root, exempt))) {
+      fail(property, `${exempt} is exempted from the network rule but does not exist`);
+    }
+  }
+  for (const [dir, extensions] of dirs) {
+    const sources = (await walk(dir, (p) => extensions.includes(extname(p)))).filter(
+      (p) => !p.endsWith('.test.ts') && !p.endsWith('.test.tsx'),
     );
     for (const path of sources) {
       const text = await readFile(path, 'utf8');
       const relative = path.slice(root.length + 1);
       // Strip comments: this file's own prose mentions fetch, and so does documentation.
-      const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      const blockStripped = text.replace(/\/\*[\s\S]*?\*\//g, '');
+      const code = blockStripped.replace(/\/\/.*$/gm, '');
+      const exemption = NETWORK_EXEMPT.get(relative.split(sep).join('/'));
+      if (exemption) {
+        for (const problem of exemption(code, blockStripped)) {
+          fail(property, `${relative} ${problem}`);
+        }
+      }
       for (const pattern of [
-        [/\bfetch\s*\(/, 'calls fetch()'],
+        // The exempt file is exempt from this one line and nothing else below it: it may
+        // answer a request the page made, and it still may not open a socket, a peer
+        // connection or a beacon.
+        ...(exemption ? [] : [[/\bfetch\s*\(/, 'calls fetch()']]),
         [/\bXMLHttpRequest\b/, 'uses XMLHttpRequest'],
         [/\bWebSocket\b/, 'opens a WebSocket'],
         [/\bnavigator\.sendBeacon\b/, 'calls sendBeacon'],
         [/\bEventSource\b/, 'opens an EventSource'],
+        // Missing until now, and the one that matters most for what comes next: remote play
+        // arrives as a data channel, and it must arrive through a reviewed transport rather
+        // than inside a game.
+        [/\bRTCPeerConnection\b/, 'opens an RTCPeerConnection'],
       ]) {
         if (pattern[0].test(code)) fail(property, `${relative} ${pattern[1]}`);
       }
