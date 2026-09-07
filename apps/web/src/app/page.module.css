@@ -108,8 +108,15 @@
   font-size: var(--db-text-xl);
 }
 
+/* "See all 108 games" is the landing page's route into the catalogue and it was a 20px
+   line of 13px text (#178). `inline-flex` with the token as a minimum keeps the words on
+   the heading's baseline — which is what `align-items: baseline` above is for — while the
+   box a thumb has to find grows to the size everything else on the page uses. */
 .sectionHead a {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
   font-size: var(--db-text-sm);
   font-weight: 600;
 }

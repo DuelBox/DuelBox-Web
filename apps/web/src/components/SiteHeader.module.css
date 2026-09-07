@@ -25,9 +25,14 @@
   min-height: 64px;
 }
 
+/* The mark is a link home, and it was 33px tall — the one control in the header that the
+   #178 sweep over `.nav a` below walked straight past, because it was already an
+   `inline-flex` and looked like it had been dealt with. The row is 64px, so the target
+   costs nothing but a taller box around the same wordmark. */
 .brand {
   display: inline-flex;
   align-items: center;
+  min-height: var(--db-touch-target);
   color: var(--db-ink);
 }
 

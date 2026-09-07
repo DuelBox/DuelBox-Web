@@ -29,12 +29,15 @@
   color: var(--db-body);
 }
 
+/* The word "Controls", on the lobby and again inside the pause panel — both on white, where
+   `--db-faint` is 2.6:1 and misses AA. It is the heading of the one block a player opens the
+   pause menu to read. `--db-muted` is 4.65:1 and matches `.label` above. */
 .title {
   font-size: var(--db-text-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--db-faint);
+  color: var(--db-muted);
 }
 
 /* Which keys are whose, before anything about what they do. */

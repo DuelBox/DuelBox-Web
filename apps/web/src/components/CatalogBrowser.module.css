@@ -35,6 +35,8 @@
 }
 
 .sort {
+  /* The arrow the select gave up sits on this label, absolutely, so it needs the frame. */
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--db-space-2);
@@ -43,14 +45,47 @@
   color: var(--db-muted);
 }
 
+/*
+ * The sort control, and the one place `min-height` alone is not a touch target.
+ *
+ * Safari sizes a native `<select>` from its own metrics and ignores height, min-height and
+ * vertical padding while `appearance` is left at its default: on iPhone this box measured
+ * 117x23 against the 48px token. `e2e/touch-targets.spec.ts` caught it on
+ * `notched-portrait` and on no other project, because Chromium honours the same
+ * declaration — so the control was the right size everywhere anybody was looking.
+ *
+ * `appearance: none` is what makes the box ours to size, and it costs the native
+ * disclosure arrow. The arrow is drawn back on the label rather than left absent, because
+ * a select with no affordance reads as a text field: `.sort::after` is a CSS triangle in
+ * `--db-ink`, which keeps the colour a token rather than the hex a background-image SVG
+ * would have forced (a data URI cannot read a custom property). `pointer-events: none` so
+ * the triangle never swallows a tap meant for the control underneath it, and the select's
+ * right padding is what leaves room for it.
+ */
 .select {
+  appearance: none;
+  -webkit-appearance: none;
   min-height: var(--db-touch-target);
-  padding: 0 var(--db-space-3);
+  padding: 0 var(--db-space-6) 0 var(--db-space-3);
   border: 2px solid var(--db-border);
   border-radius: var(--db-radius);
   background: var(--db-paper);
   color: var(--db-ink);
   font: inherit;
+}
+
+.sort::after {
+  content: '';
+  position: absolute;
+  right: var(--db-space-3);
+  top: 50%;
+  transform: translateY(-25%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--db-ink);
+  pointer-events: none;
 }
 
 /*
@@ -134,11 +169,16 @@
   margin-bottom: var(--db-space-4);
 }
 
+/* `--db-body`, not `--db-muted`: this pill sets its own `--db-surface` background, and
+   `--db-muted` measures 4.38:1 against that — under the 4.5:1 AA asks for 12px text, which
+   is what `e2e/axe.spec.ts` reports. On the page's white the same colour would be 4.65:1
+   and pass; it is the tinted pill underneath it that costs the ratio. The same swap, for
+   the same reason, is on `SiteFooter`'s hub links. */
 .sectionCount {
   font-family: var(--db-font-mono);
   font-size: var(--db-text-xs);
   font-weight: 700;
-  color: var(--db-muted);
+  color: var(--db-body);
   background: var(--db-surface);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-pill);

@@ -43,6 +43,33 @@ const ALL_ENGINES = process.env.DUELBOX_ALL_ENGINES === '1';
  * exactly the code that differs between engines.
  */
 const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
+
+/**
+ * The axe-core scan, on Chromium alone, on the same argument as `CONTENT_ONLY` above.
+ *
+ * axe reads the accessibility tree and the computed styles. An accessible name, a heading
+ * order, a landmark and a contrast ratio are properties of the document rather than of how
+ * an engine paints it, so a second engine re-confirms a verdict rather than testing one —
+ * and a scan is a far more expensive test-run than a content check, because it injects and
+ * runs axe on every page it visits. Anything that genuinely differs between engines is
+ * already covered by specs that run on all four.
+ *
+ * If a rule ever fires on one engine and not another, this is the list to take it out of.
+ */
+const CHROMIUM_ONLY = ['**/axe.spec.ts'];
+
+/**
+ * Specs that set their own viewport and therefore want one project *per engine*, not four.
+ *
+ * `touch-targets.spec.ts` measures every control at 320px, which it sets for itself — so on
+ * the two Chromium projects it would measure the same engine at the same width twice, and on
+ * the two WebKit ones likewise. What it does need is both engines, because a range slider, a
+ * file chooser and a search field are drawn by the browser rather than by the stylesheet, and
+ * the settings page has all three. So it keeps `chromium` and `notched-portrait` and stands
+ * down on the other two.
+ */
+const ONE_PER_ENGINE = ['**/touch-targets.spec.ts'];
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -87,19 +114,33 @@ export default defineConfig({
      * and the category hubs would have added nine more of the same.
      */
     // Two people sharing one phone is the primary case, so it is tested, not assumed.
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: CONTENT_ONLY },
+    {
+      name: 'mobile',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+    },
     // A notched phone in both orientations. The insets differ between them — portrait
     // puts the cutout on the top edge, landscape on one side — so a layout that clears
     // the notch in one can still bury a control in the other.
-    { name: 'notched-portrait', use: { ...devices['iPhone 14 Pro'] }, testIgnore: CONTENT_ONLY },
+    {
+      name: 'notched-portrait',
+      use: { ...devices['iPhone 14 Pro'] },
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY],
+    },
     {
       name: 'notched-landscape',
       use: { ...devices['iPhone 14 Pro landscape'] },
-      testIgnore: CONTENT_ONLY,
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
     },
     // A third engine, nightly only. See the note above the export.
     ...(ALL_ENGINES
-      ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: CONTENT_ONLY }]
+      ? [
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+            testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+          },
+        ]
       : []),
   ],
   webServer: {

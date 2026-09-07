@@ -61,10 +61,14 @@
   color: var(--db-muted);
 }
 
+/* `--db-muted`, matching `.meta` above it. As `--db-faint` this line was 2.6:1 on the
+   page's white and failed AA on all 108 cards at once, which made it the single largest
+   contrast fault on the site — and what it says is which of the three ways to play a game
+   supports, which is the one fact on a card a visitor is choosing between. */
 .modes {
   font-family: var(--db-font-mono);
   font-size: var(--db-text-xs);
-  color: var(--db-faint);
+  color: var(--db-muted);
 }
 
 /* Only a handful of the 107 are playable today; the badge is how a visitor tells at a

@@ -1,9 +1,20 @@
 .crumbs {
   display: flex;
+  /* Centred rather than stretched, because the link below is now taller than the separator
+     and the game's own name beside it, and a stretched row would put its text at a
+     different height from theirs. */
+  align-items: center;
   gap: var(--db-space-2);
   padding-block: var(--db-space-5) var(--db-space-4);
   font-size: var(--db-text-sm);
   color: var(--db-muted);
+}
+
+/* The one way back up from a game page, and it was 59×20 (#178). */
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
 }
 
 .top {
@@ -91,6 +102,11 @@
    underline is the signal; the brand colour arrives on hover as confirmation rather than as
    the whole message. */
 .relatedTitle a {
+  /* A heading that is also the route to the category hub, so it is also a target: 197×29
+     of underlined text, which reads as a heading and presses like one (#178). */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.15em;
@@ -140,11 +156,14 @@
   align-items: baseline;
 }
 
+/* "On a keyboard" and "By touch": the labels that say which set of controls the line beside
+   them describes. `--db-faint` is 2.6:1 on white and fails AA; `--db-muted` is 4.65:1 and is
+   what `dd` below already uses. */
 .controls dt {
   font-size: var(--db-text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--db-faint);
+  color: var(--db-muted);
   white-space: nowrap;
 }
 
