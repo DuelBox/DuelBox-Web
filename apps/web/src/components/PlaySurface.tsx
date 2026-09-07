@@ -337,7 +337,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   if (loadState === 'error') {
     return (
-      <div className={styles.state} role="alert">
+      <div className="db-panel" role="alert">
         <h2>This game is not playable yet</h2>
         <p>Its rules and controls are settled, but the build has not landed. Try another game.</p>
       </div>
@@ -346,7 +346,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   if (loadState === 'loading' || !manifest || !create) {
     return (
-      <div className={styles.state}>
+      <div className="db-panel">
         <p>Loading {slug.replace(/-/g, ' ')}…</p>
       </div>
     );
@@ -363,7 +363,7 @@ export function PlaySurface({ slug }: { slug: string }) {
       return 0;
     });
     return (
-      <div className={styles.state}>
+      <div className="db-panel">
         <h2>{manifest.name}</h2>
         {/* Above the buttons, because these settle what the button is about to start —
             and the buttons stay last, nearest the thumb that presses them. The tier is
