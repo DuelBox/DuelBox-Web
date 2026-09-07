@@ -158,6 +158,47 @@ than measured from matches. The verdicts are falsifiable and should be revisited
 #1862's harness exists — particularly `rt-split`, where I have claimed two advantages
 cancel out, which is exactly the kind of claim that is comfortable and might be wrong.
 
+## Criterion-3 residuals: the outcome-lattice near-misses
+
+`apps/web/src/data/outcome-lattice.ts` measures criterion 1 of the fairness audits — *are the
+measured outcome distributions comparable across input families?* — as a number per game: the
+smallest change each instrument can make to a committed outcome, compared as the **set** of
+values each can name over the shared span. `parity` (set equality) and `nested` (one lattice a
+subset of the other) discharge the criterion; `partial` and `sparse` are measured expression
+gaps; `uncalibratable` means a single-axis sweep cannot separate the game's gesture and is
+silence rather than a verdict either way. The table is pinned in `outcome-lattice.test.ts`.
+
+Every game named below is one shape: a **paddle, runner, catcher or hand whose keyboard rate was
+chosen without reference to the position envelope**. The pointer position is rounded onto the
+engine's precision lattice (one two-hundredth of the short logical side — 3.0 units in a 600-wide
+box); the keyboard path integrates its own `SPEED × fixedDeltaSeconds` and lands on a different
+lattice. The two then share only their least common multiple. This is the same defect #2506's
+`scalarEnvelopeFor` closed for *aimed* scalars and which **nothing yet closes for integrated
+positions** — that fix belongs in the engine input path (#1865), not in a game, so no game code
+is changed for it here. `control-parity.test.ts` sees no win-rate consequence for any of them,
+but by its own statement it *cannot* see a resolution difference at any sample size, so a flat
+win rate is not evidence the criterion is met — the lattice comparison is.
+
+**Accepted residuals (`partial` — the lattices substantially overlap).** For these two the
+overlap clears the harness's own 25%-of-the-smaller-lattice line, so the residual is small,
+named, and accepted here per criterion 3; the durable fix remains the engine position envelope
+(#1865).
+
+| game | factor | named quantity | residual |
+|---|---|---|---|
+| `money-grabber` | 1.667× | keyboard hand `HAND_SPEED = 300`u/s → 5.0 units/step against a 3.0-unit pointer envelope (600-wide box) | 41 of 121 keyboard positions are shared; the hand is rate-limited identically for both instruments in *match* terms (rule 10), so the gap is which intermediate positions each can name, not who reaches a token first |
+| `pizza-memory` | 2.667× | keyboard hand advances `HAND_SPEED × dt × 2` along a station rail that maps to an 8.0-unit board lattice against the 3.0-unit pointer envelope | 26 of 76 keyboard positions shared; the rail is measured in stations, both seats run identical seat-local arithmetic, and neither instrument reaches an ingredient faster |
+
+**Gaps too large to accept as-is (`sparse` — under 25% overlap).** These share almost nothing
+between the two lattices and documentation calling that a small residual would not be honest.
+They need the shared position lattice (#1865), and until then their criterion 1 is genuinely
+unmet: `ping-pong`, `taxi-race`, `racing-cars`, `brick-blast`, `animal-stack`, `star-catcher`,
+`sticky-tongues`, `archery`, `happy-hippos`, `carrom`. Four rest on thin evidence and must be
+re-checked by hand before anyone acts on the number — `happy-hippos` (one drawn quantity),
+`archery` (frame split 10/19 about the answer), and `carrom` (commits an angle and a power in one
+gesture, the shape the harness says elsewhere it cannot separate, so its 6.285 is the least safe
+number in the file).
+
 
 ---
 
