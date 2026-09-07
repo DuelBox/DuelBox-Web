@@ -1,353 +1,207 @@
-/**
- * The whole vocabulary of sound in DuelBox, and the bus a game says one of them through.
- *
- * ## Why a closed set of names
- *
- * A game says *what happened*. The engine decides what that sounds like. That is the same
- * division CLAUDE.md draws everywhere else — "games supply a simulation and a win
- * condition; countdown, HUD, pause, result, rematch and seat rotation all come from the
- * SDK" — and it buys three things that letting games specify waveforms would not:
- *
- * 1. **107 games sound like one product.** A hit is the same hit in Air Hockey and in
- *    Pinball, so a player who has learned what a fault sounds like has learned it once.
- * 2. **Issue #180 stays satisfiable.** "Every audio-only cue needs a visual indicator" is
- *    only checkable against a finite list of cues. An open vocabulary makes it a promise
- *    nothing can enforce, which is the exact failure this repository keeps finding.
- * 3. **The size budget.** Ten recipes, rendered once, shared by every game.
- *
- * ## Why these ten
- *
- * They are what is left after asking, of every game in the catalogue, "what did the player
- * just learn?" — not "what object moved?". Five belong to the match and are emitted by the
- * shell, so no game ever reimplements a countdown beep. Five belong to the game and split
- * along the one line that actually matters to a player: **did I cause this, or did the
- * world?** A puck struck by a mallet and a puck rebounding off a rail are different events
- * to the person holding the mallet, and giving them one name would make the game less
- * legible, not simpler.
- *
- * ## What is deliberately not here
- *
- * No music, no ambience, no per-game sounds, no way to pass a frequency. A game that
- * believes it needs a sound outside this list should say so on the issue: either the list
- * is missing a *category* (and gains one name, for everybody) or the game is asking to
- * sound different for its own sake, which is how a product ends up with 107 sound designs.
- */
-
-import type { AudioSystem } from './audio.js';
-import type { SeatId } from './seat.js';
-import { recipe, renderRecipe, voice, type SynthRecipe } from './synth.js';
+import type { Rng } from './rng.js';
 
 /**
- * Every sound the product can make. Adding to this list is a product decision, and the
- * guard in `apps/web/src/data/audio-cues.test.ts` will fail until the new entry has a
- * named visual counterpart backed by real code.
+ * Every sound this product may play, who is allowed to raise it, and what it tells a
+ * player (#168).
+ *
+ * ## Why a vocabulary comes before a sound pack
+ *
+ * A sound is a name long before it is a file. {@link AudioSystem.play} takes a string, and
+ * a string with no agreed list behind it is coined at each call site: a hundred and eight
+ * game packages would arrive at `hit`, `bat`, `thwack` and `contact` for one meaning, and
+ * the recordings of #169 would then have to be commissioned per game rather than per
+ * meaning. Naming the meanings first is what lets one recording serve every game that
+ * means the same thing by it, and it is what makes "does this cue have a visual
+ * counterpart" (#180) a question with one answer per entry instead of one answer per game.
+ *
+ * ## The split that matters
+ *
+ * CLAUDE.md: "Countdown, HUD, pause, result, rematch ... all come from the SDK. A bespoke
+ * version of any of those inside a game package is a bug." That is as true of how those
+ * moments sound as of how they look, so every entry names its owner and the two owners get
+ * types of their own — see {@link GameSoundBus}. A game raising the shell's countdown is
+ * not a different sound, it is the same defect as a game drawing its own pause menu, and
+ * it should be a compile error rather than something a reviewer notices.
+ *
+ * ## Nothing in here plays anything yet
+ *
+ * No sound file exists in this repository (#169, #170) and no game emits a cue. This
+ * module is the agreement the recordings and the emitters will both be written against.
+ * `play()` returns false for a name nothing has registered, so the shell can raise its
+ * cues today, hear silence, and be raising real ones the day a library lands — which is
+ * the point of wiring the names ahead of the files rather than after them.
+ *
+ * ## Every cue owes a visual counterpart
+ *
+ * Rule 7 says colour is never the only signal; #180 says the same of sound, and for a
+ * stronger reason — a phone is muted by default, an autoplay policy silences the first
+ * match until somebody taps, and a deaf player hears none of it ever. So a cue is only
+ * half of a piece of feedback: the other half is drawn, and
+ * `apps/web/src/lib/sound-visuals.ts` records which drawn thing, per entry, and fails when
+ * an entry has none.
  */
-export const SOUND_EVENTS = [
-  'countdown',
-  'start',
-  'pause',
-  'win',
-  'hit',
-  'bounce',
-  'launch',
-  'score',
-  'fault',
-  'select',
-] as const;
 
-export type SoundEvent = (typeof SOUND_EVENTS)[number];
+/** Who may raise a cue. The distinction is CLAUDE.md's, applied to sound. */
+export type SoundOwner = 'shell' | 'game';
 
-/** Who is expected to emit a cue. Games never emit match cues and vice versa. */
-export type SoundEventSource = 'shell' | 'game';
-
+/** What one entry in the vocabulary has to say about itself. */
 export interface SoundEventSpec {
-  /** What the player has just learned. One sentence, in the player's terms. */
-  readonly meaning: string;
-  readonly source: SoundEventSource;
-}
-
-/**
- * What each name means, written down so that two games cannot quietly disagree about it.
- *
- * This is the contract a game reads before choosing a name, and the text the #180 guard
- * quotes when it fails.
- *
- * `/*#__PURE__*\/` is load-bearing rather than decorative. This table is documentation:
- * it is read by the guards and by whoever wires the next game, and by nothing that ships.
- * But `Object.freeze` is a call, so a bundler cannot prove the statement is safe to drop
- * and keeps it — which put six hundred bytes of English prose into a chunk every visitor
- * downloads. The annotation is how you say "dropping this is safe" to webpack, Rollup and
- * esbuild alike. Same for {@link SILENT_BUS} below.
- */
-export const SOUND_EVENT_SPECS: Readonly<Record<SoundEvent, SoundEventSpec>> =
-  /*#__PURE__*/ Object.freeze({
-    countdown: { source: 'shell', meaning: 'One second of the pre-round count has passed.' },
-    start: { source: 'shell', meaning: 'The count has finished and the board is now live.' },
-    pause: { source: 'shell', meaning: 'The match has stopped on purpose.' },
-    win: { source: 'shell', meaning: 'A round or the match has been decided.' },
-    hit: { source: 'game', meaning: 'A player struck something: a paddle, a bat, a fist.' },
-    bounce: { source: 'game', meaning: 'Something rebounded off the world. Nobody chose it.' },
-    launch: { source: 'game', meaning: 'Something was released into play: a serve, a throw.' },
-    score: { source: 'game', meaning: 'The tally changed.' },
-    fault: { source: 'game', meaning: 'An attempt failed or was illegal: a miss, an early tap.' },
-    select: { source: 'game', meaning: 'A discrete choice was committed: a piece placed.' },
-  });
-
-/**
- * How a game asks for a sound.
- *
- * **Every parameter is a primitive and there is no options bag**, because a game emits
- * from inside `update()` and rule 5 forbids allocating there. An `{ intensity: 0.8 }`
- * literal at a call site allocates on every collision; three positional numbers do not.
- *
- * A game must work when this is absent — `context.audio` is optional and is `undefined` in
- * every headless test and every balance run. `context.audio?.emit(...)` is the whole
- * calling convention, and optional chaining allocates nothing either.
- */
-export interface SoundBus {
+  readonly owner: SoundOwner;
+  /** The moment it fires, said precisely enough that two implementers pick the same one. */
+  readonly when: string;
   /**
-   * @param event     one of {@link SOUND_EVENTS}. Unknown names are ignored, not thrown:
-   *                  a typo must not be able to end a match.
-   * @param intensity 0 to 1, how hard. Clamped. Maps to loudness, and for impacts also to
-   *                  a little brightness, so a tap and a slam are the same sound.
-   * @param seat      whose action this was, or null for the world's. The two seats are
-   *                  pitched apart, which is rule 7 ("colour is never the only signal")
-   *                  applied to the one channel that has no colour.
+   * What the player is being told. Two entries that would answer this the same way are one
+   * entry with two names, and the second is the one a sound pack ends up missing.
    */
-  emit(event: SoundEvent, intensity?: number, seat?: SeatId | null): void;
+  readonly means: string;
 }
 
 /**
- * A bus that does nothing, for anywhere there is no audio at all.
+ * The vocabulary. Fourteen cues, six of them the shell's and eight a game's.
  *
- * Handed out rather than left as `undefined` where a non-optional bus is convenient. It is
- * a frozen singleton, so using it costs no allocation either.
+ * Deliberately short. Every name here has to be worth a recording, a visual counterpart and
+ * a place in every game's QA pass, and a vocabulary that lists every noise a designer might
+ * one day want is a vocabulary nobody can finish implementing.
  */
-export const SILENT_BUS: SoundBus = /*#__PURE__*/ Object.freeze({
-  emit(): void {
-    /* Sound is presentation. Nothing that reads state may live here. */
+export const SOUND_EVENTS = {
+  countdown: {
+    owner: 'shell',
+    when: 'Each whole second of the pre-round count-in, while the match machine is counting down.',
+    means: 'The board is about to become live, and this is how long both seats have to get ready.',
   },
-});
+  start: {
+    owner: 'shell',
+    when: 'The count-in reaches zero and the simulation takes its first step of the round.',
+    means: 'Act now. Anything either seat did before this did not reach the board.',
+  },
+  // There is deliberately no `resume`. `reduce()` answers a resume by replaying the
+  // count-in rather than dropping straight back into play, so coming back from a pause
+  // already raises `countdown` and then `start`; a cue of its own would be a second sound
+  // for a moment that is not a second moment.
+  pause: {
+    owner: 'shell',
+    when: 'The match stops on purpose: the pause button, Escape, or the window going away.',
+    means: 'The board is frozen, and nothing either seat does now reaches it.',
+  },
+  // One neutral cue for the end of a round rather than a win and a loss. Both people are
+  // sitting at one device and hear the same speaker, so a cue that congratulates one of
+  // them is a cue that gloats at the other; which seat took the round is on the panel, in
+  // the pips, and in the announcement. The end of the *match* is different — see below.
+  'round-over': {
+    owner: 'shell',
+    when: 'A round is settled with rounds still to play.',
+    means: 'That round is over and the match is not.',
+  },
+  'match-win': {
+    owner: 'shell',
+    when: 'The match settles with a winner.',
+    means: 'It is finished, and somebody took it.',
+  },
+  // Split from `match-win` for the reason `lib/haptics.ts` already gives a draw the short
+  // tap rather than the win pattern: the phone is lying between two people who both just
+  // failed to win, and celebrating at them is the wrong note.
+  'match-draw': {
+    owner: 'shell',
+    when: 'The match settles level.',
+    means: 'It is finished and nobody took it.',
+  },
 
-/** Cents the two seats are pitched apart, so p1 and p2 are told apart by ear. */
-const SEAT_CENTS = 38;
+  launch: {
+    owner: 'game',
+    when: "Something is sent on its way by a player's command: a serve, a delivery, a shot, a throw.",
+    means: 'That input was taken, and the thing it aimed is now beyond taking back.',
+  },
+  hit: {
+    owner: 'game',
+    when: 'Two things meet because a player made them meet, at the moment of contact.',
+    means: 'The timing connected.',
+  },
+  // Cricket learned this one the hard way and its `#updateFlight` still carries the note: a
+  // ball pitching raised a `bounce` and nothing on screen marked where, because height is
+  // drawn as radius and a pitched ball is only a ball that got briefly smaller. A cue whose
+  // contact point is not drawn stays silent until it is drawn, rather than becoming the one
+  // thing in the match a player can only hear.
+  bounce: {
+    owner: 'game',
+    when: 'Something rebounds off the world rather than off a player: a wall, the floor, a rail.',
+    means: 'The path changed, and it changed here.',
+  },
+  // A game's, though the shell draws the number. The shell only knows that a tally moved;
+  // the game knows whether that was a boundary, a goal or a matched pair, and the sound of
+  // scoring is one of the few things that is genuinely characteristic of a game rather than
+  // of the match flow around it. There is no shell `score` cue, so nothing can double up.
+  score: {
+    owner: 'game',
+    when: "The emitting seat's tally goes up.",
+    means: 'That counted, and the number beside your name has moved.',
+  },
+  fault: {
+    owner: 'game',
+    when: 'A player loses something to the rules: a miss, a wicket, a foul, a life.',
+    means: 'That cost you, and the game has moved on without you.',
+  },
+  select: {
+    owner: 'game',
+    when: 'A player picks up, or moves onto, a legal choice in a turn-based game.',
+    means: 'This is the thing you have hold of.',
+  },
+  place: {
+    owner: 'game',
+    when: "A player's move is accepted and the board changes.",
+    means: 'The move is played and the position in front of you is new.',
+  },
+  reject: {
+    owner: 'game',
+    when: 'A player asks for something the rules will not accept.',
+    means: 'Nothing happened. The board is exactly as it was.',
+  },
+} as const satisfies Record<string, SoundEventSpec>;
 
-/** Widest deliberate detune applied to a repeated cue, in cents. A fifth of a semitone. */
-const VARIATION_CENTS = 45;
+/** Every name in the vocabulary. */
+export type SoundEvent = keyof typeof SOUND_EVENTS;
 
-const CENTS_PER_OCTAVE = 1200;
+/** The names one owner holds, derived from the table so the two can never drift apart. */
+type OwnedBy<O extends SoundOwner> = {
+  [K in SoundEvent]: (typeof SOUND_EVENTS)[K]['owner'] extends O ? K : never;
+}[SoundEvent];
 
 /**
- * The recipes. One per name; rendered once when the bank is registered, never per play.
- *
- * The design brief for all ten: short (nothing over 600 ms), quiet, and distinguishable
- * from each other on a phone speaker in a room with two people talking over it.
+ * The cues the shell raises from the match machine. A game emitting one of these is the
+ * bug this split exists to make impossible.
  */
-/**
- * The recipes. One per name; rendered once when the bank is registered, never per play.
- *
- * The design brief for all ten: short (nothing over 600 ms), quiet, and distinguishable
- * from each other on a phone speaker in a room with two people talking over it.
- *
- * Read the voices as a table. Each row is
- *
- * ```
- * voice(wave, fromHz, toHz, delay, attack, hold, release, level)
- * ```
- *
- * with every duration in seconds and `level` a peak amplitude in [0, 1]. Positional
- * rather than named because object-literal keys survive minification: see {@link voice}.
- */
-export const SOUND_RECIPES: Readonly<Record<SoundEvent, SynthRecipe>> = {
-  // A soft, flat blip. Deliberately unremarkable: it happens three times before every
-  // round and an interesting sound heard six hundred times is an irritating one.
-  countdown: recipe(0.16, voice('sine', 660, 660, 0, 0.005, 0.03, 0.1, 0.5)),
+export type ShellSoundEvent = OwnedBy<'shell'>;
 
-  // The same blip rising an octave and held: the count resolving rather than continuing,
-  // with a thin harmonic arriving late. "Go" is the one moment that should feel like a
-  // door opening.
-  start: recipe(
-    0.34,
-    voice('sine', 660, 990, 0, 0.006, 0.05, 0.2, 0.55),
-    voice('triangle', 1320, 1320, 0.05, 0.005, 0.02, 0.16, 0.2),
-  ),
-
-  // A falling tone: the shape every interface has used for "stopped" for forty years,
-  // and the one place borrowing a convention is right — a convention is not an asset.
-  pause: recipe(0.3, voice('sine', 520, 300, 0, 0.008, 0.02, 0.22, 0.42)),
-
-  // The only sound allowed to last half a second, because it is the one that ends
-  // something: a triad arriving a note at a time.
-  win: recipe(
-    0.6,
-    voice('sine', 523, 523, 0, 0.008, 0.04, 0.3, 0.34),
-    voice('sine', 659, 659, 0.08, 0.008, 0.04, 0.3, 0.32),
-    voice('sine', 784, 784, 0.16, 0.008, 0.06, 0.36, 0.3),
-  ),
-
-  // A struck thing: a noise transient of a few milliseconds over a short falling tone.
-  // The transient is what the ear reads as "solid"; the tone is what gives it a size.
-  hit: recipe(
-    0.12,
-    voice('noise', 0, 0, 0, 0.001, 0.002, 0.03, 0.5),
-    voice('triangle', 420, 180, 0, 0.002, 0.01, 0.08, 0.45),
-  ),
-
-  // The same event minus the player: shorter, higher, thinner, and with no noise layer,
-  // so a rail is instantly not a mallet even when the two happen a frame apart.
-  bounce: recipe(0.08, voice('sine', 900, 620, 0, 0.001, 0.004, 0.05, 0.3)),
-
-  // Something leaving: a rising saw, brief, with a breath of noise underneath it.
-  launch: recipe(
-    0.18,
-    voice('saw', 220, 620, 0, 0.004, 0.01, 0.11, 0.3),
-    voice('noise', 0, 0, 0, 0.01, 0, 0.09, 0.16),
-  ),
-
-  // Two rising notes. Related to `win` and shorter than it, because a point is a small
-  // version of the same news and should sound like one.
-  score: recipe(
-    0.34,
-    voice('sine', 587, 587, 0, 0.006, 0.03, 0.14, 0.4),
-    voice('sine', 880, 880, 0.09, 0.006, 0.04, 0.2, 0.36),
-  ),
-
-  // A low square falling: hollow, synthetic, unmistakably a refusal, and short enough
-  // that a player who mistimes ten taps in a row is not punished ten times over.
-  fault: recipe(0.22, voice('square', 220, 130, 0, 0.004, 0.02, 0.16, 0.26)),
-
-  // The quietest thing in the set. It fires on every tap of a turn-based game, so it has
-  // to be closer to a keyboard's click than to a notification.
-  select: recipe(0.09, voice('sine', 1200, 1100, 0, 0.001, 0.004, 0.055, 0.22)),
-};
+/** The cues a game raises from its own simulation. */
+export type GameSoundEvent = OwnedBy<'game'>;
 
 /**
- * Render every recipe into the system's context and register it under its own name.
+ * What the vocabulary says about a name, or undefined if it says nothing.
  *
- * Called once by the shell, as soon as there is a context to render into. Returns false in
- * a runtime with no Web Audio at all, which is a thing to route around rather than crash
- * on: `emit` on a bank that was never registered is a lookup miss and a no-op.
- *
- * Decoding is not involved and neither is the network. Ten buffers of a few hundred
- * milliseconds each is under a hundred thousand samples in total — a couple of
- * milliseconds of arithmetic, done once, off the hot path.
+ * Takes a plain string on purpose: its callers are the guards, which read names out of
+ * source files and out of a bundle, where a name is exactly as likely to be a typo as to be
+ * a cue.
  */
-export function registerSoundBank(system: AudioSystem): boolean {
-  const context = system.context();
-  if (context === undefined) return false;
-  for (const event of SOUND_EVENTS) {
-    system.register(event, renderRecipe(context, event, SOUND_RECIPES[event]), 1);
-  }
-  return true;
+export function soundEventSpec(name: string): SoundEventSpec | undefined {
+  // Asked before indexing, because an object literal inherits from `Object.prototype`: the
+  // plain index answered `soundEventSpec('toString')` with a function, and a guard asking
+  // "is this string a declared cue" would have been told yes. Found by the test below,
+  // which was written expecting it to pass.
+  if (!Object.hasOwn(SOUND_EVENTS, name)) return undefined;
+  return (SOUND_EVENTS as Readonly<Record<string, SoundEventSpec>>)[name];
 }
 
 /**
- * The bus the shell hands to a game.
+ * The audio surface a game is handed: {@link AudioSystem}, narrowed to the cues a game owns.
  *
- * ## Why the variation is not random
+ * This is the cheap half of "a game cannot raise a shell cue". `AudioSystem.play` takes a
+ * string, because it is also what registers and plays whatever a sound pack contains; a
+ * game never sees that. It sees this, and `bus.play('countdown')` does not compile.
  *
- * A cue fired forty times in a match sounds like forty copies of one recording unless the
- * pitch moves a little. Rule 4 forbids `Math.random`, and a seeded `Rng` would work — but
- * it would be a *second* stream that both devices in a cross-device match would have to
- * agree about, seeded and advanced in lockstep, for a benefit measured in cents of pitch.
- *
- * So the variation is not random at all. It is a hash of *how many times this cue has
- * already fired*, which every device knows without being told, and which makes the whole
- * question of whether audio can desynchronise a match answerable with "there is nothing to
- * desynchronise". The counter is per-cue and lives in an `Int32Array` sized at construction.
- *
- * ## Why nothing here can affect the simulation
- *
- * `emit` returns `void`, reads no state, and writes only to its own counters and to the
- * audio system's preallocated queue. A game cannot observe whether a sound played, whether
- * the context is running, or whether the player is muted — so the same match steps
- * identically with sound on, with sound off, and in Node with no `AudioContext` at all.
- * That is asserted in `sound-events.test.ts` rather than left as a comment.
+ * `AudioSystem` satisfies it structurally, exactly as the renderer's canvas context does,
+ * so nothing has to be wrapped or adapted when {@link GameContext} finally carries one —
+ * and `sound-events.test.ts` holds the compiler to that.
  */
-export class EngineSoundBus implements SoundBus {
-  readonly #system: AudioSystem;
-  /** One counter per cue, so `hit` and `bounce` vary independently. */
-  readonly #fired: Int32Array;
-
-  constructor(system: AudioSystem) {
-    this.#system = system;
-    this.#fired = new Int32Array(SOUND_EVENTS.length);
-  }
-
-  /** How many times a cue has been asked for. Presentation only; for tests and the HUD. */
-  firedCount(event: SoundEvent): number {
-    const index = SOUND_EVENTS.indexOf(event);
-    return index < 0 ? 0 : this.#fired[index]!;
-  }
-
-  emit(event: SoundEvent, intensity = 1, seat: SeatId | null = null): void {
-    // `indexOf` over ten interned strings, rather than the `Map` this used to build at
-    // module load. Both are allocation-free and the map was marginally faster, but a
-    // pointer comparison against at most ten strings a few times a second is not a cost
-    // anybody can measure, and the map was thirty-odd bytes in a chunk every visitor
-    // downloads. The shell budget is the tighter constraint of the two.
-    const index = SOUND_EVENTS.indexOf(event);
-    // A name that is not in the vocabulary. Silently ignored rather than thrown: this is
-    // reachable from inside a fixed step, and a thrown error there ends the match.
-    if (index < 0) return;
-
-    const n = this.#fired[index]!;
-    this.#fired[index] = n + 1;
-
-    // Knuth's multiplicative hash of the firing count, taken as a fraction of a turn.
-    // Deterministic, allocation-free, and uncorrelated enough between successive n that
-    // two hits in a row never land on the same detune.
-    const hashed = Math.imul(n + 1, 2_654_435_761) >>> 0;
-    const unit = (hashed >>> 8) / 0x100_0000;
-    const seatCents = seat === null ? 0 : seat === 'p1' ? -SEAT_CENTS : SEAT_CENTS;
-    const cents = (unit * 2 - 1) * VARIATION_CENTS + seatCents;
-
-    const level = intensity < 0 ? 0 : intensity > 1 ? 1 : intensity;
-    this.#system.play(event, level, 2 ** (cents / CENTS_PER_OCTAVE));
-  }
-}
-
-/**
- * A bus that remembers what it was asked for and plays nothing.
- *
- * This is the seam the #180 guard drives a game through: play a match, ask the recorder
- * what cues came out, and require a declared visual counterpart for every one of them. It
- * is also how a game's own tests assert that a hit makes a hit sound.
- *
- * **Test and guard use only.** It grows three arrays, which is exactly the allocation
- * inside `update()` that rule 5 forbids, and it is deliberately not exported to the shell.
- */
-export class RecordingSoundBus implements SoundBus {
-  readonly events: SoundEvent[] = [];
-  readonly intensities: number[] = [];
-  readonly seats: (SeatId | null)[] = [];
-
-  emit(event: SoundEvent, intensity = 1, seat: SeatId | null = null): void {
-    this.events.push(event);
-    this.intensities.push(intensity);
-    this.seats.push(seat);
-  }
-
-  /** The distinct cues seen, in first-seen order. */
-  distinct(): SoundEvent[] {
-    const seen: SoundEvent[] = [];
-    for (const event of this.events) {
-      if (!seen.includes(event)) seen.push(event);
-    }
-    return seen;
-  }
-
-  count(event: SoundEvent): number {
-    let total = 0;
-    for (const seen of this.events) {
-      if (seen === event) total += 1;
-    }
-    return total;
-  }
-
-  clear(): void {
-    this.events.length = 0;
-    this.intensities.length = 0;
-    this.seats.length = 0;
-  }
+export interface GameSoundBus {
+  play(event: GameSoundEvent, gain?: number, rate?: number): boolean;
+  playVaried(event: GameSoundEvent, rng: Rng, cents?: number, gain?: number): boolean;
 }

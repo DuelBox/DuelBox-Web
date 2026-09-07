@@ -4,7 +4,9 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
+import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
+import { resultAnnouncement } from '@/lib/match-announcement';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
 import { SoundToggle } from './SoundToggle';
@@ -17,6 +19,10 @@ import styles from './MatchOverlay.module.css';
  * These four screens are the shell's, not a game's. Written per game they drift into 107
  * slightly different pause menus, and a player who learns one game learns nothing about
  * the next.
+ *
+ * A fifth thing covers nothing and is drawn nowhere: the live region that says the result
+ * out loud. It sits beside the panels rather than inside one because it has to exist
+ * before there is a result to put in it — see `lib/match-announcement.ts`.
  */
 
 export interface MatchOverlayProps {
@@ -26,8 +32,20 @@ export interface MatchOverlayProps {
   rounds: number;
   /** What both seats are called, from `lib/seats.ts`. Total, so nothing here falls back. */
   seatNames: SeatNames;
-  /** Matches won by each seat in this sitting, across rematches. */
-  record?: { p1: number; p2: number; draws: number } | undefined;
+  /**
+   * Matches each seat has won at this game, all of them, from `lib/head-to-head.ts` —
+   * *including* the match this panel is announcing.
+   *
+   * It used to be the tally for one sitting and the line above it said "Tonight", which
+   * stopped being true the moment the record outlived the tab (#160). It arrives already
+   * carrying the current result rather than a commit later, so the first paint of the
+   * result panel is the paint with the final numbers on it.
+   *
+   * It is also the record against *this* match's opponent. A bot's wins are the bot's, and
+   * the store keeps them apart from the two seats' own head-to-head, so the names beside
+   * these numbers are the names of whoever actually won them.
+   */
+  record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
   onResume: () => void;
@@ -36,7 +54,34 @@ export interface MatchOverlayProps {
   onRematch: () => void;
 }
 
-export function MatchOverlay({
+export function MatchOverlay(props: MatchOverlayProps) {
+  const { state, rounds, seatNames } = props;
+  return (
+    <>
+      {/*
+        The result, said out loud, from a region that was already here.
+
+        This is the whole of #177's acceptance criterion — "hear the result" — and the
+        panel below cannot deliver it however it is marked up: it is *inserted* carrying
+        its text, and a live region that arrives with its content is the shape assistive
+        technology is least reliable about. This one has been on the page, empty, since
+        the countdown, so the ending is a change to text a screen reader was already
+        watching.
+
+        Assertive and atomic, exactly as the countdown below is, and for the same reason:
+        both are the thing everyone in the room is waiting on, and half a result read out
+        of a partly-changed region is worse than none. It says the panel's own words and
+        `lib/match-announcement.ts` explains why it says them exactly once.
+      */}
+      <p className="db-visually-hidden" role="status" aria-live="assertive" aria-atomic="true">
+        {resultAnnouncement(state, rounds, seatNames)}
+      </p>
+      <Phase {...props} />
+    </>
+  );
+}
+
+function Phase({
   state,
   manifest,
   rounds,
@@ -76,7 +121,7 @@ export function MatchOverlay({
 
     case 'round-over':
       return (
-        <Panel heading={`Round ${state.round}`} role="status">
+        <Panel heading={`Round ${state.round}`} role="group">
           <Winner outcome={state.roundOutcome} seatNames={seatNames} />
           <p className={styles.detail}>
             {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2} · first to{' '}
@@ -95,16 +140,21 @@ export function MatchOverlay({
 
     case 'match-over':
       return (
-        <Panel heading={rounds > 1 ? 'Match over' : 'Game over'} role="status">
+        <Panel heading={rounds > 1 ? 'Match over' : 'Game over'} role="group">
           <Winner outcome={state.matchOutcome} seatNames={seatNames} />
           {rounds > 1 ? (
             <p className={styles.detail}>
               {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2}
             </p>
           ) : null}
-          {record && record.p1 + record.p2 + record.draws > 1 ? (
+          {/* From the first finished match rather than the second: the number is worth
+              showing as soon as there is one, now that it is a record kept across
+              sittings rather than a count of tonight's rematches. The match on screen is
+              already in it, so a settled match always has something here and the line
+              cannot appear a frame after the buttons it sits above. */}
+          {record && record.p1 + record.p2 + record.draws > 0 ? (
             <p className={styles.record}>
-              Tonight: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
+              All time in {manifest.name}: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
               {record.draws > 0 ? `, ${record.draws} drawn` : ''}
             </p>
           ) : null}
@@ -193,7 +243,7 @@ function Panel({
   children,
 }: {
   heading: string;
-  role: 'dialog' | 'status';
+  role: 'dialog' | 'group';
   children: React.ReactNode;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -208,9 +258,17 @@ function Panel({
    * exist, which is worse than never claiming `aria-modal` at all (#2483). And this is
    * the product's only modal, raised mid-match on a device two people are sharing.
    *
-   * Only the pause menu is a dialog. The round and match results are `role="status"`:
-   * they are announcements, they interrupt nobody, and trapping focus in one would be a
-   * bug rather than a fix.
+   * Only the pause menu is a dialog. The round and match results are `role="group"`:
+   * they are not modal, they interrupt nobody, and trapping focus in one would be a bug
+   * rather than a fix.
+   *
+   * They were `role="status"`, which read as the right answer and was not one. A live
+   * region has to be on the page *before* the words are, and these panels are inserted
+   * already carrying theirs — so on the one hand a screen reader might say nothing at
+   * all, and on the other, an engine that did announce the insertion would read the whole
+   * panel: the heading, the winner, the score, the all-time record and three buttons. The
+   * result now goes to the region `MatchOverlay` keeps for it, in one sentence, once; this
+   * is the panel a player then navigates, and a named group is what it always was.
    */
   useEffect(() => {
     if (!modal) return;
@@ -288,7 +346,7 @@ function Panel({
       ref={dialogRef}
       className={styles.overlay}
       role={role}
-      {...(role === 'dialog' ? { 'aria-modal': true } : { 'aria-live': 'polite' as const })}
+      {...(role === 'dialog' ? { 'aria-modal': true } : {})}
       aria-label={heading}
     >
       <div className={styles.panel}>

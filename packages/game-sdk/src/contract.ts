@@ -5,8 +5,6 @@ import type {
   Rng,
   SeatId,
   SeatInputView,
-  SoundBus,
-  SoundEvent,
 } from '@duelbox/engine';
 import type { GameManifest } from './manifest.js';
 
@@ -24,12 +22,6 @@ export type SeatInput = SeatInputView;
 export type InputState = InputStateView;
 
 export type { Renderer };
-
-/**
- * Re-exported so a game imports its whole world from `@duelbox/game-sdk`, as it already
- * does for the renderer. The vocabulary and the bus itself live in the engine.
- */
-export type { SoundBus, SoundEvent };
 
 export interface MatchScore {
   readonly p1: number;
@@ -53,22 +45,31 @@ export interface GameContext {
    * Real-time games have no opener and may ignore this.
    */
   readonly openingSeat: SeatId;
+  /**
+   * Whether this player has asked their system for reduced motion (#175).
+   *
+   * **Passed in rather than read, and that is not a style preference.** CLAUDE.md rule 10
+   * says no game branches on the device, and lint bans `matchMedia` outright inside
+   * `packages/` — the host asks the browser and hands the answer over, exactly as it does
+   * with the presentation and the local seat. A game that reached for the media query
+   * itself would also be a game that behaves differently under a test harness with no DOM.
+   *
+   * **It may only change what is DRAWN.** Never the simulation: not a speed, not a
+   * duration counted in steps, not a distance, not a random draw. Two devices with
+   * different accessibility settings must still step the identical match, or rule 8 and
+   * every replay, lockstep trace and determinism test break at once. Screen shake, flashes,
+   * particle bursts and the board's half-turn are presentation and may all go; what they
+   * were telling the player must not, so a game that shakes on a hit needs a non-motion
+   * way to say the same thing (rule 7's argument, applied to time instead of colour).
+   *
+   * Optional on the interface and always present in practice, for the reason
+   * `SeatInputView.pointerCount` is: this context is implemented structurally by hand in
+   * game tests, and a required field is a breaking change to all of them at once. Read it
+   * as `context.reducedMotion ?? false`.
+   */
+  readonly reducedMotion?: boolean;
   /** Difficulty of the bot occupying a seat, or null when a human holds it. */
   botDifficulty(seat: SeatId): 'easy' | 'normal' | 'hard' | null;
-  /**
-   * Where a game says what just happened, so the engine can decide what it sounds like.
-   *
-   * **Optional, and it must stay optional.** Sound is presentation: every headless test,
-   * every balance run and every replay drives a game with no bus at all, and a game that
-   * needs one to step is a game whose simulation depends on its output device. The calling
-   * convention is therefore always `context.audio?.emit('hit', force, seat)` — one optional
-   * chain, no allocation, and correct whether or not anybody is listening.
-   *
-   * The vocabulary is a closed set of ten names on {@link SoundBus}. A game names the
-   * *event*, never a waveform or a file: what a hit sounds like is one decision made once
-   * for 107 games, exactly as the countdown, the HUD and the result screen are.
-   */
-  readonly audio?: SoundBus | undefined;
 }
 
 export interface Game {

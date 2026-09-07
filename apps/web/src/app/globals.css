@@ -64,6 +64,25 @@ canvas:focus-visible {
   outline: none;
 }
 
+/* The main landmark is focusable so the skip link can hand focus to it, and it must not
+   show a focus ring for that — the same argument as the board above, arrived at from the
+   other end.
+
+   The ring is a wayfinding aid: it says *which control* a keyboard user is on. Drawn
+   around a landmark it says nothing of the kind, because a landmark is not a control and
+   is not one place — on this site it is everything between the header and the footer, so
+   the ring would be a 3px box around the whole page, at the exact moment the player was
+   told they had arrived somewhere specific. It is also the one thing on the page it
+   cannot point at, since the page is what it surrounds.
+
+   This is not the focus indicator WCAG 2.4.7 asks for and does not weaken it: `main` is
+   `tabindex="-1"`, so it is not keyboard operable and Tab never stops here. The first
+   Tab after the skip link lands on a real control inside, which draws the ring above. */
+main:focus,
+main:focus-visible {
+  outline: none;
+}
+
 /* While a match is live the document refuses the browser's own pull-to-refresh.
  *
  * The canvas already declares `overscroll-behavior: contain`, but that only covers a
@@ -136,6 +155,59 @@ canvas {
   min-height: 0;
 }
 
+/* The page transition (#94), which is one declaration because the acceptance criterion
+ * rules out everything else.
+ *
+ * The criterion is that a transition never delays interactivity, so this animates `opacity`
+ * and nothing else. A fade changes no bounding box and takes no part in hit testing, so the
+ * first press on the arriving page lands the moment the page exists — a slide or a scale
+ * would put a control under a finger already aiming at where it is about to be, and a
+ * cross-fade with the outgoing page would be worse still: holding the old page on screen for
+ * the length of the transition is the delay this issue exists to forbid, dressed as polish.
+ *
+ * On the *children* of the main landmark rather than on the landmark itself, and that is
+ * the whole mechanism. `<main>` belongs to the root layout, and the app router keeps a
+ * layout mounted across navigations — an animation on it would run once, on the first load,
+ * and never again. A route's own root element is the opposite: the router keys every
+ * segment by its path, so arriving anywhere unmounts the previous page's element and mounts
+ * a new one, and a CSS animation on a newly mounted element runs. That is what makes a page
+ * transition here cost nothing at all — no client component, no navigation listener, no
+ * JavaScript. The cascade already knows a navigation happened.
+ *
+ * `--db-duration-fast`, the shortest token there is, because this carries no information.
+ *
+ * `:not(.db-fill)` stands the play route down, and that is a correction rather than a taste
+ * call. It is the only route with a `loading.tsx`, so it is the only one where two elements
+ * arrive in a single navigation: React never reuses a node across the swap from a Suspense
+ * fallback to the children it was standing in for, so the fallback and then the page are
+ * both freshly mounted children of `<main>` and both matched this rule. The player saw the
+ * centred panel fade in, drop back to transparent the moment the payload landed, and fade in
+ * again — a flicker on the one navigation the skeleton exists to smooth. Both of those roots
+ * wear `db-fill` and nothing else in the product does, so excusing it excuses exactly the
+ * pair. A play route that appears instantly is also the right answer on its own terms: what
+ * is arriving is a board two people are about to reach for. */
+.db-main > *:not(.db-fill) {
+  animation: db-page-in var(--db-duration-fast) var(--db-ease);
+}
+
+@keyframes db-page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Decoration, so it goes entirely rather than becoming instant. The token would collapse it
+   to a millisecond on its own; saying so here is how a reader of this file learns that the
+   page arriving is not something the product needs them to see. */
+@media (prefers-reduced-motion: reduce) {
+  .db-main > *:not(.db-fill) {
+    animation: none;
+  }
+}
+
 /* Fills whatever height the shell has left. The play route uses it so a match occupies
    the device exactly: neither player should have to scroll to see the board or the
    score, least of all on a phone the two of them are sharing. */
@@ -165,6 +237,33 @@ canvas {
    the honest outcome. Collapsing the board to nothing is not. */
 .db-shell:has(.db-fill) .db-main {
   overflow: auto;
+}
+
+/* The centred column the play route shows in every phase that is not a live board: the
+   loading fallback in `play/[slug]/loading.tsx` while the route's own payload is still on
+   its way, and then `PlaySurface`'s loading, unplayable and mode-choice panels once it has
+   arrived. One definition, so the swap from the first to the second moves nothing.
+
+   It sits here with the other three play-route hooks above rather than in
+   `PlaySurface.module.css`, where the geometry started, and the reason is the same one
+   `.db-fill` has: the fallback needs it before the route's own stylesheet exists. A CSS
+   module is also a JavaScript import, and Next emits a client chunk for any route segment
+   that has one — the loading segment was paying 363 gzipped bytes on the on-demand budget
+   for a map of class names to hashed class names, fetched during the very navigation this
+   fallback exists to smooth, and carrying no behaviour whatsoever. A server component that
+   needs a class needs a class, not a module. Measured: 363 B down to the 132 B stub Next
+   emits for a route segment no matter what is in it, which is the floor. */
+.db-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--db-space-4);
+  padding-block: var(--db-space-7);
+  text-align: center;
+}
+
+.db-panel h2 {
+  font-size: var(--db-text-2xl);
 }
 
 .db-wrap {

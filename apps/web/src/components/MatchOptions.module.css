@@ -27,13 +27,17 @@
   min-width: 0;
 }
 
+/* The legend is a radio group's accessible name and the only thing on screen that says
+   whether these three options are a difficulty or a match length. At `--db-faint` it was
+   2.6:1 — a label failing AA on the control it names. `--db-muted` is 4.65:1 on this
+   panel's white. */
 .legend {
   padding: 0;
   font-size: var(--db-text-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--db-faint);
+  color: var(--db-muted);
 }
 
 /*

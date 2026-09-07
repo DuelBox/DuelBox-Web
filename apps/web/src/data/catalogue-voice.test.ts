@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AMERICAN, NEVER } from '../lib/house-voice';
 import { CATALOGUE } from './catalogue.generated';
 import { MANIFESTS } from './controls';
 
@@ -101,28 +102,6 @@ describe('the catalogue rules are in our own voice', () => {
    * that a sentence came from somewhere else.
    */
   it('spells the way the rest of the shell spells', () => {
-    const AMERICAN: ReadonlyArray<readonly [string, string]> = [
-      ['color', 'colour'],
-      ['colors', 'colours'],
-      ['colored', 'coloured'],
-      ['coloring', 'colouring'],
-      ['center', 'centre'],
-      ['centers', 'centres'],
-      ['centered', 'centred'],
-      ['gray', 'grey'],
-      ['defense', 'defence'],
-      ['offense', 'offence'],
-      ['favorite', 'favourite'],
-      ['neighbor', 'neighbour'],
-      ['armor', 'armour'],
-      ['meter', 'metre'],
-      ['meters', 'metres'],
-      ['maneuver', 'manoeuvre'],
-      ['traveled', 'travelled'],
-      ['traveling', 'travelling'],
-      ['canceled', 'cancelled'],
-      ['jewelry', 'jewellery'],
-    ];
     const wrong: string[] = [];
     for (const row of ROWS) {
       for (const [american, british] of AMERICAN) {
@@ -135,36 +114,13 @@ describe('the catalogue rules are in our own voice', () => {
   });
 
   /**
-   * **No game in this collection has any of these.** Every one of the 214 manifest
-   * `controls` strings was checked: not one names a stick, a pad, a gamepad, a mouse or a
-   * swipe, because DuelBox is two people on one device with a keyboard and a finger.
-   * A rule naming one is describing a different product — which is exactly how they got
-   * here, and `packages/games/cup-pong/SPEC.md` and `traffic-jam/SPEC.md` both had to
-   * write a paragraph explaining that the catalogue was describing an input they had not
-   * built.
+   * **No game in this collection has any of these.** The table and the reasoning behind it
+   * are in `lib/house-voice.ts`, shared with the guard over the category hub copy, which
+   * used to carry three fewer patterns than this one while claiming to be the same check.
+   * `packages/games/cup-pong/SPEC.md` and `traffic-jam/SPEC.md` both had to write a
+   * paragraph explaining that the catalogue was describing an input they had not built.
    */
   it('never names an instrument no game in the collection has', () => {
-    /**
-     * Patterns rather than bare words, because English gets in the way of both halves of
-     * this: a knife "sticks" in the wood and nobody has offered anybody a controller, so
-     * only the qualified forms count as naming one.
-     */
-    const NEVER: ReadonlyArray<readonly [RegExp, string]> = [
-      [/\bjoy[\s-]?sticks?\b/i, 'joystick'],
-      [/\b(?:left|right|analogue?|control|thumb)[\s-]?sticks?\b/i, 'a named stick'],
-      [/\b(?:the|a|your|their)\s+sticks?\b/i, 'the stick'],
-      [/\bd[\s-]?pads?\b/i, 'd-pad'],
-      [/\bgame[\s-]?pads?\b/i, 'gamepad'],
-      [/\bcontrollers?\b/i, 'a controller'],
-      [/\bmouse\b/i, 'a mouse'],
-      [/\bclick(?:s|ed|ing)?\b/i, 'a click'],
-      [/\bswipe(?:s|d|ing)?\b/i, 'a swipe'],
-      [/\bpinch(?:es|ed|ing)?\b/i, 'a pinch'],
-      [/\btilt(?:s|ed|ing)?\b/i, 'a tilt'],
-      [/\btrack[\s-]?pads?\b/i, 'a trackpad'],
-      [/\btouch[\s-]?screens?\b/i, 'a touchscreen'],
-      [/\btriggers?\b/i, 'a trigger'],
-    ];
     const wrong: string[] = [];
     for (const row of ROWS) {
       for (const [pattern, what] of NEVER) {

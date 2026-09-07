@@ -5,9 +5,15 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { FRAME_GUARD } from './frame-guard';
 import { SERVICE_WORKER_CLIENT } from './service-worker-client';
 import { BASE_PATH } from './base-path';
+import { SITE_SHARE_IMAGE } from '@/lib/share-image';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
+  // The address every relative metadata URL resolves against, base path included: Next joins
+  // the two paths rather than replacing one, so `/games/chess/` becomes
+  // `/DuelBox-Web/games/chess/` and not a route the origin has never served.
+  metadataBase: new URL(`${SITE_URL}/`),
   title: {
     default: 'DuelBox — 108 games for two players',
     template: '%s — DuelBox',
@@ -33,6 +39,16 @@ export const metadata: Metadata = {
     siteName: 'DuelBox',
     title: 'DuelBox — 108 games for two players',
     description: 'Share one screen, play across two devices, or take on a bot.',
+    // The card every route inherits unless it names its own (#2453). A route that sets its
+    // own `openGraph` replaces this object rather than merging with it, which is why the
+    // two that do — a game's page and a category hub — each carry `images` of their own.
+    images: [SITE_SHARE_IMAGE],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'DuelBox — 108 games for two players',
+    description: 'Share one screen, play across two devices, or take on a bot.',
+    images: [SITE_SHARE_IMAGE],
   },
 };
 
@@ -86,7 +102,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <div className="db-shell">
           <SiteHeader />
-          <main id="main" className="db-main">
+          {/*
+            `tabIndex={-1}` is what makes the link above a skip link rather than a scroll.
+
+            A fragment link moves the *viewport* to its target; it moves focus only if the
+            target can hold focus, and a bare `<main>` cannot. Chromium papered over it by
+            moving the sequential focus starting point, so the next Tab landed inside the
+            page content and the link looked like it worked; WebKit was measured not to,
+            and no screen reader's virtual cursor moved on either engine. So the first
+            control on every page — the one control that exists for the people most likely
+            to need it — did nothing for them.
+
+            -1 rather than 0: this is a place focus is *put*, never a stop Tab visits on
+            its way past. `globals.css` explains why it is also the one focusable thing on
+            the site with no focus ring.
+          */}
+          <main id="main" className="db-main" tabIndex={-1}>
             {children}
           </main>
           <SiteFooter />

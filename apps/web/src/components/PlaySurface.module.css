@@ -89,19 +89,10 @@
   min-height: 0;
 }
 
-.state,
-.result {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--db-space-4);
-  padding-block: var(--db-space-7);
-  text-align: center;
-}
-
-.state h2 {
-  font-size: var(--db-text-2xl);
-}
+/* The panel these phases are drawn in is `.db-panel`, in `globals.css`. It moved there so
+   the route's loading fallback — a server component, which cannot import this file without
+   Next emitting a client chunk for it — can be the same panel rather than a second copy of
+   one. See the note beside the rule. */
 
 .modes {
   display: flex;
@@ -137,4 +128,20 @@
   font-family: var(--db-font-display);
   font-size: var(--db-text-xl);
   font-weight: 600;
+}
+
+/*
+ * The one line of copy above the tournament's two entry buttons: what pressing either of
+ * them starts.
+ *
+ * `--db-muted` at 4.65:1 rather than `--db-faint` at 2.45:1, which the `.versus` label above
+ * can carry because it is three uppercase letters of decoration and this is body text. The
+ * measure is capped so the sentence does not run the full width of a laptop panel and lose
+ * its connection to the buttons under it.
+ */
+.tournamentLede {
+  max-width: 30rem;
+  margin: 0;
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
 }

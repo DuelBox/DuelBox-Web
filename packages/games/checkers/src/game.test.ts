@@ -662,3 +662,45 @@ describe('the manifest', () => {
     expect(manifest.sameInputClassOnly).toBe(false);
   });
 });
+
+describe('the board turning to face the player with the move', () => {
+  /** The angle the board was drawn at in one recorded frame, walked out of the flat args. */
+  function drawnAngle(renderer: RecordingRenderer): number {
+    let cursor = 0;
+    for (const op of renderer.ops) {
+      if (op === 'pushRotation') {
+        const value = renderer.args[cursor];
+        return typeof value === 'number' ? value : Number.NaN;
+      }
+      cursor += ARG_COUNTS[op] ?? 0;
+    }
+    return Number.NaN;
+  }
+
+  it('sweeps through part-way angles rather than cutting to the far seat', () => {
+    // The control this suite did not have, and it is the assertion that can tell a sweep
+    // from a cut: an angle strictly between the two resting orientations is drawn only by
+    // a tween. A board that jumped straight round — which is what the renderer draws for a
+    // player who has asked for reduced motion, and what a regression in `SeatFlip.angle`
+    // would draw for everybody — fails here and nothing else in this file notices.
+    const game = new CheckersGame();
+    game.init(makeContext(43));
+    const input = new ScriptedInput();
+    settle(game, input);
+    tapSlot(game, input, 'p1', slotAt(5, 0));
+    tapSlot(game, input, 'p1', slotAt(4, 1));
+    expect(game.position.toMove, 'the turn has passed, so the board is turning').toBe('p2');
+
+    const angles: number[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      const renderer = new RecordingRenderer();
+      game.render(renderer, 0);
+      angles.push(drawnAngle(renderer));
+      game.update(STEP, input);
+    }
+
+    expect(angles.some((angle) => angle > 0.01 && angle < Math.PI - 0.01)).toBe(true);
+    // And it arrives, rather than resting at an angle nobody can read.
+    expect(angles[angles.length - 1]).toBeCloseTo(Math.PI, 5);
+  });
+});

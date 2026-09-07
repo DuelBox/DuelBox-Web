@@ -6,15 +6,14 @@ import { describe, expect, it } from 'vitest';
 /**
  * The privacy page has to describe this build, not a nearby one.
  *
- * It once claimed three things the product did not do: that it stores scores, that it works
+ * It claimed three things the product does not do: that it stores scores, that it works
  * with no connection at all, and that it is served from "a content delivery network"
  * (#2513). None of the three was caught by anything, because a page of prose is exactly
  * the kind of artefact no test looks at.
  *
- * So this reads the page against the code it describes. Two of those facts have since moved:
- * a second setting is stored (sound, alongside the game setup), and a service worker landed
- * (#2445), so "works with no connection" became true rather than being trimmed. The checks
- * move with them — that is the point of pinning prose to code rather than to a moment.
+ * So this reads the page against the code it describes. It is deliberately narrow — it
+ * checks the three claims that were wrong and the one fact that makes them checkable —
+ * because a test that tried to verify a privacy policy in general would verify nothing.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,16 +33,23 @@ function sources(dir: string, found: string[] = []): string[] {
 }
 
 describe('what the privacy page says about storage', () => {
-  it('is checkable, because a known, small set of modules writes to storage', () => {
-    // The claim "a couple of small settings" is only worth making while it is true. If a
-    // third writer appears, the page has to be rewritten before this passes again.
-    const writers = sources(web)
-      .filter((path) =>
-        /localStorage\.setItem|sessionStorage|indexedDB/.test(readFileSync(path, 'utf8')),
-      )
-      .map((path) => relative(web, path))
-      .sort();
-    expect(writers).toEqual(['lib/last-mode.ts', 'lib/sound-preference.ts']);
+  it('is checkable, because only one module writes to storage', () => {
+    // The page lists what is kept and says every key starts with `duelbox:`. That is a
+    // claim about the whole product, and it is only checkable while there is one place
+    // the product writes: every store goes through `lib/local-store.ts`, so a new key
+    // means a new store built on it, and a store built on it can be found by reading one
+    // file's importers. A second writer would mean a key the page might not know about,
+    // and the page has to be rewritten — or the writer moved behind the funnel — before
+    // this passes again.
+    //
+    // Deliberately "every store" rather than a list of them. This comment named four —
+    // setup, favourites, recent games, settings — and stayed at four through the batch
+    // that added the head-to-head record and the chosen seat names, in the one file whose
+    // whole job is keeping the storage claims current.
+    const writers = sources(web).filter((path) =>
+      /localStorage\.setItem|sessionStorage|indexedDB/.test(readFileSync(path, 'utf8')),
+    );
+    expect(writers.map((path) => relative(web, path))).toEqual(['lib/local-store.ts']);
   });
 
   it('does not claim a score is kept', () => {
@@ -55,8 +61,9 @@ describe('what the privacy page says about storage', () => {
 describe('what the privacy page says about the network', () => {
   it('promises offline only because a service worker now backs it', () => {
     // The inversion the previous version's message anticipated: a service worker landed
-    // (#2445), so the page is now allowed to describe offline — and does. A claim the code
-    // cannot keep is what this file exists to catch, in either direction.
+    // (#2445 / the 29–30 August session), so the page is now allowed to describe offline —
+    // and does. A claim the code cannot keep is what this file exists to catch, in either
+    // direction.
     const registrations = sources(web)
       .filter((path) => /serviceWorker/.test(readFileSync(path, 'utf8')))
       .map((path) => relative(web, path));

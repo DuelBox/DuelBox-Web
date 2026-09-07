@@ -30,8 +30,77 @@ const ALL_ENGINES = process.env.DUELBOX_ALL_ENGINES === '1';
  * These run on Chromium alone. Everything else — anything touching pointers, keys, layout,
  * viewport insets, the canvas or the page lifecycle — runs on every engine, because that
  * is where engines differ.
+ *
+ * `category-hubs.spec.ts` qualifies on the same reading as `smoke.spec.ts`: it asks a hub
+ * for its heading, its prose, its canonical URL, the number of cards in its grid, a footer
+ * link, and — one game page per category — whether anything on the site links the hub at
+ * all. It never touches a pointer, a key or the canvas. Listing it here is what
+ * keeps eighteen static pages from costing the verify job nine repeat test-runs — the
+ * budget CLAUDE.md records as already having been overspent once.
+ *
+ * `record.spec.ts` deliberately is NOT here, and it is the useful contrast: it plays a
+ * match to its end, so it exercises the canvas, the loop and the page lifecycle, which is
+ * exactly the code that differs between engines.
  */
-const CONTENT_ONLY = ['**/smoke.spec.ts'];
+const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
+
+/**
+ * The axe-core scan, on Chromium alone, on the same argument as `CONTENT_ONLY` above.
+ *
+ * axe reads the accessibility tree and the computed styles. An accessible name, a heading
+ * order, a landmark and a contrast ratio are properties of the document rather than of how
+ * an engine paints it, so a second engine re-confirms a verdict rather than testing one —
+ * and a scan is a far more expensive test-run than a content check, because it injects and
+ * runs axe on every page it visits. Anything that genuinely differs between engines is
+ * already covered by specs that run on all four.
+ *
+ * `page-transition.spec.ts` joins it on the same reading. What it asserts is that the page
+ * entry animation contains nothing able to hold up a press: it animates opacity, so no box
+ * moves and no hit test changes. Opacity has never taken part in hit testing in any engine,
+ * so a second one would re-confirm the verdict rather than test it, and the property that
+ * could differ between engines — how a fade is painted — is not the property under test.
+ *
+ * It is also the list that spec *must* be in, which is a stronger reason than the one above.
+ * Its layout-shift measurement reads `PerformanceObserver` entries of type `layout-shift`,
+ * an API only Chromium implements: on WebKit the observer would never fire, the total would
+ * be zero, and the assertion would pass having measured nothing at all. A guard that cannot
+ * fail on an engine is worse on that engine than no guard, so it is only run where the
+ * number is real.
+ *
+ * If a rule ever fires on one engine and not another, this is the list to take it out of.
+ *
+ * `tournament.spec.ts` is here on the first of those arguments rather than the second. What
+ * it asserts is a state machine, a `localStorage` document and the markup drawn from them,
+ * and none of the three is a thing engines differ about. It does play two bot matches to
+ * their end, which *is* engine-sensitive — but that path is already covered on all four
+ * projects by `record.spec.ts` and `match-flow.spec.ts`, so a second engine here would pay
+ * about seventy seconds of authorised waiting to re-confirm a canvas somebody else has
+ * already confirmed. It is the most expensive spec in the suite per run, which is the
+ * strongest reason of all to run it once.
+ */
+const CHROMIUM_ONLY = ['**/axe.spec.ts', '**/page-transition.spec.ts', '**/tournament.spec.ts'];
+
+/**
+ * Specs that set their own viewport and therefore want one project *per engine*, not four.
+ *
+ * `touch-targets.spec.ts` measures every control at 320px, which it sets for itself — so on
+ * the two Chromium projects it would measure the same engine at the same width twice, and on
+ * the two WebKit ones likewise. What it does need is both engines, because a range slider, a
+ * file chooser and a search field are drawn by the browser rather than by the stylesheet, and
+ * the settings page has all three. So it keeps `chromium` and `notched-portrait` and stands
+ * down on the other two.
+ *
+ * `screen-reader.spec.ts` arrives at the same two projects from the other side. Landmarks,
+ * accessible names and live regions are properties of the document, so on that count it
+ * belongs in `CHROMIUM_ONLY` with the axe scan — but one of the things it pins is not: a
+ * fragment link to a `<main>` that cannot hold focus left `document.activeElement` on
+ * `<body>`, and Chromium hid that by moving the sequential focus starting point where WebKit
+ * was measured not to. A Chromium-only run of that assertion would re-confirm the engine on
+ * which the defect never showed. Two projects, then, and not four: the second Chromium and
+ * the second WebKit would each be the same verdict a third time.
+ */
+const ONE_PER_ENGINE = ['**/touch-targets.spec.ts', '**/screen-reader.spec.ts'];
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -72,22 +141,37 @@ export default defineConfig({
      *
      * One engine, because none of it can plausibly differ between them: it asserts what
      * the static build contains, not how a browser lays it out or handles a touch. Running
-     * it on four projects was 27 of the suite's 300 test-runs re-confirming the same HTML.
+     * it on four projects was 27 of the suite's 300 test-runs re-confirming the same HTML,
+     * and the category hubs would have added nine more of the same.
      */
     // Two people sharing one phone is the primary case, so it is tested, not assumed.
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: CONTENT_ONLY },
+    {
+      name: 'mobile',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+    },
     // A notched phone in both orientations. The insets differ between them — portrait
     // puts the cutout on the top edge, landscape on one side — so a layout that clears
     // the notch in one can still bury a control in the other.
-    { name: 'notched-portrait', use: { ...devices['iPhone 14 Pro'] }, testIgnore: CONTENT_ONLY },
+    {
+      name: 'notched-portrait',
+      use: { ...devices['iPhone 14 Pro'] },
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY],
+    },
     {
       name: 'notched-landscape',
       use: { ...devices['iPhone 14 Pro landscape'] },
-      testIgnore: CONTENT_ONLY,
+      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
     },
     // A third engine, nightly only. See the note above the export.
     ...(ALL_ENGINES
-      ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: CONTENT_ONLY }]
+      ? [
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+            testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+          },
+        ]
       : []),
   ],
   webServer: {

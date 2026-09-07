@@ -31,6 +31,37 @@ describe('seat names', () => {
     expect(names.p2).not.toBe(SEAT_CHARACTERS.p2);
   });
 
+  it('lets the two people at the device name themselves', () => {
+    // #161: a chosen name replaces the seat's own for as long as it is set, and a seat
+    // nobody named keeps the name it has always had.
+    const names = seatNamesFor(undefined, { p1: 'Ada' });
+    expect(names.p1).toBe('Ada');
+    expect(names.p2).toBe(SEAT_CHARACTERS.p2);
+  });
+
+  it('marks a bot sitting in a seat somebody has named', () => {
+    // The mark belongs to the occupant, not to the name: a player who names the far seat
+    // and then plays a bot must see the bot marked rather than their own name handed to
+    // it.
+    const names = seatNamesFor({ p2: 'hard' }, { p2: 'Grace' });
+    expect(names.p2).toContain('Grace');
+    expect(names.p2).not.toBe('Grace');
+    expect(names.p2).toBe(seatNamesFor({ p2: 'hard' }).p2.replace(SEAT_CHARACTERS.p2, 'Grace'));
+  });
+
+  it('ignores a chosen name that is empty, rather than showing a blank seat', () => {
+    expect(seatNamesFor(undefined, { p1: '' }).p1).toBe(SEAT_CHARACTERS.p1);
+  });
+
+  it('behaves exactly as it did when it is given only bots', () => {
+    // Every caller but the play surface passes one argument, and this is the guarantee
+    // that adding a second changed nothing for them.
+    for (const bots of [undefined, {}, { p1: 'hard' }, { p2: 'hard' }, { p1: 1, p2: 1 }]) {
+      expect(seatNamesFor(bots, {})).toEqual(seatNamesFor(bots));
+      expect(seatNamesFor(bots, undefined)).toEqual(seatNamesFor(bots));
+    }
+  });
+
   it('gives each seat its own keys', () => {
     expect(SEAT_KEYS.map((entry) => entry.seat)).toEqual([...SEATS]);
     expect(SEAT_KEYS[0]?.action).not.toBe(SEAT_KEYS[1]?.action);

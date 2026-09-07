@@ -16,8 +16,6 @@ import {
   NO_INSETS,
   viewportToLogical,
   vec2,
-  zoneSplitFor,
-  type Presentation,
   type SeatId,
   type ZoneSplit,
 } from '@duelbox/engine';
@@ -28,7 +26,8 @@ import {
   type GameManifest,
   type MatchPhase,
 } from '@duelbox/game-sdk';
-import { audio, soundBus } from '@/lib/audio';
+import { audio } from '@/lib/audio';
+import { prefersReducedMotion } from '@/lib/reduced-motion';
 import styles from './GameHost.module.css';
 
 /**
@@ -81,34 +80,6 @@ export interface GameHostProps {
    * up would either re-render the shell sixty times a second or hand it something stale.
    */
   onTraceReady?: (getTrace: () => string) => void;
-}
-
-/**
- * The split the shell puts the pointer surface on, for a manifest, a presentation and
- * whoever currently has the move.
- *
- * A game with turns owns the whole pointer surface; only a real-time game on a shared
- * screen has zones. That was a serious bug once, and it hid behind a test that aimed only
- * where it worked: a turn-based board **rotates to face whoever is to move**, so its far
- * side sits in the other seat's zone — every tap aimed there was attributed to a player
- * whose turn it was not, and dropped. In Tic Tac Toe the far row of cells could not be
- * reached by touch at all. Ten shared-board games had the same hole.
- *
- * `getActiveSeat` is the honest discriminator rather than the manifest's `zoneSplit`:
- * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs its
- * zones exactly as much as Tic Tac Toe needed to lose them.
- *
- * The rule itself lives in the engine, in {@link zoneSplitFor}, because the input fuzzer
- * has to reach the identical answer — it had its own copy, and for eleven real-time games
- * the two copies disagreed (#2479). Exported so that agreement can be *asserted* rather
- * than assumed; the shell has no other reason to name it.
- */
-export function hostZoneSplit(
-  manifest: GameManifest,
-  presentation: Presentation,
-  activeSeat: SeatId | null,
-): ZoneSplit {
-  return zoneSplitFor(presentation, manifest.zoneSplit, activeSeat);
 }
 
 export function GameHost({
@@ -168,15 +139,25 @@ export function GameHost({
     motion.addEventListener('change', onMotionChange);
     const inputView = new InputView();
     const game = createGame();
-    // See {@link hostZoneSplit}: a game with turns owns the whole surface, a real-time
-    // game on a shared screen gets a zone each, and single-seat has no divider at all.
-    //
+    /**
+     * A game with turns owns the whole pointer surface; only a real-time game has zones.
+     *
+     * This was a serious bug, and it hid behind a test that aimed only where it worked.
+     * A turn-based board **rotates to face whoever is to move**, so its far side sits in
+     * the other seat's zone — and every tap aimed there was attributed to a player whose
+     * turn it was not, and dropped. In Tic Tac Toe the far row of cells could not be
+     * reached by touch at all. Ten shared-board games had the same hole.
+     *
+     * `getActiveSeat` is the honest discriminator rather than the manifest's `zoneSplit`:
+     * Whack a Mole is a shared board too, but both seats swing at it at once, so it needs
+     * its zones exactly as much as Tic Tac Toe needed to lose them.
+     */
     // Read from the *live* value rather than from whether the method exists. The contract
     // has always said returning null means "no turns right now", and a game can mean it
     // for part of its life: Sea Battle has both players lay out their fleets at the same
     // time, each on their own half, and only then starts taking turns at a shared grid.
-    const splitFor = (seat: SeatId | null): ZoneSplit =>
-      hostZoneSplit(manifest, presentation, seat);
+    const zonedSplit: ZoneSplit = manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal';
+    const splitFor = (seat: SeatId | null): ZoneSplit => (seat === null ? zonedSplit : 'shared');
 
     const initialSeat = game.getActiveSeat?.() ?? null;
     const manager = new InputManager(logical, {
@@ -196,10 +177,13 @@ export function GameHost({
       presentation,
       localSeat,
       openingSeat,
+      // Read here rather than through the hook, and the difference matters: a game is
+      // handed its context once, inside this effect, and cannot be told again. A hook's
+      // state is still `false` on the render that schedules this effect, so a player who
+      // asked their system for reduced motion would get a full-motion match and only the
+      // next one would honour it. The direct read answers before the game exists (#175).
+      reducedMotion: prefersReducedMotion(),
       botDifficulty: (seat) => botDifficulty?.[seat] ?? null,
-      // The one bus for the tab. Optional on the contract and absent in every headless
-      // test, which is what keeps a game's simulation independent of its output device.
-      audio: soundBus(),
     };
     game.init(gameContext);
 
@@ -348,6 +332,20 @@ export function GameHost({
     let lastWinner: SeatId | 'draw' | null = null;
     let lastSeat: SeatId | null | undefined;
 
+    /**
+     * The three bindings the debug overlay of #119 needs, and the only three lines of it
+     * that are not already inside a branch a bundler deletes.
+     *
+     * They survive webpack — a `let` is not a dead branch — and then go, because once every
+     * `if (process.env.NODE_ENV !== 'production')` below has been folded away nothing reads
+     * or writes them and the minifier drops them as unused. Put through this project's own
+     * webpack and its own minifier, this shape emits bytes identical to the same code
+     * written with no debug lines in it at all.
+     */
+    let debugFrames = 0;
+    let debugCancelled = false;
+    let stopDebugOverlay: (() => void) | undefined;
+
     const loop = new FixedLoop({
       update(dt) {
         // The shell's clock runs in every live phase; the simulation only while playing.
@@ -377,13 +375,11 @@ export function GameHost({
         }
       },
       render(alpha) {
+        // The only thing the overlay adds to the hot path, and the one number it cannot get
+        // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
+        if (process.env.NODE_ENV !== 'production') debugFrames += 1;
         renderer.beginFrame();
         game.render(renderer, alpha);
-        // Queued cues reach the audio graph once a frame, from here, outside the fixed
-        // step. That is what keeps playing a sound during `update()` allocation-free
-        // (rule 5): the step writes three numbers into a preallocated queue, and the node
-        // work — which has to allocate, since a buffer source is single-use — happens here.
-        audio().flush();
         renderer.endFrame();
         // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
         // sound from inside `update()` stays allocation-free (rule 5).
@@ -407,6 +403,69 @@ export function GameHost({
     // hang wherever it was, with no error and nothing in the console.
     if (phaseRef.current === 'countdown' || phaseRef.current === 'playing') runner.start();
 
+    /**
+     * The debug overlay (#119), switched on with `?debug=1` and absent from production.
+     *
+     * The gate is the trace panel's: a query parameter, so somebody looking at a stutter can
+     * turn it on where the stutter is. The *delivery* is deliberately not the trace panel's.
+     * `TracePanel` is a component the play surface renders behind a flag — right for a tool
+     * a player has to be able to reach on the deployed site, and wrong here, because a
+     * component behind a prop still ships and only its rendering is skipped. The acceptance
+     * criterion for this one is zero bytes.
+     *
+     * So every part of it lives inside this test. `process.env.NODE_ENV` is a string literal
+     * by the time webpack parses this file, so the branch folds to `if (false)` and is
+     * deleted *before* the `import()` inside it is resolved: no chunk is emitted and
+     * `debug/DebugOverlay` is never compiled. That is also why the query parameter is read
+     * here rather than in `PlaySurface` and handed down — a prop is a value that has to
+     * exist in production for the sake of the branch that ignores it, and a `?debug=1` the
+     * shell reads and passes to nobody is the same bytes by another name.
+     *
+     * Read in an effect, like every other reader of `location` in this app: the play page is
+     * statically exported, and reading the URL during a render makes the server's HTML and
+     * the browser's first paint disagree.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      if (new URLSearchParams(globalThis.location.search).get('debug') === '1') {
+        void import('./debug/DebugOverlay')
+          .then(({ mountDebugOverlay }) => {
+            // Strict mode mounts, unmounts and remounts every effect in development, which
+            // is exactly where this code runs. Without the flag the discarded host's
+            // overlay outlives it and two boxes stack up in the corner.
+            if (debugCancelled) return;
+            stopDebugOverlay = mountDebugOverlay(() => ({
+              at: performance.now(),
+              frames: debugFrames,
+              steps: loop.totalSteps,
+              stepMs: loop.stepSeconds * 1000,
+              running: runner.running,
+              // The seat ids are written out rather than taken from the engine's `SEATS`,
+              // because an import at the top of this file ships whether or not this branch
+              // does. `localSeat` above defaults the same way for the same reason.
+              seats: (['p1', 'p2'] as const).map((seat) => {
+                const view = inputView.seat(seat);
+                const pointer = view.pointer;
+                return {
+                  seat,
+                  moveX: view.move.x,
+                  moveY: view.move.y,
+                  actionHeld: view.actionHeld,
+                  holdSeconds: view.holdSeconds,
+                  // Copied rather than passed on: the view's vectors are reused every step
+                  // so that reading input allocates nothing, and a reading kept across
+                  // samples would quietly become a reading of the present.
+                  pointer: pointer === null ? null : { x: pointer.x, y: pointer.y },
+                  pointerCount: view.pointerCount ?? 0,
+                };
+              }),
+            }));
+          })
+          .catch(() => {
+            // A development tool that will not load is not a reason to take the match down.
+          });
+      }
+    }
+
     function onVisibility(): void {
       // Tab-switching must not fast-forward the accumulator, and a hidden match must not
       // keep burning battery. The shell is told; it owns the decision.
@@ -416,6 +475,10 @@ export function GameHost({
 
     return () => {
       runner.stop();
+      if (process.env.NODE_ENV !== 'production') {
+        debugCancelled = true;
+        stopDebugOverlay?.();
+      }
       if (resizeHandle !== 0) globalThis.cancelAnimationFrame(resizeHandle);
       runnerRef.current = null;
       loopRef.current = null;
@@ -477,6 +540,15 @@ export function GameHost({
     <canvas
       ref={canvasRef}
       className={styles.canvas}
+      /* The name was here and nothing was obliged to read it out. `canvas` maps to no ARIA
+         role of its own, and an element with no role is an element whose `aria-label` an
+         engine is free to drop — so the one thing on this page that is the game announced
+         itself as nothing at all, inconsistently, depending on who was listening.
+         `role="img"` is what makes the name a name: a picture with a text alternative,
+         which is honestly what a board a screen reader cannot enter is. Deliberately not
+         `role="application"`, which would hand this element the assistive technology's own
+         key handling in exchange for an interface we do not offer. */
+      role="img"
       aria-label={`${manifest.name} board`}
       /* Focusable so the board can hold focus during play. Without this, focus sits on
          whichever button was last used and seat two's action key — Enter — activates it

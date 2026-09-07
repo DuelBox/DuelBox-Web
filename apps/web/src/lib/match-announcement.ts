@@ -1,0 +1,79 @@
+/**
+ * What a screen reader is told when a round or a match ends.
+ *
+ * ## Why the result panel is not enough on its own
+ *
+ * The panel is not an announcement, however it is marked up. It is inserted into the
+ * document already carrying its text, and a live region that arrives with its content is
+ * the shape assistive technology is least reliable about: the region has to be on the page
+ * before the words are, or there is no change for it to report. So the panel is an
+ * ordinary named group now, and the announcement is a separate region that has been
+ * sitting on the page, empty, since the countdown. This function is the only thing that
+ * ever puts words in it.
+ *
+ * ## Why it reads the phase and not the score
+ *
+ * That is what makes it fire exactly once. `MatchOverlay` re-renders on every fixed step
+ * of the simulation, sixty times a second, and React writes a text node only when the
+ * string it is handed actually changes. A match spends its whole life at `''` and changes
+ * to a sentence on the one step that settles it. Reading the tally instead would announce
+ * every point either seat scored — which is the HUD's job, which it already does, politely
+ * and per seat, and which is the wrong urgency for a result.
+ *
+ * The words mirror the panel: its heading, its winner line, its round tally. A sighted
+ * player and a screen-reader player should be told the same thing rather than two versions
+ * of it. The one line deliberately left out is the round panel's "first to N takes it",
+ * which does not change between rounds and would be read out again after every one.
+ */
+
+import type { MatchState, Outcome, Tally } from '@duelbox/game-sdk';
+import type { SeatNames } from '@/lib/seats';
+
+/** The part of the match state an announcement is made from. */
+export type AnnouncableState = Pick<
+  MatchState,
+  'phase' | 'round' | 'roundOutcome' | 'matchOutcome' | 'roundWins'
+>;
+
+/** An outcome that has been settled. `null` is a match still running, and says nothing. */
+type Settled = Exclude<Outcome, null>;
+
+/** "… wins", or "A draw". The seat's own name, never a placeholder — see `lib/seats.ts`. */
+function outcomeSentence(outcome: Settled, seatNames: SeatNames): string {
+  return outcome === 'draw' ? 'A draw' : `${seatNames[outcome]} wins`;
+}
+
+/** The rounds each seat has taken, named and in the order the HUD shows them. */
+function tallySentence(roundWins: Tally, seatNames: SeatNames): string {
+  return `${seatNames.p1} ${String(roundWins.p1)}, ${seatNames.p2} ${String(roundWins.p2)}`;
+}
+
+/**
+ * The sentence to announce for `state`, or `''` in every phase that is not an ending.
+ *
+ * `rounds` is the match length the player chose, because a single-round match ends with
+ * "Game over" and has no round tally worth reading — exactly as the panel has none.
+ */
+export function resultAnnouncement(
+  state: AnnouncableState,
+  rounds: number,
+  seatNames: SeatNames,
+): string {
+  if (state.phase === 'round-over') {
+    const outcome = state.roundOutcome;
+    if (outcome === null) return '';
+    const tally = tallySentence(state.roundWins, seatNames);
+    return `Round ${String(state.round)}. ${outcomeSentence(outcome, seatNames)}. ${tally}.`;
+  }
+  if (state.phase === 'match-over') {
+    const outcome = state.matchOutcome;
+    // A match the machine ends with no outcome at all is not a result to read out.
+    // `PlaySurface` declines to record one for the same reason, and neither is reachable
+    // today; announcing a phantom draw would be worse than announcing nothing.
+    if (outcome === null) return '';
+    const heading = rounds > 1 ? 'Match over' : 'Game over';
+    const tally = rounds > 1 ? ` ${tallySentence(state.roundWins, seatNames)}.` : '';
+    return `${heading}. ${outcomeSentence(outcome, seatNames)}.${tally}`;
+  }
+  return '';
+}

@@ -16,7 +16,7 @@ export function GameCard({ game }: { game: CatalogueEntry }) {
   return (
     <Link href={playable ? `/play/${game.slug}/` : `/games/${game.slug}/`} className={styles.card}>
       <div className={styles.art}>
-        <GameTile tint={game.tint} mark={game.mark} name={game.name} />
+        <GameTile game={game} />
         <span className={styles.seats} aria-hidden="true">
           <i className={styles.p1} />
           <i className={styles.p2} />

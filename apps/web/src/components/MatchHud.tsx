@@ -5,6 +5,7 @@ import type { SeatId } from '@duelbox/engine';
 import type { MatchState } from '@duelbox/game-sdk';
 import type { SeatNames } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
+import { SoundToggle } from './SoundToggle';
 import styles from './MatchHud.module.css';
 
 /**
@@ -94,16 +95,42 @@ export function MatchHud({
         right
       />
 
-      {onPause && canPause && !flipped ? (
-        <button
-          type="button"
-          className={styles.pause}
-          onClick={onPause}
-          aria-label="Pause the match"
-        >
-          ❚❚
-        </button>
-      ) : null}
+      {flipped ? null : (
+        /*
+         * The match's own controls, on the upright copy only: the far copy is decorative
+         * and hidden from assistive technology, and a second mute there would be a button
+         * a screen reader could not reach and an eye could not tell from the first.
+         *
+         * The mute lives here as well as in the site header because on a phone the header
+         * hides it, and #171 asks for it within one tap of any screen — and a match on a
+         * phone is the screen with the sound. It stays through every phase, unlike the
+         * pause, which only shows while there is something to pause.
+         *
+         * The group is what makes the second mute findable rather than merely present.
+         * Above 40rem the header keeps its own copy, so a match page really does offer two
+         * buttons called "Mute sound", and the audit that found them read the duplicate as
+         * the two HUDs — which it is not, and has not been since the far copy stopped
+         * rendering controls at all. Naming either one after a seat would be worse than
+         * the duplicate: muting is one device-wide setting, both buttons write it, both
+         * carry the same `aria-pressed`, and a button labelled as one seat's that silences
+         * the other seat too is a label that lies. What a screen-reader user is missing is
+         * not whose it is but where it is, so the group says that, and the two are then
+         * told apart by the landmark each sits in — the banner's, and the match's.
+         */
+        <div className={styles.controls} role="group" aria-label="Match controls">
+          <SoundToggle className={styles.sound} />
+          {onPause && canPause ? (
+            <button
+              type="button"
+              className={styles.pause}
+              onClick={onPause}
+              aria-label="Pause the match"
+            >
+              ❚❚
+            </button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -135,6 +162,13 @@ function Seat({
       data-seat={seat}
       // Announced as a live region so a screen-reader user hears the score change
       // without hunting for it. The flipped copy stays quiet or it is said twice.
+      //
+      // This is also the board's spoken commentary, and the reason there is no second
+      // live score beside the canvas. The canvas has no text alternative that changes —
+      // it cannot have one, since what is in it is pixels — so the honest question was
+      // whether a screen-reader player can follow a match at all, and the answer is these
+      // two regions plus the result. A third region saying the same numbers would only
+      // mean hearing every point twice.
       {...(silent ? {} : { 'aria-live': 'polite' as const })}
     >
       <SeatGlyph seat={seat} />

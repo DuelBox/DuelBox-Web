@@ -29,18 +29,12 @@
   gap: 4px;
 }
 
-/*
- * The two seat marks differ by SHAPE as well as by colour, because rule 7 says colour is
- * never the only signal — and this is the catalogue's own seat signal, on every card.
+/* The two seats, sitting on the tile.
  *
- * They were two identical 7px circles separated only by `background` until #2518. The
- * greyscale harness covers the games and does not look at the shell, so a rule the whole
- * product is held to was broken in the one place a player sees first.
- *
- * Disc and rounded square, matching `SeatGlyph.tsx` exactly — Pip is a disc, Bo is a
- * rounded square — so the catalogue and the match use one visual language. Done in CSS
- * rather than by rendering 108 pairs of inline SVG, which the shell has no bytes for.
- */
+ * Both of these were discs. `SeatGlyph` has said since it was written that Pip is a disc
+ * and Bo a rounded square precisely so rule 7 holds — colour is never the only signal —
+ * and this pair, on 108 cards, was the one place in the shell that ignored it. Rendering
+ * the catalogue in greyscale is what showed it: two identical grey dots. */
 .seats i {
   width: 7px;
   height: 7px;
@@ -67,10 +61,14 @@
   color: var(--db-muted);
 }
 
+/* `--db-muted`, matching `.meta` above it. As `--db-faint` this line was 2.6:1 on the
+   page's white and failed AA on all 108 cards at once, which made it the single largest
+   contrast fault on the site — and what it says is which of the three ways to play a game
+   supports, which is the one fact on a card a visitor is choosing between. */
 .modes {
   font-family: var(--db-font-mono);
   font-size: var(--db-text-xs);
-  color: var(--db-faint);
+  color: var(--db-muted);
 }
 
 /* Only a handful of the 107 are playable today; the badge is how a visitor tells at a

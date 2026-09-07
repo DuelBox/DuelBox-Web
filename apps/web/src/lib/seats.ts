@@ -54,11 +54,23 @@ function botLabel(name: string): string {
  * in — and a seat present in it is played by a bot. Taking the same object the host is
  * given means "who is a bot" is decided once per match rather than re-derived from `mode`
  * beside every place a name is drawn.
+ *
+ * `chosen` is what the two people at this device have called themselves (#161, stored by
+ * `lib/player-names.ts`), and a chosen name replaces the seat's own for as long as it is
+ * set. It is still *the seat* that is named, so a chosen name takes the bot mark exactly
+ * as the default does: a player who names the far seat and then plays the bot must see the
+ * bot marked rather than their own name handed quietly to it. An absent or empty entry
+ * leaves that seat its own name, which is what clearing the field in the settings page
+ * amounts to.
  */
-export function seatNamesFor(bots?: Readonly<Partial<Record<SeatId, unknown>>>): SeatNames {
+export function seatNamesFor(
+  bots?: Readonly<Partial<Record<SeatId, unknown>>>,
+  chosen?: Readonly<Partial<Record<SeatId, string>>>,
+): SeatNames {
   const names: Partial<Record<SeatId, string>> = {};
   for (const seat of SEATS) {
-    const name = SEAT_CHARACTERS[seat];
+    const picked = chosen?.[seat];
+    const name = picked === undefined || picked.length === 0 ? SEAT_CHARACTERS[seat] : picked;
     names[seat] = bots?.[seat] === undefined ? name : botLabel(name);
   }
   // Built as a partial and asserted once, rather than spelling both seats out: a literal

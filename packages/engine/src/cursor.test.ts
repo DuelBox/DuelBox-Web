@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GridCursor } from './cursor.js';
+import { toScreen, toWorld } from './seat.js';
+import { vec2 } from './vec2.js';
 
 const STEP = 1 / 60;
 
@@ -158,6 +160,37 @@ describe('the far seat, reading the board upside down', () => {
     expect(cursor.column).toBe(1);
     expect(cursor.row).toBe(1);
   });
+
+  /**
+   * The meaning of `rotated`, pinned (#2521).
+   *
+   * A key is absolute in device space and a pointer is a device-space point; both reach a
+   * rotated board through the same half turn. So a press "down the device" and a tap one
+   * cell down the device from the cursor must name the same cell, whether or not the board
+   * is drawn rotated. If the cursor ever inverted for a reason `toWorld` did not, this is
+   * the test that would say so — the earlier ones only assert that inversion happens.
+   */
+  it.each([false, true])(
+    'agrees with toWorld about a device-down press (rotated: %s)',
+    (rotated) => {
+      const columns = 3;
+      const rows = 3;
+      const size = { width: 3, height: 3 };
+      const cursor = new GridCursor({ columns, rows, startIndex: 4 });
+
+      // The cell the cursor sits on, at its centre, in device space: the board is drawn
+      // through the same rotation the cursor is told about.
+      const before = toScreen(vec2(), cursor.column + 0.5, cursor.row + 0.5, size, rotated);
+      // One cell down the device from there, taken back into board coordinates.
+      const tapped = toWorld(vec2(), before.x, before.y + 1, size, rotated);
+      const expectedRow = Math.floor(tapped.y);
+      const expectedColumn = Math.floor(tapped.x);
+
+      cursor.step(0, 1, STEP, rotated);
+      expect(cursor.row).toBe(expectedRow);
+      expect(cursor.column).toBe(expectedColumn);
+    },
+  );
 });
 
 describe('determinism', () => {

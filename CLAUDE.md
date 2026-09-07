@@ -116,8 +116,13 @@ through to the system `size(1)`, the asset-licence check this file said CI
 enforced, CI itself being red on every commit behind another workflow's green
 tick, and a balance harness whose headline promised a band it did not enforce.
 The React hook rules, enforced by nothing at all, were the sixth.
+`Canvas2DRenderer.setReducedMotion` — the whole of reduced motion for a board, and
+the one part of it that reaches all forty-five flip-owning games — had no test of
+any kind until 7 September 2026. That is the seventh. **The count lives here.** A
+file that finds the next one adds it to this list rather than numbering it where it
+was found, which is how two files came to claim a different sixth.
 
-Five of the six were found in a single day, by looking. The habit that finds
+Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard
 nobody has seen.

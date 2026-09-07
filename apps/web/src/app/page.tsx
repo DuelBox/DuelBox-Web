@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { GameCard } from '@/components/GameCard';
+import { TileSprite } from '@/components/TileSprite';
 import styles from './page.module.css';
 
 const WAYS = [
@@ -37,6 +38,7 @@ export default function HomePage() {
   const featured = CATALOGUE.slice(0, 12);
   return (
     <>
+      <TileSprite games={featured} />
       <section className={styles.hero}>
         <div className="db-wrap">
           {/* Not "Works offline": there is no service worker, so a page that has not been

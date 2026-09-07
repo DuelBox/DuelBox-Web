@@ -429,7 +429,7 @@ games:
 - id: memory
   name: Memory Match
   category: Memory
-  archetype: rt-split
+  archetype: turn-board
   confidence: observed
   rename: true
   was: Memory
@@ -757,7 +757,7 @@ games:
   category: Racing
   archetype: rt-race
   confidence: observed
-  modes: friend,bot,solo
+  modes: friend,bot
   rule: Lean back and the front wheel comes up, and the higher it rides the faster the bike goes. Lean too far and you go over backwards, and the bumps down the lane kick the nose up whether you wanted it or not. First to the end of the course.
   refName: Wheelie
   modesNote: Reference app offers no bot here; we add one so single-player is never a dead end.
@@ -792,7 +792,7 @@ games:
   confidence: observed
   solo: true
   rule: One solitaire deal and two players taking turns on it, one move each. A card you send up to a foundation scores its face value to you and is gone for your opponent, and when nobody can move the higher score wins.
-  modes: solo
+  modes: friend,bot,solo
   hasOptions: true
   refName: Solitaire
 - id: sudoku
@@ -802,7 +802,7 @@ games:
   confidence: observed
   solo: true
   rule: One nine-by-nine grid, filled a square at a time. Answer correctly and the square is yours; answer wrongly and the right digit goes in anyway and the square is your opponent's. Whoever holds more of the twenty-seven lines wins.
-  modes: solo
+  modes: friend,bot,solo
   hasOptions: true
   refName: Sudoku
 - id: sliding-puzzle
@@ -812,7 +812,7 @@ games:
   confidence: observed
   solo: true
   rule: One board of numbered tiles with a single gap, and two players solving it from opposite sides of the table. You want the tiles in order as you read them, and so does your opponent, so every helpful slide gets in the other's way.
-  modes: solo
+  modes: friend,bot
   refName: Sliding Puzzle
 - id: blocks
   name: Blocks
@@ -821,7 +821,7 @@ games:
   confidence: observed
   solo: true
   rule: A nine-by-nine board and a shared tray of three shapes. Fill a row, a column or a box and it clears, and every cleared square pays whoever placed it. The tray refills only when it is bare, so the last pick is whatever you were left.
-  modes: solo
+  modes: friend,bot,solo
   refName: Blocks
 - id: tap-match
   name: Tap Match
@@ -830,7 +830,7 @@ games:
   confidence: observed
   solo: true
   rule: Six piles between two players, one card of each turned up. Take a card into your rack, where three alike clear and score. The rack holds seven and there is no eighth slot, so a card that completes nothing when you are full puts you out.
-  modes: solo
+  modes: friend,bot
   refName: Tap Match
 - id: nuts-and-bolts
   name: Nuts and Bolts
@@ -839,7 +839,7 @@ games:
   confidence: observed
   solo: true
   rule: Twenty nuts on a rack of seven bolts, half of them marked as yours from the deal. Only the outermost nut comes off a bolt, and it only goes onto a bare bolt or onto its own kind. A bolt of one kind pays whoever owns the nuts standing in it.
-  modes: solo
+  modes: friend,bot
   refName: Nuts And Bolts
 - id: maze-paint
   name: Maze Paint
@@ -848,7 +848,7 @@ games:
   confidence: observed
   solo: true
   rule: A roller each on one floor. Pick a direction and you slide until you meet a block, the edge, or your opponent's paint, laying colour on every bare square you cross. Your own paint you roll straight over, and the most squares wins.
-  modes: solo
+  modes: friend,bot,solo
   refName: Maze Paint
 - id: ping-pong
   name: Ping Pong

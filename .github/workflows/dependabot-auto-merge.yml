@@ -1,0 +1,132 @@
+# Turn on auto-merge for Dependabot's patch updates, so that a green gate is enough.
+#
+# The second half of #63. The first half — weekly, grouped — is `dependabot.yml`. This is the
+# part that stops a patch bump sitting open for a fortnight waiting for somebody to click a
+# button they were always going to click.
+#
+# **Patch only, and that is the whole judgement.** A patch that breaks something breaks the
+# gate: format, typecheck, lint, unit tests, build, size budget and e2e all run on the PR, and
+# auto-merge does not fire until every required check is green. A minor release changes
+# behaviour on purpose, and behaviour that changes on purpose deserves a person reading the
+# changelog. Nothing here can merge a minor or a major, whatever the CI says.
+#
+# ## Read this before believing it does anything
+#
+# **It is inert today, and it checks that it is rather than assuming it.** Two switches have
+# to be on outside this file, and neither is:
+#
+# 1. **"Allow auto-merge" is OFF** in the repository settings (Settings → General → Pull
+#    Requests). Without it `gh pr merge --auto` fails outright — the API rejects the request.
+# 2. **This repository has no branch protection on `main`** (#2512). Auto-merge waits for the
+#    required checks and merges the moment they pass; with none required there is nothing to
+#    wait for, and a PR queued for auto-merge merges immediately — CI still running, gate
+#    unread. That is worse than the delay it replaces.
+#
+# So both are needed before this file is anything but decoration: the setting on, and a
+# branch-protection rule on `main` requiring at least `verify` and `e2e` from `ci.yml`.
+#
+# **Neither of those is left to a comment.** The `settings` step below asks the API for both
+# and the merge step runs only when both answer yes, which buys two things a paragraph
+# cannot. Documented and unguarded, this workflow was red on every Dependabot patch PR —
+# `gh pr merge --auto` exits non-zero when switch 1 is off, and the PRs it went red on were
+# exactly the ones it exists to help, which trains a reader to ignore a red X. And flipping
+# switch 1 alone — one checkbox, on a different settings page from switch 2 — would have
+# turned that red-but-harmless workflow into one that merges to `main` with the gate unread,
+# the outcome the paragraph above calls worse than the delay it replaces. Now the first
+# state is green and silent and the second cannot happen.
+#
+# The probe reads `allow_auto_merge` and the base branch's `protected` flag, both of which
+# the job's own `GITHUB_TOKEN` can see. It deliberately does not read
+# `branches/main/protection/required_status_checks`, which needs admin the token does not
+# have and would 404 identically whether protection exists or not — a check that cannot tell
+# its two answers apart is the kind of guard this repository keeps finding. So `protected`
+# is what is asserted: it is true only once somebody has been to the branch-protection page,
+# which is where the required checks are set.
+#
+# It is written down here rather than left to be discovered because this repository has now
+# found **seven** guards that claimed something nothing ran — the list is in CLAUDE.md, which
+# is where it is kept and counted. A workflow named "auto-merge" that does not merge would be
+# the eighth. It is not
+# claiming to work; it is ready for the day somebody flips the switches, and it says out loud
+# in the run log which of the two is still off.
+#
+# ## And even then, most npm PRs will not qualify
+#
+# `dependabot.yml` groups minor **and** patch into one weekly `minor-and-patch` PR. A grouped
+# PR reports the highest update type it contains, so any group with a single minor in it is a
+# minor PR and is skipped here by design. Auto-merge will land the weeks that happen to be all
+# patch, and every `github-actions` bump, which is ungrouped and therefore one dependency per
+# PR. That is the intended reach, not a bug to widen later by ungrouping.
+#
+# ## Why `pull_request_target`, and why nothing is checked out
+#
+# On a `pull_request` event Dependabot's runs get a read-only `GITHUB_TOKEN`, which cannot
+# enable auto-merge. `pull_request_target` runs in the context of the base branch with a
+# writable token — and is exactly the trigger that turns into remote code execution if the
+# job checks out the pull request's head and runs anything from it. So it does not check
+# anything out. There is no `actions/checkout` here, no install, and no script from the PR:
+# the only inputs are the API's own metadata about the update.
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+
+permissions:
+  contents: write # queue the merge
+  pull-requests: write # and mark the PR auto-merge
+
+# One run per pull request. A push to a Dependabot branch that supersedes the last one has
+# nothing to say that the newer run will not say better.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    # Dependabot's own PRs, from a branch in this repository, and nothing else. The actor
+    # check alone is not enough: a pull request from a fork carries a head repository that is
+    # not ours, and `pull_request_target` would still run this with a writable token.
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      # Both prerequisites, asked of the API rather than assumed. A failed call is read as
+      # "off": the fallback keeps a transient API error from arming a merge, which is the
+      # direction an unknown answer has to fail in. `|| echo false` because the default
+      # shell is `bash -e`, where an unguarded `x=$(gh ...)` on a non-zero exit ends the step.
+      - id: settings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          auto=$(gh api "repos/$GITHUB_REPOSITORY" --jq '.allow_auto_merge' 2>/dev/null || echo false)
+          protected=$(gh api "repos/$GITHUB_REPOSITORY/branches/$BASE" --jq '.protected' 2>/dev/null || echo false)
+          echo "auto=$auto" >> "$GITHUB_OUTPUT"
+          echo "protected=$protected" >> "$GITHUB_OUTPUT"
+          if [ "$auto" != "true" ] || [ "$protected" != "true" ]; then
+            echo "::notice::Auto-merge stays off: allow_auto_merge=$auto, $BASE protected=$protected. Both are needed — see #2512 and the note at the top of this file."
+          fi
+
+      - name: Enable auto-merge for a patch update
+        # `npm_and_yarn` is what the metadata calls the ecosystem `dependabot.yml` calls
+        # `npm`; both spellings are accepted so that a rename on either side cannot quietly
+        # switch this off instead of failing. Anything outside these two — a future pip or
+        # docker ecosystem — is not covered by the reasoning above and is left to a person.
+        if: >-
+          steps.settings.outputs.auto == 'true' &&
+          steps.settings.outputs.protected == 'true' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          contains(fromJSON('["npm_and_yarn", "npm", "github_actions"]'),
+          steps.metadata.outputs.package-ecosystem)
+        # `--merge`, not `--squash`: a Dependabot branch is one commit with a good message
+        # already, and a merge commit keeps `Bumps x from 1.2.3 to 1.2.4` searchable in the
+        # history rather than folding it into a squash summary.
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,31 @@
+/*
+ * A read-out laid over a board two people are playing on, which decides every rule below.
+ *
+ * It never takes a pointer, so a thumb aimed at the corner of the board reaches the board.
+ * It is out of flow and fixed to the viewport rather than placed in the play surface, so it
+ * cannot move the board by a pixel — a debugging aid that changes the layout it is measuring
+ * is measuring the wrong layout. And it carries no transition and no media query, because
+ * there is nothing here to animate and nothing here that should reflow at a breakpoint.
+ */
+.overlay {
+  position: fixed;
+  left: max(var(--db-space-2), var(--db-safe-left));
+  bottom: max(var(--db-space-2), var(--db-safe-bottom));
+  z-index: 100;
+  padding: var(--db-space-2) var(--db-space-3);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  background: var(--db-paper);
+  color: var(--db-body);
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+  line-height: 1.45;
+  /* The read-out is columns of numbers, so the newlines and the padding are the layout. */
+  white-space: pre;
+  opacity: 0.9;
+  pointer-events: none;
+  /* A phone is narrower than these lines are wide. Clipping is right and scrolling is not:
+     a debugging aid must never be the thing that makes the page scroll under a match. */
+  max-width: calc(100vw - var(--db-space-4));
+  overflow: hidden;
+}

@@ -7,9 +7,13 @@
   font-size: var(--db-text-3xl);
 }
 
+/* `--db-muted`, not `--db-faint`: the date this page was last changed is the one fact on it
+   a reader may need to check, and `--db-faint` is 2.6:1 on white — well under AA for 13px
+   text. The same swap as the seven `e2e/axe.spec.ts` reported elsewhere; this page is not
+   one of the shapes that scan covers, so it was made by hand rather than by a red test. */
 .updated {
   margin-top: var(--db-space-2);
-  color: var(--db-faint);
+  color: var(--db-muted);
   font-size: var(--db-text-sm);
 }
 

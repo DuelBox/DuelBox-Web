@@ -1,55 +1,117 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { audio, setSoundMuted, soundPreference } from '@/lib/audio';
+import { useCallback, useEffect, useState } from 'react';
+import { DEFAULT_SETTINGS, readSettings, writeSettings, type Settings } from '@/lib/settings';
+import styles from './SoundToggle.module.css';
 
 /**
- * The one control for sound in the whole product.
+ * The one-tap mute (#171), and the subscription every sound control shares.
  *
- * It lives in the pause menu rather than beside the score, because the score is shared by
- * two people playing and a control there is one either of them can hit by accident on a
- * device they are both reaching across. Pause is already the place a pair stops to change
- * something.
- *
- * There is deliberately **no "enable sound" prompt** anywhere. Unlocking happens off the
- * tap the player was already making (see `lib/audio.ts`), and this button is about a
- * preference, not a permission — a player who never opens it never learns that browsers
- * have an autoplay policy, which is the correct amount to learn about it.
- *
- * The label says which state it is in, in words. Colour carries nothing here, which is
- * rule 7's requirement and also what makes it legible in greyscale and to a screen reader
- * without a second announcement.
+ * It sits in the site header and in the match HUD, and the settings page has a switch for
+ * the same value, so one screen can show the same setting two or three times over. Storage
+ * is the only source of truth for it, and a control that kept a copy of its own would be
+ * the one that disagreed with the others after a tap on any of them. So every control
+ * reads storage on mount, tells the rest whenever it writes, and takes what it is told —
+ * a module-level set of listeners rather than a store, because three controls sharing one
+ * boolean is not what a store is for.
  */
-export function SoundToggle({ className }: { className?: string | undefined }) {
-  /**
-   * Starts as the OS-derived default and is corrected in an effect.
-   *
-   * This site is a static export: `localStorage` does not exist on the build machine, so
-   * reading a stored preference during render would make the server's HTML and the
-   * browser's first paint disagree. The same reason `PlaySurface` reads `location` in an
-   * effect rather than while rendering.
-   */
-  const [muted, setMuted] = useState(false);
+
+type Listener = (settings: Settings) => void;
+
+const listeners = new Set<Listener>();
+
+/**
+ * Tells every mounted sound control what the settings now are.
+ *
+ * The value is handed over rather than re-read from storage so that a write storage
+ * refused — private browsing on an older engine, a full quota — still reaches the speaker
+ * and every button on the page: what the player sees and hears should be what they just
+ * did, and the setting failing to survive a reload is a separate, smaller matter. Called
+ * with no argument by the settings page after an import or an erase, where storage is the
+ * only place the new value exists.
+ */
+export function notifySettingsChanged(settings: Settings = readSettings()): void {
+  for (const listener of listeners) listener(settings);
+}
+
+/**
+ * The stored settings, kept current, and a way to change them.
+ *
+ * The defaults render first and the stored values replace them once mounted: the page is
+ * statically exported, and reading storage during render would make the server's HTML and
+ * the browser's first paint disagree. A change from any control on the page arrives
+ * through {@link notifySettingsChanged}; a change from another tab arrives as the
+ * browser's own `storage` event. Both push the level into the audio system as well as
+ * into React state, so a mute chosen in the header or in another tab reaches the speaker
+ * without each control having to remember to do it.
+ *
+ * Nothing is applied on mount, deliberately: `audio()` builds the system from storage the
+ * first time anything asks for it, so applying the same values again would only construct
+ * it early on pages that never make a sound.
+ *
+ * **The audio module is reached by `import()` rather than by an import at the top.** This
+ * hook runs in the site header, which is on every page, and `lib/audio` pulls
+ * `AudioSystem` — the whole synthesiser — out of the engine, which belongs to the play
+ * route and not to a visitor reading the catalogue.
+ *
+ * Measured before it was believed: with a static import here the shell came out one byte
+ * smaller, so today this buys nothing and webpack was already keeping the synthesiser out
+ * of every non-play chunk. It stays because it makes that independent of a bundler's
+ * judgement, and because the cost is a microtask on the one gesture that changes a level,
+ * on a page where the module is usually loaded already. It is insurance, not a saving,
+ * and `size-budget.json` records it as insurance.
+ */
+export function useSettings(): readonly [Settings, (patch: Partial<Settings>) => void] {
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    const stored = soundPreference();
-    setMuted(stored.muted);
-    // Applied as well as read: the system may have been built before anything was stored,
-    // or the preference may have been changed in another tab since this one loaded.
-    audio().setMuted(stored.muted);
-    audio().setMasterGain(stored.volume);
+    setSettings(readSettings());
+    const listener: Listener = (next) => {
+      setSettings(next);
+      void import('@/lib/audio').then((module) => {
+        module.applySoundSettings(next);
+      });
+    };
+    const onStorage = (): void => {
+      listener(readSettings());
+    };
+    listeners.add(listener);
+    globalThis.addEventListener('storage', onStorage);
+    return () => {
+      listeners.delete(listener);
+      globalThis.removeEventListener('storage', onStorage);
+    };
   }, []);
 
+  const update = useCallback((patch: Partial<Settings>) => {
+    notifySettingsChanged(writeSettings(patch));
+  }, []);
+
+  return [settings, update];
+}
+
+/**
+ * Mute and unmute, as a toggle button.
+ *
+ * The label names the action the press will take and `aria-pressed` carries the state, so
+ * a screen reader hears "Unmute sound, pressed" while muted and a sighted player sees the
+ * crossed-out speaker. Two signals on purpose: the glyph alone is 17px of emoji, and the
+ * emoji alone is drawn differently on every platform.
+ */
+export function SoundToggle({ className }: { className?: string | undefined }) {
+  const [settings, update] = useSettings();
+  const { muted } = settings;
   return (
     <button
       type="button"
-      className={className}
+      className={className === undefined ? styles.toggle : `${styles.toggle} ${className}`}
       aria-pressed={muted}
+      aria-label={muted ? 'Unmute sound' : 'Mute sound'}
       onClick={() => {
-        setMuted(setSoundMuted(!muted));
+        update({ muted: !muted });
       }}
     >
-      {muted ? 'Sound off' : 'Sound on'}
+      <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>
     </button>
   );
 }

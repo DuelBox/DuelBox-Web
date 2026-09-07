@@ -21,3 +21,10 @@ next-env.d.ts
 
 # The dev server keeps its own build output so a production build cannot clobber it.
 apps/web/.next-dev/
+
+# The share images (#2453). `pnpm share:images` composes all 109 of them from
+# apps/web/src/lib/tiles.ts before every build, so they are output and not source — and
+# tracking them would mean 109 assets.license.json entries recording one piece of
+# provenance a hundred and nine times. apps/web/assets.license.json licenses the code that
+# draws them, which is the same answer rule 3 already takes for the catalogue tiles.
+apps/web/public/og/

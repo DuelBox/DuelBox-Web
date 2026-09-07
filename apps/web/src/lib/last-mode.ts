@@ -14,9 +14,12 @@
  * `localStorage` because it fits the hosting constraint exactly: no account, no server,
  * no sync. Losing it costs one tap, so every failure path here returns the fallback
  * rather than throwing. Storage is genuinely absent in private browsing on some engines,
- * and full on others, and neither is worth a broken pre-match screen.
+ * and full on others, and neither is worth a broken pre-match screen — which is why the
+ * storage calls themselves live in `local-store.ts`, where that story is told once for
+ * every store rather than once per store.
  */
 
+import { isRecord, KEY_PREFIX, readJson, writeJson } from './local-store';
 import {
   DEFAULT_SETUP,
   isBotDifficulty,
@@ -26,7 +29,7 @@ import {
   type PlayMode,
 } from './match-setup';
 
-const KEY = 'duelbox:last-mode';
+export const LAST_MODE_KEY = `${KEY_PREFIX}last-mode`;
 
 /**
  * The shape written today, as #152 asks for.
@@ -58,54 +61,32 @@ type StoredSetup = Partial<MatchSetup>;
  * tab, still running the old build.
  */
 function readAll(): Record<string, StoredSetup> {
-  try {
-    // No optional chaining: the type says localStorage is always there, and in private
-    // browsing on some engines it is not. Reaching for it throws, which the catch below
-    // handles — the same path as a parse failure, and for the same reason.
-    const raw = globalThis.localStorage.getItem(KEY);
-    if (!raw) return {};
-    const parsed: unknown = JSON.parse(raw);
-    // Anything could be in storage — another tab, an older version, a user with the
-    // console open. Validate rather than trust, and never let a bad value crash a page.
-    if (!isRecord(parsed)) return {};
+  // Read raw rather than through `readVersioned`, because this is the one store with a
+  // pre-version shape still worth reading, and only this file knows what it looked like.
+  const parsed = readJson(LAST_MODE_KEY);
+  // Anything could be in storage — another tab, an older version, a user with the
+  // console open. Validate rather than trust, and never let a bad value crash a page.
+  if (!isRecord(parsed)) return {};
 
-    // The pre-version shape was a flat map of slug to mode, and nothing else. A player
-    // upgrading mid-sitting keeps what they chose rather than being quietly reset.
-    const versioned = parsed['version'] !== undefined;
-    if (versioned && parsed['version'] !== VERSION) return {};
-    const games = versioned ? parsed['games'] : parsed;
-    if (!isRecord(games)) return {};
+  // The pre-version shape was a flat map of slug to mode, and nothing else. A player
+  // upgrading mid-sitting keeps what they chose rather than being quietly reset.
+  const versioned = parsed['version'] !== undefined;
+  if (versioned && parsed['version'] !== VERSION) return {};
+  const games = versioned ? parsed['games'] : parsed;
+  if (!isRecord(games)) return {};
 
-    // `Object.create(null)` rather than `{}`, and `__proto__` skipped outright (#2365).
-    //
-    // `JSON.parse` makes `__proto__` an **own enumerable** property, so `Object.entries`
-    // yields it, and `out['__proto__'] = value` does not create a key — it replaces this
-    // map's prototype. Storage is untrusted input, so that is a real hazard.
-    //
-    // **It was not exploitable, and the reason is an ordering rather than a check**:
-    // `sanitise()` runs before the assignment, so whatever an attacker nested is reduced to
-    // a fresh object of known fields and the prototype is replaced with an inert `{}`.
-    // Traced end to end — with `{"__proto__": {"chess": {"mode": "bot"}}}` in storage,
-    // `out['chess']` is `undefined` either way, and `Object.prototype` is never touched.
-    //
-    // Hardened anyway, because resting on an ordering is fragile: moving this assignment
-    // above `sanitise()`, or adding a branch that stores a value straight from storage,
-    // would make it exploitable with nothing to catch it. The tests alongside this are
-    // deliberately labelled as characterization tests — they pass before and after — so
-    // nobody mistakes them for a regression guard they are not.
-    const out: Record<string, StoredSetup> = Object.create(null) as Record<string, StoredSetup>;
-    for (const [slug, value] of Object.entries(games)) {
-      if (slug === '__proto__') continue;
-      out[slug] = versioned ? sanitise(value) : isPlayMode(value) ? { mode: value } : {};
-    }
-    return out;
-  } catch {
-    return {};
+  // `Object.create(null)` rather than `{}`, and `__proto__` skipped outright (#2365):
+  // `JSON.parse` makes `__proto__` an own enumerable property, so `Object.entries` yields
+  // it, and `out['__proto__'] = value` does not create a key — it replaces this map's
+  // prototype. `sanitise()` already reduces each value to known fields, so it was never
+  // exploitable, but resting on that ordering is fragile and storage is untrusted input, so
+  // it is hardened anyway.
+  const out: Record<string, StoredSetup> = Object.create(null) as Record<string, StoredSetup>;
+  for (const [slug, value] of Object.entries(games)) {
+    if (slug === '__proto__') continue;
+    out[slug] = versioned ? sanitise(value) : isPlayMode(value) ? { mode: value } : {};
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return out;
 }
 
 /** Keeps the fields that are recognised and drops the rest, field by field. */
@@ -130,18 +111,26 @@ export function readSetup(slug: string): MatchSetup {
   };
 }
 
+/**
+ * Every game with something remembered about it, for the settings page to count.
+ *
+ * A count of games rather than a count of fields, because "3 games" is a thing a player
+ * can picture before pressing "erase" and "7 fields" is not.
+ */
+export function rememberedGames(): readonly string[] {
+  return Object.keys(readAll());
+}
+
 /** Remembers part of a setup, leaving the rest of it alone. */
 export function writeSetup(slug: string, patch: Partial<MatchSetup>): void {
-  try {
-    const all = readAll();
-    // Merged rather than replaced, so choosing a tier cannot silently overwrite the mode
-    // a player picked in another tab a moment ago.
-    all[slug] = { ...all[slug], ...patch };
-    globalThis.localStorage.setItem(KEY, JSON.stringify({ version: VERSION, games: all }));
-  } catch {
-    // Storage full, disabled, or unavailable. The player loses a convenience and
-    // nothing else, so there is nothing to report and nothing to retry.
-  }
+  const all = readAll();
+  // Merged rather than replaced, so choosing a tier cannot silently overwrite the mode
+  // a player picked in another tab a moment ago.
+  all[slug] = { ...all[slug], ...patch };
+  // The result is ignored on purpose. Storage full, disabled or unavailable costs the
+  // player a convenience and nothing else, so there is nothing to report and nothing to
+  // retry.
+  writeJson(LAST_MODE_KEY, { version: VERSION, games: all });
 }
 
 /** The mode this game was last played in, or null if it never has been. */

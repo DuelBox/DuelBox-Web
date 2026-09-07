@@ -25,9 +25,14 @@
   min-height: 64px;
 }
 
+/* The mark is a link home, and it was 33px tall — the one control in the header that the
+   #178 sweep over `.nav a` below walked straight past, because it was already an
+   `inline-flex` and looked like it had been dealt with. The row is 64px, so the target
+   costs nothing but a taller box around the same wordmark. */
 .brand {
   display: inline-flex;
   align-items: center;
+  min-height: var(--db-touch-target);
   color: var(--db-ink);
 }
 
@@ -52,8 +57,32 @@
   color: var(--db-ink);
 }
 
-.cta {
+/*
+ * The controls that are not navigation: a random game, the mute, and the Play button.
+ *
+ * One wrapper carries the `margin-left: auto` that used to sit on `.cta`, so the three
+ * hold the right-hand end of the row together and hide together. They have to hide
+ * together: a Play button that goes at 40rem while a 48px mute stays would be a mute that
+ * overflowed 320px on its own, and the arithmetic below has no room for it.
+ */
+.tools {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--db-space-3);
+}
+
+/* Never wraps: a two-line button in a 64px header is a header that grows. */
+.quick {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.sound {
+  flex: 0 0 auto;
+}
+
+.cta {
   padding: var(--db-space-2) var(--db-space-4);
   min-height: var(--db-touch-target);
   display: inline-flex;
@@ -71,16 +100,34 @@
 }
 
 /*
- * On a phone the links stay and the button goes — the other way round from before.
+ * Between 40rem and 64rem the Play button stands down and the two controls stay.
+ *
+ * Six things do not fit a 641px row. The brand (115px), the two links (152px) and their
+ * gaps come to 291; "Surprise me", the mute and "Play now" are roughly 120, 48 and 94
+ * with two 12px gaps between them, another 286; and the 24px gap before them makes 601
+ * against the 592 between the gutters. Something has to go, and the Play button is the
+ * one that costs nothing: it opens `/games/`, the same page as the nav's first link,
+ * whereas "Surprise me" opens a game directly and the mute has no other home outside a
+ * match. Above 64rem there is room for all of it.
+ */
+@media (max-width: 64rem) {
+  .cta {
+    display: none;
+  }
+}
+
+/*
+ * On a phone the links stay and the buttons go — the other way round from before.
  *
  * The nav used to be hidden outright below 40rem with nothing put in its place, so on the
  * product's primary device "Games" and "How to play" were unreachable from the header
  * (#2484). "How to play" is exactly what a pair who have never played reach for, and the
  * only other place it appears is the footer.
  *
- * Dropping the button costs nothing, because `.cta` and the nav's first link are the same
- * destination: `/games/`. The route into a game still survives the breakpoint — it is just
- * a link now rather than a button, and it brings the second destination with it.
+ * Dropping the tools costs nothing that a phone does not get elsewhere. The Play button
+ * and the nav's first link are the same destination. The mute is in the match HUD, which
+ * is where a phone needs it (#171) — a match is the screen with sound. A random game is
+ * the one thing that waits for a wider screen, and at 320px there is nowhere to put it.
  *
  * Measured rather than assumed, which is why there is no disclosure widget here: at 320px
  * the brand is 115px and the two 48px-tall links are 152px together, which with the gap
@@ -101,7 +148,7 @@
     gap: var(--db-space-4);
   }
 
-  .cta {
+  .tools {
     display: none;
   }
 }

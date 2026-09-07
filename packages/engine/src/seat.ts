@@ -40,6 +40,15 @@ export function seatView(seat: SeatId, presentation: Presentation, localSeat: Se
 /**
  * Whether this seat reads the device upside down.
  *
+ * One question, asked in two places, and it is worth saying that they are the same
+ * question (#2521). A turn-based game uses this to decide whether to draw the board half
+ * a turn round so the active seat reads it upright; it then hands the *same* boolean to
+ * {@link toWorld} for a pointer and to `GridCursor.step` for a key. Those two are not a
+ * second rotation on top of the drawing — they are the device-to-board mapping the drawing
+ * created, applied to input, so the cell under a finger and the cell a key moves to are
+ * the ones the player sees. A board a seat reads upright on its own half of the device is
+ * not rotated, and passes `false` to all three.
+ *
  * The same answer as {@link seatView}'s `rotated`, as a primitive. That is the whole point:
  * a game asks this on every fixed step, and returning an object there allocates once a step
  * per game, which rule 5 forbids and which nothing was catching.

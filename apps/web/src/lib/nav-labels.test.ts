@@ -24,6 +24,7 @@ const web = join(here, '..');
 const NAMED_ROUTES: Readonly<Record<string, string>> = {
   '/how-to-play/': 'How to play',
   '/privacy/': 'Privacy',
+  '/settings/': 'Settings',
   '/terms/': 'Terms of use',
 };
 
