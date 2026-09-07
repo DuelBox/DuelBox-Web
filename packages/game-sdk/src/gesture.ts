@@ -27,14 +27,12 @@ import type { SeatInput } from './contract.js';
  * flags rather than a fresh object each step.
  */
 
-/** A recogniser that consumes one seat's input for the step about to run. */
-interface SeatGesture {
-  /** Fold this step's input into the gesture. Call once per `update()`, per seat. */
-  sample(input: SeatInput, fixedDeltaSeconds: number): void;
-  /** Forget any gesture in progress. Called on a round boundary or a hard reset. */
-  reset(): void;
-}
-
+/**
+ * Each recogniser exposes `sample(input, …)` — called once per `update()`, per seat — and
+ * `reset()`. They do not share a nominal interface: `DragAim` and `PressGesture` need only the
+ * seat view, while `HoldToAct` also needs the fixed delta and a constraint flag, so forcing a
+ * common `sample` signature would only add an argument two of them ignore.
+ */
 function clamp(value: number, lo: number, hi: number): number {
   if (value < lo) return lo;
   if (value > hi) return hi;
@@ -95,7 +93,7 @@ export interface DragAimResult {
  * the origin by calling {@link setAnchor} on the press step; left alone, the origin is the
  * press point, which is the on-screen-pad case.
  */
-export class DragAim implements SeatGesture {
+export class DragAim {
   #maxPower: number;
   #deadzone: number;
   #active = false;
@@ -185,7 +183,7 @@ export class DragAim implements SeatGesture {
     this.#magnitude = Math.hypot(this.#vecX, this.#vecY);
   }
 
-  sample(input: SeatInput, _fixedDeltaSeconds: number): void {
+  sample(input: SeatInput): void {
     this.#result.fired = false;
     this.#result.cancelled = false;
 
@@ -288,7 +286,7 @@ export interface PressGestureOptions {
  * charge/hold boundary here is a *classification*, not a race, so whole-step resolution is
  * the right precision for it.
  */
-export class PressGesture implements SeatGesture {
+export class PressGesture {
   #tapMax: number;
   #chargeFull: number;
   #held = false;
@@ -351,7 +349,7 @@ export class PressGesture implements SeatGesture {
     return this.#released ? this.#releaseSeconds : 0;
   }
 
-  sample(input: SeatInput, _fixedDeltaSeconds: number): void {
+  sample(input: SeatInput): void {
     this.#justPressed = false;
     this.#released = false;
     this.#kind = null;
@@ -371,8 +369,7 @@ export class PressGesture implements SeatGesture {
       const total = input.holdSecondsAtRelease;
       this.#heldSeconds = total;
       this.#released = true;
-      this.#kind =
-        total <= this.#tapMax ? 'tap' : total >= this.#chargeFull ? 'charge' : 'hold';
+      this.#kind = total <= this.#tapMax ? 'tap' : total >= this.#chargeFull ? 'charge' : 'hold';
       this.#releaseSeconds = total;
       this.#held = false;
       // Leave heldSeconds readable for this step, then it is stale until the next press.
@@ -420,7 +417,7 @@ export interface HoldToActOptions {
  * `actionHeld`/`actionReleased`, the identical logic runs on touch, keyboard and gamepad —
  * the second acceptance criterion — with no branch on the source.
  */
-export class HoldToAct implements SeatGesture {
+export class HoldToAct {
   #grace: number;
   #held = false;
   #holdSeconds = 0;
@@ -470,7 +467,8 @@ export class HoldToAct implements SeatGesture {
   sample(input: SeatInput, fixedDeltaSeconds: number, inConstraint = false): void {
     this.#released = false;
     this.#releaseSeconds = 0;
-    const delta = Number.isFinite(fixedDeltaSeconds) && fixedDeltaSeconds > 0 ? fixedDeltaSeconds : 0;
+    const delta =
+      Number.isFinite(fixedDeltaSeconds) && fixedDeltaSeconds > 0 ? fixedDeltaSeconds : 0;
 
     if (input.pointerCancelled) {
       this.#end();

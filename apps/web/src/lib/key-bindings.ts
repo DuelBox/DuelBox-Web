@@ -65,7 +65,8 @@ function isKeyBindingShape(value: unknown): value is KeyBinding {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
   for (const slot of BINDING_SLOTS) {
-    if (typeof record[slot] !== 'string' || (record[slot] as string).length === 0) return false;
+    const value = record[slot];
+    if (typeof value !== 'string' || value.length === 0) return false;
   }
   return true;
 }

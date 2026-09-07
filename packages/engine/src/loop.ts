@@ -6,6 +6,8 @@
  * the last two steps using `alpha`.
  */
 
+import type { GamepadSnapshot } from './gamepad.js';
+
 const DEFAULT_STEPS_PER_SECOND = 60;
 const DEFAULT_MAX_STEPS_PER_FRAME = 5;
 
@@ -176,7 +178,7 @@ export function browserClock(): Clock {
  * Returns an empty array where the API is absent (older engines, a locked-down context) rather
  * than throwing, so a host can poll unconditionally and simply see no pads.
  */
-export function browserGamepadSource(): () => (import('./gamepad.js').GamepadSnapshot | null)[] {
+export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
   const scope = globalThis;
   if (typeof scope.navigator === 'undefined' || typeof scope.navigator.getGamepads !== 'function') {
     return () => [];

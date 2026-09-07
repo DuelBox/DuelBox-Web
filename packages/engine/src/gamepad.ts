@@ -244,10 +244,7 @@ export class GamepadManager {
     return null; // no free seat: the pad is connected but drives nothing
   }
 
-  #findPad(
-    pads: readonly (GamepadSnapshot | null)[],
-    index: number,
-  ): GamepadSnapshot | null {
+  #findPad(pads: readonly (GamepadSnapshot | null)[], index: number): GamepadSnapshot | null {
     for (const pad of pads) {
       if (pad !== null && pad.connected && pad.index === index) return pad;
     }
