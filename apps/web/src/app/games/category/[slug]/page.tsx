@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { CATALOGUE, type CatalogueEntry } from '@/data/catalogue.generated';
 import { CATEGORY_HUBS, hubFor } from '@/lib/categories';
 import { formatRound } from '@/lib/format';
+import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { absoluteUrl } from '@/lib/site';
 import { collectionPageJsonLd, serialiseJsonLd } from '@/lib/structured-data';
 import { GameCard } from '@/components/GameCard';
@@ -85,8 +86,12 @@ export async function generateMetadata({
     title: hub.title,
     description,
     alternates: { canonical: url },
-    openGraph: { title, description, url },
-    twitter: { card: 'summary', title, description },
+    // The site's own card rather than a game's. A hub is eighteen games wide and picking
+    // one of them to stand for it would be arbitrary; the montage says "a lot of games",
+    // which is what the page is. `images` has to be repeated here at all because a route
+    // that declares `openGraph` replaces the layout's object rather than extending it.
+    openGraph: { title, description, url, images: [SITE_SHARE_IMAGE] },
+    twitter: { card: 'summary', title, description, images: [SITE_SHARE_IMAGE] },
   };
 }
 

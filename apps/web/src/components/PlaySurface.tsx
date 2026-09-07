@@ -23,9 +23,23 @@ import {
 } from '@/lib/head-to-head';
 import { readPlayerNames } from '@/lib/player-names';
 import { readSetup, writeSetup } from '@/lib/last-mode';
-import { armAudio } from '@/lib/audio';
+import { armAudio, audio } from '@/lib/audio';
+import { ducksMatchAudio, shellCueFor } from '@/lib/match-cues';
 import { vibrate } from '@/lib/haptics';
-import { recordPlayed } from '@/lib/recent';
+import { readRecent, recordPlayed } from '@/lib/recent';
+import {
+  currentGame,
+  initialTournament,
+  isCurrentLeg,
+  pickTournamentGames,
+  reduce as reduceTournament,
+  resume,
+  TOURNAMENT_LEG_ROUNDS,
+  TOURNAMENT_LENGTH,
+  legsToWin,
+  type TournamentState,
+} from '@/lib/tournament';
+import { clearTournament, readTournament, writeTournament } from '@/lib/tournament-store';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
@@ -35,6 +49,7 @@ import {
   type PlayMode,
 } from '@/lib/match-setup';
 import { GameHost } from './GameHost';
+import { TournamentTrack } from './TournamentTrack';
 import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
@@ -102,11 +117,30 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [setup, setSetup] = useState<MatchSetup>(DEFAULT_SETUP);
   /** What the two people here call themselves, if they have said (#161). */
   const [chosenNames, setChosenNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
-  // Two reads of this device's storage, in one effect because they are one thing: what
-  // this browser already knows about this game before anybody presses Start.
+  /**
+   * The tournament this device has in progress, if it has one (#157).
+   *
+   * Written down on every change rather than held here, because a tournament spans seven
+   * URLs: leg three is a different page from leg two, so every advance through one is a
+   * page load and React state cannot carry it across. `resume` derives the phase, which is
+   * the one thing about a tournament that is deliberately not stored.
+   */
+  const [tournament, setTournament] = useState<TournamentState>(initialTournament);
+  /**
+   * Whether the match on screen is a tournament leg, fixed at the moment it starts.
+   *
+   * State rather than a look at `tournament`, because the tournament moves on the instant a
+   * leg is reported: a derived answer would flip to "not a leg" as the result screen
+   * appeared, and the HUD would grow round pips for a best-of nobody chose.
+   */
+  const [legMatch, setLegMatch] = useState(false);
+  // Three reads of this device's storage, in one effect because they are one thing: what
+  // this browser already knows before anybody presses Start.
   useEffect(() => {
     setSetup(readSetup(slug));
     setChosenNames(readPlayerNames());
+    const stored = readTournament();
+    setTournament(stored === null ? initialTournament() : resume(stored));
   }, [slug]);
 
   /**
@@ -166,7 +200,13 @@ export function PlaySurface({ slug }: { slug: string }) {
    * it the round pips, the "Next round" screen and the opening-seat rotation of #2466,
    * all of which are implemented and were being shipped switched off.
    */
-  const rules = useMemo<MatchRules>(() => matchRulesFor(setup.rounds), [setup.rounds]);
+  const rules = useMemo<MatchRules>(
+    // A tournament leg is a single match whatever the player's remembered length says: the
+    // tournament is the best-of, and seven best-of-threes is a different product
+    // (`docs/tournament.md`).
+    () => matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds),
+    [legMatch, setup.rounds],
+  );
 
   const [match, send] = useReducer(
     (state: ReturnType<typeof initialMatchState>, event: MatchEvent) => reduce(state, event, rules),
@@ -250,7 +290,20 @@ export function PlaySurface({ slug }: { slug: string }) {
     // this call is about to write, from the same function, so the two cannot be different
     // arithmetic — and the panel does not have to wait for a second commit to be right.
     recordResult(slug, outcome, opponent);
-  }, [match.phase, match.matchOutcome, seed, slug, opponent]);
+    /**
+     * And the tournament, if this is the game it is waiting on.
+     *
+     * A leg is reported by that route and by no other, which is what makes a result count
+     * once: the result screen still offers Rematch — taking it away would be a worse answer
+     * than leaving it — and a replayed leg is a friendly game that goes on the head-to-head
+     * record above and not on the tournament. The head-to-head write is unconditional for
+     * the same reason: a match played to its end is a match played to its end.
+     */
+    if (!isCurrentLeg(tournament, slug)) return;
+    const advanced = reduceTournament(tournament, { kind: 'report', outcome });
+    writeTournament(advanced);
+    setTournament(advanced);
+  }, [match.phase, match.matchOutcome, seed, slug, opponent, tournament]);
 
   /**
    * A buzz when a round ends and another when the match does (#135).
@@ -265,6 +318,62 @@ export function PlaySurface({ slug }: { slug: string }) {
     if (match.phase === 'round-over') vibrate('score');
     else if (match.phase === 'match-over') vibrate(match.matchOutcome === 'draw' ? 'tap' : 'win');
   }, [match.phase, match.matchOutcome]);
+
+  /**
+   * The same phase changes, said in sound (#168) and given room to be heard (#172).
+   *
+   * The shell owns the count-in, the pause and the result, so it owns their cues too;
+   * `lib/match-cues.ts` turns the match state into one of them and
+   * `packages/engine/src/sound-events.ts` is the vocabulary both halves of the product read.
+   * Nothing is audible yet — no sound file exists (#169, #170), so `play` is handed a name
+   * nothing has registered and answers false — and that is the intended state: the names are
+   * wired now so the recordings drop into a shell already asking for them.
+   */
+  const cue = shellCueFor(match);
+  const beat = Math.ceil(match.countdownRemaining);
+  /** The cue and beat already raised, so a re-run of this effect is not a second sound. */
+  const raised = useRef('');
+  useEffect(() => {
+    if (cue === null) return;
+    // The beat is part of the identity, not decoration: a count-in raises the same cue once
+    // a second, and without the number the second beat reads as a repeat of the first and is
+    // dropped. It also covers development's double-invoked effects, which would otherwise
+    // make every cue in the product fire twice in the one environment anybody is listening.
+    const key = `${cue}:${String(beat)}`;
+    if (raised.current === key) return;
+    raised.current = key;
+    const sound = audio();
+    sound.play(cue);
+    // Drained here rather than left to the host's per-frame `flush()`, which is the only
+    // other caller. The loop is stopped in every phase that is not live, so a cue raised at
+    // a pause or a result would sit in the queue until somebody started the next match and
+    // then fire against that screen instead.
+    sound.flush();
+  }, [cue, beat]);
+
+  /**
+   * Hold the match down while a count-in or a result is on screen.
+   *
+   * This is the caller #172's reference-counted duck was written for and did not have. The
+   * duck moves the master gain rather than a sound, so it works with nothing playing (a
+   * ramp on a node with no voices under it) and before the first gesture has built a context
+   * at all; and it cannot fight the mute, because a muted system reports zero however deep
+   * the duck is. `ducksMatchAudio` says which cues take one and why the other two do not.
+   *
+   * One duck per held reason, released in the cleanup, so the pairing is React's to get
+   * right rather than ours: an effect that is torn down and set up again nets one duck, and
+   * the counted API means an unduck can never run a debt up that the *next* announcement
+   * would pay by not ducking at all.
+   */
+  const ducking = cue !== null && ducksMatchAudio(cue);
+  useEffect(() => {
+    if (!ducking) return;
+    const sound = audio();
+    sound.duck();
+    return () => {
+      sound.unduck();
+    };
+  }, [ducking]);
 
   const handleTick = useCallback((dt: number) => {
     send({ kind: 'tick', seconds: dt });
@@ -287,6 +396,8 @@ export function PlaySurface({ slug }: { slug: string }) {
       // Counted as played from the moment a mode is chosen rather than when the match
       // ends, because a pair who quit halfway through still played it (#87).
       recordPlayed(slug);
+      // Settled here rather than derived while the match runs: see `legMatch`.
+      setLegMatch(isCurrentLeg(tournament, slug));
       setMode(chosen);
       setActiveSeat(null);
       const next = seed + 1;
@@ -300,8 +411,54 @@ export function PlaySurface({ slug }: { slug: string }) {
     // from the render that created it and every match after the first would open on a
     // stale one. This was found by hand; `react-hooks/exhaustive-deps` now fails the
     // build on it, so the next one will not be (#2482).
-    [slug, seed],
+    [slug, seed, tournament],
   );
+
+  /**
+   * Starts a tournament from this game's lobby (#156).
+   *
+   * The first leg is the game the press happened in and the other six are drawn; that
+   * follows from where the entry point is rather than from taste, and
+   * `docs/tournament.md` sets out both. The current game is kept out of the pool so the
+   * line-up cannot repeat it.
+   *
+   * `Math.random` is right here and forbidden under `packages/`: this is the shell deciding
+   * what to open, not a simulation, and no match depends on which games were drawn.
+   *
+   * Reduced from whatever state the machine is in rather than from a fresh one, so the
+   * `complete → start` transition in its table is the one that actually runs when a pair
+   * start a second tournament off the screen that told them who won the first. A `start`
+   * while one is running is refused by that same table, which is why nothing offers it.
+   */
+  const beginTournament = useCallback(
+    (against: Opponent) => {
+      const games = [
+        slug,
+        ...pickTournamentGames(
+          PLAYABLE.filter((candidate) => candidate !== slug),
+          readRecent(),
+          TOURNAMENT_LENGTH - 1,
+          Math.random,
+        ),
+      ];
+      const drawn = reduceTournament(tournament, { kind: 'start', games, opponent: against });
+      writeTournament(drawn);
+      setTournament(drawn);
+    },
+    [slug, tournament],
+  );
+
+  /**
+   * Leaves the tournament, in one press.
+   *
+   * Storage is cleared outside the updater on purpose: React may call a state updater more
+   * than once, and an updater that also wrote to storage would be a side effect running an
+   * unknown number of times.
+   */
+  const leaveTournament = useCallback(() => {
+    clearTournament();
+    setTournament((current) => reduceTournament(current, { kind: 'abandon' }));
+  }, []);
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
@@ -312,6 +469,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const quit = useCallback(() => {
     setMode(null);
+    setLegMatch(false);
     send({ kind: 'quit' });
   }, []);
 
@@ -333,7 +491,22 @@ export function PlaySurface({ slug }: { slug: string }) {
     [slug],
   );
 
-  const nextGame = useMemo(() => suggestNextGame(slug), [slug]);
+  const suggested = useMemo(() => suggestNextGame(slug), [slug]);
+
+  /** The game the tournament is waiting on, if there is a tournament and it is waiting. */
+  const waiting = currentGame(tournament);
+
+  /**
+   * Where the result screen points.
+   *
+   * The tournament's next game when there is one, so the link the overlay already draws
+   * carries the tournament forward and neither it nor the match machine has to learn what a
+   * tournament is. Otherwise the ordinary suggestion, so a result is never a dead end.
+   */
+  const nextGame =
+    waiting === undefined || waiting === slug
+      ? suggested
+      : { slug: waiting, name: nameOf(waiting) };
 
   if (loadState === 'error') {
     return (
@@ -362,35 +535,102 @@ export function PlaySurface({ slug }: { slug: string }) {
       if (b === remembered) return 1;
       return 0;
     });
+    /** Whether the tournament is waiting on *this* game, which is the only leg it can start. */
+    const legHere = isCurrentLeg(tournament, slug);
+    /*
+     * The track has to name both seats before a mode has been chosen, and `botSeats` is
+     * undefined until a match starts — so who is in the far seat comes from the tournament,
+     * which settled that once for all seven of its games.
+     */
+    const trackNames = seatNamesFor(
+      botSeatsFor(tournament.opponent, setup.difficulty),
+      chosenNames,
+    );
     return (
       <div className="db-panel">
         <h2>{manifest.name}</h2>
-        {/* Above the buttons, because these settle what the button is about to start —
-            and the buttons stay last, nearest the thumb that presses them. The tier is
-            offered only where the manifest has a bot to play, which today is every
-            playable game: even the solo puzzles declare `friend` and `bot` as well,
-            because a solo-only manifest is a game page nobody can start. */}
-        <MatchOptions
-          showDifficulty={offered.includes('bot')}
-          difficulty={setup.difficulty}
-          onDifficulty={chooseDifficulty}
-          rounds={setup.rounds}
-          onRounds={chooseRounds}
-        />
-        <div className={styles.modes}>
-          {ordered.map((offer, index) => (
-            <button
-              key={offer}
-              type="button"
-              className={index === 0 ? styles.primary : styles.secondary}
-              onClick={() => {
-                start(offer);
-              }}
-            >
-              {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
-            </button>
-          ))}
-        </div>
+        {tournament.phase === 'idle' ? null : (
+          <TournamentTrack
+            state={tournament}
+            names={trackNames}
+            onLeave={leaveTournament}
+            {...(legHere
+              ? {
+                  onPlay: () => {
+                    start(tournament.opponent);
+                  },
+                }
+              : {})}
+            {...(legHere || waiting === undefined ? {} : { href: `/play/${waiting}/` })}
+          />
+        )}
+        {/* The ordinary lobby, and it stands down only on the game the tournament is
+            waiting on: a tournament running elsewhere is no reason to stop somebody
+            playing the game they have actually opened. */}
+        {legHere ? null : (
+          <>
+            {/* Above the buttons, because these settle what the button is about to start —
+                and the buttons stay last, nearest the thumb that presses them. The tier is
+                offered only where the manifest has a bot to play, which today is every
+                playable game: even the solo puzzles declare `friend` and `bot` as well,
+                because a solo-only manifest is a game page nobody can start. */}
+            <MatchOptions
+              showDifficulty={offered.includes('bot')}
+              difficulty={setup.difficulty}
+              onDifficulty={chooseDifficulty}
+              rounds={setup.rounds}
+              onRounds={chooseRounds}
+            />
+            <div className={styles.modes}>
+              {ordered.map((offer, index) => (
+                <button
+                  key={offer}
+                  type="button"
+                  className={index === 0 ? styles.primary : styles.secondary}
+                  onClick={() => {
+                    start(offer);
+                  }}
+                >
+                  {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
+                </button>
+              ))}
+            </div>
+            {/* The tournament's way in (#156), and the two entry buttons are the reference
+                app's two: player against player, and player against the bot. They are here
+                rather than in a bar on every page because a control on every page is shell
+                weight on every page, and this feature is priced against the budget of the
+                route it runs on — `docs/tournament.md` sets the whole argument out.
+
+                Offered while one is finished as well as while there is none, because that
+                is the screen a pair are on when they decide to go again. It is withheld
+                only while one is actually running, and the machine refuses a `start` there
+                anyway — this is the same rule, not a second copy of it. */}
+            {tournament.phase === 'playing' ? null : (
+              <>
+                <p className={styles.tournamentLede}>
+                  Or play a tournament: {TOURNAMENT_LENGTH} games drawn at random, starting with
+                  this one. First to {legsToWin(TOURNAMENT_LENGTH)} takes it.
+                </p>
+                <div className={styles.modes}>
+                  {(['friend', 'bot'] as const).map((against) => (
+                    <button
+                      key={against}
+                      type="button"
+                      className={styles.secondary}
+                      onClick={() => {
+                        beginTournament(against);
+                      }}
+                    >
+                      {against === 'friend'
+                        ? 'Tournament together'
+                        : `Tournament against ${SEAT_CHARACTERS.p2}`}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
         <Controls manifest={manifest} />
       </div>
     );
@@ -433,6 +673,14 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   return (
     <div className={styles.surface}>
+      {/* The tournament's standing, on the one screen during a leg where it is what the
+          pair are talking about: the moment a game ends. It is deliberately not up while
+          the board is live — the match HUD is the score that matters then, and a phone two
+          people share has no height to spare for a second one. */}
+      {tournament.phase === 'idle' || match.phase !== 'match-over' ? null : (
+        <TournamentTrack state={tournament} names={seatNames} onLeave={leaveTournament} />
+      )}
+
       {/* Two people sit on opposite sides of one device, so the scoreboard faces both
           ways. The far copy is turned to face the player at the top of the screen. */}
       <MatchHud {...hudProps} flipped />
@@ -487,6 +735,15 @@ export function PlaySurface({ slug }: { slug: string }) {
 }
 
 /**
+ * What a game is called, or its slug turned back into words when the build has no name for
+ * it. One function, because the suggestion and the tournament's next leg both need it and a
+ * second copy is a second place for a link to be labelled differently.
+ */
+function nameOf(slug: string): string {
+  return GAME_NAMES[slug] ?? slug.replace(/-/g, ' ');
+}
+
+/**
  * Something to play next, so a result screen is never a dead end. Deterministic — the
  * slug picks it — because a suggestion that changes on every render reads as a glitch.
  */
@@ -497,5 +754,5 @@ function suggestNextGame(slug: string): { slug: string; name: string } | undefin
   let hash = 0;
   for (let i = 0; i < slug.length; i += 1) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
   const pick = others[hash % others.length] ?? first;
-  return { slug: pick, name: GAME_NAMES[pick] ?? pick.replace(/-/g, ' ') };
+  return { slug: pick, name: nameOf(pick) };
 }

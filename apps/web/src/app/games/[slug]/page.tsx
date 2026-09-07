@@ -5,6 +5,7 @@ import { CATALOGUE } from '@/data/catalogue.generated';
 import { categorySlug } from '@/lib/categories';
 import { formatRound } from '@/lib/format';
 import { SEAT_CHARACTERS } from '@/lib/seats';
+import { SITE_SHARE_IMAGE, shareImageFor } from '@/lib/share-image';
 import { absoluteUrl } from '@/lib/site';
 import { serialiseJsonLd, videoGameJsonLd } from '@/lib/structured-data';
 import { FavouriteButton } from '@/components/FavouriteButton';
@@ -37,12 +38,21 @@ export async function generateMetadata({
   const description = game.rule || `${game.name} — a two-player game you can play in the browser.`;
   const title = `${game.name} — DuelBox`;
   const url = absoluteUrl(`/games/${game.slug}/`);
+  /**
+   * This game's own card, composed at build time from its own tile (#2453).
+   *
+   * The fallback is the site's montage rather than nothing: a game whose picture the build
+   * did not emit still shares as a DuelBox link rather than as a bare title. That case is a
+   * bug and `share-image.test.ts` fails on it — but it fails in the test run, where somebody
+   * is looking, instead of in a preview nobody on this side of the link ever sees.
+   */
+  const image = shareImageFor(game.slug, game.name) ?? SITE_SHARE_IMAGE;
   return {
     title: game.name,
     description,
     alternates: { canonical: url },
-    openGraph: { title, description, url },
-    twitter: { card: 'summary', title, description },
+    openGraph: { title, description, url, images: [image] },
+    twitter: { card: 'summary', title, description, images: [image] },
   };
 }
 

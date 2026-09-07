@@ -14,6 +14,7 @@ import {
 } from './player-data';
 import { readRecent, RECENT_KEY, recordPlayed } from './recent';
 import { DEFAULT_SETTINGS, readSettings, SETTINGS_KEY, writeSettings } from './settings';
+import { readTournament, TOURNAMENT_KEY, writeTournament } from './tournament-store';
 
 /** A minimal localStorage, so these tests do not need a DOM. */
 function fakeStorage(initial: Record<string, string> = {}) {
@@ -60,6 +61,7 @@ function populate(): void {
   recordResult('chess', 'draw', 'friend');
   recordResult('pool', 'p2', 'friend');
   writePlayerName('p1', 'Ada');
+  writeTournament({ games: ['chess', 'darts', 'ludo'], results: ['p1'], opponent: 'bot' });
 }
 
 describe('the keys', () => {
@@ -71,6 +73,7 @@ describe('the keys', () => {
       SETTINGS_KEY,
       HEAD_TO_HEAD_KEY,
       PLAYER_NAMES_KEY,
+      TOURNAMENT_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -101,6 +104,12 @@ describe('exporting', () => {
           bots: {},
         },
         [PLAYER_NAMES_KEY]: { version: 1, p1: 'Ada' },
+        [TOURNAMENT_KEY]: {
+          version: 1,
+          games: ['chess', 'darts', 'ludo'],
+          results: ['p1'],
+          opponent: 'bot',
+        },
       },
     });
   });
@@ -144,6 +153,13 @@ describe('importing', () => {
     // keep the score they have been keeping against each other.
     expect(readGameRecord('chess', 'friend')).toEqual({ p1: 1, p2: 0, draws: 1, played: 2 });
     expect(readPlayerNames()).toEqual({ p1: 'Ada' });
+    // A tournament in progress travels too, and it is the one thing in here that cannot be
+    // rebuilt by playing: the line-up was drawn at random and the games behind it are gone.
+    expect(readTournament()).toEqual({
+      games: ['chess', 'darts', 'ludo'],
+      results: ['p1'],
+      opponent: 'bot',
+    });
   });
 
   it('refuses text that is not JSON, with a reason', () => {
@@ -230,6 +246,7 @@ describe('erasing', () => {
     expect(readSettings()).toEqual(DEFAULT_SETTINGS);
     expect(readGameRecord('chess', 'friend').played).toBe(0);
     expect(readPlayerNames()).toEqual({});
+    expect(readTournament()).toBeNull();
   });
 
   it('is safe with nothing stored and with no storage at all', () => {

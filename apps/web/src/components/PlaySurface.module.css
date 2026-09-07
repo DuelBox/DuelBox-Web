@@ -129,3 +129,19 @@
   font-size: var(--db-text-xl);
   font-weight: 600;
 }
+
+/*
+ * The one line of copy above the tournament's two entry buttons: what pressing either of
+ * them starts.
+ *
+ * `--db-muted` at 4.65:1 rather than `--db-faint` at 2.45:1, which the `.versus` label above
+ * can carry because it is three uppercase letters of decoration and this is body text. The
+ * measure is capped so the sentence does not run the full width of a laptop panel and lose
+ * its connection to the buttons under it.
+ */
+.tournamentLede {
+  max-width: 30rem;
+  margin: 0;
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}
