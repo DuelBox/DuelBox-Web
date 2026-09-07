@@ -14,5 +14,6 @@
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "clean": "tsc --build --clean"
-  }
+  },
+  "sideEffects": false
 }

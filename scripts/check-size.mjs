@@ -79,9 +79,12 @@ const DIST = join(WEB, process.env.NEXT_DIST_DIR ?? '.next');
 const BUDGET = JSON.parse(readFileSync(join(ROOT, 'size-budget.json'), 'utf8'));
 
 // The routes a visitor reaches only after choosing a game. Everything else is the shell.
-// `/play/[slug]` is the one; if a second post-choice route appears, it belongs here, and
-// the shell number should drop when it is added rather than rise.
-const isPostChoiceRoute = (route) => route.startsWith('/play/');
+// `/play/[slug]` was the first; `/embed/[slug]` (#2367) is the second — an embedded game a
+// visitor never downloads by arriving at this site, fetched only when someone opens that one
+// embed elsewhere, so it hosts the same PlaySurface machinery and belongs off the shell number
+// exactly as the comment below always said the next one would.
+const isPostChoiceRoute = (route) =>
+  route.startsWith('/play/') || route.startsWith('/embed/');
 
 function walk(dir) {
   const found = [];
