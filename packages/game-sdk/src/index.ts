@@ -45,3 +45,12 @@ export {
 export type { Judgement } from './bot-judgement.js';
 
 export { SearchBudget, DEFAULT_SEARCH_NODES, deepen } from './search-budget.js';
+
+export { DragAim, PressGesture, HoldToAct } from './gesture.js';
+export type {
+  DragAimOptions,
+  DragAimResult,
+  PressGestureOptions,
+  PressKind,
+  HoldToActOptions,
+} from './gesture.js';
