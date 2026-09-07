@@ -271,6 +271,19 @@ interface SeatSources {
    * still holding an aim nothing will ever tell it to drop.
    */
   cancelLatched: boolean;
+  /**
+   * A gamepad's analogue movement and action for this seat (#130), each axis in [-1, 1].
+   *
+   * Set once per step by the host's gamepad poll through {@link InputManager.setSeatAnalog},
+   * before `beginStep`, and added to the keyboard's movement vector so a seat driven by a
+   * pad reads the same `moveX`/`moveY`/`actionHeld` a seat driven by keys does — a game never
+   * learns which family it is. Zero by default, so a build with no pad is byte-identical to
+   * one before this existed: the analog is *added* to the key vector, and adding zero changes
+   * nothing.
+   */
+  analogX: number;
+  analogY: number;
+  analogAction: boolean;
 }
 
 function createSeatSources(): SeatSources {
@@ -284,6 +297,9 @@ function createSeatSources(): SeatSources {
     actionLatched: false,
     pointerLatched: false,
     cancelLatched: false,
+    analogX: 0,
+    analogY: 0,
+    analogAction: false,
   };
 }
 
@@ -313,6 +329,9 @@ function releaseSources(sources: SeatSources): void {
   sources.actionLatched = false;
   sources.pointerLatched = false;
   sources.cancelLatched = false;
+  sources.analogX = 0;
+  sources.analogY = 0;
+  sources.analogAction = false;
 }
 
 /** Where a key code writes to. Built on construction and on rebind, never per step. */
@@ -513,6 +532,26 @@ export class InputManager {
   }
 
   /**
+   * Set a seat's analogue movement and action from a gamepad (#130).
+   *
+   * Called once per step by the host's gamepad poll, before {@link beginStep}, with the
+   * deadzoned, normalised reading from {@link GamepadManager}. The values persist until the
+   * next call, so a host that polls every step keeps them fresh and one that stops polling
+   * (the pad was unplugged) should call this with zeros — which `GamepadManager.reading`
+   * returning null tells it to do.
+   *
+   * Movement is *added* to the keyboard vector and clamped with it, so a seat with both a pad
+   * and a hand on the keys is not two players; a seat with neither reads exactly as it did
+   * before this channel existed.
+   */
+  setSeatAnalog(seat: SeatId, moveX: number, moveY: number, action: boolean): void {
+    const sources = this.#sourcesFor(seat);
+    sources.analogX = Number.isFinite(moveX) ? moveX : 0;
+    sources.analogY = Number.isFinite(moveY) ? moveY : 0;
+    sources.analogAction = action;
+  }
+
+  /**
    * Round a logical coordinate onto the shared precision lattice.
    *
    * See {@link PRECISION_ENVELOPE}. Applied at the one place logical coordinates enter the
@@ -662,7 +701,14 @@ export class InputManager {
     const left = keys.left || taps.left;
     const down = keys.down || taps.down;
     const up = keys.up || taps.up;
-    set(move, (right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
+    // The gamepad's analogue movement is added to the keyboard's digital one (#130). A seat
+    // with no pad has analogX/Y == 0, so this line is byte-identical to the digital-only
+    // one it replaced — the clamp below keeps a pad-and-keys seat inside unit length.
+    set(
+      move,
+      (right ? 1 : 0) - (left ? 1 : 0) + sources.analogX,
+      (down ? 1 : 0) - (up ? 1 : 0) + sources.analogY,
+    );
     taps.right = false;
     taps.left = false;
     taps.down = false;
@@ -686,8 +732,9 @@ export class InputManager {
     out.pointerX = sources.pointerX;
     out.pointerY = sources.pointerY;
 
-    // Either source raises the action: a thumb on the screen and a key are the same intent.
-    const held = keys.action || pointerDown;
+    // Either source raises the action: a thumb on the screen, a key, or a gamepad button
+    // are the same intent, so a game reading `actionHeld` never learns which family it was.
+    const held = keys.action || pointerDown || sources.analogAction;
     const was = sources.wasActionHeld;
     // A tap that began and ended between two steps is still a press. Without the latch
     // it is invisible: by the time the step runs the finger is already gone.
