@@ -96,6 +96,9 @@ export {
   InputManager,
   PRECISION_ENVELOPE,
   envelopeFor,
+  SCALAR_ENVELOPE,
+  scalarEnvelopeFor,
+  quantiseScalar,
   DEFAULT_BINDINGS,
 } from './input.js';
 export type { SeatInputState, KeyBinding } from './input.js';

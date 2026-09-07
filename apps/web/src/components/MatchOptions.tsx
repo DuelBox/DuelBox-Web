@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { seatColour } from '@/styles/tokens';
+import { SEAT_CHARACTERS } from '@/lib/seats';
 import { BOT_DIFFICULTIES, ROUND_CHOICES, type BotDifficulty } from '@/lib/match-setup';
 import styles from './MatchOptions.module.css';
 
@@ -81,7 +81,7 @@ export function MatchOptions({
       {showDifficulty ? (
         <Group
           name={`${id}-tier`}
-          legend={`${seatColour.p2.name}’s skill`}
+          legend={`${SEAT_CHARACTERS.p2}’s skill`}
           choices={TIERS}
           chosen={difficulty}
           onChoose={(value) => {

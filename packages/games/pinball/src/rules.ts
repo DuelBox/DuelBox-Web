@@ -17,12 +17,17 @@ import type { Circle, Rng, Segment, SeatId } from '@duelbox/engine';
  * velocities. Neither seat is ever handed the easier end, and `rules.test.ts` asserts each
  * of those separately rather than trusting the arithmetic here.
  *
- * A flipper's `side` is always **screen** left or right, never "the left one as you sit".
- * The table does not rotate for a real-time game, so the far seat reads it upside down and
- * their screen-left flipper is on their right hand. Air Hockey, Ping Pong and Brick Blast
- * all put the keyboard axis in screen space for both seats; this follows them, so a finger
- * and a key always name the same flipper. The half-turn mirror therefore swaps the side as
- * well as the seat.
+ * A flipper's `side` is always **screen** left or right, never "the left one as you sit":
+ * the geometry, the renderer and the bot all work in the table's own frame, so the half-turn
+ * mirror swaps the side as well as the seat and `flipperIndex` names a fixed slot in the
+ * match's phase array. Nothing about that changes per seat, and it must not — the four
+ * flippers are four places on one shared table.
+ *
+ * **Which flipper a press means is a different question, and it is answered in the pressing
+ * seat's own frame.** This table never rotates: the renderer pushes no seat rotation, both
+ * ends are drawn at once, and the far seat therefore reads the picture upside down — the
+ * flipper it sees on its left hand is the screen-**right** one. See {@link wantsFlipper} for
+ * how the two instruments differ on that, and why only one of them needed mapping.
  */
 
 export interface Table {
@@ -349,7 +354,16 @@ export const WALLS: readonly Segment[] = [
 
 export const FLIPPER_COUNT = 4;
 
-/** Index into the flat phase and rate arrays a match keeps: p1 left, p1 right, p2 left, p2 right. */
+/**
+ * Index into the flat phase and rate arrays a match keeps: p1 left, p1 right, p2 left, p2 right.
+ *
+ * Screen sides, and deliberately so: this names a place on the table, and the same slot has to
+ * mean the same flipper to the solver, the renderer, the bot and both seats' inputs. Turning
+ * it per seat would rotate the *table* rather than the question being asked of it, and the
+ * bot — which reads a ball position and answers with a side — would start defending the wrong
+ * post. It is {@link wantsFlipper} that works in a seat's frame, and it hands its answer back
+ * here as a screen side.
+ */
 export function flipperIndex(seat: SeatId, side: FlipperSide): number {
   return (seat === 'p1' ? 0 : 2) + (side === 'left' ? 0 : 1);
 }
@@ -364,6 +378,19 @@ export function flipperSideOf(index: number): FlipperSide {
 
 export function otherSide(side: FlipperSide): FlipperSide {
   return side === 'left' ? 'right' : 'left';
+}
+
+/**
+ * The hand a seat sees a screen side on: its own left is the screen's right when it is
+ * reading the table upside down.
+ *
+ * `rotated` is `seatView(seat, presentation, localSeat).rotated` — the engine's one
+ * definition of that, and the same flag `toWorld` takes. A half-turn is its own inverse, so
+ * this one function maps a screen side into a seat's frame and a seat's side back out to the
+ * screen, exactly as `toWorld` and `toScreen` share a mapping for a position.
+ */
+export function seatSide(side: FlipperSide, rotated: boolean): FlipperSide {
+  return rotated ? otherSide(side) : side;
 }
 
 /** +1 for the screen-left flipper, -1 for the screen-right one. */
@@ -437,22 +464,55 @@ export function flipperPhaseRate(phase: number, next: number, dt: number): numbe
 }
 
 /**
- * Whether a seat is asking for the flipper on `side`, from either input source.
+ * Whether a seat is asking for the flipper on screen-`side`, from either input source.
  *
  * A key names a direction and a finger names a place, and both name the same flipper: the two
  * are OR-ed rather than switched between, so there is no mode and a player may use both at
- * once. `pointerX` is null when this seat has no finger down.
+ * once. `pointerX` is null when this seat has no finger down, and is in device space, which is
+ * the frame `InputManager` reports in.
+ *
+ * **`rotated` is what makes the two seats the same game.** Pass
+ * `seatView(seat, presentation, localSeat).rotated` for the seat doing the pressing: true when
+ * that person is reading the device upside down. *Which flipper does this press mean* is a
+ * seat-space question — the answer has to be the flipper that player can see under their own
+ * hand — so it is decided in seat space and mapped back to a screen side at the end, the way
+ * `toWorld` maps a tap before anything decides what was touched. The two instruments need
+ * different amounts of that mapping, and the difference is not an inconsistency:
+ *
+ * - **A key already names the seat's own direction.** That is the engine's stated contract:
+ *   `GridCursor.step` documents `moveX` as "the seat's direction vector, in the *player's*
+ *   frame". So a negative axis is that player's left whichever end of the table they sit at,
+ *   and only the side it picks has to be turned back into a screen side. Without that the far
+ *   seat's arrows raised the flipper on its other hand, which is the defect this closes.
+ * - **A finger is a place, and a place is in device space**, so it is mapped into the seat's
+ *   frame first. That mapping and the mapping of the side back out cancel exactly — which is
+ *   why the pointer behaves as it always did and why it was already right. Touch the half of
+ *   the glass on your left and the flipper on your left comes up, because a flipper's place
+ *   mirrors along with the finger's. Whack-a-Mole draws the same distinction on the same
+ *   ground: on a board drawn in one orientation its keys mirror and its taps do not.
+ *
+ * The one thing that does move for the far seat's pointer is the tie-break. A finger exactly
+ * on the centre line now raises that seat's own **right** flipper rather than the screen-right
+ * one, so the tie-break commutes with the half-turn like every other one on this table (see
+ * {@link enforceVertical}) instead of quietly handing the two seats different hands.
  *
  * A seat can raise **one** flipper at a time and that is the same for both instruments: the
  * engine sums the two direction keys into one axis, so A and D together read as neither, and
  * a seat reports one pointer position however many fingers are on the glass. Being an equal
  * limit on both is what keeps it fair rather than a defect in one of them.
  */
-export function wantsFlipper(side: FlipperSide, moveX: number, pointerX: number | null): boolean {
-  if (side === 'left') {
-    return moveX < 0 || (pointerX !== null && pointerX < CENTRE_X);
+export function wantsFlipper(
+  side: FlipperSide,
+  moveX: number,
+  pointerX: number | null,
+  rotated: boolean,
+): boolean {
+  const asked = seatSide(side, rotated);
+  const seatPointerX = pointerX !== null && rotated ? TABLE.width - pointerX : pointerX;
+  if (asked === 'left') {
+    return moveX < 0 || (seatPointerX !== null && seatPointerX < CENTRE_X);
   }
-  return moveX > 0 || (pointerX !== null && pointerX >= CENTRE_X);
+  return moveX > 0 || (seatPointerX !== null && seatPointerX >= CENTRE_X);
 }
 
 export function createBall(): Ball {

@@ -877,18 +877,77 @@ describe('the bot tiers', () => {
     expect(hard).toBeGreaterThan(normal + 0.6);
   });
 
-  it('each knob is monotone on its own', () => {
+  /**
+   * Arrows a point in the three one-knob sweeps below.
+   *
+   * This was 800, and the three sweeps were a single case: 9 600 arrows, every one of them
+   * planned against `hard`'s twenty targets and five flight times, which made it the slowest
+   * test in the repo. It ran 11.9 s on a quiet machine, 25.9 s on one merely settling, and
+   * timed out against the 30 s budget in `vitest.config.ts` on a busy one (#2523) — a gate
+   * that reports the machine's mood, which teaches whoever sees it to re-run rather than to
+   * look. Raising the budget again was the answer already tried, and it only moves the wall.
+   *
+   * So the separation was measured first and the sample size taken from it, rather than the
+   * largest number that still fit. Over sixteen seeds, the *narrowest* step of each knob —
+   * the one a regression would hide in — as mean gap in arrows ± its spread across seeds:
+   *
+   * | knob | narrowest step | at 200 arrows | at 800 arrows |
+   * | --- | --- | --- | --- |
+   * | `scan` | 15 -> 20 | 0.557 ± 0.056 | 0.536 ± 0.026 |
+   * | `angleSpread` | 0.05 -> 0.1 | 0.425 ± 0.076 | 0.451 ± 0.047 |
+   * | `powerSpread` | 0.008 -> 0.04 | 0.239 ± 0.042 | 0.215 ± 0.027 |
+   *
+   * Two hundred puts every step of every knob at least five spreads clear of zero, and all
+   * sixteen seeds order all three knobs correctly. Fifty does not — one seed inverts
+   * `angleSpread`'s last step — and a hundred leaves `powerSpread`'s first step at three.
+   * Above two hundred the ratio barely moves, and for `angleSpread` it does not move at all:
+   * its spread across seeds is a floor rather than sampling noise, so more arrows buy nothing
+   * there. The knob worth watching is `powerSpread` at its bottom end: 0.008 to 0.04 is worth
+   * about a fifth of an arrow however many are shot. It is narrow because the knob is narrow,
+   * not because the sample is small, and 800 arrows did not separate it any better.
+   *
+   * Split one case per knob as well, so a failure names the knob instead of the sweep, and
+   * the durations recorded here beside the budget rather than left to be rediscovered. Timed
+   * three runs on one quiet machine, where the sweep this replaces took 6.6 s: the three
+   * cases take 0.40 s, 0.63 s and 0.63 s. Scaled by #2523's own quiet-to-settling ratio that
+   * is about 2.5 s for the slowest of them against the 30 s budget in `vitest.config.ts` —
+   * a twelfth of it, where the sweep was using seven eighths.
+   */
+  const KNOB_ARROWS = 200;
+
+  it('is monotone in how many targets it looks at', () => {
     const base = BOT_PROFILES.hard;
-    const scans = [5, 10, 15, 20].map((scan) => meanArrow({ ...base, scan }, 800));
-    for (let i = 1; i < scans.length; i += 1) expect(scans[i]!).toBeGreaterThan(scans[i - 1]!);
-    const spreads = [0.005, 0.02, 0.05, 0.1].map((angleSpread) =>
-      meanArrow({ ...base, angleSpread }, 800),
-    );
-    for (let i = 1; i < spreads.length; i += 1) expect(spreads[i]!).toBeLessThan(spreads[i - 1]!);
-    const powers = [0.008, 0.04, 0.09, 0.16].map((powerSpread) =>
-      meanArrow({ ...base, powerSpread }, 800),
-    );
-    for (let i = 1; i < powers.length; i += 1) expect(powers[i]!).toBeLessThan(powers[i - 1]!);
+    const scans = [5, 10, 15, 20];
+    const means = scans.map((scan) => meanArrow({ ...base, scan }, KNOB_ARROWS));
+    for (let i = 1; i < means.length; i += 1) {
+      expect(means[i]!, `scan ${scans[i]!} over scan ${scans[i - 1]!}`).toBeGreaterThan(
+        means[i - 1]!,
+      );
+    }
+  });
+
+  it('is monotone in the wobble it puts on the angle', () => {
+    const base = BOT_PROFILES.hard;
+    const spreads = [0.005, 0.02, 0.05, 0.1];
+    const means = spreads.map((angleSpread) => meanArrow({ ...base, angleSpread }, KNOB_ARROWS));
+    for (let i = 1; i < means.length; i += 1) {
+      expect(
+        means[i]!,
+        `angleSpread ${spreads[i]!} under angleSpread ${spreads[i - 1]!}`,
+      ).toBeLessThan(means[i - 1]!);
+    }
+  });
+
+  it('is monotone in the wobble it puts on the draw', () => {
+    const base = BOT_PROFILES.hard;
+    const spreads = [0.008, 0.04, 0.09, 0.16];
+    const means = spreads.map((powerSpread) => meanArrow({ ...base, powerSpread }, KNOB_ARROWS));
+    for (let i = 1; i < means.length; i += 1) {
+      expect(
+        means[i]!,
+        `powerSpread ${spreads[i]!} under powerSpread ${spreads[i - 1]!}`,
+      ).toBeLessThan(means[i - 1]!);
+    }
   });
 
   it('reading the drift is worth something, which it was not until it was measured', () => {

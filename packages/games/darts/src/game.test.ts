@@ -142,11 +142,14 @@ function release(input: FakeInput, seat: SeatId): void {
 }
 
 /**
- * The gesture taken away rather than let go: a system edge-swipe, palm rejection, a pause.
+ * The gesture taken away rather than let go: a `pointercancel`, a system edge-swipe, palm
+ * rejection, a pause, a lost focus.
  *
  * Mirrors `InputManager.#applySeat` exactly (`packages/engine/src/input.ts`): the pointer is
- * gone, no edge is reported at all, and the release the lift would otherwise have produced
- * is *suppressed* — a cancel and a release can never both be true.
+ * gone, no edge is reported at all, and the release the lift would otherwise have produced is
+ * *suppressed* — a cancel and a release are opposite events and can never both be true. Per
+ * `docs/input-idiom.md` a cancel **abandons** the gesture: the aim it was carrying is dropped
+ * and nothing is committed.
  */
 function cancel(input: FakeInput, seat: SeatId): void {
   const target = seat === 'p1' ? input.p1 : input.p2;
@@ -242,7 +245,9 @@ describe('taking turns', () => {
   });
 });
 
-describe('a cancelled gesture', () => {
+describe('a gesture taken away (a cancel)', () => {
+  // A cancel is not a release. Per `docs/input-idiom.md` it **abandons** the gesture, so
+  // the aim it was carrying is dropped and nothing is committed.
   let game: DartsGame;
   let input: FakeInput;
 
@@ -262,20 +267,6 @@ describe('a cancelled gesture', () => {
     expect(game.dartsThrownThisTurn, 'a cancel commits nothing').toBe(0);
   });
 
-  it('leaves nothing of the abandoned gesture behind', () => {
-    // `#pointerAiming` exists only while a finger is on the glass. Frozen true by a cancel,
-    // the keyboard's press-to-commit branch is unreachable for the rest of the turn — the
-    // player's interruption costs them their darts as well as their gesture.
-    aimAt(input, 'p1', 0.6, -0.3);
-    step(game, input, 3);
-    cancel(input, 'p1');
-    step(game, input);
-    input.clear();
-    input.p1.actionPressed = true;
-    step(game, input, 30);
-    expect(game.dartsThrownThisTurn, 'the keyboard must still be able to throw').toBe(1);
-  });
-
   it('does not throw at the abandoned aim on the next release', () => {
     // The headline. A cancel abandons: it ends and it commits nothing, so whatever release
     // arrives next — a second finger lifting, a key coming up — must not fire the dart the
@@ -290,30 +281,51 @@ describe('a cancelled gesture', () => {
     expect(game.dartsThrownThisTurn, 'a release must not commit an abandoned gesture').toBe(0);
   });
 
-  it('keeps the aim, so the throw the player does make goes where they pointed', () => {
-    // The aim commits nothing on its own once the gesture is gone, and this game already
-    // carries it from one dart to the next. Moving the reticle because the system took the
-    // finger away would punish the player twice for an interruption they did not cause.
-    const uninterrupted = new DartsGame();
-    const control = new FakeInput();
-    uninterrupted.init(makeContext(null, null));
-    aimAt(control, 'p1', 0.6, -0.3);
-    step(uninterrupted, control, 3);
-    release(control, 'p1');
-    step(uninterrupted, control, 30);
+  it('abandons an aim cancelled while the player is still aiming', () => {
+    aimAt(input, 'p1', 0.6, -0.6);
+    step(game, input);
+    expect(game.hasAimed).toBe(true);
 
-    aimAt(input, 'p1', 0.6, -0.3);
-    step(game, input, 3);
+    input.clear();
+    cancel(input, 'p1');
+    step(game, input);
+    expect(game.hasAimed, 'the aim is abandoned, not held').toBe(false);
+    expect(game.aimX).toBe(0);
+    expect(game.aimY).toBe(0);
+    expect(game.dartsThrownThisTurn, 'and nothing is committed').toBe(0);
+  });
+
+  it('sees a cancel that lands while a dart is in flight', () => {
+    // `update()` returns early during the flight, so before #2505 the one step the cancel
+    // was raised on had passed before the game ever looked at the seat, and the bit — which
+    // lasts exactly one step — was gone. The committed dart still lands, because it was
+    // committed before the cancel; what must not survive is the aim it left behind.
+    aimAt(input, 'p1', 0.6, -0.6);
+    step(game, input);
+    release(input, 'p1');
+    step(game, input);
+    expect(game.dartsThrownThisTurn, 'in the air, not yet scored').toBe(0);
+
+    input.clear();
     cancel(input, 'p1');
     step(game, input);
     input.clear();
-    input.p1.actionPressed = true;
     step(game, input, 30);
 
-    expect(uninterrupted.remainingFor('p1')).toBeLessThan(STARTING_SCORE);
-    expect(game.remainingFor('p1'), 'the cancel moved the reticle').toBe(
-      uninterrupted.remainingFor('p1'),
-    );
+    expect(game.dartsThrownThisTurn, 'the dart already committed still lands').toBe(1);
+    expect(game.activeSeat, 'one dart of three: still the same turn').toBe('p1');
+    expect(game.hasAimed, 'the next dart must be aimed afresh').toBe(false);
+    expect(game.aimX).toBe(0);
+    expect(game.aimY).toBe(0);
+  });
+
+  it('still throws on an ordinary release', () => {
+    // The regression the cancel handling must not cause: a release is still a release.
+    aimAt(input, 'p1', 0.2, 0.2);
+    step(game, input);
+    release(input, 'p1');
+    step(game, input, 30);
+    expect(game.dartsThrownThisTurn).toBe(1);
   });
 });
 

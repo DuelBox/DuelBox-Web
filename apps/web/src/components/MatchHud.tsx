@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import type { MatchState } from '@duelbox/game-sdk';
-import { seatColour } from '@/styles/tokens';
+import type { SeatNames } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
 import styles from './MatchHud.module.css';
 
@@ -26,10 +26,22 @@ export interface MatchHudProps {
   rounds: number;
   /** Whose turn it is, or null in a real-time game. */
   activeSeat: SeatId | null;
-  /** Names the seats. In a bot match seat two is the bot. */
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
-  /** Which seats a bot holds, so the HUD says "thinking" rather than "turn". */
-  botSeats?: Partial<Record<SeatId, boolean>> | undefined;
+  /**
+   * What both seats are called, from `lib/seats.ts`.
+   *
+   * Required and total. It was an optional map of *overrides*, and every consumer carried
+   * its own fallback for the seats the caller had not named — which is how the HUD came to
+   * read "Pip vs Player two", one seat named by the shell and the other by a default two
+   * files away.
+   */
+  seatNames: SeatNames;
+  /**
+   * Which seats a bot holds, so the HUD says "thinking" rather than "turn".
+   *
+   * Any map keyed by seat: the shell passes the same tier map the game host is given, so
+   * the HUD and the simulation cannot disagree about who is a bot.
+   */
+  botSeats?: Readonly<Partial<Record<SeatId, unknown>>> | undefined;
   onPause?: (() => void) | undefined;
 }
 
@@ -54,8 +66,8 @@ export function MatchHud({
         seat="p1"
         state={state}
         activeSeat={activeSeat}
-        seatNames={seatNames}
-        isBot={botSeats?.p1 ?? false}
+        name={seatNames.p1}
+        isBot={botSeats?.p1 !== undefined}
         silent={flipped}
       />
 
@@ -65,7 +77,7 @@ export function MatchHud({
             <span className={styles.label}>
               Round {state.round} of {rounds}
             </span>
-            <RoundPips rounds={rounds} state={state} />
+            <RoundPips rounds={rounds} state={state} seatNames={seatNames} />
           </>
         ) : (
           <span className={styles.label}>vs</span>
@@ -76,8 +88,8 @@ export function MatchHud({
         seat="p2"
         state={state}
         activeSeat={activeSeat}
-        seatNames={seatNames}
-        isBot={botSeats?.p2 ?? false}
+        name={seatNames.p2}
+        isBot={botSeats?.p2 !== undefined}
         silent={flipped}
         right
       />
@@ -100,7 +112,7 @@ function Seat({
   seat,
   state,
   activeSeat,
-  seatNames,
+  name,
   isBot = false,
   right = false,
   silent = false,
@@ -108,12 +120,12 @@ function Seat({
   seat: SeatId;
   state: MatchState;
   activeSeat: SeatId | null;
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
+  /** Already resolved by the caller. Nothing here decides what a seat is called. */
+  name: string;
   isBot?: boolean | undefined;
   right?: boolean | undefined;
   silent?: boolean | undefined;
 }) {
-  const name = seatNames?.[seat] ?? seatColour[seat].name;
   const isActive = activeSeat === seat;
   const score = seat === 'p1' ? state.tally.p1 : state.tally.p2;
   const bumped = useScoreBump(score);
@@ -168,7 +180,15 @@ function useScoreBump(score: number): boolean {
 const BUMP_MS = 220;
 
 /** One pip per round: filled for the seat that took it, empty for rounds not yet played. */
-function RoundPips({ rounds, state }: { rounds: number; state: MatchState }) {
+function RoundPips({
+  rounds,
+  state,
+  seatNames,
+}: {
+  rounds: number;
+  state: MatchState;
+  seatNames: SeatNames;
+}) {
   const won: (SeatId | null)[] = [];
   for (let i = 0; i < state.roundWins.p1; i += 1) won.push('p1');
   for (let i = 0; i < state.roundWins.p2; i += 1) won.push('p2');
@@ -185,8 +205,7 @@ function RoundPips({ rounds, state }: { rounds: number; state: MatchState }) {
         />
       ))}
       <span className="db-visually-hidden">
-        Rounds won: {seatColour.p1.name} {state.roundWins.p1}, {seatColour.p2.name}{' '}
-        {state.roundWins.p2}
+        Rounds won: {seatNames.p1} {state.roundWins.p1}, {seatNames.p2} {state.roundWins.p2}
       </span>
     </div>
   );

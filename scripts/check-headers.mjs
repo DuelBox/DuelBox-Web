@@ -25,6 +25,15 @@
  * — the meta CSP and the meta referrer policy — must be present in every page along with
  * the frame guard that partly stands in for the `X-Frame-Options` nobody serves. Then the
  * served-versus-discarded table is printed, on every build, in plain words.
+ *
+ * ## What even that cannot tell you
+ *
+ * That a header reached a browser. Every section here checks that the *files* say the right
+ * thing — the inverse assertion included, which reads the artefact and the workflow, not the
+ * live origin. A green step named "check headers" reads like a live-site guarantee and is
+ * not one: only `curl -sI` against the origin can say a header arrived, which is the
+ * verification step in `docs/deploy.md`. Issue #2481 tracks the choice between moving to a
+ * host that reads `_headers` and accepting the gap knowingly.
  */
 
 import { readFile, readdir } from 'node:fs/promises';

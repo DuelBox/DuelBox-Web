@@ -103,18 +103,43 @@ def game_issues(catalog: dict, tpl: dict) -> list[dict]:
                     f"\"{game['was']}\". We ship it as **{game['name']}** to keep "
                     f"our naming clear of trademark risk. Rules and mechanics are "
                     f"not protected; names can be.")
-        if game.get("confidence") == "research":
-            note += ("\n\n> Mechanics for this game are not yet confirmed. The "
-                     "research issue must be closed before the spec issue starts.")
+        # This branch used to test `confidence == "research"`, a value no row in
+        # catalog.yaml has ever held - only `observed` and `original` are in use - so the
+        # caveat it exists to print had never once been printed (#2514). The condition that
+        # is really true is on disk: no game has a RESEARCH.md, so every seeded issue should
+        # say so rather than none of them.
+        observed = game.get("confidence") == "observed"
+        if observed and not (ROOT / "packages" / "games" / gid / "RESEARCH.md").exists():
+            note += ("\n\n> No RESEARCH.md exists for this game, so its in-play mechanics "
+                     "are unconfirmed: what was observed of the reference app is its "
+                     "pre-game screen, not a match. See `docs/research-status.md`.")
+
         if game.get("rule"):
-            note += (f"\n\n**Observed rules**\n\n{game['rule']}\n\n"
-                     f"Recorded by playing the reference game. This describes the "
-                     f"mechanics we reimplement from scratch; our own copy, art, and "
-                     f"layout are original.")
+            # What this sentence may claim is bounded by what was actually done. The rule text
+            # is transcribed verbatim from the reference app's pre-game screen during the
+            # emulator sweep in docs/observed-rules.md - it is one sentence read off a screen,
+            # not a record of play - and for a `confidence: original` game there is no
+            # reference app at all. The previous wording, "Recorded by playing the reference
+            # game", claimed both, on every game, including the one we invented.
+            if observed:
+                provenance = ("Transcribed verbatim from the reference app's pre-game screen "
+                              "(`docs/observed-rules.md`). It is the rule statement the app "
+                              "shows before a match, not a record of playing one. The mechanics "
+                              "are reimplemented from scratch; our copy, art, and layout are "
+                              "original.")
+            else:
+                provenance = ("Ours. This game has no counterpart in the reference app "
+                              "(`confidence: original`), so there is nothing to observe and no "
+                              "research issue for it.")
+            note += f"\n\n**Rules**\n\n{game['rule']}\n\n{provenance}"
+
         if game.get("modes"):
             pretty = {"friend": "vs Friend", "bot": "vs Bot", "solo": "Solo"}
             modes = ", ".join(pretty.get(m, m) for m in game["modes"].split(","))
-            note += f"\n\n**Play modes observed:** {modes}"
+            label = "Play modes observed" if observed else "Play modes"
+            note += f"\n\n**{label}:** {modes}"
+            if game.get("modesNote"):
+                note += f"\n\n> Mode note: {game['modesNote']}"
 
         parent_footer = f"---\n`game:{gid}` · `{game.get('archetype')}` · `{game.get('category')}`"
         out.append({
@@ -131,6 +156,14 @@ def game_issues(catalog: dict, tpl: dict) -> list[dict]:
             if allowed and game.get("archetype") not in allowed:
                 continue
             if game.get("solo") and t["key"] in ("seatflip", "splitlayout", "bot"):
+                continue
+            # A `confidence: original` game is ours; there is no reference app entry to play,
+            # so a research issue on it could never be satisfied by the only method CLAUDE.md
+            # rule 2 permits. GitHub agrees with this by accident rather than by rule - the 107
+            # open research issues are exactly the 107 `observed` games, because `cricket` was
+            # added after the last seeding run and has never been seeded at all. Without this
+            # line the next run would give it an unsatisfiable one (#2514).
+            if t["key"] == "research" and not observed:
                 continue
             footer = f"---\n`game:{gid}` · `template:{t['key']}`"
             out.append({

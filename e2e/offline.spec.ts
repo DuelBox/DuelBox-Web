@@ -1,6 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
 
 /**
  * How long to wait for the worker to install and claim the page.
@@ -29,7 +30,7 @@ async function controlled(page: Page) {
 test.describe('with the network cut', () => {
   test('a match against the bot plays through with every request blocked', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
-    await page.getByRole('button', { name: 'Play against Bo' }).waitFor();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).waitFor();
 
     // Everything is loaded. From here nothing may reach the network at all.
     const blocked: string[] = [];
@@ -38,7 +39,7 @@ test.describe('with the network cut', () => {
       return route.abort();
     });
 
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
       timeout: 10_000,
     });

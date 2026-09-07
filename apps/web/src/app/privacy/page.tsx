@@ -3,7 +3,7 @@ import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Privacy',
-  description: 'DuelBox collects nothing. No accounts, no analytics, no cookies, no network.',
+  description: 'DuelBox collects nothing. No accounts, no analytics, no cookies, no server.',
 };
 
 /**
@@ -12,14 +12,35 @@ export const metadata: Metadata = {
  * Every claim here is a property the build enforces rather than a promise: the zero-cost
  * guard fails the build if gameplay touches the network or a server runtime appears, and
  * the bundle scan fails it if a credential-shaped string reaches shipped output. It is a
- * description of the product, not an undertaking about it.
+ * description of the product, not an undertaking about it. `privacy-claims.test.ts` reads
+ * this page against the code it describes, so a claim here that stops being true fails a
+ * test rather than merely misleading a reader.
+ *
+ * Three of those claims were once not descriptions of anything (#2513), each wrong in the
+ * direction of claiming *more* than the product then did. Two are now true because the code
+ * caught up rather than because the prose was trimmed:
+ *
+ * - **"Scores and settings"**. Nothing stores a score. Exactly two modules write to
+ *   `localStorage`: `lib/last-mode.ts` (`duelbox:last-mode`, the mode, bot tier and match
+ *   length last chosen per game) and `lib/sound-preference.ts` (`duelbox:sound`, mute and
+ *   volume). Neither writes a result of any match.
+ * - **"works with no connection at all"**. Once an overstatement — a page already open kept
+ *   working, but a reload with the network down failed because there was no service worker
+ *   (#2445). One now ships (`public/sw.js`), so the site and every game already opened work
+ *   offline, and the paragraphs below describe that cache rather than promise a backlog item.
+ * - **"a content delivery network"**. It is GitHub Pages. Naming the host is the whole
+ *   value of the paragraph — a reader deciding whether to trust it needs to know whose
+ *   logs their request lands in, and "a content delivery network" names nobody.
+ *
+ * An overstatement is a smaller failure than an understatement here, and it is still a
+ * privacy page saying something untrue about what it keeps.
  */
 export default function PrivacyPage() {
   return (
     <div className="db-wrap">
       <header className={styles.head}>
         <h1>Privacy</h1>
-        <p className={styles.updated}>Last updated 29 August 2026</p>
+        <p className={styles.updated}>Last updated 7 September 2026</p>
       </header>
 
       <div className={styles.prose}>
@@ -36,15 +57,23 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Your settings are kept in your browser&apos;s own storage on the device you played on:
-          which mode you last chose, the bot difficulty and how many rounds. No scores, no names and
-          no times are stored anywhere, by us or by your browser.
+          A couple of small settings, kept in your browser&apos;s own storage on the device you
+          played on: what you last chose for each game — whether you played a friend or a bot, how
+          hard the bot tries, and how many rounds make a match — and whether sound is muted and how
+          loud it is. Reopening a game offers you the same setup rather than starting from the
+          defaults every time.
+        </p>
+        <p>
+          Scores are not part of it. No result of any match is written down anywhere, on your device
+          or ours — a running tally is held in memory while you play and is gone when you close the
+          tab.
         </p>
         <p>
           Your browser also keeps a copy of the site itself, and of each game as you play it, so
           that everything you have opened still works with no connection. Those copies are files you
           already downloaded, held on your device and read from there. Clearing your browser&apos;s
-          site data removes all of it, and nothing else remembers any of it.
+          site data removes all of it — your settings included — and nothing else remembers any of
+          it.
         </p>
 
         <h2>Cookies</h2>

@@ -12,10 +12,10 @@ import {
 } from '@duelbox/game-sdk';
 import { loadGame } from '@/data/registry';
 import type { NextGame } from '@/data/next-game';
-import { seatColour } from '@/styles/tokens';
 import { readSetup, writeSetup } from '@/lib/last-mode';
 import { armAudio, emitCue } from '@/lib/audio';
 import { matchCue } from '@/lib/match-cues';
+import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
@@ -65,6 +65,22 @@ export function PlaySurface({ slug, nextGame }: { slug: string; nextGame?: NextG
   const [getTrace, setGetTrace] = useState<(() => string) | null>(null);
   useEffect(() => {
     setRecording(new URLSearchParams(globalThis.location.search).get('trace') === '1');
+  }, []);
+
+  /**
+   * Armed here rather than in `GameHost`, and the difference is the whole point.
+   *
+   * `GameHost` mounts only *after* Start is pressed, so by the time it could attach a
+   * listener the gesture that should have unlocked audio has already happened, and the
+   * first match plays in silence — which is the failure #167 describes, reached from the
+   * other side. The play page mounts before Start, so the Start tap is itself the
+   * unlocking gesture and nobody is ever asked for permission.
+   *
+   * Idempotent, and `armAudio` also re-arms after iOS suspends the context for a
+   * backgrounded tab or a phone call.
+   */
+  useEffect(() => {
+    armAudio();
   }, []);
   // The running head-to-head for this sitting. A pair that plays five in a row wants to
   // know the score across all five, not just the last one.
@@ -119,19 +135,6 @@ export function PlaySurface({ slug, nextGame }: { slug: string; nextGame?: NextG
       cancelled = true;
     };
   }, [slug]);
-
-  /**
-   * Arm the unlock here, on the play page, rather than in `GameHost`.
-   *
-   * The difference is the whole point. `GameHost` mounts only *after* Start is pressed, so
-   * by the time it could attach a listener the gesture that should have unlocked audio has
-   * already happened and the first match would be silent — exactly the failure #167
-   * describes, arrived at from the other direction. This page mounts before Start, so the
-   * Start tap is itself the unlocking gesture and nothing ever asks the player for one.
-   */
-  useEffect(() => {
-    armAudio();
-  }, []);
 
   /**
    * The four match cues, raised from the transition rather than from the phase.
@@ -323,7 +326,7 @@ export function PlaySurface({ slug, nextGame }: { slug: string; nextGame?: NextG
                 start(offer);
               }}
             >
-              {offer === 'friend' ? 'Play together here' : `Play against ${seatColour.p2.name}`}
+              {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
             </button>
           ))}
         </div>
@@ -332,15 +335,23 @@ export function PlaySurface({ slug, nextGame }: { slug: string; nextGame?: NextG
     );
   }
 
-  const seatNames: Partial<Record<SeatId, string>> =
-    mode === 'bot' ? { p2: `${seatColour.p2.name} (bot)` } : { p2: 'Player two' };
+  /**
+   * What the two seats are called this match.
+   *
+   * Derived from the same `botSeats` map the game host is handed, so the scoreboard, the
+   * result screen and the simulation cannot disagree about who is a bot. The shell used to
+   * write a *partial* override here — seat two only — and leave seat one to whatever
+   * fallback each component happened to carry, which is how the HUD came to read
+   * "Pip vs Player two" (#2513).
+   */
+  const seatNames = seatNamesFor(botSeats);
 
   const hudProps = {
     state: match,
     rounds: rules.rounds ?? 1,
     activeSeat,
     seatNames,
-    botSeats: mode === 'bot' ? { p2: true } : undefined,
+    botSeats,
   };
 
   return (

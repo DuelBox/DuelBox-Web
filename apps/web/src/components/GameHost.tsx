@@ -28,8 +28,8 @@ import {
   type GameManifest,
   type MatchPhase,
 } from '@duelbox/game-sdk';
-import styles from './GameHost.module.css';
 import { audio, soundBus } from '@/lib/audio';
+import styles from './GameHost.module.css';
 
 /**
  * Runs one game on a canvas.
@@ -385,6 +385,9 @@ export function GameHost({
         // work — which has to allocate, since a buffer source is single-use — happens here.
         audio().flush();
         renderer.endFrame();
+        // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
+        // sound from inside `update()` stays allocation-free (rule 5).
+        audio().flush();
       },
     });
     loopRef.current = loop;

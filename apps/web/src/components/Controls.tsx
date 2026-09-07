@@ -1,5 +1,5 @@
 import type { GameManifest } from '@duelbox/game-sdk';
-import { seatColour } from '@/styles/tokens';
+import { SEAT_CHARACTERS, SEAT_KEYS } from '@/lib/seats';
 import { SeatGlyph } from './SeatGlyph';
 import styles from './Controls.module.css';
 
@@ -14,18 +14,6 @@ import styles from './Controls.module.css';
  * The copy comes from each game's manifest, so the shell never invents a legend and a
  * game never draws its own.
  */
-/**
- * Which keys belong to which seat, from the engine's own defaults.
- *
- * Written out rather than described, because "W A S D or the arrow keys" tells a player
- * what the game accepts and not what is *theirs* — and two strangers sitting down at one
- * laptop need the second thing far more than the first.
- */
-const SEAT_KEYS: readonly { seat: 'p1' | 'p2'; move: string; action: string }[] = [
-  { seat: 'p1', move: 'W A S D', action: 'Space' },
-  { seat: 'p2', move: '↑ ← ↓ →', action: 'Enter' },
-];
-
 export function Controls({ manifest }: { manifest: GameManifest }) {
   return (
     <div className={styles.controls}>
@@ -35,7 +23,7 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
         {SEAT_KEYS.map(({ seat, move, action }) => (
           <li key={seat} className={styles.seat}>
             <SeatGlyph seat={seat} />
-            <span className={styles.seatName}>{seatColour[seat].name}</span>
+            <span className={styles.seatName}>{SEAT_CHARACTERS[seat]}</span>
             <span className={styles.keys}>
               <kbd>{move}</kbd>
               <kbd>{action}</kbd>

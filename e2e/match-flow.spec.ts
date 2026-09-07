@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
 
 /**
  * The shared match flow, exercised in a real browser against the built static files.
@@ -46,9 +47,14 @@ test.describe('the match flow', () => {
     const hud = page.getByRole('group', { name: 'Score' });
     await expect(hud).toBeVisible();
     // Named and counted in text, not only drawn: colour is never the only signal.
-    await expect(hud).toContainText('Pip');
-    await expect(hud).toContainText('Player two');
-    await expect(hud.getByText('Pip has 0 points')).toBeAttached();
+    // Both seats are named, and both names are the seat's own. `lib/seats.ts` owns them:
+    // a seat's name belongs to the seat rather than to whoever is sitting in it, so a bot
+    // is marked as a bot rather than renamed, and neither seat is ever a placeholder.
+    // This used to expect "Player two", which was the half-filled override map that #2513
+    // removed — one seat had a name and the other had a placeholder.
+    await expect(hud).toContainText(SEAT_CHARACTERS.p1);
+    await expect(hud).toContainText(SEAT_CHARACTERS.p2);
+    await expect(hud.getByText(`${SEAT_CHARACTERS.p1} has 0 points`)).toBeAttached();
   });
 
   test('pauses on Escape and resumes with a fresh count-in', async ({ page }) => {
@@ -107,7 +113,7 @@ test.describe('the match flow', () => {
 test.describe('playing against the bot', () => {
   test('gets past the countdown and into play', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
 
     const countdown = page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ });
     await expect(countdown).toBeVisible();
@@ -117,14 +123,14 @@ test.describe('playing against the bot', () => {
 
   test('names the bot in the HUD and says it is thinking on its turn', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     const hud = page.getByRole('group', { name: 'Score' });
-    await expect(hud).toContainText('Bo (bot)');
+    await expect(hud).toContainText(`${SEAT_CHARACTERS.p2} (bot)`);
   });
 
   test('keeps running long after the countdown, rather than stalling once', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
       timeout: 10_000,
     });
@@ -146,26 +152,26 @@ test.describe('remembering how you last played', () => {
     const buttons = page.getByRole('button', { name: /Play (together here|against)/ });
     await expect(buttons.first()).toHaveText('Play together here');
 
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await page.getByRole('button', { name: 'Pause the match' }).click();
     await page.getByRole('button', { name: 'Quit match' }).click();
 
     // Having chosen the bot, the bot now leads — but nothing has auto-started.
-    await expect(buttons.first()).toHaveText('Play against Bo');
+    await expect(buttons.first()).toHaveText(`Play against ${SEAT_CHARACTERS.p2}`);
     await expect(page.locator('canvas')).toHaveCount(0);
   });
 
   test('the choice survives a reload', async ({ page }) => {
     await page.goto('/play/air-hockey/');
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     await page.reload();
     const buttons = page.getByRole('button', { name: /Play (together here|against)/ });
-    await expect(buttons.first()).toHaveText('Play against Bo');
+    await expect(buttons.first()).toHaveText(`Play against ${SEAT_CHARACTERS.p2}`);
   });
 
   test('is remembered per game rather than globally', async ({ page }) => {
     await page.goto('/play/air-hockey/');
-    await page.getByRole('button', { name: 'Play against Bo' }).click();
+    await page.getByRole('button', { name: `Play against ${SEAT_CHARACTERS.p2}` }).click();
     // A different game is unaffected by that choice.
     await page.goto('/play/tic-tac-toe/');
     const buttons = page.getByRole('button', { name: /Play (together here|against)/ });

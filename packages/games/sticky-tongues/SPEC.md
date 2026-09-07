@@ -376,8 +376,10 @@ code that provably does nothing.
 
 That is a claim rather than an omission, so it is tested: `game.test.ts` plays the same seed with
 both openers and asserts the two matches are byte-identical.
-`apps/web/src/data/balance-aggregate.test.ts` reports `opener 0 of 50` for this game, which is the
-same fact from the other side.
+`apps/web/src/data/balance-aggregate.test.ts` reports `opener 0/12` for this game, which is the
+same fact from the other side — and since #2494 it acts on it, playing each seed once and
+spending the saved half of the budget on 88 seeds instead of 50 pairs. The 12 is how many
+pairs it still plays both ways to keep proving the claim above.
 
 ## The bot
 
@@ -557,8 +559,9 @@ seat-order swap means in a game with no opener to alternate:
 
 A seed pair is one independent draw, not two, so these are 1500-seed figures with a standard error
 of 1.3 points: z of +0.10, −0.13 and +1.20. `apps/web/src/data/balance-aggregate.test.ts` reads
-**54.0% at `normal` over its own fifty seeds**, which is 0.57 standard errors of that sample and
-inside the flat band as well as the enforced one.
+**50.0% at `normal` over its own 88 seeds**, dead on the band and inside the enforced one as well
+as the flat one. It read 54.0% over fifty seeds before #2494 taught it to stop playing this
+game's second arm; the difference is the sample, not the game.
 
 The two tongues are out together for **172, 227 and 273 steps a match** at the three tiers — about
 three to four and a half seconds of every match in which both frogs are committed at once, which is

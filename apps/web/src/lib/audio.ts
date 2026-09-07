@@ -43,7 +43,11 @@ export function emitCue(event: SoundEvent, intensity?: number): void {
 /**
  * Arm the unlock, load the sounds, and keep both alive across backgrounding.
  *
- * Idempotent, so a component may call it on every mount.
+ * Idempotent, so a component may call it on every mount. The gesture listeners are one-shot
+ * and remove themselves once a gesture has been seen; `observeVisibility` is what re-arms
+ * them after iOS suspends the context for a phone call or a backgrounded tab, which is a
+ * state that is not in the spec and which code comparing only against `suspended` never
+ * notices.
  *
  * The order matters. `unlock()` attaches the gesture listeners and deliberately creates no
  * context — creating one before the gesture is what leaves it suspended. `registerSoundBank`

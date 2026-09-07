@@ -102,8 +102,12 @@ this one has no opener to name — but the SDK alternates it across the rounds o
 *precisely so that a residual seat asymmetry washes out*, and this is the residual seat
 asymmetry. Binding it makes the two matches the repository's balance harness plays from one
 seed **one match and its exact mirror**, so seat one's share of that sweep is 50.0% by
-construction rather than by sampling. It also keeps this game off the `OPENER_BLIND` ratchet
-in `balance-aggregate.test.ts`, which says outright that a new game must read the field.
+construction rather than by sampling. The `OPENER_BLIND` ratchet in
+`balance-aggregate.test.ts` never applied here either way — it counts `turn-*` games only,
+and this one is `rt-split` — so binding the field is worth doing on its own merits rather
+than to satisfy a guard. It is also why the `openerSwung` column below is high: the two
+matches from a seed really are different matches, which is what that column reports and, as
+of the fix that set the ratchet to 0, all that it reports.
 
 Measured on the repository's own harness, replicated exactly (50 seed pairs, frozen idle
 input, both opening seats):

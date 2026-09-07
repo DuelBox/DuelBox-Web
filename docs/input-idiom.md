@@ -233,7 +233,7 @@ Three rules follow, and they are what a game must obey to stay inside the envelo
    travel between two steps. A mouse can cross 400 logical units in one 16ms step and a
    thumb cannot. Any rule of the form "sweep faster for more X" is outside the envelope
    and is a cross-device advantage the engine does not remove. One game does this today
-   (shuriken's spin).
+   (shuriken's spin), and rule 4 below is what its lattice must be run through.
 2. **Deadzones and tap radii are multiples of the envelope, not bare numbers.** They are
    currently 22 hand-picked constants between 6 and 26 logical units, in boxes between 600
    and 1080 units on the short side — a spread of 2.0 to 5.8 envelopes for what is the
@@ -242,6 +242,52 @@ Three rules follow, and they are what a game must obey to stay inside the envelo
 3. **A held finger and a held key are the same signal, and both are rate-limited by the
    simulation.** `actionHeld` is already `keys.action || pointerDown`; a game that adds its
    own per-press rate is re-deciding something the engine decided.
+4. **An aimed scalar goes through one lattice, not one per instrument.** The envelope levels
+   where a pointer *is*. A game that lets a player aim an angle, a power or a spin derives it
+   twice — the pointer path inheriting the position lattice, the keyboard path being some
+   `KEY_RATE × fixedDeltaSeconds` the game chose — and nothing makes those two commensurate.
+   Measured in shuriken's spin (#2506) they were **disjoint**: the finger could reach
+   multiples of 0.021 and the key multiples of 0.0433, whose first common multiple is past
+   the ±1.9 clamp, so every spin in the game but zero and the clamp belonged to exactly one
+   of the two instruments. `scalarEnvelopeFor(span)` gives the lattice and `quantiseScalar`
+   applies it; write the value through it **at the one place the game stores it**, so the
+   finger, the keys and the bot all pass through the same gate and none can opt out.
+   Quantising the pointer path alone moves the gap rather than closing it.
+
+   The constant carries an obligation with it. Both sets are equal only if *every* increment
+   either instrument can apply is no larger than one cell — then a sweep on either passes
+   through every cell on its way, exactly as a dragged finger visits every point of the
+   position lattice. So a game's own keyboard rate must satisfy `KEY_RATE × fixedDelta <=
+   scalarEnvelopeFor(span)`, which is a line of arithmetic a game can assert about itself and
+   should, or a later retune reopens the gap silently. `SCALAR_ENVELOPE` is `1/64` because
+   the collection's five aimed scalars spell their spans in 87, 99, 82, 81 and 70 key steps,
+   and 64 is the power of two under the binding one.
+
+   And the test for it is a **set comparison, not a win-rate comparison**: assert that the
+   values reachable under one instrument are the values reachable under the other.
+   `control-parity.test.ts` cannot see this defect and never could — its ±75-point band is
+   looking for a game one instrument cannot play, and this is not a difference in strength
+   but in what can be expressed. A set comparison cannot pass by luck; a distribution
+   comparison can.
+5. **A finger count is not an input, it is a device class.** `SeatInputView.pointerCount`
+   exists (#2498) and reading it costs `sameInputClassOnly: true`, enforced by
+   `apps/web/src/data/multi-touch.test.ts`. This is the one capability in this document with
+   no fair equivalent in another family: `docs/keyboard-rollover.md` shows a commodity
+   keyboard guarantees only two or three simultaneous keys, that our seats already spend
+   them on a direction and an action, and that a blocked press never arrives at all — so a
+   game cannot even detect that the fingers it asked for did not come. Express a multi-finger
+   mechanic through **position** if it is to stay fair: a grab radius, a sweep, a place on the
+   board. Money Grabber's SPEC is the worked example, and its catalogue row — "using all the
+   fingers of your hand" — is why the count is exposed at all rather than merely documented
+   as absent.
+
+   Two limits on it, both deliberate. It is a **count and not a list**: the engine keeps one
+   position per seat — whichever pointer moved most recently — so "how many fingers" is
+   answerable and "where is the third one" is not, and a per-finger list would be new engine
+   state rather than a new view of existing state. And it is **optional on the interface**
+   (`pointerCount ?? 0`) only because `SeatInputView` is implemented by hand in twenty-seven
+   test doubles across the game packages; the real `InputView` always sets it. Making it
+   required is mechanical and wants doing when those files are next touched.
 
 Trackpad-specific: nothing in the idiom may require a gesture longer than about a third of
 the play area's short side without an intervening lift, because a trackpad has to

@@ -42,9 +42,14 @@ describe('design tokens', () => {
     expect(seatColour.p1.base).not.toBe(seatColour.p2.base);
   });
 
-  it('names both characters, so no screen has to invent a label', () => {
-    expect(seatColour.p1.name).toBe('Pip');
-    expect(seatColour.p2.name).toBe('Bo');
+  it('carries colours and nothing else', () => {
+    // The palette used to name the characters too, and that made it one of five places
+    // in the shell able to say what a player is called. Names live in `lib/seats.ts`;
+    // `seats.test.ts` fails if a second spelling appears anywhere. This fails if the
+    // name comes back here, which is where it was.
+    for (const entry of Object.values(seatColour)) {
+      expect(Object.keys(entry).sort()).toEqual(['base', 'deep', 'tint']);
+    }
   });
 
   it('keeps the touch target above the 44px web minimum', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from '@duelbox/engine';
+import { Rng, quantiseScalar } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
 import {
   BOARD_HEIGHT,
@@ -43,6 +43,7 @@ import {
   throwShuriken,
   turnAim,
   winnerOf,
+  SPIN_ENVELOPE,
 } from './rules.js';
 import type { ArcPoint, BotDifficulty, State } from './rules.js';
 
@@ -288,6 +289,9 @@ describe('aiming', () => {
     expect(state.spin).toBe(MAX_SPIN);
     addSpin(state, -99);
     expect(state.spin).toBe(-MAX_SPIN);
+    // Stored exactly: the lattice is applied when the blade leaves the hand, not while the
+    // player is still winding, so the accumulator stays a plain sum and cannot drift with
+    // the order its increments arrive in.
     spinTo(state, 0.5);
     expect(state.spin).toBe(0.5);
   });
@@ -328,6 +332,46 @@ describe('aiming', () => {
     expect(state.spin).toBe(0.6);
   });
 
+  it('lets a finger and a key name the same spins', () => {
+    // The property #2506 exists for, asserted as a set rather than as a ratio.
+    //
+    // Before the lattice these two paths were disjoint, not merely unequal. A finger's step
+    // is the positional envelope times SPIN_PER_UNIT — 700/200 x 0.006 = 0.021 — and a key's
+    // is SPIN_KEY_RATE over the fixed step, 2.6/60 = 0.043333. As fractions those are 21/1000
+    // and 13/300, whose first common multiple is 2.73, past the +/-1.9 clamp. So the only two
+    // spins both players could reach were zero and the clamp, and every other spin in the
+    // game belonged to exactly one instrument. A win-rate comparison cannot see that: two
+    // players of equal skill holding disjoint lattices win equally often and still cannot
+    // describe the same throw.
+    const POINTER_STEP = (700 / 200) * 0.006;
+    const KEY_STEP = 2.6 / 60;
+
+    const reachable = (step: number): Set<number> => {
+      const found = new Set<number>();
+      // Deliberately swept past MAX_SPIN rather than stopped at it. Overshooting and
+      // being clamped is how a player reaches the extreme — hold the key a moment longer —
+      // so a sweep that skips out-of-range values reports the two ends as finger-only and
+      // invents an unfairness that is not there. That was this test's first version.
+      for (let n = -400; n <= 400; n += 1) {
+        const { state } = started();
+        spinTo(state, n * step);
+        throwShuriken(state, state.active);
+        found.add(state.shot.spin);
+      }
+      return found;
+    };
+
+    const byFinger = reachable(POINTER_STEP);
+    const byKey = reachable(KEY_STEP);
+
+    expect(byFinger.size).toBeGreaterThan(8);
+    expect(byKey.size).toBeGreaterThan(8);
+    // Neither instrument reaches a spin the other cannot.
+    for (const spin of byFinger)
+      expect(byKey.has(spin), `only a finger reaches ${spin}`).toBe(true);
+    for (const spin of byKey) expect(byFinger.has(spin), `only a key reaches ${spin}`).toBe(true);
+  });
+
   it('takes no aim once the blade has left the hand', () => {
     const { state } = started();
     aimAt(state, 0.2);
@@ -339,7 +383,7 @@ describe('aiming', () => {
     expect(state.spin).toBe(0.3);
     // What was thrown is what was aimed: the blade carries its own copy.
     expect(state.shot.heading).toBe(0.2);
-    expect(state.shot.spin).toBe(0.3);
+    expect(state.shot.spin).toBe(quantiseScalar(0.3, SPIN_ENVELOPE));
   });
 });
 

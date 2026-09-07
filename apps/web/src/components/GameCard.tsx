@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CatalogueEntry } from '@/data/catalogue.generated';
 import { isPlayable } from '@/data/registry';
+import { formatRound } from '@/lib/format';
 import { GameTile } from './GameTile';
 import styles from './GameCard.module.css';
 
@@ -31,10 +32,4 @@ export function GameCard({ game }: { game: CatalogueEntry }) {
       </span>
     </Link>
   );
-}
-
-function formatRound(seconds: number): string {
-  if (seconds < 60) return `${String(seconds)}s`;
-  const minutes = Math.round(seconds / 60);
-  return `${String(minutes)} min`;
 }

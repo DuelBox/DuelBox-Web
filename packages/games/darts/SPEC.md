@@ -91,6 +91,28 @@ concern `docs/input-parity.md` raises for exactly this archetype.
 - **Input while the board is turning.** Refused, as everywhere.
 - **A turn ending.** The previous thrower's darts are cleared from the board, so the next
   player sees their own three and not six.
+- **The gesture being taken away** — a `pointercancel`, a pause, a lost focus. The aim is
+  **abandoned**: the reticle returns to centre, nothing is committed, and the next dart has
+  to be aimed afresh. A cancel is the opposite of a release and never arrives on the same
+  step as one, so this can never swallow a throw the player did make. A dart already in the
+  air is not recalled — it left the hand before the cancel.
+
+### Why the cancel is read above the phase switch
+
+`update()` returns early during the flight and the settle, and `pointerCancelled` is true
+for exactly **one** step — the engine clears it on the next. A cancel raised while a dart
+was in the air was therefore over before the game next looked at the seat, and was silently
+dropped (#2505): the player lost the pointer mid-flight, the game never learned, and the
+next gesture began from a state that believed the previous one had ended normally.
+
+The input edges are now read at the top of `update()`, above the phase switch, so every
+phase *observes* them and chooses to ignore them rather than never being offered them. The
+alternative — latching the bit until somebody reads it — would change its meaning from "this
+step" to "since you last looked" for every game in the catalogue, and is a contract change
+rather than a fix to one game.
+
+The general form is worth stating once: **a one-step input bit read by a state machine that
+does not read input in every state is a bit that can be dropped.**
 
 ## Determinism
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
+import { SEAT_CHARACTERS, SEAT_KEYS } from '@/lib/seats';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -38,10 +39,16 @@ export default function HowToPlayPage() {
           back and forth: each half belongs to the person nearest it, and a touch belongs to the
           seat it started in even if your finger crosses the middle.
         </p>
+        <p>
+          The two seats are {SEAT_CHARACTERS.p1} and {SEAT_CHARACTERS.p2}. Whoever sits in a seat
+          plays under its name and its mark — a disc for {SEAT_CHARACTERS.p1}, a rounded square for{' '}
+          {SEAT_CHARACTERS.p2} — so the scoreboard, the keys below and the pieces on the board all
+          mean the same person. A bot takes a seat under the same name.
+        </p>
         <div className={styles.device} aria-hidden="true">
-          <div className={`${styles.seat} ${styles.seatTop}`}>Player two</div>
+          <div className={`${styles.seat} ${styles.seatTop}`}>{SEAT_CHARACTERS.p2}</div>
           <div className={styles.divider} />
-          <div className={`${styles.seat} ${styles.seatBottom}`}>Player one</div>
+          <div className={`${styles.seat} ${styles.seatBottom}`}>{SEAT_CHARACTERS.p1}</div>
         </div>
         <p>
           In games played turn by turn the board turns to face whoever is to move, so you always
@@ -56,33 +63,30 @@ export default function HowToPlayPage() {
           Two people sharing a laptop have one keyboard between them, so the keys are split rather
           than shared. Every game lists its own controls on its page; these are the defaults.
         </p>
+        {/* The same `SEAT_KEYS` the in-game control legend draws. Written out twice they
+            drift, and a guide that disagrees with the game is worse than no guide. */}
         <table className={styles.keys}>
           <thead>
             <tr>
-              <th scope="col">Player</th>
+              <th scope="col">Seat</th>
               <th scope="col">Move</th>
               <th scope="col">Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">Player one</th>
-              <td>
-                <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>
-              </td>
-              <td>
-                <kbd>Space</kbd>
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Player two</th>
-              <td>
-                <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd>
-              </td>
-              <td>
-                <kbd>Enter</kbd>
-              </td>
-            </tr>
+            {SEAT_KEYS.map(({ seat, move, action }) => (
+              <tr key={seat}>
+                <th scope="row">{SEAT_CHARACTERS[seat]}</th>
+                <td>
+                  {move.split(' ').map((key) => (
+                    <kbd key={key}>{key}</kbd>
+                  ))}
+                </td>
+                <td>
+                  <kbd>{action}</kbd>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
         <p>
@@ -103,17 +107,18 @@ export default function HowToPlayPage() {
         <h2>Things worth knowing</h2>
         <div className={styles.cards}>
           <div className={styles.card}>
-            <h3>It works offline</h3>
+            <h3>A loaded game needs nothing</h3>
             <p>
-              Once a game has loaded it keeps working with no connection at all. Nothing about
-              playing needs the network.
+              Once a page has loaded, playing it needs no network at all. Closing the tab and coming
+              back does need one — there is no offline cache yet.
             </p>
           </div>
           <div className={styles.card}>
             <h3>No accounts, no data</h3>
             <p>
-              There is nothing to sign up for and nothing to log in to. Scores live on your device
-              and nowhere else.
+              There is nothing to sign up for and nothing to log in to. The only thing kept on your
+              device is what you last chose for a game — the mode, the bot level and the match
+              length. Scores are not saved anywhere.
             </p>
           </div>
           <div className={styles.card}>

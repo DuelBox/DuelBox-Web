@@ -62,6 +62,7 @@ import {
   opponentOf,
   otherSide,
   placeServe,
+  seatSide,
   serveSpotX,
   serveSpotY,
   stepBall,
@@ -874,44 +875,186 @@ describe('the serve', () => {
 });
 
 describe('what a seat is asking its flippers for', () => {
+  // The near seat is not rotated, so for it seat space and screen space are the same thing
+  // and these read exactly as they did before the seat's frame entered the question.
+  const NEAR = false;
+  const FAR = true;
+
   it('reads a key as a direction', () => {
-    expect(wantsFlipper('left', -1, null)).toBe(true);
-    expect(wantsFlipper('right', -1, null)).toBe(false);
-    expect(wantsFlipper('right', 1, null)).toBe(true);
-    expect(wantsFlipper('left', 1, null)).toBe(false);
+    expect(wantsFlipper('left', -1, null, NEAR)).toBe(true);
+    expect(wantsFlipper('right', -1, null, NEAR)).toBe(false);
+    expect(wantsFlipper('right', 1, null, NEAR)).toBe(true);
+    expect(wantsFlipper('left', 1, null, NEAR)).toBe(false);
   });
 
   it('reads a finger as a place', () => {
-    expect(wantsFlipper('left', 0, 10)).toBe(true);
-    expect(wantsFlipper('right', 0, 10)).toBe(false);
-    expect(wantsFlipper('right', 0, TABLE.width - 10)).toBe(true);
-    expect(wantsFlipper('left', 0, TABLE.width - 10)).toBe(false);
+    expect(wantsFlipper('left', 0, 10, NEAR)).toBe(true);
+    expect(wantsFlipper('right', 0, 10, NEAR)).toBe(false);
+    expect(wantsFlipper('right', 0, TABLE.width - 10, NEAR)).toBe(true);
+    expect(wantsFlipper('left', 0, TABLE.width - 10, NEAR)).toBe(false);
   });
 
-  it('gives a finger exactly on the centre line to the right flipper, always', () => {
-    expect(wantsFlipper('right', 0, CENTRE_X)).toBe(true);
-    expect(wantsFlipper('left', 0, CENTRE_X)).toBe(false);
+  it('gives a finger exactly on the centre line to the presser own right flipper', () => {
+    expect(wantsFlipper('right', 0, CENTRE_X, NEAR)).toBe(true);
+    expect(wantsFlipper('left', 0, CENTRE_X, NEAR)).toBe(false);
+    // The far seat's own right is the screen's left, and the tie-break goes with the hand
+    // rather than with the screen, so it mirrors like everything else on this table.
+    expect(wantsFlipper('left', 0, CENTRE_X, FAR)).toBe(true);
+    expect(wantsFlipper('right', 0, CENTRE_X, FAR)).toBe(false);
   });
 
   it('raises nothing when nobody is asking', () => {
-    expect(wantsFlipper('left', 0, null)).toBe(false);
-    expect(wantsFlipper('right', 0, null)).toBe(false);
+    expect(wantsFlipper('left', 0, null, NEAR)).toBe(false);
+    expect(wantsFlipper('right', 0, null, NEAR)).toBe(false);
+    expect(wantsFlipper('left', 0, null, FAR)).toBe(false);
+    expect(wantsFlipper('right', 0, null, FAR)).toBe(false);
   });
 
   it('ORs the two sources rather than switching between them', () => {
     // A key and a finger are one intent, so there is no mode: either raises the flipper.
-    expect(wantsFlipper('left', -1, TABLE.width - 10)).toBe(true);
-    expect(wantsFlipper('right', -1, TABLE.width - 10)).toBe(true);
-    expect(wantsFlipper('left', 1, 10)).toBe(true);
-    expect(wantsFlipper('right', 1, 10)).toBe(true);
+    expect(wantsFlipper('left', -1, TABLE.width - 10, NEAR)).toBe(true);
+    expect(wantsFlipper('right', -1, TABLE.width - 10, NEAR)).toBe(true);
+    expect(wantsFlipper('left', 1, 10, NEAR)).toBe(true);
+    expect(wantsFlipper('right', 1, 10, NEAR)).toBe(true);
   });
 
   it('raises neither flipper when both keys are held, equally for both instruments', () => {
     // The engine sums the two direction keys into one axis, so A and D together read as
     // zero. A seat reports one pointer position however many fingers are down, so a thumb
     // cannot raise two either. Being the same limit on both is what keeps it fair.
-    expect(wantsFlipper('left', 0, null)).toBe(false);
-    expect(wantsFlipper('right', 0, null)).toBe(false);
+    expect(wantsFlipper('left', 0, null, NEAR)).toBe(false);
+    expect(wantsFlipper('right', 0, null, NEAR)).toBe(false);
+  });
+
+  it('gives the far seat left key the flipper on its left, which is the screen right one', () => {
+    // The whole of issue #2476: the table never turns, so the far seat reads it upside down
+    // and the flipper under its left hand is the one drawn on the right of the screen.
+    expect(wantsFlipper('right', -1, null, FAR)).toBe(true);
+    expect(wantsFlipper('left', -1, null, FAR)).toBe(false);
+    expect(wantsFlipper('left', 1, null, FAR)).toBe(true);
+    expect(wantsFlipper('right', 1, null, FAR)).toBe(false);
+  });
+
+  it('leaves a finger exactly where it landed, for the far seat as much as the near one', () => {
+    // The counterpart, and the reason only one instrument moved: a place mirrors along with
+    // the flipper it is reaching for, so the two mirrors cancel and a tap on the left of the
+    // glass raises the flipper on the left of the glass whichever end is asking.
+    for (const rotated of [NEAR, FAR]) {
+      expect(wantsFlipper('left', 0, 10, rotated)).toBe(true);
+      expect(wantsFlipper('right', 0, 10, rotated)).toBe(false);
+      expect(wantsFlipper('right', 0, TABLE.width - 10, rotated)).toBe(true);
+      expect(wantsFlipper('left', 0, TABLE.width - 10, rotated)).toBe(false);
+    }
+  });
+});
+
+/**
+ * The symmetry the two seats owe each other, asserted as a property rather than as examples.
+ *
+ * The examples above say what one gesture does at one seat, and an example cannot catch a
+ * seat-mirroring defect: the old code passed a whole file of them while the far seat's keys
+ * were reversed, because every example was written from the screen's point of view and the
+ * screen is exactly the frame that was wrong.
+ *
+ * So this drives **the same gesture, expressed in the pressing seat's own frame**, through
+ * every seat and both orientations, and requires the same answer every time — named as an
+ * index into that seat's own pair of flippers, so "the same answer" means the same hand and
+ * not the same side of the device. Two seats playing identically must play the same game.
+ */
+describe('the same gesture, played at either seat', () => {
+  interface Gesture {
+    /** A direction key, already in the pressing seat's frame; 0 for no key. */
+    readonly moveX: number;
+    /** Where the finger is on the glass **in the seat's own frame**, or null for none. */
+    readonly seatPointerX: number | null;
+  }
+
+  /** Every key state crossed with every interesting place a finger can be, including none. */
+  function gestures(): readonly Gesture[] {
+    const keys = [-1, -0.6, 0, 0.6, 1];
+    const places: readonly (number | null)[] = [
+      null,
+      0,
+      10,
+      CENTRE_X - 1,
+      CENTRE_X,
+      CENTRE_X + 1,
+      TABLE.width - 10,
+      TABLE.width,
+    ];
+    const out: Gesture[] = [];
+    for (const moveX of keys) {
+      for (const seatPointerX of places) out.push({ moveX, seatPointerX });
+    }
+    return out;
+  }
+
+  /**
+   * Which of a seat's flippers one seat-space gesture raises, as indices into that seat's own
+   * pair: 0 for the flipper under its left hand, 1 for the one under its right.
+   *
+   * The gesture is converted to what the device would actually report — a place mirrors for a
+   * seat reading the table upside down, a key does not — and the answer is converted back
+   * through the flat index the match really keys its phases by, so this exercises
+   * `flipperIndex` rather than talking about it.
+   */
+  function raised(seat: SeatId, rotated: boolean, gesture: Gesture): readonly number[] {
+    const devicePointerX =
+      gesture.seatPointerX !== null && rotated
+        ? TABLE.width - gesture.seatPointerX
+        : gesture.seatPointerX;
+    const out: number[] = [];
+    for (const side of SIDES) {
+      if (!wantsFlipper(side, gesture.moveX, devicePointerX, rotated)) continue;
+      const index = flipperIndex(seat, side);
+      expect(flipperSeatOf(index)).toBe(seat);
+      out.push(seatSide(flipperSideOf(index), rotated) === 'left' ? 0 : 1);
+    }
+    // Sorted, because the loop above walks the screen's two sides and the far seat meets them
+    // in the other order. Which hands a gesture asks for is the answer; the order the two
+    // slots happen to be visited in is not, and comparing it would fail the mirror on nothing.
+    return out.sort((a, b) => a - b);
+  }
+
+  it('raises the flipper under the same hand, at either seat and either orientation', () => {
+    for (const gesture of gestures()) {
+      const reference = raised('p1', false, gesture);
+      for (const seat of SEATS) {
+        for (const rotated of [false, true]) {
+          expect(
+            raised(seat, rotated, gesture),
+            `${seat}${rotated ? ' rotated' : ''}: key ${gesture.moveX}, finger ${String(
+              gesture.seatPointerX,
+            )}`,
+          ).toEqual(reference);
+        }
+      }
+    }
+  });
+
+  it('has teeth: the two seats do not agree about the screen, only about the hand', () => {
+    // Without this the property above could be satisfied by a function that ignores the seat
+    // entirely. The two seats must disagree in screen space exactly when one of them is
+    // reading the table upside down, and the keys are where that disagreement shows.
+    const near = SIDES.filter((side) => wantsFlipper(side, -1, null, false));
+    const far = SIDES.filter((side) => wantsFlipper(side, -1, null, true));
+    expect(near).toEqual(['left']);
+    expect(far).toEqual(['right']);
+  });
+
+  it('answers one instrument with exactly one flipper, at either orientation', () => {
+    // One hand, one flipper. Both instruments at once may ask for both — they are OR-ed, and
+    // that is tested above — but a gesture made with one of them selects exactly one flipper
+    // whenever it says anything at all, and the seat's frame must not change how many.
+    for (const gesture of gestures()) {
+      const keyOnly = gesture.seatPointerX === null;
+      const pointerOnly = gesture.moveX === 0;
+      if (!keyOnly && !pointerOnly) continue;
+      const idle = keyOnly && pointerOnly;
+      for (const rotated of [false, true]) {
+        expect(raised('p1', rotated, gesture)).toHaveLength(idle ? 0 : 1);
+      }
+    }
   });
 });
 
