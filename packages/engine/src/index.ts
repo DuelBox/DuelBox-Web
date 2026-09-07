@@ -30,6 +30,9 @@ export type { Vec2 } from './vec2.js';
 export { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
 export type { Clock, LoopCallbacks, LoopOptions } from './loop.js';
 
+export { LatencyMeter, INPUT_FAMILIES } from './latency.js';
+export type { InputFamily, LatencyStats } from './latency.js';
+
 export { GamepadManager } from './gamepad.js';
 export type {
   GamepadSnapshot,
