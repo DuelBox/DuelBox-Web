@@ -44,11 +44,9 @@
 # which is where the required checks are set.
 #
 # It is written down here rather than left to be discovered because this repository has now
-# found **six** guards that claimed something nothing ran — `pnpm size` falling through to the
-# system `size(1)`, the asset-licence check CLAUDE.md said CI enforced, CI itself red behind
-# another workflow's green tick, a balance harness that promised a band it did not enforce, a
-# coverage threshold no workflow mentioned, and the React hook rules enforced by nothing at
-# all. A workflow named "auto-merge" that does not merge would be the seventh. It is not
+# found **seven** guards that claimed something nothing ran — the list is in CLAUDE.md, which
+# is where it is kept and counted. A workflow named "auto-merge" that does not merge would be
+# the eighth. It is not
 # claiming to work; it is ready for the day somebody flips the switches, and it says out loud
 # in the run log which of the two is still off.
 #

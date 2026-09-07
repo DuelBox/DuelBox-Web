@@ -54,9 +54,22 @@ const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts'];
  * runs axe on every page it visits. Anything that genuinely differs between engines is
  * already covered by specs that run on all four.
  *
+ * `page-transition.spec.ts` joins it on the same reading. What it asserts is that the page
+ * entry animation contains nothing able to hold up a press: it animates opacity, so no box
+ * moves and no hit test changes. Opacity has never taken part in hit testing in any engine,
+ * so a second one would re-confirm the verdict rather than test it, and the property that
+ * could differ between engines — how a fade is painted — is not the property under test.
+ *
+ * It is also the list that spec *must* be in, which is a stronger reason than the one above.
+ * Its layout-shift measurement reads `PerformanceObserver` entries of type `layout-shift`,
+ * an API only Chromium implements: on WebKit the observer would never fire, the total would
+ * be zero, and the assertion would pass having measured nothing at all. A guard that cannot
+ * fail on an engine is worse on that engine than no guard, so it is only run where the
+ * number is real.
+ *
  * If a rule ever fires on one engine and not another, this is the list to take it out of.
  */
-const CHROMIUM_ONLY = ['**/axe.spec.ts'];
+const CHROMIUM_ONLY = ['**/axe.spec.ts', '**/page-transition.spec.ts'];
 
 /**
  * Specs that set their own viewport and therefore want one project *per engine*, not four.
@@ -67,8 +80,17 @@ const CHROMIUM_ONLY = ['**/axe.spec.ts'];
  * file chooser and a search field are drawn by the browser rather than by the stylesheet, and
  * the settings page has all three. So it keeps `chromium` and `notched-portrait` and stands
  * down on the other two.
+ *
+ * `screen-reader.spec.ts` arrives at the same two projects from the other side. Landmarks,
+ * accessible names and live regions are properties of the document, so on that count it
+ * belongs in `CHROMIUM_ONLY` with the axe scan — but one of the things it pins is not: a
+ * fragment link to a `<main>` that cannot hold focus left `document.activeElement` on
+ * `<body>`, and Chromium hid that by moving the sequential focus starting point where WebKit
+ * was measured not to. A Chromium-only run of that assertion would re-confirm the engine on
+ * which the defect never showed. Two projects, then, and not four: the second Chromium and
+ * the second WebKit would each be the same verdict a third time.
  */
-const ONE_PER_ENGINE = ['**/touch-targets.spec.ts'];
+const ONE_PER_ENGINE = ['**/touch-targets.spec.ts', '**/screen-reader.spec.ts'];
 
 export default defineConfig({
   testDir: './e2e',

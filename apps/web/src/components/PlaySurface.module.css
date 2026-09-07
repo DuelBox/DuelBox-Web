@@ -89,19 +89,10 @@
   min-height: 0;
 }
 
-.state,
-.result {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--db-space-4);
-  padding-block: var(--db-space-7);
-  text-align: center;
-}
-
-.state h2 {
-  font-size: var(--db-text-2xl);
-}
+/* The panel these phases are drawn in is `.db-panel`, in `globals.css`. It moved there so
+   the route's loading fallback — a server component, which cannot import this file without
+   Next emitting a client chunk for it — can be the same panel rather than a second copy of
+   one. See the note beside the rule. */
 
 .modes {
   display: flex;

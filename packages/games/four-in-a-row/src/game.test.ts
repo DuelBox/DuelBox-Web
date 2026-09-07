@@ -107,7 +107,9 @@ class RecordingRenderer implements Renderer {
     this.depth += 1;
     if (this.depth > this.maxDepth) this.maxDepth = this.depth;
   }
-  pushRotation(): void {
+  angles: number[] = [];
+  pushRotation(radians: number): void {
+    this.angles.push(radians);
     this.pushSeatRotation();
   }
   popSeatRotation(): void {
@@ -621,5 +623,30 @@ describe('lifecycle and render', () => {
     // Four highlight rings on top of everything the open board already drew.
     expect(won.rings).toBeGreaterThanOrEqual(open.rings + 4);
     expect(won.depth).toBe(0);
+  });
+});
+
+describe('the board turning to face the player with the move', () => {
+  it('sweeps through part-way angles rather than cutting to the far seat', () => {
+    // The control this suite did not have, and the reason it is worth a test of its own:
+    // `some((angle) => angle > 0.01)` is satisfied by pi, so a board that jumped straight
+    // round would pass it, and a board that stopped turning entirely fails nothing else
+    // in this file. The window here is strictly between the two resting orientations, and
+    // only a tween is ever drawn inside it.
+    const game = new DropFourGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null, 'shared-screen', 'p1'));
+    dropInto(game, input, 1, false);
+    input.clear();
+
+    const renderer = new RecordingRenderer();
+    for (let i = 0; i < 40; i += 1) {
+      game.update(STEP, input);
+      game.render(renderer, 0);
+    }
+
+    expect(renderer.angles.some((angle) => angle > 0.01 && angle < Math.PI - 0.01)).toBe(true);
+    // And it arrives, rather than resting at an angle nobody can read.
+    expect(renderer.angles[renderer.angles.length - 1]).toBeCloseTo(Math.PI, 5);
   });
 });

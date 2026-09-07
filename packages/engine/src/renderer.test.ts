@@ -789,3 +789,76 @@ describe('font cache', () => {
     expect(valuesOf(first.fake, 'set:font')[0]).toBe(valuesOf(second.fake, 'set:font')[0]);
   });
 });
+
+/**
+ * `setReducedMotion` had no test at all until this block, which made it the **seventh**
+ * guard in this repository claiming something nothing ran. The running list lives in
+ * CLAUDE.md and this one has been added to it, so the count has one home.
+ *
+ * It is worth more than the usual, because it is the whole of reduced motion for a board:
+ * it reaches every one of the forty-five games that own a flip through the angle they
+ * already push, with no edit to any of them, and it follows a preference changed mid-match
+ * in both directions, which a game handed the answer once in `init` cannot. A second
+ * switch on `SeatFlip` was written alongside this one and taken out again — `flip.ts`
+ * records why at the top of the file.
+ */
+describe('reduced motion', () => {
+  it('draws a part-way rotation as the resting orientation it is nearest', () => {
+    const { fake, renderer } = setup();
+    renderer.setReducedMotion(true);
+
+    // Not yet half way round: the board is still square on to the seat that had it.
+    renderer.pushRotation(Math.PI * 0.4);
+    expect(opsOf(fake)).toEqual(['save']);
+    renderer.popSeatRotation();
+
+    fake.calls.length = 0;
+    // Past half way: it has arrived, in one cut and at the full half turn.
+    renderer.pushRotation(Math.PI * 0.6);
+    expect(valuesOf(fake, 'rotate')).toEqual([Math.PI]);
+    renderer.popSeatRotation();
+  });
+
+  it('never scales a board it is not turning', () => {
+    // The tuck-in factor exists for a board caught mid-turn, and a board drawn at a
+    // resting angle must produce the calls it always did.
+    const { fake, renderer } = setup();
+    renderer.setReducedMotion(true);
+
+    renderer.pushRotation(Math.PI / 4);
+    expect(countOp(fake, 'scale')).toBe(0);
+    renderer.popSeatRotation();
+  });
+
+  it('turns through every angle it is given when the preference is off', () => {
+    // The negative control. Without it this block would pass just as well against a
+    // switch that did nothing at all.
+    const { fake, renderer } = setup();
+
+    renderer.pushRotation(Math.PI * 0.4);
+    expect(valuesOf(fake, 'rotate')).toEqual([Math.PI * 0.4]);
+    expect(countOp(fake, 'scale')).toBe(1);
+    renderer.popSeatRotation();
+  });
+
+  it('can be switched off again', () => {
+    const { fake, renderer } = setup();
+    renderer.setReducedMotion(true);
+    renderer.pushRotation(Math.PI * 0.4);
+    renderer.popSeatRotation();
+    fake.calls.length = 0;
+
+    renderer.setReducedMotion(false);
+    renderer.pushRotation(Math.PI * 0.4);
+    expect(valuesOf(fake, 'rotate')).toEqual([Math.PI * 0.4]);
+    renderer.popSeatRotation();
+  });
+
+  it('still rejects an angle that is not a finite number', () => {
+    const { renderer } = setup();
+    renderer.setReducedMotion(true);
+    expect(() => {
+      renderer.pushRotation(Number.NaN);
+    }).toThrow(RangeError);
+  });
+});

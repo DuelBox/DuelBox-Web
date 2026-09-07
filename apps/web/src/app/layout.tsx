@@ -65,7 +65,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <div className="db-shell">
           <SiteHeader />
-          <main id="main" className="db-main">
+          {/*
+            `tabIndex={-1}` is what makes the link above a skip link rather than a scroll.
+
+            A fragment link moves the *viewport* to its target; it moves focus only if the
+            target can hold focus, and a bare `<main>` cannot. Chromium papered over it by
+            moving the sequential focus starting point, so the next Tab landed inside the
+            page content and the link looked like it worked; WebKit was measured not to,
+            and no screen reader's virtual cursor moved on either engine. So the first
+            control on every page — the one control that exists for the people most likely
+            to need it — did nothing for them.
+
+            -1 rather than 0: this is a place focus is *put*, never a stop Tab visits on
+            its way past. `globals.css` explains why it is also the one focusable thing on
+            the site with no focus ring.
+          */}
+          <main id="main" className="db-main" tabIndex={-1}>
             {children}
           </main>
           <SiteFooter />

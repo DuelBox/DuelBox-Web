@@ -540,6 +540,15 @@ export function GameHost({
     <canvas
       ref={canvasRef}
       className={styles.canvas}
+      /* The name was here and nothing was obliged to read it out. `canvas` maps to no ARIA
+         role of its own, and an element with no role is an element whose `aria-label` an
+         engine is free to drop — so the one thing on this page that is the game announced
+         itself as nothing at all, inconsistently, depending on who was listening.
+         `role="img"` is what makes the name a name: a picture with a text alternative,
+         which is honestly what a board a screen reader cannot enter is. Deliberately not
+         `role="application"`, which would hand this element the assistive technology's own
+         key handling in exchange for an interface we do not offer. */
+      role="img"
       aria-label={`${manifest.name} board`}
       /* Focusable so the board can hold focus during play. Without this, focus sits on
          whichever button was last used and seat two's action key — Enter — activates it
