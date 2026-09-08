@@ -7,6 +7,7 @@
  */
 
 import type { GamepadSnapshot } from './gamepad.js';
+import type { BatterySnapshot, BatterySource } from './power.js';
 
 const DEFAULT_STEPS_PER_SECOND = 60;
 const DEFAULT_MAX_STEPS_PER_FRAME = 5;
@@ -20,6 +21,17 @@ const MAX_FRAME_SECONDS = 0.25;
 export interface LoopCallbacks {
   update(fixedDeltaSeconds: number): void;
   render(alpha: number): void;
+  /**
+   * Once per animation frame, before any step, with the wall-clock time this frame is
+   * bringing to the loop — clamped, but not yet scaled by assist mode.
+   *
+   * The one number the adaptive-quality monitor needs and nothing else on this interface
+   * carries: `update` sees only the fixed step, and `render` sees only `alpha`. Measured by
+   * `RunLoop` from the clock it already reads, so no host has to touch `performance` a
+   * second time to learn how long its frames are taking. Optional, because most callers of
+   * `FixedLoop` are tests that drive it by hand and want nothing of the kind.
+   */
+  frame?(frameDeltaSeconds: number): void;
 }
 
 export interface LoopOptions {
@@ -90,6 +102,7 @@ export class FixedLoop {
   advance(frameDeltaSeconds: number): void {
     let delta = frameDeltaSeconds;
     if (!Number.isFinite(delta) || delta < 0) delta = 0;
+    this.#callbacks.frame?.(delta);
     this.#accumulator += delta;
 
     let stepsThisFrame = 0;
@@ -239,6 +252,55 @@ export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
     }
     return out;
   };
+}
+
+/**
+ * The browser adapter for the battery (#190), beside {@link browserGamepadSource} and for the
+ * same reason: `navigator.getBattery` is a device API, this is the one file allowed to read
+ * one, and `power.ts` — which decides what a low battery means — stays `navigator`-free.
+ *
+ * The API is a promise that resolves to a live `BatteryManager` with `levelchange` and
+ * `chargingchange` events. The promise is asked for once, here; the returned reader answers
+ * from one snapshot that the events keep current, so a host may read it every frame and the
+ * frame path allocates nothing (rule 5). Until the promise resolves, and wherever the API does
+ * not exist — which is every WebKit browser, so every iPhone — the reader answers `null`, and
+ * `isLowPower(null)` is "no": an unknown battery is never throttled on a guess.
+ */
+export function browserBatterySource(): BatterySource {
+  const scope = globalThis;
+  const nav = scope.navigator as
+    (Navigator & { getBattery?: () => Promise<BatteryManagerLike> }) | undefined;
+  if (nav === undefined || typeof nav.getBattery !== 'function') return () => null;
+  const state: { level: number; charging: boolean } = { level: 1, charging: true };
+  let known: BatterySnapshot | null = null;
+  const sync = (manager: BatteryManagerLike): void => {
+    state.level = manager.level;
+    state.charging = manager.charging;
+    known = state;
+  };
+  nav
+    .getBattery()
+    .then((manager) => {
+      sync(manager);
+      manager.addEventListener('levelchange', () => {
+        sync(manager);
+      });
+      manager.addEventListener('chargingchange', () => {
+        sync(manager);
+      });
+    })
+    .catch(() => {
+      // A browser that has the method and refuses to answer — a locked-down context — is
+      // a browser with no battery to read, which the reader already reports.
+    });
+  return () => known;
+}
+
+/** The slice of `BatteryManager` the adapter reads, declared here so tests need no DOM. */
+export interface BatteryManagerLike {
+  readonly level: number;
+  readonly charging: boolean;
+  addEventListener(type: 'levelchange' | 'chargingchange', listener: () => void): void;
 }
 
 export class RunLoop {

@@ -235,6 +235,8 @@ export class WebGLRenderer implements HostRenderer {
   #rotationDepth = 0;
   #shakeDepth = 0;
   #reducedMotion = false;
+  /** The device's effects switch (#190, #31); folded into `quiet` beside the player's preference. */
+  #effectsEnabled = true;
   #inFrame = false;
   #surfaceLost = false;
   #surfaceLosses = 0;
@@ -268,7 +270,7 @@ export class WebGLRenderer implements HostRenderer {
   }
 
   get reducedMotion(): boolean {
-    return this.#reducedMotion;
+    return this.#reducedMotion || !this.#effectsEnabled;
   }
 
   get surfaceLost(): boolean {
@@ -325,6 +327,11 @@ export class WebGLRenderer implements HostRenderer {
 
   setReducedMotion(reduced: boolean): void {
     this.#reducedMotion = reduced;
+  }
+
+  /** See `HostRenderer.setEffectsEnabled`; the same path as reduced motion, from the device. */
+  setEffectsEnabled(enabled: boolean): void {
+    this.#effectsEnabled = enabled;
   }
 
   /**
@@ -536,7 +543,10 @@ export class WebGLRenderer implements HostRenderer {
         `rotation must be a finite number of radians, received ${String(radians)}`,
       );
     }
-    const angle = this.#reducedMotion ? Math.round(radians / HALF_TURN) * HALF_TURN : radians;
+    const angle =
+      this.#reducedMotion || !this.#effectsEnabled
+        ? Math.round(radians / HALF_TURN) * HALF_TURN
+        : radians;
     const t = this.#transform;
     t.push();
     this.#rotationDepth += 1;
@@ -564,7 +574,7 @@ export class WebGLRenderer implements HostRenderer {
     }
     this.#transform.push();
     this.#shakeDepth += 1;
-    if (this.#reducedMotion) return;
+    if (this.#reducedMotion || !this.#effectsEnabled) return;
     if (offsetX === 0 && offsetY === 0) return;
     this.#transform.translate(offsetX, offsetY);
   }
