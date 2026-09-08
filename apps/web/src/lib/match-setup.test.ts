@@ -16,8 +16,10 @@ import {
   isBotDifficulty,
   isPlayMode,
   isRoundChoice,
+  isSolo,
   matchRulesFor,
   offeredModes,
+  soloRules,
 } from './match-setup';
 
 /**
@@ -229,7 +231,8 @@ describe('the two spellings of what the shell can start', () => {
   it('are the two the runtime actually recognises', () => {
     expect([...PLAY_MODES].sort()).toEqual([...unionMembers(MATCH_SETUP_SOURCE)].sort());
     for (const mode of PLAY_MODES) expect(isPlayMode(mode)).toBe(true);
-    for (const other of ['solo', 'remote', 'FRIEND', '', null, 3]) {
+    expect(isPlayMode('solo')).toBe(true);
+    for (const other of ['remote', 'online', 'FRIEND', '', null, 3]) {
       expect(isPlayMode(other), `${String(other)} is not a mode the shell can start`).toBe(false);
     }
   });
@@ -269,8 +272,12 @@ describe('narrowing a game’s declaration to what the lobby can offer', () => {
 
   it('drops a declared mode the shell has no branch for', () => {
     // The six real manifests: `['friend', 'bot', 'solo']`. Two buttons, never three.
-    expect(offeredModes(['friend', 'bot', 'solo'])).toEqual(['friend', 'bot']);
-    expect(offeredModes(['friend', 'solo'])).toEqual(['friend']);
+    // Six games declare all three, and for a long time the third came back empty-handed
+    // here: the shell had no branch for it. #1750 built the branch, and this line used to
+    // assert the opposite.
+    expect(offeredModes(['friend', 'bot', 'solo'])).toEqual(['friend', 'bot', 'solo']);
+    expect(offeredModes(['friend', 'bot', 'remote'])).toEqual(['friend', 'bot']);
+    expect(offeredModes(['friend', 'online'])).toEqual(['friend']);
   });
 
   it('keeps the game’s own order, so the caller owns the ordering rule', () => {
@@ -281,7 +288,6 @@ describe('narrowing a game’s declaration to what the lobby can offer', () => {
 
   it('answers with nothing rather than guessing when a game declares nothing it can run', () => {
     expect(offeredModes([])).toEqual([]);
-    expect(offeredModes(['solo'])).toEqual([]);
     expect(offeredModes(['remote', 'online'])).toEqual([]);
   });
 });
@@ -308,5 +314,25 @@ describe('every game in the catalogue', () => {
       'these games declare no mode the shell can start, so their lobby draws no button:\n' +
         dead.join('\n'),
     ).toEqual([]);
+  });
+});
+
+describe('a solo run (#1750)', () => {
+  it('seats no bot: nobody is in the far seat, which is not the same as a bot being there', () => {
+    expect(botSeatsFor('solo', 'hard')).toBeUndefined();
+    expect(botSeatsFor('bot', 'hard')).toEqual({ p2: 'hard' });
+  });
+
+  it('is the one mode that puts a player alone', () => {
+    expect(isSolo('solo')).toBe(true);
+    expect(isSolo('friend')).toBe(false);
+    expect(isSolo('bot')).toBe(false);
+  });
+
+  it('is always one round, decided by the game, whatever length was remembered', () => {
+    const rules = soloRules();
+    expect(rules.rounds).toBe(1);
+    expect(rules.win).toEqual({ kind: 'first-to', target: 1 });
+    expect(rules.countdownSeconds).toBe(3);
   });
 });

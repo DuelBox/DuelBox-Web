@@ -73,7 +73,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Eleven things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Twelve things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -99,6 +99,10 @@ export default function PrivacyPage() {
             settings page shows them and puts either seat back to its defaults.
           </li>
           <li>The order you last sorted the catalogue in, so it opens the same way next time.</li>
+          <li>
+            Your best score in each game you have played solo, so a score-attack has a number to
+            beat. Only the best, never the run: how many tries it took is not written down.
+          </li>
           <li>
             Whether you said &ldquo;not now&rdquo; to adding DuelBox to your home screen, and when,
             so you are not asked again for a month; and whether you added it.

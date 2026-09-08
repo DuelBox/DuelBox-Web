@@ -217,6 +217,14 @@ export interface MatchState extends Position {
    */
   scoredP1: number;
   scoredP2: number;
+  /**
+   * One seat, never handed over (#1750). Set from `GameContext.solo`: the turn stays with
+   * `p1` after every shape, every placement settles the score at once — there is no "round of
+   * two" to wait for — and the match ends on the ordinary condition, the deal running out or
+   * nothing in the tray fitting anywhere. `winnerOf` then compares `p1` to a `p2` that never
+   * moved, which the shell reads as "the run is over" and not as a winner.
+   */
+  readonly solo: boolean;
 }
 
 function emptyPosition(): Position {
@@ -235,7 +243,7 @@ function emptyPosition(): Position {
  * one tray four three-by-threes by luck; and because it is drawn before the first move, no
  * later draw can depend on how the game went.
  */
-export function createMatch(rng: Rng, openingSeat: SeatId = 'p1'): MatchState {
+export function createMatch(rng: Rng, openingSeat: SeatId = 'p1', solo = false): MatchState {
   const deal = new Int8Array(PIECES_PER_MATCH);
   const bag: number[] = [];
   for (let i = 0; i < PIECES_PER_MATCH; i += 1) {
@@ -257,11 +265,14 @@ export function createMatch(rng: Rng, openingSeat: SeatId = 'p1'): MatchState {
     placedCells: new Uint8Array(CELL_COUNT),
     dealt: 0,
     placed: 0,
-    active: openingSeat,
+    // Solo always opens on the one seat there is; a coin that landed on `p2` would wait
+    // forever for a player who is not there.
+    active: solo ? 'p1' : openingSeat,
     lastGain: 0,
     lastLoss: 0,
     scoredP1: 0,
     scoredP2: 0,
+    solo,
   };
   refill(state);
   return state;
@@ -472,12 +483,12 @@ export function playMove(state: MatchState, move: number): number {
   state.placed += 1;
   // The round has closed: both seats have now placed the same number of shapes, so the
   // score is safe to settle. See `winnerOf` for why an unclosed round is not.
-  if (state.placed % 2 === 0) {
+  if (state.solo || state.placed % 2 === 0) {
     state.scoredP1 = state.p1;
     state.scoredP2 = state.p2;
   }
   refill(state);
-  state.active = otherOf(seat);
+  state.active = state.solo ? seat : otherOf(seat);
   return gain;
 }
 

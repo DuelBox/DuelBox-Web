@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { initialMatchState, type MatchState } from '@duelbox/game-sdk';
 import { seatNamesFor } from './seats.js';
-import { resultAnnouncement, type AnnouncableState } from './match-announcement.js';
+import {
+  resultAnnouncement,
+  soloAnnouncement,
+  type AnnouncableState,
+} from './match-announcement.js';
 
 const NAMES = seatNamesFor();
 
@@ -89,5 +93,36 @@ describe('the result announcement', () => {
     const said = resultAnnouncement(state({ phase: 'match-over', matchOutcome: 'p2' }), 1, names);
     expect(said).toBe(`Game over. ${names.p2} wins.`);
     expect(said).toContain('(bot)');
+  });
+});
+
+describe('the solo announcement (#1750)', () => {
+  const over = {
+    phase: 'match-over' as const,
+    round: 1,
+    roundOutcome: 'p1' as const,
+    matchOutcome: 'p1' as const,
+    roundWins: { p1: 1, p2: 0 },
+  };
+
+  it('names no winner, because there was nobody to beat', () => {
+    const said = soloAnnouncement(over, { score: 12, best: 20, isNewBest: false });
+    expect(said).toBe('Game over. Score 12. Best 20.');
+    expect(said).not.toMatch(/wins|draw/);
+  });
+
+  it('says when the run set a new best rather than repeating the same number twice', () => {
+    expect(soloAnnouncement(over, { score: 21, best: 21, isNewBest: true })).toBe(
+      'Game over. Score 21. A new best.',
+    );
+  });
+
+  it('says nothing before the run is over, and nothing about a run the machine did not settle', () => {
+    expect(
+      soloAnnouncement({ ...over, phase: 'playing' }, { score: 1, best: 1, isNewBest: true }),
+    ).toBe('');
+    expect(
+      soloAnnouncement({ ...over, matchOutcome: null }, { score: 1, best: 1, isNewBest: true }),
+    ).toBe('');
   });
 });

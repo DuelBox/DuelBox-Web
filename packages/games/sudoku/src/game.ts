@@ -164,7 +164,7 @@ export class SudokuGame implements Game {
     // playing, which one shared generator cannot promise the moment a turn's draw count
     // starts depending on the position — and here it does, because a turn costs one draw
     // per square the mover may answer.
-    this.#state = createMatch(context.rng, context.openingSeat);
+    this.#state = createMatch(context.rng, context.openingSeat, undefined, context.solo === true);
     this.#rngP1 = new Rng(context.rng.int(1, 0x7fff_ffff));
     this.#rngP2 = new Rng(context.rng.int(1, 0x7fff_ffff));
 

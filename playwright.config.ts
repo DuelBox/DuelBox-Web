@@ -154,6 +154,11 @@ const CHROMIUM_ONLY = [
   // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
   // no-op there, so a second engine would be four copies of a hidden button (#195).
   '**/install-prompt.spec.ts',
+  // `attract-mode.spec.ts` (#165) stubs `navigator.getBattery` and `navigator.connection`,
+  // which are Chromium's alone — WebKit has neither, so the stubs would stub nothing — and a
+  // bot-versus-bot match is the same simulation on every engine by rule 8. A second engine
+  // would re-run the catalogue's idle timer to learn nothing.
+  '**/attract-mode.spec.ts',
   // `download-all.spec.ts` (#196) proves a downloaded game opens with the network gone, which
   // needs `context.setOffline` — Chromium and Firefox only, for the reason `offline.spec.ts`
   // sets out at length: a route-abort does not reach a worker's own fetch.
