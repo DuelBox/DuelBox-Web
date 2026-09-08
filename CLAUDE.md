@@ -100,7 +100,7 @@ the nightly workflow runs — the suite passes on Firefox and has since it was f
 tried, so paying for a third engine on every push buys nothing. If a nightly ever
 fails, move it back to every push.
 
-**Three things run nightly rather than on every push, and the gate above does not
+**Four things run nightly rather than on every push, and the gate above does not
 cover them.** The third browser engine; the deep seat-balance sample
 (`pnpm balance:audit`, 250 seeds a game against the push gate's 50, plus an `easy`
 and `hard` pass); and **the coverage gate** (`pnpm test:coverage`, 70% of lines,
