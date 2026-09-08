@@ -60,7 +60,7 @@ not aspirational. All figures are **gzipped bytes, because that is what crosses 
 | **Legacy polyfills** | `legacyPolyfillBytes` — **40.0 KB** (40,960 B) | `polyfills-*.js`, which Next references as `<script nomodule>`. No engine in tiers 1 or 2 of `docs/support-matrix.md` fetches it; only the tier-3 engines that document says are not supported. Budgeted rather than exempt, because the file is the framework's. |
 | **On demand** | `onDemandBytes` — **51.0 KB** (52,224 B) | The play route's own scripts plus anything reached by an `import()`. Nobody downloads it by arriving; it is paid when a player commits to a game. |
 | **One game chunk** | `gameChunkBytes` — **12.0 KB** (12,288 B) | The marginal cost of the one game a player actually picked. One chunk per game is the whole point of the layout. |
-| **Speculated** | `speculatedBytes` — **480.0 KB** (491,520 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. |
+| **Speculated** | `speculatedBytes` — **496.0 KB** (507,904 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. |
 
 **The shell number moved 163.0 → 129.0 without the shell shrinking.** It stopped counting the
 polyfills, which are now the row below it: the old figure billed 38.5 KB nobody supported
