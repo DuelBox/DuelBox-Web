@@ -17,12 +17,19 @@ import { expect, test, type Page } from '@playwright/test';
 const PORTRAIT_GAME = 'road-dodge';
 const ANY_GAME = 'chess';
 
+/**
+ * Starts a match and returns as soon as the lobby is gone.
+ *
+ * Deliberately **not** waiting for the countdown to finish. The prompt is up for every live
+ * phase, countdown included, so waiting for the count to run out adds a dependency on how
+ * fast a CI runner loads a game chunk and nothing else — which is exactly what it cost: two
+ * shards timed out at ten seconds on a spec that passes in under one locally.
+ */
 async function play(page: Page, game: string) {
   await page.goto(`/play/${game}/`);
-  await page.getByRole('button', { name: 'Play together here' }).click();
-  await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
-    timeout: 10_000,
-  });
+  const start = page.getByRole('button', { name: 'Play together here' });
+  await start.click();
+  await expect(start).toBeHidden();
 }
 
 const prompt = (page: Page) => page.getByText(/Turn the device (upright|sideways)/i);
