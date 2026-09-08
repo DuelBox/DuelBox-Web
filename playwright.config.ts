@@ -158,7 +158,16 @@ const CHROMIUM_ONLY = [
  * which the defect never showed. Two projects, then, and not four: the second Chromium and
  * the second WebKit would each be the same verdict a third time.
  */
-const ONE_PER_ENGINE = ['**/touch-targets.spec.ts', '**/screen-reader.spec.ts'];
+const ONE_PER_ENGINE = [
+  '**/touch-targets.spec.ts',
+  '**/screen-reader.spec.ts',
+  // `rotate-prompt.spec.ts` (#136) sets a portrait and a landscape viewport of its own, per
+  // test, because which way up the device is *is* the thing under test. On a project that has
+  // already chosen one, running it again measures the viewport this spec set either way — so
+  // four projects would be four copies of two measurements, and the two that matter are one
+  // per engine.
+  '**/rotate-prompt.spec.ts',
+];
 
 export default defineConfig({
   testDir: './e2e',
