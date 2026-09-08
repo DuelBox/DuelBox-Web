@@ -78,6 +78,12 @@ export interface GameHostProps {
   openingSeat?: SeatId;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
   /**
+   * One player alone (#1750): handed to the game as `GameContext.solo`, and nothing else in
+   * this host changes for it. The far seat simply never receives input, never holds a bot,
+   * and — because the game keeps the turn — never becomes the active seat.
+   */
+  solo?: boolean;
+  /**
    * One fixed simulation step elapsed. Fires in every running phase, including the
    * countdown, so the shell's clock advances on the same timestep as the physics rather
    * than on a separate wall-clock timer that two devices would disagree about.
@@ -184,6 +190,7 @@ export function GameHost({
   openingSeat = 'p1',
   peerLogical,
   botDifficulty,
+  solo = false,
   onTick,
   onScore,
   onActiveSeat,
@@ -360,6 +367,7 @@ export function GameHost({
       // next one would honour it. The direct read answers before the game exists (#175).
       reducedMotion: prefersReducedMotion(),
       botDifficulty: (seat) => botDifficulty?.[seat] ?? null,
+      solo,
     };
     game.init(gameContext);
 
@@ -851,6 +859,7 @@ export function GameHost({
     openingSeat,
     peerLogical,
     botDifficulty,
+    solo,
     recordTrace,
   ]);
 

@@ -361,6 +361,14 @@ export interface Match {
   winner: SeatId | 'draw' | null;
   /** Seconds the match has run, for the backstop. */
   elapsed: number;
+  /**
+   * One yard, not two (#1750). Set from `GameContext.solo` by `resetMatch`: the far yard is
+   * never stepped, so nothing is ever dealt to it and it can neither stand nor fall, and the
+   * run ends when the near yard is done — every animal placed or the tower down — or the
+   * clock runs out. `decide` then names a seat because `resolve` has no other vocabulary; the
+   * shell reads the name as "the run is over" and the count as the score.
+   */
+  solo: boolean;
 }
 
 function createPlaced(): Placed {
@@ -407,6 +415,7 @@ export function createMatch(): Match {
     phase: 'playing',
     winner: null,
     elapsed: 0,
+    solo: false,
   };
 }
 
@@ -436,7 +445,7 @@ function resetYard(yard: Yard): void {
   yard.since = 0;
 }
 
-export function resetMatch(match: Match): void {
+export function resetMatch(match: Match, solo = false): void {
   resetYard(match.p1);
   resetYard(match.p2);
   // The three deal arrays are cleared as well as `drawn`, so a reset match is
@@ -452,6 +461,7 @@ export function resetMatch(match: Match): void {
   match.phase = 'playing';
   match.winner = null;
   match.elapsed = 0;
+  match.solo = solo;
 }
 
 export function yardOf(match: Match, seat: SeatId): Yard {
@@ -950,7 +960,8 @@ export function decide(match: Match): void {
   const p1Out = fallenOf(match.p1);
   const p2Out = fallenOf(match.p2);
   options.eliminated = p1Out ? (p2Out ? BOTH_OUT : P1_OUT) : p2Out ? P2_OUT : NOBODY_OUT;
-  options.timeExpired = spent(match) || match.elapsed >= ROUND_SECONDS;
+  options.timeExpired =
+    (match.solo ? done(match.p1) : spent(match)) || match.elapsed >= ROUND_SECONDS;
   const outcome = resolve(CONDITION, tally, options);
   if (outcome === null) return;
   match.phase = 'over';
@@ -983,7 +994,9 @@ export function step(
 
   match.elapsed += fixedDeltaSeconds;
   result.p1 = stepYard(match, match.p1, p1Intent, fixedDeltaSeconds, rng);
-  result.p2 = stepYard(match, match.p2, p2Intent, fixedDeltaSeconds, rng);
+  // The far yard of a solo run is never stepped: nothing is dealt to it, so it never stands
+  // and never falls, and the run is decided on the near yard alone.
+  if (!match.solo) result.p2 = stepYard(match, match.p2, p2Intent, fixedDeltaSeconds, rng);
   decide(match);
   return result;
 }

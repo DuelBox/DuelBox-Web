@@ -6,7 +6,8 @@ import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
 import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
-import { resultAnnouncement } from '@/lib/match-announcement';
+import { resultAnnouncement, soloAnnouncement } from '@/lib/match-announcement';
+import type { RunResult } from '@/lib/best-scores';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
 import { countdownViews } from './countdown-views';
@@ -71,10 +72,17 @@ export interface MatchOverlayProps {
   onRematch: () => void;
   /** Restart the match cleanly from the pause menu (#145). */
   onRestart: () => void;
+  /**
+   * A solo run's result (#1750), once the machine has settled it. Present only in solo mode:
+   * the ending is then a score against this device's best rather than a winner, the
+   * head-to-head line and the share card are not offered (there was nobody on the other side
+   * of either), and the way on is "Go again" rather than "Rematch".
+   */
+  solo?: RunResult | undefined;
 }
 
 export function MatchOverlay(props: MatchOverlayProps) {
-  const { state, rounds, seatNames } = props;
+  const { state, rounds, seatNames, solo } = props;
   return (
     <>
       {/*
@@ -93,7 +101,9 @@ export function MatchOverlay(props: MatchOverlayProps) {
         `lib/match-announcement.ts` explains why it says them exactly once.
       */}
       <p className="db-visually-hidden" role="status" aria-live="assertive" aria-atomic="true">
-        {resultAnnouncement(state, rounds, seatNames)}
+        {solo === undefined
+          ? resultAnnouncement(state, rounds, seatNames)
+          : soloAnnouncement(state, solo)}
       </p>
       <Phase {...props} />
     </>
@@ -116,6 +126,7 @@ function Phase({
   onNextRound,
   onRematch,
   onRestart,
+  solo,
 }: MatchOverlayProps) {
   switch (state.phase) {
     case 'countdown':
@@ -185,6 +196,34 @@ function Phase({
       );
 
     case 'match-over':
+      if (solo !== undefined) {
+        // One person, one number, and the one they are trying to beat. No winner line — the
+        // machine settled the run with a seat in `matchOutcome` because that is its only
+        // vocabulary, and which seat it named is not a result anybody is shown.
+        return (
+          <Panel heading="Game over" role="group">
+            <p className={styles.winner}>Score {solo.score}</p>
+            <p className={styles.detail}>
+              {solo.isNewBest
+                ? 'A new best on this device.'
+                : `Best on this device: ${String(solo.best)}.`}
+            </p>
+            <div className={styles.actions}>
+              <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
+                Go again
+              </button>
+              {nextGame ? (
+                <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
+                  Play {nextGame.name}
+                </Link>
+              ) : null}
+            </div>
+            <Link className={styles.back} href="/games" prefetch={false}>
+              Back to all games
+            </Link>
+          </Panel>
+        );
+      }
       return (
         <Panel heading={rounds > 1 ? 'Match over' : 'Game over'} role="group">
           <Winner outcome={state.matchOutcome} seatNames={seatNames} />

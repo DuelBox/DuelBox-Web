@@ -173,15 +173,25 @@ function describeOrientations(entries) {
  *
  * 1. A MODE NOTHING CAN START.
  *
- * `packages/game-sdk`'s vocabulary is `friend | bot | solo`. The shell's is `friend | bot`:
- * `PlayMode` in `apps/web/src/lib/match-setup.ts` has two members, `botSeatsFor` has a branch
- * for one of them and returns `undefined` for everything else, and `PlaySurface` draws a
- * button per member of the intersection. There is no route, no reducer state and no seating
- * rule anywhere in `apps/web` that puts one player alone in a match. A game declaring `solo`
- * is therefore not making a claim a game can keep or break — it is naming a mode the product
- * has no code path to reach, and no game can implement it. That is checked by reading
- * `PLAY_MODES` out of the shell's own source rather than restating it here, so the day a mode
- * is genuinely built the list moves once and this follows.
+ * `packages/game-sdk`'s vocabulary is `friend | bot | solo` and so, since #1750, is the
+ * shell's: `PlayMode` in `apps/web/src/lib/match-setup.ts` has three members, `PlaySurface`
+ * draws a button per member of the intersection, and `isSolo` is the branch that seats one
+ * player alone. For a long time it was two members, six manifests declared the third, and
+ * this block carried a list of those six as a known gap — a mode the product had no code path
+ * to reach, which no game could implement. The list is gone because the gap is. What stays
+ * is the rule: the startable modes are read out of the shell's own source rather than
+ * restated here, so the day the SDK grows a fourth word, a manifest declaring it fails this
+ * check until the shell has a branch for it.
+ *
+ * 3. A GAME THAT DECLARES `solo` AND HANDS THE TURN TO NOBODY.
+ *
+ * `GameContext.solo` is a promise the game keeps or breaks: the far seat is never a human and
+ * never a bot, so a game that hands it the turn has stalled the run, and one that deals to it
+ * has scored a ghost. `soloFailureFor` plays each solo-declaring game with the flag set and
+ * the near seat idle and reads the active seat on every step — it must never be `p2` — and,
+ * on a split board, the far seat's count at the end, which must be zero. Idle rather than
+ * driven on purpose: a turn-board game whose clock forfeits the turn is exactly the case in
+ * which the hand-over happens with no move made, and it is the case that stalled.
  *
  * 2. A GAME THAT DECLARES `bot` AND HAS NONE.
  *
@@ -252,34 +262,14 @@ async function startableModes() {
 }
 
 /**
- * Declarations known to name a mode nothing can start, recorded rather than accepted.
- *
- * These six manifests declare `solo`. Their own comments say why, and the reason is honest:
- * the catalogue row records the reference app's game, which is solitaire, and `solo` stays in
- * the manifest so that `catalogue-manifest.test.ts` does not report the row and the manifest
- * as disagreeing. The product cannot start any of them — `/games/sudoku/` renders a "Play
- * solo. Chase your own best score, no opponent needed." card and `/play/sudoku/` offers "Play
- * together here" and "Play against Pip" and nothing else — so six landing pages promise a mode
- * the lobby one click away does not have. It is #2531's defect turned around: the catalogue
- * and the manifests now agree, and what they agree on is still not true of the product.
- *
- * They are listed rather than waved through, and the list is held from both ends: a
- * declaration that is NOT here fails the build outright, and an entry here that has stopped
- * being true fails the build too, saying to delete the line. A quarantine that can only grow
- * is a second way of spelling "ignored".
- *
- * The fix is one word out of six manifests and six catalogue rows. Both are outside the file
- * set of the pass that wrote this, which is the only reason it is a list and not a diff.
+ * Six manifests declare `solo` — animal-stack, blocks, brainrot-stack, maze-paint, solitaire
+ * and sudoku — and until #1750 this file carried them as a quarantine: a list of declarations
+ * the product could not start, held from both ends so it could neither grow nor go stale. The
+ * list is gone because the mode exists now. What replaced it is not a list but a run:
+ * `soloFailureFor` below plays every solo-declaring game with `GameContext.solo` set and
+ * fails the build if the far seat is ever asked to move, which is the claim a manifest is
+ * actually making when it writes the word.
  */
-const UNSTARTABLE_DECLARATIONS = [
-  ['animal-stack', 'solo'],
-  ['blocks', 'solo'],
-  ['brainrot-stack', 'solo'],
-  ['maze-paint', 'solo'],
-  ['solitaire', 'solo'],
-  ['sudoku', 'solo'],
-];
-
 /**
  * A short, deterministic record of what a match looked like, hashed.
  *
@@ -387,33 +377,19 @@ function botFailureFor(name, manifest, create, engine) {
 }
 
 /**
- * Both play-mode checks, over every manifest that parsed.
+ * All three play-mode checks, over every manifest that parsed.
  *
  * Failures and notes come back separately: a note is printed on every run whether or not the
- * build fails, because a quarantined declaration nobody is ever shown is a declaration nobody
- * will ever fix.
+ * build fails, so what was checked behaviourally is on the record beside what failed.
  */
 async function checkPlayModes(entries) {
   const failures = [];
   const notes = [];
   const startable = await startableModes();
 
-  const quarantined = new Set(UNSTARTABLE_DECLARATIONS.map(([id, mode]) => `${id} ${mode}`));
-  const used = new Set();
-
   for (const { name, manifest } of entries) {
     for (const mode of manifest.modes) {
       if (startable.has(mode)) continue;
-      const key = `${name} ${mode}`;
-      if (quarantined.has(key)) {
-        used.add(key);
-        notes.push(
-          `${name}: declares "${mode}", which nothing in apps/web can start. Known, and ` +
-            'recorded in scripts/validate-manifests.mjs (#1749): its landing page offers the ' +
-            'mode and its lobby has no button for it.',
-        );
-        continue;
-      }
       failures.push(
         `${name}: declares the mode "${mode}", which the shell cannot start. ` +
           `apps/web/src/lib/match-setup.ts offers ${[...startable].join(' and ')}, and the ` +
@@ -422,15 +398,6 @@ async function checkPlayModes(entries) {
           'shell first, or take it out of the manifest.',
       );
     }
-  }
-
-  for (const [id, mode] of UNSTARTABLE_DECLARATIONS) {
-    if (used.has(`${id} ${mode}`)) continue;
-    failures.push(
-      `${id}: is recorded in validate-manifests.mjs as declaring the unstartable mode ` +
-        `"${mode}" and no longer does. Delete that line — a list of known-bad declarations ` +
-        'that keeps entries after they are fixed stops being evidence of anything.',
-    );
   }
 
   const wantBots = entries.filter(({ manifest }) => manifest.modes.includes('bot'));
@@ -466,7 +433,85 @@ async function checkPlayModes(entries) {
     }
   }
 
+  const wantSolo = entries.filter(({ manifest }) => manifest.modes.includes('solo'));
+  if (wantSolo.length > 0) {
+    const engine = await import(
+      pathToFileURL(join(root, 'packages', 'engine', 'dist', 'index.js')).href
+    );
+    for (const { name, manifest } of wantSolo) {
+      const distModule = join(gamesDir, name, 'dist', 'index.js');
+      let create;
+      try {
+        const loaded = await import(pathToFileURL(distModule).href);
+        create = (loaded.default ?? loaded).create;
+      } catch (error) {
+        failures.push(
+          `${name}: declares "solo" and its module failed to load — ${String(error).slice(0, 200)}`,
+        );
+        continue;
+      }
+      if (typeof create !== 'function') {
+        failures.push(`${name}: declares "solo" but exports no create(), so nothing can play it`);
+        continue;
+      }
+      const failure = soloFailureFor(name, manifest, create, engine);
+      if (failure !== null) failures.push(failure);
+      else notes.push(`${name}: solo keeps the turn on p1 and deals nothing to the far seat`);
+    }
+  }
+
   return { failures, notes };
+}
+
+/**
+ * Play a solo run with the near seat idle and watch the far seat (#1750).
+ *
+ * Nothing is synthesised for `p1`, deliberately. The failure this looks for is a game that
+ * hands the turn to a seat nobody is in, and the ordinary way that happens is a turn ending
+ * with no move made — a clock running out, a forfeit — which an idle seat produces on every
+ * turn. A game that keeps the turn under those conditions keeps it under all of them.
+ */
+function soloFailureFor(name, manifest, create, engine) {
+  const { InputManager, InputView, Rng } = engine;
+  const game = create();
+  try {
+    game.init({
+      manifest,
+      rng: new Rng(TRACE_SEED),
+      presentation: 'single-seat',
+      localSeat: 'p1',
+      openingSeat: 'p1',
+      reducedMotion: false,
+      botDifficulty: () => null,
+      solo: true,
+    });
+    const input = new InputManager(manifest.logical, {
+      split: manifest.zoneSplit === 'vertical' ? 'vertical' : 'horizontal',
+      bottomSeat: 'p1',
+    });
+    const view = new InputView();
+    for (let step = 0; step < TRACE_STEPS; step += 1) {
+      game.update(TRACE_STEP_SECONDS, view.sync(input.beginStep(TRACE_STEP_SECONDS)));
+      const active = game.getActiveSeat?.() ?? null;
+      if (active === 'p2') {
+        return (
+          `${name}: declares "solo" and handed the turn to p2 on step ${String(step)} with ` +
+          'nobody in that seat. A solo run keeps the turn on p1 — see GameContext.solo.'
+        );
+      }
+    }
+    if (manifest.zoneSplit !== 'shared-board' && game.getScore().p2 !== 0) {
+      return (
+        `${name}: declares "solo" and the far seat scored ${String(game.getScore().p2)} in a ` +
+        'run nobody was in. A split board deals nothing to the far half of a solo run.'
+      );
+    }
+  } catch (error) {
+    return `${name}: declares "solo" and threw playing one — ${String(error).slice(0, 200)}`;
+  } finally {
+    game.destroy?.();
+  }
+  return null;
 }
 
 await main();

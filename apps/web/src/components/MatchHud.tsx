@@ -45,6 +45,13 @@ export interface MatchHudProps {
   botSeats?: Readonly<Partial<Record<SeatId, unknown>>> | undefined;
   onPause?: (() => void) | undefined;
   /**
+   * One seat, not two (#1750). A solo run has nobody in the far seat, so the far half of
+   * the scoreboard is not drawn at all rather than drawn empty: a "vs" against a name with a
+   * zero under it is a claim there is somebody to play against. The middle keeps the round
+   * label and the clock, which are about the run and not about a second player.
+   */
+  solo?: boolean | undefined;
+  /**
    * The round/match clock, already formatted as `m:ss` by the SDK's `formatClock` (#149).
    *
    * Absent for an untimed game, which is every game in the catalogue today, so the HUD is
@@ -66,6 +73,7 @@ export function MatchHud({
   flipped = false,
   clock,
   clockWarning = false,
+  solo = false,
 }: MatchHudProps) {
   const canPause = state.phase === 'playing' || state.phase === 'countdown';
   return (
@@ -93,7 +101,7 @@ export function MatchHud({
             <RoundPips rounds={rounds} state={state} seatNames={seatNames} />
           </>
         ) : (
-          <span className={styles.label}>vs</span>
+          <span className={styles.label}>{solo ? 'solo' : 'vs'}</span>
         )}
         {clock === undefined ? null : (
           // The clock the SDK drives (#149). Monospace and tabular so the digits do not
@@ -109,15 +117,17 @@ export function MatchHud({
         )}
       </div>
 
-      <Seat
-        seat="p2"
-        state={state}
-        activeSeat={activeSeat}
-        name={seatNames.p2}
-        isBot={botSeats?.p2 !== undefined}
-        silent={flipped}
-        right
-      />
+      {solo ? null : (
+        <Seat
+          seat="p2"
+          state={state}
+          activeSeat={activeSeat}
+          name={seatNames.p2}
+          isBot={botSeats?.p2 !== undefined}
+          silent={flipped}
+          right
+        />
+      )}
 
       {flipped ? null : (
         /*
