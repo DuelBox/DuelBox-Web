@@ -17,9 +17,29 @@
   min-height: var(--db-touch-target);
 }
 
+/*
+ * The art beside the words, and the one column on this page that had to be told to stop.
+ *
+ * `18rem` is a reading measure for the tile, and a `rem` grows with the root font size —
+ * which is exactly what WCAG 1.4.4 does to it. At 200% text `18rem` is 576px, so on a
+ * 1024px viewport the art claimed 56% of the width and left the column beside it 288px;
+ * the controls list inside that column then could not fit its own two tracks and pushed
+ * the page to a scrollWidth of 1083. `e2e/zoom.spec.ts` had been failing on
+ * `/games/air-hockey/` for both 1.4.4 (resize text) and 1.4.10 (reflow) on every run.
+ *
+ * The media query below cannot help, because a media query's `rem` is the *initial* root
+ * font size — 16px whatever the user has chosen — so `max-width: 40rem` is 640px at 200%
+ * text just as it is at 100%, and a 1024px viewport never reaches it. That is the trap: the
+ * responsive rule reads as though it covers this and does not.
+ *
+ * `min(18rem, 40%)` keeps the tile at its measure whenever there is room and makes the
+ * percentage the ceiling when there is not, so the art can never take more than its share
+ * of a viewport however large the text is. Percentages resolve against the container rather
+ * than the font, which is the property this needs.
+ */
 .top {
   display: grid;
-  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, min(18rem, 40%)) minmax(0, 1fr);
   gap: var(--db-space-6);
   align-items: start;
 }
@@ -147,11 +167,23 @@
   vertical-align: top;
 }
 
-/* Controls per seat, from the game's own manifest — the same words the play page uses. */
+/*
+ * Controls per seat, from the game's own manifest — the same words the play page uses.
+ *
+ * `minmax(0, 1fr)` rather than `1fr`, which is the same correction the `.top` grid above
+ * carries and for the same reason: a bare `1fr` is `minmax(auto, 1fr)`, and that `auto`
+ * floor is the track's min-content width, so the column refuses to shrink below the widest
+ * word in it and overflows its container instead. Measured while fixing the reflow failure
+ * above: this list resolved to tracks of 224.906px and 138.266px inside a 288px box.
+ *
+ * Capping the art column is what actually fixed the page, and this is a latent version of
+ * the same defect a narrower viewport would have found later, so it is fixed here rather
+ * than left for it.
+ */
 .controls {
   margin-top: var(--db-space-5);
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: var(--db-space-2) var(--db-space-4);
   align-items: baseline;
 }
