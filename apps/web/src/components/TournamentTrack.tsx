@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { SeatNames } from '@/lib/seats';
+import type { BotDifficulty } from '@/lib/match-setup';
 import {
   legsPlayed,
   tournamentOutcome,
@@ -45,10 +46,23 @@ export interface TournamentTrackProps {
   onPlay?: (() => void) | undefined;
   /** Where the tournament is waiting, when it is waiting somewhere other than here. */
   href?: string | undefined;
+  /**
+   * The bot's tier for the whole tournament, when it is against the bot (#2347). Said on
+   * the track because the track is the one thing on every leg's screen, and a tier fixed
+   * for seven games has to be readable in all seven.
+   */
+  tier?: BotDifficulty | undefined;
   onLeave: () => void;
 }
 
-export function TournamentTrack({ state, names, onPlay, href, onLeave }: TournamentTrackProps) {
+export function TournamentTrack({
+  state,
+  names,
+  onPlay,
+  href,
+  tier,
+  onLeave,
+}: TournamentTrackProps) {
   const played = legsPlayed(state);
   const score = tournamentScore(state);
   const outcome = tournamentOutcome(state);
@@ -101,6 +115,11 @@ export function TournamentTrack({ state, names, onPlay, href, onLeave }: Tournam
         {names.p1} {score.p1} — {score.p2} {names.p2}
         {score.draws > 0 ? `, ${score.draws} drawn` : ''}
       </p>
+      {tier === undefined ? null : (
+        <p className={styles.score}>
+          Bot skill: {tier} for all {state.games.length} games
+        </p>
+      )}
 
       <div className={styles.actions}>
         {onPlay === undefined ? null : (

@@ -37,6 +37,30 @@ async function storedGames(page: Page): Promise<string[]> {
 const track = (page: Page) => page.getByRole('group', { name: 'Tournament' });
 
 test.describe('starting a tournament', () => {
+  test('against the bot, fixes the tier chosen in the lobby for every leg (#2347)', async ({
+    page,
+  }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('radio', { name: /Easy/ }).check();
+    await page.getByRole('button', { name: /Tournament against/ }).click();
+
+    await expect(track(page)).toContainText('Game 1 of 7');
+    await expect(track(page)).toContainText('Bot skill: easy for all 7 games');
+    expect(JSON.parse((await storedText(page)) ?? 'null')).toMatchObject({
+      opponent: 'bot',
+      difficulty: 'easy',
+    });
+    // The lobby's own tier control stands down with the rest of the lobby on the leg the
+    // tournament is waiting on: there is nothing on this screen that could change it.
+    await expect(page.getByRole('radio', { name: /Easy/ })).toHaveCount(0);
+
+    // And a tournament with the other seat carries no tier, because there is no bot in it.
+    await page.getByRole('button', { name: 'Leave the tournament' }).click();
+    await page.getByRole('button', { name: 'Tournament together' }).click();
+    await expect(track(page)).not.toContainText('Bot skill');
+    expect(JSON.parse((await storedText(page)) ?? 'null')).not.toHaveProperty('difficulty');
+  });
+
   test('draws seven games with no repeat, and keeps them across a reload', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     await page.getByRole('button', { name: 'Tournament together' }).click();
@@ -142,13 +166,20 @@ test.describe('playing a tournament to the end', () => {
           games: ['crash-it', 'road-dodge'],
           results: [],
           opponent: 'bot',
+          // On the record rather than on this game's own option (#2347): the second leg is
+          // a different game with a different remembered tier, and the tournament's has to
+          // hold there too.
+          difficulty: 'hard',
         }),
       ] as const,
     );
     await page.reload();
 
     await expect(track(page)).toContainText('Game 1 of 2');
+    await expect(track(page)).toContainText('Bot skill: hard for all 2 games');
     await page.getByRole('button', { name: 'Play game 1' }).click();
+    // Shown throughout, on the scoreboard, and not only on the screen that chose it.
+    await expect(page.getByRole('group', { name: 'Score' })).toContainText('hard');
     await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible({ timeout: 25_000 });
 
     // The leg is reported the moment the match machine settles it, so the track has moved
@@ -157,7 +188,12 @@ test.describe('playing a tournament to the end', () => {
     expect(
       JSON.parse((await storedText(page)) ?? 'null'),
       'one finished leg is one result on the document',
-    ).toMatchObject({ version: 1, games: ['crash-it', 'road-dodge'], opponent: 'bot' });
+    ).toMatchObject({
+      version: 1,
+      games: ['crash-it', 'road-dodge'],
+      opponent: 'bot',
+      difficulty: 'hard',
+    });
     const afterOne = await page.evaluate(
       (key) =>
         (JSON.parse(globalThis.localStorage.getItem(key) ?? 'null') as { results: string[] })
@@ -174,8 +210,12 @@ test.describe('playing a tournament to the end', () => {
     await page.getByRole('link', { name: 'Go to game 2' }).click();
     await expect(page).toHaveURL(/\/play\/road-dodge\//);
     await expect(track(page)).toContainText('Game 2 of 2');
+    // Road Dodge has never had a tier chosen on it, so its own option still says normal —
+    // and the leg plays at the tournament's hard regardless. That is #2347's whole claim.
+    await expect(track(page)).toContainText('Bot skill: hard for all 2 games');
 
     await page.getByRole('button', { name: 'Play game 2' }).click();
+    await expect(page.getByRole('group', { name: 'Score' })).toContainText('hard');
     await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible({ timeout: 45_000 });
 
     // Both games played, so the tournament is decided one way or the other. Which way is
