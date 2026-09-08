@@ -42,3 +42,4 @@ e2e/__screenshots__/*-win32.png
 # provenance a hundred and nine times. apps/web/assets.license.json licenses the code that
 # draws them, which is the same answer rule 3 already takes for the catalogue tiles.
 apps/web/public/og/
+.lighthouseci/
