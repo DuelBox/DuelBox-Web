@@ -85,6 +85,9 @@ const underCoverage = process.env.DUELBOX_COVERAGE === '1';
  */
 const onCi = process.env.CI === 'true' || process.env.CI === '1';
 
+/** Set by `pnpm test:allocation`, the only way the rule 5 benchmark is run. */
+const runAllocation = process.env.DUELBOX_ALLOCATION === '1';
+
 /**
  * V8's internal optimisation controls, for the one file that cannot work without them.
  *
@@ -117,6 +120,40 @@ const NATIVES = ['--allow-natives-syntax'];
 export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.ts'],
+    /**
+     * The rule 5 benchmark, which is a measurement rather than a test and cannot share a
+     * machine with 363 other files.
+     *
+     * It counts bytes allocated per call by reading `used_heap_size` around a window of
+     * iterations, and it takes the median of nine such windows. Every one of those windows is
+     * shared with whatever else is running: another worker's scavenge inside a window makes it
+     * read low, another worker's allocation makes it read high, and on the four-core runner
+     * this repository uses — with two vitest workers and three e2e shards beside them — the
+     * same unchanged case has been measured at **0, 16, 32 and 40 bytes per call on
+     * consecutive runs**. 40 is "an object" in this file's own vocabulary. It is not.
+     *
+     * Two attempts to make it survive that are recorded in the file and neither was enough: a
+     * retry over medians (three attempts, lowest wins) and a ceiling widened to admit one
+     * boxed double, which is as far as it can be widened before it stops catching the objects,
+     * arrays, closures and strings rule 5 is actually about.
+     *
+     * So it moves to the nightly, on one worker, which is where this repository already puts
+     * the two other things that need a quiet machine to mean anything — the deep balance
+     * sample and the coverage gate. `nightly.yml` carries the same note and the trade:
+     * a per-frame allocation can now merge green and is caught the next morning. That is worse
+     * than catching it at the gate and much better than a gate that fails at random, because a
+     * gate that fails at random is one people learn to re-run.
+     *
+     * `pnpm test:allocation` runs it here, on demand, and is what to use when touching the
+     * step path. It sets `DUELBOX_ALLOCATION=1`, which is what lifts the exclusion below —
+     * without that, naming the file on the command line would find nothing, because an
+     * `exclude` outranks a filter.
+     */
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      ...(runAllocation ? [] : ['packages/engine/src/allocation.test.ts']),
+    ],
     environment: 'node',
     poolOptions: {
       forks: { execArgv: NATIVES },

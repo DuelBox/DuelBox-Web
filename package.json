@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:allocation": "DUELBOX_ALLOCATION=1 vitest run packages/engine/src/allocation.test.ts --maxWorkers=1",
     "test:watch": "vitest",
     "test:coverage": "DUELBOX_COVERAGE=1 vitest run --coverage",
     "clean": "tsc --build --clean && rm -rf packages/*/dist apps/*/.next",
