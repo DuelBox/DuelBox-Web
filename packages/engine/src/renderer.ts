@@ -246,6 +246,16 @@ export class Canvas2DRenderer implements Renderer {
    */
   #shakeDepth = 0;
   #reducedMotion = false;
+  /**
+   * Whether non-essential effects run this frame (#190, #31).
+   *
+   * Two switches, one answer. `#reducedMotion` is the player's preference; this is the
+   * device's situation — a battery running low, or an adaptive-quality rung with effects
+   * off — and either alone puts the renderer on its quiet path. Kept apart so a device that
+   * recovers does not take the player's preference with it, and read together through
+   * {@link Canvas2DRenderer.quiet} so there is one place the two are combined.
+   */
+  #effectsEnabled = true;
   #inFrame = false;
   /**
    * Whether the surface this renderer draws into is unusable as of now (#101).
@@ -291,9 +301,28 @@ export class Canvas2DRenderer implements Renderer {
     return this.#shakeDepth;
   }
 
-  /** The live preference, for the juice primitives that are levels rather than transforms. */
+  /**
+   * The live answer to "draw the cheap version of this", for the juice primitives that are
+   * levels rather than transforms.
+   *
+   * True for the player's reduced-motion preference *or* for a device that has asked for
+   * effects off — a low battery (#190) or an adaptive-quality rung with `effectsEnabled`
+   * false (#31). Both reach the games through this one member because this is the member
+   * every flash, hit-stop and shake already reads: a preference switch that fifty games
+   * honour is a switch a low battery can throw without any of them being edited.
+   */
   get reducedMotion(): boolean {
-    return this.#reducedMotion;
+    return this.quiet;
+  }
+
+  /** Whether non-essential effects are currently allowed by the device, as distinct from the player. */
+  get effectsEnabled(): boolean {
+    return this.#effectsEnabled;
+  }
+
+  /** The player's preference or the device's situation, whichever is asking for less. */
+  private get quiet(): boolean {
+    return this.#reducedMotion || !this.#effectsEnabled;
   }
 
   /**
@@ -602,6 +631,20 @@ export class Canvas2DRenderer implements Renderer {
     this.#reducedMotion = reduced;
   }
 
+  /**
+   * Switch non-essential effects on or off from the device's side (#190, #31).
+   *
+   * Set by the host from the battery reading and the adaptive-quality level, never from a
+   * game. It takes exactly the path reduced motion takes — the flash reads as steady, the
+   * hit-stop as nothing, the shake and the board's mid-turn sweep as their resting frames —
+   * because that path is already the one every game honours and already proven to change
+   * nothing the simulation reads. It does not touch the player's own preference: a device
+   * back on charge sees its effects return, and a player who asked for reduced motion keeps it.
+   */
+  setEffectsEnabled(enabled: boolean): void {
+    this.#effectsEnabled = enabled;
+  }
+
   pushRotation(radians: number): void {
     if (!Number.isFinite(radians)) {
       throw new RangeError(
@@ -610,7 +653,7 @@ export class Canvas2DRenderer implements Renderer {
     }
     // Snap to the nearest half turn: the board arrives the instant the turn changes
     // rather than sweeping there, and never rests at an angle nobody can read.
-    const angle = this.#reducedMotion ? Math.round(radians / HALF_TURN) * HALF_TURN : radians;
+    const angle = this.quiet ? Math.round(radians / HALF_TURN) * HALF_TURN : radians;
     const ctx = this.#context;
     // Saved whether or not there is any rotation, so pushes and pops balance for both
     // seats and the caller never has to branch on which one it is drawing.
@@ -660,7 +703,7 @@ export class Canvas2DRenderer implements Renderer {
     // caller never branches on the preference.
     ctx.save();
     this.#shakeDepth += 1;
-    if (this.#reducedMotion) return;
+    if (this.quiet) return;
     if (offsetX === 0 && offsetY === 0) return;
     ctx.translate(offsetX, offsetY);
   }

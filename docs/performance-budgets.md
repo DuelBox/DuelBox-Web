@@ -42,6 +42,16 @@ different and the fixed timestep makes the two independent:
 - **No per-frame allocation** in engine or game `update()` (CLAUDE.md rule 5), because GC
   pauses are how a 60 fps game becomes a 45 fps one for a frame — Penalty Kicks' bot-cost guard
   first failed on a single collection.
+- **Quality steps down before the frame rate does** (#31). `AdaptiveQuality` in the engine is fed
+  every animation frame's wall-clock length by the loop; two seconds averaging over the 1/60 s
+  budget steps the rung down (backing-store ratio 2 → 1.5 → 1, effects off on the last rung),
+  four seconds comfortably under steps it back up. A game may cap its own ratio with `dprCap`
+  in its manifest. All of it is presentation — the logical box and the fixed step never move.
+- **A low battery halves the picture, not the match** (#190). At or under 20% and off the cable
+  — the platforms' own Low Power Mode threshold — alternate frames are drawn and effects take
+  the reduced-motion path. WebKit exposes no battery API, so on every iPhone this is a no-op;
+  there is no thermal API on any browser, and nothing here pretends otherwise.
+  `e2e/adaptive-quality.spec.ts` measures the halving and holds the match clock to its time.
 
 The bot's per-step cost is already budgeted deterministically: `bot-cost.test.ts` fails a bot
 spending more than a frame on one step, and searching bots run under a `SearchBudget` node cap
@@ -58,7 +68,7 @@ not aspirational. All figures are **gzipped bytes, because that is what crosses 
 |---|---|---|
 | **Shell** | `shellBytes` — **129.0 KB** (132,096 B) | Everything a visitor downloads before choosing a game: the scripts every non-play route loads eagerly. Does not grow when a game is added, so it is the number worth defending. |
 | **Legacy polyfills** | `legacyPolyfillBytes` — **40.0 KB** (40,960 B) | `polyfills-*.js`, which Next references as `<script nomodule>`. No engine in tiers 1 or 2 of `docs/support-matrix.md` fetches it; only the tier-3 engines that document says are not supported. Budgeted rather than exempt, because the file is the framework's. |
-| **On demand** | `onDemandBytes` — **54.0 KB** (55,296 B) | The play route's own scripts plus anything reached by an `import()`. Nobody downloads it by arriving; it is paid when a player commits to a game. |
+| **On demand** | `onDemandBytes` — **56.0 KB** (57,344 B) | The play route's own scripts plus anything reached by an `import()`. Nobody downloads it by arriving; it is paid when a player commits to a game. |
 | **One game chunk** | `gameChunkBytes` — **12.0 KB** (12,288 B) | The marginal cost of the one game a player actually picked. One chunk per game is the whole point of the layout. |
 | **Speculated** | `speculatedBytes` — **496.0 KB** (507,904 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. |
 

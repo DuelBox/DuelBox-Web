@@ -864,6 +864,62 @@ describe('reduced motion', () => {
 });
 
 /**
+ * The device's own switch on effects (#190, #31), which takes the path above without touching
+ * the preference it shares it with.
+ */
+describe('effects switched off by the device', () => {
+  it('drops a shake exactly as reduced motion does', () => {
+    const { fake, renderer } = setup();
+    renderer.setEffectsEnabled(false);
+    renderer.pushShake(4, -3);
+    expect(countOp(fake, 'translate')).toBe(0);
+    renderer.popShake();
+  });
+
+  it('snaps a mid-turn rotation exactly as reduced motion does', () => {
+    const { fake, renderer } = setup();
+    renderer.setEffectsEnabled(false);
+    renderer.pushRotation(Math.PI * 0.6);
+    expect(valuesOf(fake, 'rotate')).toEqual([Math.PI]);
+    expect(countOp(fake, 'scale')).toBe(0);
+    renderer.popSeatRotation();
+  });
+
+  it('is what the juice primitives read, so a flash and a hit-stop go quiet with it', () => {
+    // `reducedMotion` is the member every Flash.levelFor / HitStop.holdingFor call reads,
+    // which is the whole reason the device's switch is routed through it.
+    const { renderer } = setup();
+    expect(renderer.reducedMotion).toBe(false);
+    renderer.setEffectsEnabled(false);
+    expect(renderer.reducedMotion).toBe(true);
+    expect(renderer.effectsEnabled).toBe(false);
+  });
+
+  it("leaves the player's preference where it was when the device recovers", () => {
+    const { fake, renderer } = setup();
+    renderer.setReducedMotion(true);
+    renderer.setEffectsEnabled(false);
+    renderer.setEffectsEnabled(true);
+    // Effects are back on the device's side; the player still asked for less.
+    expect(renderer.reducedMotion).toBe(true);
+    renderer.pushShake(4, -3);
+    expect(countOp(fake, 'translate')).toBe(0);
+    renderer.popShake();
+  });
+
+  it('gives the effects back when the device is fine and the player never asked', () => {
+    // The negative control: without it this block would pass against a switch stuck off.
+    const { fake, renderer } = setup();
+    renderer.setEffectsEnabled(false);
+    renderer.setEffectsEnabled(true);
+    expect(renderer.reducedMotion).toBe(false);
+    renderer.pushShake(4, -3);
+    expect(argsFor(fake, 'translate')).toEqual([[4, -3]]);
+    renderer.popShake();
+  });
+});
+
+/**
  * A hand-written stand-in for the canvas element a host watches.
  *
  * It keeps listeners by type and fires them on demand, and the event it fires records
