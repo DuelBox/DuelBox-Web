@@ -28,7 +28,7 @@ import { GridCursor } from './cursor.js';
 import { SeatFlip } from './flip.js';
 import { InputManager } from './input.js';
 import { InputView } from './input-view.js';
-import { Impact } from './juice.js';
+import { Impact, Shake } from './juice.js';
 import { LockstepSession } from './lockstep.js';
 import type { MatchConfig } from './lockstep.js';
 import { FixedLoop } from './loop.js';
@@ -249,7 +249,7 @@ const OPTIMISED = MAGLEV | TURBOFAN;
  */
 const natives = (() => {
   try {
-    /* eslint-disable no-new-func, @typescript-eslint/no-implied-eval */
+    /* eslint-disable @typescript-eslint/no-implied-eval */
     const prepare = new Function('f', '%PrepareFunctionForOptimization(f)') as (
       f: (i: number) => void,
     ) => void;
@@ -259,7 +259,7 @@ const natives = (() => {
     const status = new Function('f', 'return %GetOptimizationStatus(f)') as (
       f: (i: number) => void,
     ) => number;
-    /* eslint-enable no-new-func, @typescript-eslint/no-implied-eval */
+    /* eslint-enable @typescript-eslint/no-implied-eval */
     // Built successfully is not the same as working: without the flag the bodies parse as
     // a stray `%` and throw only when called. Prove one round trip on a throwaway function.
     // Its own sink, not the shared `SINK` below: this runs while the module is still being
@@ -538,42 +538,30 @@ function retainedBytesPerCall(make: (i: number) => unknown, count: number): numb
  * just demonstrated it will not show us.
  */
 const calibration = (() => {
-  // Deliberately shaped like `Shake`, the class the failure was traced to, and no smaller.
-  // A calibration that is easier to inline than the code it vouches for would come back
-  // clean on an engine that is about to fail the real thing, which is the one way this could
-  // be worse than useless. So it carries the same chain: a guard getter, a second getter
-  // that reads two double fields and calls through a third, and a mutator that compares
-  // against that getter before writing.
-  class Decaying {
-    #level = 0;
-    #span = 0;
-    #elapsed = 0;
-    readonly #curve: (x: number) => number;
-    constructor(curve: (x: number) => number) {
-      this.#curve = curve;
-    }
-    get running(): boolean {
-      return this.#elapsed < this.#span;
-    }
-    get level(): number {
-      if (!this.running) return 0;
-      return this.#level * this.#curve(1 - this.#elapsed / this.#span);
-    }
-    raise(to: number, span: number): void {
-      if (to <= this.level) return;
-      this.#level = to;
-      this.#span = span;
-      this.#elapsed = 0;
-    }
-    advance(by: number): void {
-      if (!this.running) return;
-      this.#elapsed += by;
-    }
-  }
-  const shape = new Decaying((x) => x * x);
+  // `Shake` itself, not an imitation of it, and that is the correction this replaces.
+  //
+  // The first version of this was a hand-written class shaped *like* `Shake` — a guard
+  // getter, a second getter reading two double fields and calling through a third. It was
+  // still easier to inline than the real thing, so CI inlined the calibration, declared the
+  // engine healthy, and failed `Impact.strike` at 16.000 exactly as before. A calibration
+  // that is cheaper than the code it vouches for is worse than none: it certifies eyesight
+  // the run does not have.
+  //
+  // The real class cannot be beaten on that, because it *is* the code. And it is
+  // allocation-free by construction rather than by measurement, which is what makes this
+  // honest rather than circular: read `Shake.kick` and `Shake.step` — between them they
+  // compare numbers, write four number fields and call a decay function that returns a
+  // number. There is no object, no array, no closure and no string on either path. Any
+  // reading above zero here is therefore boxing at a call boundary and nothing else, which
+  // is precisely the question being asked.
+  //
+  // Driven the way `Impact.strike`'s own case drives it — kick then step, with a magnitude
+  // that re-kicks — so the getter chain `kick` -> `intensity` -> the decay function through
+  // a field is exercised on every call. That chain is where the failure was traced to.
+  const shake = new Shake();
   return (i: number): void => {
-    shape.raise((i % 97) / 97, 0.2);
-    shape.advance(1 / 60);
+    shake.kick(0.02 + (i % 7) / 1000, 0.2);
+    shake.step(1 / 60);
   };
 })();
 
