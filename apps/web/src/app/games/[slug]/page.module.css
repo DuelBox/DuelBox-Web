@@ -150,7 +150,7 @@
   min-height: var(--db-touch-target);
   border-radius: var(--db-radius);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 4px 0 var(--db-brand-deep);
@@ -201,5 +201,59 @@
 
 .controls dd {
   margin: 0;
+  color: var(--db-muted);
+}
+
+/* This device's record for this game (#162).
+
+   Last in the detail column and stacked rather than laid out in two columns, and both of
+   those are about the one frame in which the counts arrive. A label beside its value would
+   have to be given a width to stop "Pip – , the bot –, – drawn" and "Pip 12, the bot 11, 10
+   drawn" wrapping to different numbers of lines at 320px; stacked, each value has the whole
+   column to itself and is one line at every width this page is read at, whatever the
+   figures. Nothing under it moves when storage is read. */
+.record {
+  margin-top: var(--db-space-5);
+  max-width: 34rem;
+}
+
+.recordTitle {
+  font-size: var(--db-text-lg);
+}
+
+.tallies {
+  display: grid;
+  gap: var(--db-space-3);
+  margin: var(--db-space-3) 0 0;
+}
+
+/* The same treatment as the control legend's labels above, because they are the same kind
+   of thing: the word that says what the line beside it is counting. */
+.tallies dt {
+  font-size: var(--db-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--db-muted);
+}
+
+/* Tabular figures so the counts sit under one another between the two rows, and `--db-body`
+   rather than `--db-muted` because this is the number the block exists to show.
+
+   The minimum height is the second half of the reservation above and is deliberately not
+   load-bearing today: the line is never empty, because a count that has not been read yet
+   is a dash rather than nothing. It is here so that a later change which does render
+   nothing while it waits cannot collapse the row and take the page with it. */
+.tallies dd {
+  margin: var(--db-space-1) 0 0;
+  min-height: 1.5em;
+  color: var(--db-body);
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.recordNote {
+  margin-top: var(--db-space-3);
+  font-size: var(--db-text-sm);
   color: var(--db-muted);
 }

@@ -177,6 +177,121 @@ files the same batch had open. What generalises is not any of the three. It is t
 written beside the thing it guards is tested against the defect that prompted it and nothing
 else, so **the sentence to distrust is the one in the docstring, not the one in the code**.
 
+The **eleventh** is rule 5 above, and it is the first entry that was never a guard at all —
+only a sentence. "No per-frame allocations in engine or game `update()`" had been believed
+since it was written and had never once been measured, and it was false in four places.
+`obbSegment` cost 125 bytes a call, `sweptCircleAabb` 94, `obbObb` 119, `aabbSegment` 95,
+`aabbObb` 40, and `InputManager.beginStep` 16 bytes on every step of every match in the
+collection, since every game reads its controls through it. None of it was visible to a
+reader, and that is the part worth keeping: the source allocates nothing, and what allocates
+is the *generated code* — a floating-point value crossing a call the optimiser has declined
+to inline cannot travel as a raw double, so V8 materialises it on the heap first. Inlining
+depends on the size of the calling function, which is why the same helper was free from one
+caller and expensive from another, and why reading the file could not have found it.
+`packages/engine/src/allocation.test.ts` measures all 44 paths on every push, and it proves
+it can see a single 16-byte allocation before it asserts the absence of one — its first
+16-byte control read 0.07 bytes and would have let everything below it pass. Its second half
+is not closed: a game's `update()` is its own compilation unit with its own inlining budget,
+a plausible two-puck one costs 64 bytes a step with every engine call inside it free, and no
+game here measures itself. The benchmark's header says so in as many words rather than
+implying a coverage it does not have. And the ceiling it enforces had to come down one
+notch on contact with a second engine: **the identical source reads 0.000 B/call on V8 26 and
+16.000 on V8 12.4**, which is the Node 22 CI runs, because whether a double crossing a call is
+materialised is the optimiser's decision and the inlining budget is spent by the *caller*. The
+proof is inside the benchmark: take the two `mix` calls out of the remote-pair case and the
+`beginStep` pair beside them reads 0.000 on the engine that read 16 with them — a shorter
+caller, not a changed callee. A benchmark whose own closure decides the verdict cannot assert
+that verdict about the code, and `calibration` cannot save it, because it is one caller and
+inlining is decided per caller. So a single boxed double is now **reported by name with the V8
+version** and passes; two of them, or an object, an array, a closure or a string, still fails,
+and none of those depends on a budget. Watched failing with an object planted in
+`InputManager.beginStep`: 48 B/call, five cases red.
+
+The **twelfth** was found while reviewing the batch that added the eleventh, and it is the
+shortest story here: "CSS modules use the `var(--db-*)` tokens; no raw hex" was enforced by
+nothing whatsoever. `tokens.test.ts` checked that the TS and CSS palettes agree and that
+every `var()` names a token that exists — both real checks, neither of them this one — and a
+stylesheet that simply declines to use `var()` walked past all four style suites in silence.
+There is no stylelint in this repository. It had already drifted to thirteen `color: #fff`
+declarations across eight stylesheets, every one of them `--db-paper` spelled a second way,
+and the cost of that habit is on the record two rules above one of them: `page.module.css`
+still carries a comment about a hand-copied `#a06f00` that shipped at 3.93:1, below AA,
+because it was a colour nobody could reach the palette from. The thirteen are now
+`var(--db-paper)` and `tokens.test.ts` scans every stylesheet but `tokens.css` itself. What
+that guard has that the tenth entry's did not is a control on real input: the scanner is run
+over `tokens.css`, which must come back with the whole palette. Watched, both halves — with
+a hex planted in a module the check named it by file and line and ignored the `#178` beside
+it, and with the comment stripper made greedy the check went green **with the plant still
+there** while the control failed on its own, which is the pass that would otherwise have
+been indistinguishable from a clean one. Reviewing it a day later found the guard narrower
+than its own headline sentence twice over, which is this list's most reliable finding about
+itself: it matched `#` and nothing else, so `rgb()`, `oklch()` and `background: white` were
+all still free — one `rgb(0 0 0 / 45%)` was already live — and it read stylesheets, so
+`app/layout.tsx`'s `themeColor: '#4b3beb'`, the brand written out a second time in a
+TypeScript object, sat exactly where the `#a06f00` scar says a colour goes to hide. Both are
+scanned now, and the entry stands as written: the sentence to distrust is the one in the
+docstring.
+
+The **thirteenth** is rule 11's, and it is the largest number in this list. `pnpm size` has
+never known what the biggest download on this site is, because `scripts/check-size.mjs`
+collects a file only if it ends `.js` — so the three budgets it defends are three facts
+about scripts, and every note in `size-budget.json` says in as many words that CSS and
+server-rendered markup are therefore free. Browsing the catalogue downloads something else.
+`next/link` prefetches the route payload of every card that passes within 200px of the
+viewport, and the grid has one card per game, so a visitor who scrolls it and presses
+nothing fetches 108 `/play/<slug>/index.txt` payloads: **397 KB gzipped, more than twice the
+182 KB ADR 0001 budgets for a whole first session.** The spec added in that same batch to
+hold #185 — whose other half is "do not waste bytes on links nobody presses" — did not merely
+fail to bound them, it *required* them, since its liveness control fails when fewer than
+fifty-five are speculated. And "markup is free" was falsified by the same batch that repeated
+it: the play route's `<noscript>` (#103) is 207 gzipped bytes of markup, in every one of
+those 108 payloads, so a block only a scripting-off visitor ever reads costs 22.4 KB of
+speculative download — more than everything that batch spent on both script budgets put
+together, in the one file that had written down that it cost nothing. `speculatedBytes` now holds the total,
+measured from the export by `check-size.mjs` and from a real browse by `e2e/prefetch.spec.ts`
+so the two ends cannot drift. Watched failing on purpose, both ways: fifty-five bytes appended
+to each payload in the built export failed the build with `browsing the catalogue speculates
+390.7 KB of route payloads, over the 390.0 KB budget`, and with the payloads moved aside the
+floor fired instead — `no route payloads at all — the export has stopped writing index.txt
+files` — because a guard that reads zero must never report a saving.
+
+The **fourteenth** is the clickjacking defence, and it is the plainest case in the list of a
+guard that reads a file instead of running it. On a host that serves neither
+`X-Frame-Options` nor CSP `frame-ancestors` — which is this one (#2481) — the inline
+`FRAME_GUARD` is the *entire* defence. Two things watched it, and both watched the text:
+`security/header-delivery.test.ts` asserts things about the source string, and
+`check-headers.mjs` looks for its first forty-two characters after a literal `<script>` in
+every exported page. Both of those pass on a guard that throws on its second line, and
+**nothing in the repository had ever put a page in a frame.** Found while cutting the script
+down for #2545, which is the useful part: it was rewritten to hide-and-flag, with the notice
+moved into the layout and its styling into `globals.css`, and the entire rewrite could have
+shipped a defence that did nothing with every existing check green. `e2e/frame-guard.spec.ts`
+frames a real page in Chromium and WebKit now, and it was watched failing with the refusal
+short-circuited. Two false starts are worth recording beside it, because each produced a red
+that looked like a bug in the test rather than in the page: a DuelBox page cannot be the
+framing page at all, since every one of them carries `default-src 'none'` with no `frame-src`;
+and framing a loopback address from an `about:blank` document is refused by Private Network
+Access before the server hears about it. In both the child never loaded, and what the report
+said was "element not found".
+
+The **fifteenth** is the shell budget itself, one line under the thirteenth, and it is the
+largest single number in this list: **38.5 KB of the 164 KB described as "paid by every
+visitor" was paid by nobody.** Next emits `polyfills-*.js` and references it as
+`<script nomodule>`, which every engine that understands `<script type=module>` skips without
+a request — that is every engine in tiers 1 and 2 of `docs/support-matrix.md`, and has been
+since 2018. The only engines that fetch it are the ones that document explicitly does not
+support. `check-size.mjs` counted it because `polyfillFiles` sits in the same manifest array
+as `rootMainFiles`, which every route really does load, and because #2516 — the rewrite that
+found 94.9 KB of pages-router surface in exactly this position, four lines below in the same
+file — read past it. So 23% of the number rule 11 defends described a download nobody makes,
+and it has been the number every batch for weeks has been squeezing itself against: the true
+figure is 125.5 KB, which is also the answer to #4's "under 150 KB gzipped excluding any
+game", met and unnoticed. The polyfills now have a bucket and a budget of their own, and the
+`nomodule` claim is *read out of the export on every build* rather than believed — the moment
+one of those scripts loses the attribute, everybody fetches it, it is shell again, and the
+build says so. Watched failing both ways: with the attribute stripped from all 353 pages, and
+with the file left in the manifest and unreferenced by any of them.
+
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard

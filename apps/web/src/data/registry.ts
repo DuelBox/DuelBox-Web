@@ -1,4 +1,5 @@
 import type { Game, GameManifest } from '@duelbox/game-sdk';
+import { killSwitchFor } from '../lib/flags';
 import { GAME_IDS } from './game-names.generated';
 
 /**
@@ -136,8 +137,38 @@ const LOADERS: Record<string, Loader> = {
  *
  * Keyed by **package id**, which is what `create-game` and `register-game` write. The site
  * routes by slug; the two are reconciled below.
+ *
+ * **`LOADERS`, deliberately, and not `AVAILABLE`.** This names every game with a build, so
+ * the balance, fuzz, control-parity and cross-viewport suites keep playing a game the kill
+ * switch (#208) has taken off the site — which is the game whose tests most need to run. The
+ * cost is that `routing.test.ts`'s "cover exactly the games that have a build" goes red for
+ * as long as a switch is set, because that is exactly what a switch makes untrue; ADR 0005
+ * records the choice and what the failure means when somebody meets it.
+ *
+ * **Nothing may go between the end of `LOADERS` and this comment.** `scripts/register-game.mjs`
+ * finds the end of the table by searching for the literal `};` followed by a blank line and
+ * the first line of this docstring, and fails with "could not find the end of LOADERS" when
+ * it cannot — which is how this note came to be written, because the kill switch was added
+ * in that gap first and the scaffold stopped being able to add a game at all.
  */
 export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
+
+/**
+ * The same table with the kill switch (#208) applied: what this build will actually open.
+ *
+ * Everything a player can reach is derived from here rather than from `LOADERS` — the
+ * routes, the sitemap, the catalogue's Play badges, Surprise me, and the "play something
+ * else" list at the end of a match. That is the whole of the mechanism, and it is one
+ * filter on purpose: a second notion of "playable" sitting beside the first is a thing that
+ * drifts, and a game switched off in one of them and on in the other is worse than a game
+ * nobody switched off at all.
+ *
+ * `lib/flags.ts` holds the list and reconciles a game's two names, so a switch written
+ * `memory` and a lookup written `memory-match` are the same question.
+ */
+const AVAILABLE: Record<string, Loader> = /*#__PURE__*/ Object.fromEntries(
+  Object.entries(LOADERS).filter(([id]) => killSwitchFor(id) === null),
+);
 
 /**
  * A game has two names, and the site had been using both.
@@ -211,20 +242,27 @@ function resolve(slugOrId: string): string {
  * `generateStaticParams`, the how-to-play count — and a bundler cannot otherwise prove a
  * `.filter().map()` chain is safe to drop, so the whole of `GAME_IDS` rode into the client
  * behind it. See the notes at the top of `scripts/check-size.mjs`.
+ *
+ * It filters `AVAILABLE` rather than `LOADERS`, so a game switched off by the kill switch
+ * (#208) leaves the catalogue and the router together — the two came from different
+ * branches and both are load-bearing, so the merge keeps both.
  */
 export const PLAYABLE: readonly string[] = /*#__PURE__*/ Object.entries(GAME_IDS)
-  .filter(([, id]) => id in LOADERS)
+  .filter(([, id]) => id in AVAILABLE)
   .map(([slug]) => slug);
 
 /** The alias table, for the drift guard in `slug-aliases.test.ts` and nothing else. */
 export const SLUG_ALIASES_FOR_TEST = SLUG_ALIASES;
 
 export function isPlayable(slugOrId: string): boolean {
-  return resolve(slugOrId) in LOADERS;
+  return resolve(slugOrId) in AVAILABLE;
 }
 
 export async function loadGame(slugOrId: string): Promise<LoadedGame> {
-  const loader = LOADERS[resolve(slugOrId)];
+  const loader = AVAILABLE[resolve(slugOrId)];
+  // The message is unchanged for a game the kill switch took out, and it is still true: this
+  // build has no playable build for it. Nothing that can reach here has a player in front of
+  // it to tell — the route is not exported, so the only caller left is a stale tab.
   if (!loader) throw new Error(`No playable build for "${slugOrId}"`);
   return loader();
 }

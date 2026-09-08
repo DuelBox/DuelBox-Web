@@ -9,3 +9,4 @@ never edited except to mark it superseded; see `template.md` for the format and 
 | [0002](0002-nextjs-app-router-static-export.md)         | Next.js 15 App Router with `output: 'export'`, over a Vite SPA or Astro             | accepted |
 | [0003](0003-canvas2d-behind-renderer-interface.md)      | Canvas2D behind the `Renderer` interface, in logical units; WebGL deferred          | accepted |
 | [0004](0004-fixed-timestep-seeded-rng-logical-units.md) | Fixed 60 Hz timestep, seeded `Rng`, no wall clock or device reads in the simulation | accepted |
+| [0005](0005-build-time-feature-flags.md)                | Flags are build-time constants; a game is switched off by a list in the source      | accepted |

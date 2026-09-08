@@ -79,10 +79,20 @@
 }
 
 /*
- * `#fff` rather than a token, matching the 404's button and the skip link. There is no token
- * for it and there should not be: the fill is `--db-brand` in both themes, so the label has to
- * stay white in both, and `--db-paper` — the only white in the palette — inverts to near-black
- * under the dark theme and would put a dark label on an indigo button.
+ * `--db-paper`, matching the 404's button and the skip link — both of which this rule was
+ * written to match and both of which are now the token rather than a hand-written `#fff`.
+ *
+ * The comment that stood here argued for the literal, and its premise was that the fill is
+ * `--db-brand` in both themes so the label has to stay white in both. The fill is not the
+ * same in both. `--db-brand` is `#4b3beb` under the light palette and `#8b7dff` under the
+ * dark one — an indigo that becomes a pale lavender — so white-on-brand inverts from
+ * comfortable to unreadable exactly where the argument said it was needed: 6.72:1 light,
+ * **3.24:1 dark**, under AA for body text, and 2.35:1 on the `--db-brand-deep` hover. The
+ * token tracks the palette instead and reads 5.36:1 and 7.41:1 there while being byte-for-byte
+ * `#ffffff` in the light theme, so nothing changes in light mode and dark mode stops failing.
+ *
+ * This is the drift `tokens.test.ts` was added to catch, and it caught this: a colour spelled
+ * outside the palette cannot follow the palette when the palette changes.
  */
 .primary {
   display: inline-flex;
@@ -91,12 +101,12 @@
   padding-inline: var(--db-space-5);
   border-radius: var(--db-radius);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   box-shadow: 0 4px 0 var(--db-brand-deep);
   font-weight: 700;
 }
 
 .primary:hover {
   background: var(--db-brand-deep);
-  color: #fff;
+  color: var(--db-paper);
 }

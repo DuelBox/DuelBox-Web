@@ -340,3 +340,13 @@
     transition: none;
   }
 }
+
+/* #160's overall record. Tabular figures so the three counts do not jitter as they are
+   read, and `--db-ink` because this is the one number on the page a pair come looking
+   for. */
+.overall {
+  margin-block: var(--db-space-2) var(--db-space-3);
+  color: var(--db-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

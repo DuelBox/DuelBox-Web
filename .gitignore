@@ -1,4 +1,10 @@
-node_modules/
+# No trailing slash: `node_modules/` matches a directory and nothing else, so a
+# `node_modules` that is a *symlink* — which is what `git worktree` setups and some CI
+# caches leave behind — sails past it and can be committed by `git add -A`. One did, and
+# every job on the PR died in twelve seconds with
+# `ENOTDIR: not a directory, mkdir .../node_modules` out of `pnpm install`, because pnpm
+# cannot make a directory where a symlink already is.
+node_modules
 .next/
 dist/
 build/
@@ -21,6 +27,14 @@ next-env.d.ts
 
 # The dev server keeps its own build output so a production build cannot clobber it.
 apps/web/.next-dev/
+
+# The visual baselines (#227) are tracked, but only the platform CI compares on. macOS
+# rasterises text through CoreText and Linux through the FreeType inside Chromium, so the
+# same page is a different picture on each and a committed `-darwin` baseline could only
+# ever be an image nothing checks. `e2e/visual.spec.ts` skips rather than fails off Linux
+# and `-u` there writes these, which are for watching your own change and nobody else's.
+e2e/__screenshots__/*-darwin.png
+e2e/__screenshots__/*-win32.png
 
 # The share images (#2453). `pnpm share:images` composes all 109 of them from
 # apps/web/src/lib/tiles.ts before every build, so they are output and not source — and

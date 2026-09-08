@@ -99,7 +99,7 @@
    emphasis matches the recommendation. */
 .keep {
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border: none;
   box-shadow: 0 4px 0 var(--db-brand-deep);
 }
