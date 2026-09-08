@@ -36,7 +36,25 @@ const SESSION_BUDGET_KB = 700;
  */
 const DEBUG_OVERLAY_MARKER = 'duelbox-debug-overlay';
 
-/** Anything that would put gameplay behind a round trip. */
+/**
+ * Anything that would put gameplay behind a round trip.
+ *
+ * The first nine are HTTP and transport clients: the direct way to add a request. The rest
+ * are backends-as-a-package, and they are here because a documented claim was resting on
+ * nothing. `docs/cwe-top-25.md` says of this script, twice, that it "fails a build that adds
+ * a server runtime or a DB client" — and until this line there was no DB client in this
+ * list, so the second half of that sentence was enforced by no code at all. It was not an
+ * idle claim either: `firebase` and `@supabase/supabase-js` are meant to be imported into a
+ * browser bundle, they are the shape of thing somebody reaches for to add a leaderboard in
+ * an afternoon, and either one turns a site that costs nothing to host into a site with a
+ * bill and a data-protection surface. The server-side drivers are listed with them because
+ * the cost of a name that never appears is nil and the cost of the one that does is a build
+ * that ships it.
+ *
+ * This does not make the CWE table's sentence fully true on its own — a *server runtime* is
+ * checked by `checkNoServerRuntime` and `checkNoDynamicRoutes`, and those were always real.
+ * It makes the half about a client true.
+ */
 const NETWORK_CLIENTS = [
   'axios',
   'node-fetch',
@@ -47,7 +65,49 @@ const NETWORK_CLIENTS = [
   'graphql-request',
   '@tanstack/react-query',
   'swr',
+  'firebase',
+  '@firebase/app',
+  '@supabase/supabase-js',
+  '@vercel/postgres',
+  '@upstash/redis',
+  '@prisma/client',
+  'mongodb',
+  'mysql2',
+  'pg',
 ];
+
+/** A literal that means itself inside a regular expression, metacharacters and all. */
+function escapeRegExp(text) {
+  return text.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
+}
+
+/**
+ * How a package name is spelled when a file actually depends on it.
+ *
+ * This was `from ['"]<client>` — one import form out of four. Over the three gameplay
+ * packages that was very nearly harmless: they are hand-written ES modules, every
+ * dependency in them is a static `import … from`, and the shape had never had a chance to
+ * be wrong. Widening the walk to `apps/web/src` removes that accident. The shell is a Next
+ * application, `await import('…')` is the idiom it already uses for anything it wants kept
+ * out of the first chunk, and a data-fetching client is exactly the sort of dependency
+ * somebody reaches for that way — lazily, on an interaction, which is precisely the case
+ * this rule exists to refuse.
+ *
+ * That is measured rather than argued: `await import('axios')` written into
+ * `apps/web/src/lib/offline-state.ts` produced a completely clean run against the previous
+ * pattern. So all four forms are matched — `from 'x'`, a bare `import 'x'`, `import('x')`
+ * and `require('x')` — and a subpath or a sibling of the package with it (`ky/umd`,
+ * `got-scraping`), which is the trailing `['"]|[-/]`.
+ *
+ * The quote has to sit immediately before the name, and that is what keeps the short
+ * entries in the list above from becoming noise: `from './lib/got'` does not match, because
+ * the character after the quote is a dot.
+ */
+function moduleSpecifier(client) {
+  return new RegExp(
+    `\\b(?:from|import|require)\\s*\\(?\\s*['"]${escapeRegExp(client)}(?:['"]|[-/])`,
+  );
+}
 
 /**
  * The ways a browser asks a server for something, and the words that name them in source.
@@ -121,7 +181,10 @@ const BACKGROUND_WORK = [
  *
  * A short list on purpose. The property is not "the worker mentions origins somewhere"; it
  * is that the fetch handler compares the origin of what it was handed against its own before
- * it does anything with it, and there are only so many ways to write that. `registration.scope`
+ * it does anything with it, and there are only so many ways to write that. That distinction
+ * is now structural rather than aspirational: these patterns are tested against the code the
+ * fetch handler can actually reach, not against the file, so a comparison sitting in a helper
+ * nobody calls no longer counts as one. `registration.scope`
  * is the second one because it is stricter than the first — a worker served from `/DuelBox-Web/`
  * on a project page has a scope narrower than its origin, and a prefix test against it also
  * satisfies same-origin. Adding a third entry here is a deliberate act: it widens what counts
@@ -140,6 +203,30 @@ const failures = [];
 
 function fail(property, detail) {
   failures.push({ property, detail });
+}
+
+/**
+ * Read a file a check cannot reason about anything without, or record why it could not.
+ *
+ * Three checks below open one named file and then draw conclusions from its contents, and a
+ * bare `readFile` on a path that has moved ends the entire run in a stack trace — after the
+ * checks above it have already printed their passes, and before a single failure collected
+ * so far is reported. Nothing about that is quiet, so it is not the failure mode this file
+ * is mostly built against; it is the wrong *shape* of answer. Watched on a tree with
+ * `apps/web/src` emptied: two real violations were found, neither was printed, and what
+ * came out was an ENOENT for `catalogue.generated.ts` with no indication that anything else
+ * had gone wrong at all.
+ *
+ * A guard that cannot find its subject should name the file, say what it needed it for,
+ * take its place in the list with every other failure, and let the rest of the run finish.
+ */
+async function readOrFail(path, property, why) {
+  try {
+    return await readFile(path, 'utf8');
+  } catch {
+    fail(property, `${path.slice(root.length + 1)} could not be read, and ${why}`);
+    return null;
+  }
 }
 
 async function walk(dir, predicate, found = []) {
@@ -330,6 +417,49 @@ function enclosingDeclaration(code, index) {
   return last[1] ?? last[2] ?? null;
 }
 
+/**
+ * Every top-level declaration that has a body, with the body, so a handler's reach can be
+ * followed instead of guessed at.
+ *
+ * The same column-zero convention `enclosingDeclaration` relies on, read in the other
+ * direction: that one asks "which declaration is this index inside", this one asks "what
+ * are all of them". Two checks below need the second question. Whether a same-origin guard
+ * is in the code the fetch handler actually runs is not answerable by searching the file,
+ * because a guard written and never called reads identically to one that guards; and
+ * whether install's precache helper is install's alone is not answerable without knowing
+ * where that helper's body stops.
+ *
+ * The `;` test is the one piece of care in it. A declaration's body is found by taking the
+ * next `{` after its name, and a `const` bound to something with no block — `const CACHE =
+ * \`duelbox-shell-${REVISION}\`;` — has no brace of its own, so the naive version reaches
+ * past the semicolon and adopts the body of whatever function is declared next. That would
+ * be worse than not looking: it would attribute a real function's code to a string
+ * constant, and both of the checks that use this would then be reading a scope that does
+ * not exist. A declaration whose brace is on the far side of a semicolon has no body, and
+ * is skipped.
+ */
+function topLevelDeclarations(code) {
+  const pattern =
+    /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)|^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/gm;
+  const found = [];
+  for (const match of code.matchAll(pattern)) {
+    const name = match[1] ?? match[2] ?? null;
+    if (name === null) continue;
+    const open = code.indexOf('{', match.index);
+    if (open < 0 || code.slice(match.index, open).includes(';')) continue;
+    const body = blockBody(code, open);
+    if (body === null) continue;
+    found.push({
+      name,
+      at: code.indexOf(name, match.index),
+      start: body.start,
+      end: body.end,
+      body: code.slice(body.start, body.end + 1),
+    });
+  }
+  return found;
+}
+
 /** The build is a directory of files, not a program. */
 async function checkNoServerRuntime() {
   const property = 'The deployed output is files, not a server';
@@ -382,7 +512,12 @@ async function checkNoDynamicRoutes() {
     }
   }
 
-  const config = await readFile(join(root, 'apps', 'web', 'next.config.ts'), 'utf8');
+  const config = await readOrFail(
+    join(root, 'apps', 'web', 'next.config.ts'),
+    property,
+    'it is the only place that says whether this site is exported or served',
+  );
+  if (config === null) return;
   // Comments stripped first: the config explains at length *why* it exports statically,
   // so a search of the raw text finds the setting in the prose and passes even when the
   // setting itself has been commented out.
@@ -429,25 +564,61 @@ async function checkNoDynamicRoutes() {
  */
 async function checkNoNetworkInGameplay() {
   const property = 'Nothing shipped to a browser reaches the network';
-  const dirs = [
-    join(root, 'packages', 'engine', 'src'),
-    join(root, 'packages', 'game-sdk', 'src'),
-    join(root, 'packages', 'games'),
-    join(root, 'apps', 'web', 'src'),
+  /**
+   * Where to look, and what counts as a source file in each place.
+   *
+   * Two extension sets rather than one, because the last entry is not like the others.
+   * `packages/games` is a whole package tree rather than a `src/` directory, so admitting
+   * `.js` there would walk into whatever a build left behind and read a bundler's output as
+   * though somebody had written it. `public/` is the opposite case and needs exactly that:
+   * scripts dropped in there are served verbatim and are not compiled, bundled or
+   * type-checked by anything, which makes it the easiest place in this repository to put a
+   * call nobody reviews. The worker is the one file allowed to be there; everything else in
+   * it is held to the same rule as the rest of the site.
+   */
+  const roots = [
+    [join(root, 'packages', 'engine', 'src'), ['.ts', '.tsx']],
+    [join(root, 'packages', 'game-sdk', 'src'), ['.ts', '.tsx']],
+    [join(root, 'packages', 'games'), ['.ts', '.tsx']],
+    [join(root, 'apps', 'web', 'src'), ['.ts', '.tsx']],
+    [join(root, 'apps', 'web', 'public'), ['.js', '.mjs', '.cjs']],
   ];
+
   const sources = [];
-  for (const dir of dirs) {
-    sources.push(...(await walk(dir, (p) => ['.ts', '.tsx'].includes(extname(p)))));
+  const breakdown = [];
+  for (const [dir, extensions] of roots) {
+    const relative = dir.slice(root.length + 1);
+    const found = await walk(dir, (p) => extensions.includes(extname(p)));
+    /**
+     * A walk of a directory that is not there returns an empty list, and an empty list
+     * satisfies every pattern below it, silently, for ever.
+     *
+     * That is the failure CLAUDE.md keeps a count of, and it is not hypothetical for this
+     * function: symlinking `packages/games` out of the tree took this scan from 1020 files
+     * to 156 and it still printed "all properties hold" — a hundred and eight games
+     * unexamined, and a green tick over them. Nothing dramatic is needed to do it by
+     * accident. A package renamed, a tree that grows a level, a `src/` that becomes
+     * `source/`: the list above goes stale in the one direction that produces no error.
+     *
+     * So each root has to yield something. None of the five can legitimately be empty —
+     * they hold the engine, the SDK, a hundred and eight games, the shell, and the worker —
+     * and a root that has become empty is a fact about this list rather than about the
+     * repository.
+     */
+    if (found.length === 0) {
+      fail(
+        property,
+        `${relative} holds no ${extensions.join('/')} file, so walking it proves nothing.` +
+          ' Either that tree moved and the list in checkNoNetworkInGameplay has to move' +
+          ' with it, or it is gone — and either way this scan has been reporting success' +
+          ' over a directory it never read.',
+      );
+      continue;
+    }
+    breakdown.push(`${relative} ${String(found.length)}`);
+    sources.push(...found);
   }
-  // Scripts dropped into `public/` are served verbatim and are not compiled, bundled or
-  // type-checked by anything — which makes them the easiest place in this repository to put
-  // a call nobody reviews. The worker is the one that is allowed to be here; anything else
-  // is held to the same rule as the rest of the site.
-  sources.push(
-    ...(await walk(join(root, 'apps', 'web', 'public'), (p) =>
-      ['.js', '.mjs', '.cjs'].includes(extname(p)),
-    )),
-  );
+
   // Both test extensions. A `.test.tsx` describing a component's network behaviour names
   // these APIs in order to assert they are absent, and failing it for that would teach the
   // next person to write the assertion somewhere this cannot read.
@@ -461,12 +632,15 @@ async function checkNoNetworkInGameplay() {
       if (pattern.test(bare)) fail(property, `${relative} ${what}`);
     }
     for (const client of NETWORK_CLIENTS) {
-      if (new RegExp(`from\\s+['"]${client.replace(/[/@-]/g, '\\$&')}`).test(bare)) {
+      if (moduleSpecifier(client).test(bare)) {
         fail(property, `${relative} imports ${client}`);
       }
     }
   }
-  console.log(`  network-free sources: ${String(checkable.length)} files scanned`);
+  console.log(
+    `  network-free sources: ${String(checkable.length)} files checked of` +
+      ` ${String(sources.length)} found — ${breakdown.join(', ')}`,
+  );
 }
 
 /**
@@ -501,7 +675,13 @@ async function checkNoNetworkInGameplay() {
  * `fetch` outside the install handler is handed the request the page made, rather than a URL
  * the worker built; and `cache.add`/`cache.addAll` — the two calls that make the *cache* go
  * to the network on the worker's behalf — happen only in install, or in a function install
- * names. The exemption for install is the honest one and it is bounded: precaching is a
+ * names **and no other handler reaches**. That last clause is load-bearing and was missing:
+ * a `precache()` helper called from install and again from a `message` handler put every
+ * request in the precache list back on the wire on a schedule the page chose, with the
+ * `addAll` still sitting inside the function install names, still exempt. The exemption
+ * belongs to install, so the helper has to be install's alone.
+ *
+ * The exemption for install is the honest one and it is bounded: precaching is a
  * burst of requests at a moment the person is already loading the site, once per deploy, and
  * it is the thing that makes a cold offline start possible at all. Anything after that is
  * the worker spending somebody's bandwidth on its own initiative.
@@ -536,6 +716,89 @@ async function checkTheWorkerOnlyAnswers() {
   for (const [path, source] of workers) {
     const where = path.slice(root.length + 1);
     const { bare, code, literals } = readScript(source);
+    const declarations = topLevelDeclarations(code);
+
+    /**
+     * The argument list of `self.addEventListener('<event>', …)`, matched by its parentheses
+     * rather than by its braces.
+     *
+     * `addEventListener('install', (e) => e.waitUntil(precache()))` has no braces at all,
+     * and a span that only recognised the block form would send an exemption to the wrong
+     * place. `open` is kept alongside the span because a position is judged to be inside a
+     * handler by comparing against both ends.
+     */
+    const handlerOf = (event) => {
+      const opener = new RegExp(`addEventListener\\s*\\(\\s*['"]${event}['"]`).exec(bare);
+      if (opener === null) return null;
+      const open = code.indexOf('(', opener.index);
+      if (open < 0) return null;
+      const span = callArguments(code, open);
+      return span === null ? null : { open, text: span.text, end: span.end };
+    };
+
+    /**
+     * Everything a handler can reach: its own body, plus the body of every top-level
+     * declaration named anywhere in what it reaches, to a fixed point.
+     *
+     * An over-approximation of a call graph — a name mentioned is treated as a name called —
+     * and over is the safe direction for the one question asked of it. It is used to decide
+     * whether a guard is in the code that runs, and being generous about what runs can only
+     * accept a guard that is there; it can never invent one.
+     *
+     * Transitive rather than one level down, because a worker is allowed to be written in
+     * more than two layers. This one is: `fetch` names `respondToNavigation`, which names
+     * `cached` and `save`, and a same-origin test factored into either of those is a real
+     * guard in a real code path. Stopping at the first level would have failed that worker
+     * and taught its author to inline a helper to satisfy a script.
+     */
+    const reachedBy = (handler) => {
+      if (handler === null) return '';
+      const reached = new Map();
+      const frontier = [handler.text];
+      while (frontier.length > 0) {
+        const text = frontier.pop() ?? '';
+        for (const declaration of declarations) {
+          if (reached.has(declaration.name)) continue;
+          if (!new RegExp(`\\b${escapeRegExp(declaration.name)}\\b`).test(text)) continue;
+          reached.set(declaration.name, declaration.body);
+          frontier.push(declaration.body);
+        }
+      }
+      return [handler.text, ...reached.values()].join('\n');
+    };
+
+    /**
+     * One registration per event, because every span below is scoped to the first.
+     *
+     * This is not a fourth property. It is the precondition that makes two of the three
+     * checkable, and it is here because without it they would quietly stop being true.
+     * `handlerOf` takes the first `addEventListener` for a name; a worker that registered a
+     * second `fetch` listener would have that listener's whole body outside the span the
+     * same-origin check reads, and a second `install` listener would put a precache outside
+     * the one span the exemption is scoped to — so the guard would be looked for in the
+     * wrong place and the exemption granted in the wrong place, both silently, both
+     * reporting a pass.
+     *
+     * Refusing the second registration is a great deal more honest than half-scoping to it.
+     * Nothing needs two: a worker with one job per event is also the only shape anybody
+     * reading this file afterwards will expect.
+     */
+    const registrations = new Map();
+    for (const match of bare.matchAll(/addEventListener\s*\(\s*['"]([a-z]+)['"]/gi)) {
+      const event = (match[1] ?? '').toLowerCase();
+      registrations.set(event, (registrations.get(event) ?? 0) + 1);
+    }
+    for (const [event, count] of registrations) {
+      if (count > 1) {
+        fail(
+          property,
+          `${where} registers ${String(count)} "${event}" listeners. The checks below scope` +
+            ' themselves to the first one they find, so a second would put its body outside' +
+            ' every span they can see — the same-origin guard looked for in the wrong place,' +
+            ' and the precache exemption granted in the wrong place. One listener per event',
+        );
+      }
+    }
 
     // One: same origin, and said so out loud.
     for (const { value } of literals) {
@@ -548,13 +811,41 @@ async function checkTheWorkerOnlyAnswers() {
         );
       }
     }
-    if (!SAME_ORIGIN_GUARDS.some((pattern) => pattern.test(code))) {
+    /**
+     * The guard has to be in the code the fetch handler runs, not merely in the file.
+     *
+     * This searched the whole of `code` until it was watched passing the case it exists to
+     * catch: delete the comparison out of the fetch handler, leave a `sameOrigin(url)`
+     * helper at the bottom of the file that nothing calls, and the worker proxies every
+     * cross-origin request it is handed while this reported the property held. Dead code
+     * and a guard read identically to a search for a substring, and the failure message
+     * underneath already said "its fetch handler must compare" — so the sentence was true
+     * and the check under it was not, which is the exact shape CLAUDE.md says to distrust.
+     *
+     * A worker with no fetch handler at all fails here rather than passing vacuously. It
+     * would satisfy this property in the strictest possible way, by answering nothing, and
+     * it would also not be a service worker: `e2e/offline.spec.ts` asserts a cold start
+     * from the cache, which is a fetch handler or it is nothing.
+     */
+    const fetchHandler = handlerOf('fetch');
+    const fetchReach = reachedBy(fetchHandler);
+    if (fetchHandler === null) {
       fail(
         property,
-        `${where} has no same-origin guard. Its fetch handler must compare the request's` +
-          ' origin against self.location.origin, or test the URL against registration.scope,' +
-          ' and return without handling anything that fails — otherwise it answers, caches' +
-          ' and can rewrite responses from hosts this site does not control',
+        `${where} registers no fetch handler this can find, so there is no code path to scope` +
+          " the same-origin guard to. Register it as self.addEventListener('fetch', ...) —" +
+          ' and if this worker genuinely answers nothing, it is not the worker that' +
+          ' e2e/offline.spec.ts opens a game from with the network switched off',
+      );
+    } else if (!SAME_ORIGIN_GUARDS.some((pattern) => pattern.test(fetchReach))) {
+      fail(
+        property,
+        `${where} has no same-origin guard in the code its fetch handler reaches. That handler` +
+          " must compare the request's origin against self.location.origin, or test the URL" +
+          ' against registration.scope, and return without handling anything that fails —' +
+          ' otherwise it answers, caches and can rewrite responses from hosts this site does' +
+          ' not control. A comparison written somewhere the handler never reaches is not a' +
+          ' guard, and this no longer accepts one',
       );
     }
 
@@ -581,13 +872,8 @@ async function checkTheWorkerOnlyAnswers() {
       if (pattern.test(code)) fail(property, `${where} ${what}, with no page and no person`);
     }
 
-    // Three: no request of its own beyond the install precache. The install handler's own
-    // argument list is the span, found by matching its parentheses rather than its braces:
-    // `addEventListener('install', (e) => e.waitUntil(precache()))` has no braces at all, and
-    // a span that only recognised the block form would send the exemption to the wrong place.
-    const opener = /addEventListener\s*\(\s*['"]install['"]/.exec(bare);
-    const open = opener === null ? -1 : code.indexOf('(', opener.index);
-    const install = open < 0 ? null : callArguments(code, open);
+    // Three: no request of its own beyond the install precache.
+    const install = handlerOf('install');
     if (install === null) {
       fail(
         property,
@@ -596,11 +882,16 @@ async function checkTheWorkerOnlyAnswers() {
           ' the shape every check here and every worker in the wild uses',
       );
     }
-    const inInstall = (at) => install !== null && at > open && at < install.end;
+    const inInstall = (at) => install !== null && at > install.open && at < install.end;
+    // Every helper an exemption was granted through, so the grant can be audited below.
+    const exempted = new Set();
     const namedByInstall = (at) => {
       if (install === null) return false;
       const declaration = enclosingDeclaration(code, at);
-      return declaration !== null && new RegExp(`\\b${declaration}\\b`).test(install.text);
+      if (declaration === null) return false;
+      if (!new RegExp(`\\b${escapeRegExp(declaration)}\\b`).test(install.text)) return false;
+      exempted.add(declaration);
+      return true;
     };
 
     for (const match of code.matchAll(/\bfetch\s*\(/g)) {
@@ -644,6 +935,54 @@ async function checkTheWorkerOnlyAnswers() {
           ' before any page has asked for anything, from a URL the page never named',
       );
     }
+
+    /**
+     * A helper install lends the exemption to has to be install's alone.
+     *
+     * The two scans above forgive a `fetch` or a `cache.addAll` that sits inside a function
+     * the install handler names, and they have to: `event.waitUntil(precache())` with
+     * `async function precache()` below it is the readable way to write a worker, and a
+     * check that only accepted the inline form would be telling people to write it worse.
+     * But the exemption is granted to a *position in the file*, and a function has more than
+     * one caller available to it.
+     *
+     * So this was watched going past, in the shape that matters: add a `message` handler
+     * that calls `precache()` when a page says hello, and every request in the precache list
+     * goes out again, on a schedule the page chooses, on a connection somebody may be paying
+     * for by the megabyte — with the `addAll` still sitting inside the function install
+     * names, still exempt, still green. `enclosingDeclaration`'s own docstring records the
+     * near-miss version of this being caught by brace-matching; that closed the case where
+     * the offending call is appended *after* the helper, and left the case where it is
+     * simply routed *through* it.
+     *
+     * The rule that closes it is the narrowest one that still permits the readable form: the
+     * helper may be named by its own declaration, mentioned inside its own body, and called
+     * from the install handler. A mention anywhere else means the exemption has left install,
+     * and the line numbers say where to look.
+     */
+    for (const name of exempted) {
+      const declaration = declarations.find((entry) => entry.name === name);
+      const strayed = [...code.matchAll(new RegExp(`\\b${escapeRegExp(name)}\\b`, 'g'))]
+        .map((match) => match.index)
+        .filter((at) => !inInstall(at))
+        .filter(
+          (at) =>
+            declaration === undefined ||
+            (at !== declaration.at && (at < declaration.start || at > declaration.end)),
+        );
+      if (strayed.length > 0) {
+        const lines = strayed.map((at) => String(code.slice(0, at).split('\n').length));
+        fail(
+          property,
+          `${where} reaches ${name}() from line ${lines.join(', line ')} as well as from its` +
+            ' install handler. Precaching is exempt because install is the one moment the' +
+            ' person is already loading the site, once per deploy; a helper install shares' +
+            ' with another handler carries that exemption out of install with it, and a cache' +
+            " re-warmed on a message or a claim is the worker spending somebody's bandwidth" +
+            ' on its own initiative',
+        );
+      }
+    }
   }
 
   console.log(
@@ -663,7 +1002,12 @@ async function checkSessionBudget() {
   // Read the scripts a play page actually references, rather than summing every chunk
   // in the build — most of those belong to other routes and no one player downloads
   // them. This measures what one person pulls to open a game and play it.
-  const html = await readFile(join(out, 'play', 'tic-tac-toe', 'index.html'), 'utf8');
+  const html = await readOrFail(
+    join(out, 'play', 'tic-tac-toe', 'index.html'),
+    property,
+    'it is the page this budget is measured against — one game, opened and played',
+  );
+  if (html === null) return;
   const referenced = new Set(
     [...html.matchAll(/\/_next\/static\/[^"']+?\.js/g)].map((match) =>
       decodeURIComponent(match[0]),
@@ -701,10 +1045,13 @@ async function checkPagesArePrerendered() {
   // literal goes stale the day a game is added and nothing says so: this check asked for
   // "107 games plus the catalogue index itself" and a total of 108 while the catalogue
   // held 108 games, so it was already a page of slack before anything else touched it.
-  const catalogue = await readFile(
+  const catalogue = await readOrFail(
     join(root, 'apps', 'web', 'src', 'data', 'catalogue.generated.ts'),
-    'utf8',
+    property,
+    'the page counts below are read out of it rather than written down here, so without it' +
+      ' there is no number to hold the export against',
   );
+  if (catalogue === null) return;
   const games = [...catalogue.matchAll(/"slug":\s*"[a-z0-9-]+"/g)].length;
   const categories = /export const CATEGORIES[^=]*=\s*\[([^\]]*)\]/.exec(catalogue);
   const hubs = categories === null ? 0 : [...categories[1].matchAll(/"[^"]+"/g)].length;

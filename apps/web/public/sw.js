@@ -133,9 +133,30 @@ function documentKey(url) {
  * `Vary` would turn every one of those hits into a miss and the site would be online-only
  * while appearing to have a full cache. There is nothing to honour: a static host has one
  * representation per URL, so a stored response is *the* response.
+ *
+ * ## Why a failed lookup is `undefined` rather than a rejection
+ *
+ * Because of what `respondWith` does with a rejected promise, which is not what it looks
+ * like it does. A promise passed to `respondWith` that rejects does **not** fall through to
+ * the network — the browser treats it as a network error and the visitor gets the failure
+ * page. So a rejection anywhere in the two strategies below is a working online site turned
+ * into a broken one, by the one piece of code on this site that survives the reload somebody
+ * would try next.
+ *
+ * `caches.match` can reject. Storage cleared from another tab while this page is open, a
+ * quota eviction landing mid-lookup, Firefox's private windows keeping the API and refusing
+ * it: none of those is exotic, and none of them is a reason to refuse to serve a page the
+ * network is perfectly willing to give us. Swallowing here means a cache this worker cannot
+ * read behaves exactly like a cache that does not hold the thing — a miss — and a miss goes
+ * to the network. The site degrades to the site as it was before this file existed, which is
+ * the worst outcome a caching layer is allowed to have.
+ *
+ * It also makes the 503 at the bottom of `respondToNavigation` reachable, which its own
+ * comment already claims it is: a cache that cannot be read *and* a network that is gone is
+ * the one state where there is genuinely nothing left to answer with.
  */
 function cached(key) {
-  return caches.match(key, { ignoreVary: true });
+  return caches.match(key, { ignoreVary: true }).catch(() => undefined);
 }
 
 /**
@@ -287,7 +308,19 @@ self.addEventListener('activate', (event) => {
       const stale = names.filter(
         (name) => name.startsWith('duelbox-') && name !== SHELL_CACHE && name !== RUNTIME_CACHE,
       );
-      await Promise.all(stale.map((name) => caches.delete(name)));
+      // A delete that fails is swallowed, and the ordering around it is the point. Deleting
+      // is housekeeping — a stale cache costs a device some bytes until the next activation
+      // sweeps it up — while claiming is the behaviour the whole first visit depends on. And
+      // `Promise.all` rejects on the first failure, so a single `caches.delete` refusing
+      // would have skipped `clients.claim()` entirely: the visitor loses control of the page,
+      // nothing they then look at is cached, and the site is worse than it would have been
+      // with no worker at all — in order to guarantee a cleanup nobody can see.
+      //
+      // The order stays delete-then-claim rather than the reverse, though, because the
+      // reverse races the thing it is meant to guarantee: a page claimed before the sweep has
+      // finished can read `caches.keys()` and find two `duelbox-shell-` caches, which is the
+      // count `e2e/offline.spec.ts` asserts is exactly one.
+      await Promise.all(stale.map((name) => caches.delete(name).catch(() => undefined)));
       // Claim, so a first visit is controlled without needing a reload. Without this the
       // person who arrives, installs the worker and closes the tab has downloaded the whole
       // shell and cached none of what they then looked at, because none of it went through
@@ -300,13 +333,19 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
+  // Anything but a GET goes straight to the network, because a cache is not something it
+  // could be answered from: the Cache API stores GET responses and nothing else, so a POST
+  // reaching the strategies below would miss on every lookup, be fetched, and then fail to be
+  // stored — the network path with two pointless cache round trips wrapped around it.
+  // Returning without calling `respondWith` is also stronger than that: it hands the request
+  // back to the browser untouched, rather than through a promise this worker could reject.
+  if (request.method !== 'GET') return;
   // Property 1 of the contract at the top of this file, and the only place it is decided.
   // A cross-origin request is not answered, not cached and not inspected — it goes to the
   // network as though this worker were not installed. Note what that costs: it makes a
   // third-party request visible to `e2e/offline.spec.ts`'s second-play assertion as a
   // response that did not come from the worker, which is the right way for one to be
   // found. There are none today; the typefaces became self-hosted in #2469.
-  if (request.method !== 'GET') return;
   if (new URL(request.url).origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
     event.respondWith(respondToNavigation(event, request));

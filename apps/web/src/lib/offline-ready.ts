@@ -48,6 +48,23 @@
  * statement about what is stored. It is not "Available offline", which would be a promise
  * about how the next tap behaves.
  *
+ * ## Who calls this, and the one route that is annotated
+ *
+ * `CatalogBrowser`, after every one of its renders, over the subtree it rendered — and
+ * nothing else. That is `/games/` alone. The landing page, the eighteen category hubs and
+ * each game's own page render the same cards from the same server component and leave the
+ * attribute empty, because the only way to fill it in on those routes is to put a client
+ * component on them, and `lib/landing.test.ts` fails the build if one reaches the landing
+ * page at all. An unannotated card says neither word, so the cost of that is a page that is
+ * silent about storage rather than a page that is wrong about it.
+ *
+ * The consequence worth stating: on a first-ever visit the worker claims the page a few
+ * hundred milliseconds after it loads, and this runs before that, so the grid stays silent
+ * until something re-renders it — a keystroke, a chip, a star. A first visit has no games
+ * saved yet, so what is being withheld is a hundred and eight cards all saying "Not on this
+ * device", and saying nothing is the better of the two. A `controllerchange` listener would
+ * close that window and costs shell bytes on the route with the least room for them.
+ *
  * ## No BASE_PATH here, deliberately
  *
  * `app/base-path.ts` names "the service worker's scope, its precache list" as the callers that
@@ -84,12 +101,29 @@ export interface AnnotatableLink {
 }
 
 /**
- * Every pathname the browser is holding a response for, across every cache.
+ * Every pathname the browser is holding a *document* for, across every cache.
  *
  * Pathnames rather than URLs because that is what a link can be compared against: the same
  * document is `http://127.0.0.1:4173/play/chess/` in the cache and `/play/chess/` on the
  * card, and the origin is the same for both by construction — the worker only ever caches
  * this site.
+ *
+ * ## Why an entry with a query is skipped, which is not a tidying-up
+ *
+ * Because without it this reports the opposite of the truth on exactly the cards the feature
+ * is about. `sw.js` keys a document under `${origin}${pathname}` and everything else under
+ * the request it was made with, and it says why in `documentKey`: the router's prefetch
+ * payload for a route is `/play/sudoku/?_rsc=…`, it is a flight payload rather than a page,
+ * and the two must never be confused. The catalogue is a grid of a hundred and eight links
+ * and `next/link` prefetches the ones that scroll into view, so a browser that has merely
+ * *displayed* the row sudoku is in holds an entry whose pathname is `/play/sudoku/` — and
+ * counting it would put "On this device" on a game that has never been opened, which is the
+ * one thing the annotation must not do. Dropping every entry that carries a query keeps
+ * exactly the keys `documentKey` writes, and `e2e/offline.spec.ts` asserts sudoku reads `0`
+ * on a page whose links have had every chance to be prefetched.
+ *
+ * The static assets under `/_next/static/` survive the filter — they have no query either —
+ * and are harmless: no catalogue link points at one.
  *
  * The caches are read one after another rather than in parallel. There are two or three of
  * them (the precached shell, and whatever the worker names its runtime cache), so the
@@ -99,7 +133,10 @@ export async function cachedPathnames(store: CacheStorage): Promise<ReadonlySet<
   const paths = new Set<string>();
   for (const name of await store.keys()) {
     const cache = await store.open(name);
-    for (const request of await cache.keys()) paths.add(new URL(request.url).pathname);
+    for (const request of await cache.keys()) {
+      const url = new URL(request.url);
+      if (url.search === '') paths.add(url.pathname);
+    }
   }
   return paths;
 }

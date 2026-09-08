@@ -49,9 +49,13 @@ export default function HomePage() {
       <TileSprite games={featured} />
       <section className={styles.hero}>
         <div className="db-wrap">
-          {/* Not "Works offline": there is no service worker, so a page that has not been
-              loaded cannot be opened without a connection (#2445). The privacy page made
-              the same claim and it was wrong there too (#2513). */}
+          {/* Still not "Works offline", and the reason has changed rather than gone away.
+              There *is* a service worker now (#192), so a game this device has opened before
+              does open with no connection — but a game it has never opened does not, and a
+              flat "Works offline" on the page every visitor lands on would promise the second
+              thing while delivering the first. The catalogue is where the distinction can be
+              made per game, in words, and it is made there (#193). This eyebrow keeps to the
+              three claims that are true of every visitor without qualification. */}
           <p className={styles.eyebrow}>No download · No account · Runs on your device</p>
           <h1 className={styles.title}>
             {CATALOGUE.length} games

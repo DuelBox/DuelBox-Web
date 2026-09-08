@@ -117,6 +117,21 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const OFFLINE_ROUTE = `${BASE_PATH}/offline/`;
 
 /**
+ * The home page, which `e2e/offline.spec.ts` asserts by name and this did not.
+ *
+ * Checked here rather than left to the entry count, and the gap that closes is narrow and
+ * would have been expensive to find. `shellDocuments` adds `/` only when `out/index.html`
+ * exists, and `precacheList` fails only when *no* document at all was found — so an export
+ * that emitted the sub-directory routes and not the root would sail through the count check
+ * with well over twenty entries, produce a worker that installs cleanly, and fail six minutes
+ * later in a browser on `expect(state.home).toBe(true)`, with nothing in the build log to say
+ * which step had gone wrong. Every other thing that spec asserts about the list was already
+ * held here by name; this one was the exception, and an exception in a guard is where the
+ * next defect goes.
+ */
+const HOME_ROUTE = `${BASE_PATH}/`;
+
+/**
  * What the spec asserts, restated here so a build cannot ship a list that would fail it.
  *
  * `e2e/offline.spec.ts` opens the shell cache and expects more than twenty entries. A run
@@ -249,6 +264,14 @@ async function precacheList(out) {
         fail(`manifest.webmanifest names the icon ${icon.src}, which the build did not emit`);
       }
     }
+  }
+
+  if (!entries.has(HOME_ROUTE)) {
+    fail(
+      `${HOME_ROUTE} is not in the precache list, so the one page every visitor reaches by` +
+        ' typing the domain would be the one page that needs a connection. See the note on' +
+        ' HOME_ROUTE for how an export can produce that and pass every other check here.',
+    );
   }
 
   if (!entries.has(OFFLINE_ROUTE)) {

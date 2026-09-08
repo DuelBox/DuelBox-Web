@@ -2,8 +2,10 @@
 
 A browser collection of two-player mini-games played by two people on one device
 in one tab. Original implementations of game genres that are free to reimplement.
-No accounts. Once a page has loaded it needs no network at all; coming back to it
-does, because there is no service worker (#2445).
+No accounts. Once a page has loaded it needs no network at all, and coming back to
+a game this device has opened before needs none either: a service worker keeps the
+shell and each played game on the device (#192, #2445). A game it has never opened
+still needs a connection, and the catalogue says which games are here.
 
 Read `docs/reference-analysis.md` before touching engine, input, or SDK code — it
 records what the reference app actually does and why our architecture is shaped
@@ -121,7 +123,7 @@ The React hook rules, enforced by nothing at all, were the sixth.
 the one part of it that reaches all forty-five flip-owning games — had no test of
 any kind until 7 September 2026. That is the seventh. The **eighth** is the sentence
 this file opened with until the same day: README.md line 4 and CLAUDE.md line 5 both
-called the product "offline-capable" while the repository contains no service worker
+called the product "offline-capable" while the repository contained no service worker
 of any kind, and the only file that mentioned one was
 `apps/web/src/lib/privacy-claims.test.ts`, asserting that none exists — a check
 written for the privacy page when #2513 corrected it for making exactly this claim,

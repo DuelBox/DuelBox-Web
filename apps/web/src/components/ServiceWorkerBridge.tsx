@@ -123,10 +123,25 @@ export function ServiceWorkerBridge() {
    * is never swapped out from under itself, and the spec asserts the state is still
    * `installed` at the moment the prompt appears.
    *
-   * Both entry points matter. `updatefound` is the live case — a new deploy found while this
-   * page is open. `registration.waiting` at mount is the case that is easy to forget and more
-   * common in practice: the update installed during the last visit, nobody took it, and the
-   * person is now back on a page that is still being served by the old worker.
+   * **Three entry points, and the third is the one that was missing.** `updatefound` is the
+   * live case — a new deploy found while this page is open, which is what
+   * `e2e/offline.spec.ts` manufactures and therefore the only one that spec can catch.
+   * `registration.waiting` at mount is the case that is easy to forget and common in
+   * practice: the update installed during the last visit, nobody took it, and the person is
+   * back on a page still served by the old worker. `registration.installing` at mount is the
+   * one that is easy to *reason* wrongly about, and it is the ordinary path in production.
+   * `docs/deploy.md` says how a device learns about a deploy at all: the browser re-fetches
+   * `sw.js` on navigation, on its own schedule, and starts installing the moment the bytes
+   * differ. That happens while the document is still loading — and this registers on `load`,
+   * deliberately, a beat later. So by the time `register()` resolves, `updatefound` has
+   * frequently already fired on a registration object nobody was holding yet, and there is
+   * no way to hear an event that has been and gone: `waiting` is still null because the
+   * worker is `installing`, not installed, and the prompt would appear one visit late, every
+   * time, for the update path almost every real visitor is on. One `offer` covers all three:
+   * it reads both slots at mount and then follows whatever it was handed through
+   * `statechange`, so a worker that is already installed is taken as it stands and one that
+   * is still installing is waited for. That is why the state is re-read inside `settle`
+   * rather than assumed from which slot the worker came out of.
    */
   useEffect(() => {
     if (!canRegisterWorker(window)) return;
@@ -137,15 +152,17 @@ export function ServiceWorkerBridge() {
         .register(workerScriptUrl(BASE_PATH), { scope: workerScope(BASE_PATH) })
         .then((registration) => {
           const offer = (worker: ServiceWorker | null): void => {
-            if (worker !== null && container.controller !== null) setWaiting(worker);
+            if (worker === null) return;
+            const settle = (): void => {
+              if (worker.state === 'installed' && container.controller !== null) setWaiting(worker);
+            };
+            settle();
+            worker.addEventListener('statechange', settle);
           };
           offer(registration.waiting);
+          offer(registration.installing);
           registration.addEventListener('updatefound', () => {
-            const installing = registration.installing;
-            if (installing === null) return;
-            installing.addEventListener('statechange', () => {
-              if (installing.state === 'installed') offer(installing);
-            });
+            offer(registration.installing);
           });
         })
         .catch(() => {
@@ -187,6 +204,12 @@ export function ServiceWorkerBridge() {
    * re-claims after a reload it would do it again, and again. Attaching it only when somebody
    * has asked for the update means the only `controllerchange` it can ever see is the one it
    * caused. `once` covers the second half: an engine that fires the event twice reloads once.
+   *
+   * What is deliberately not guarded is a second press while the first is still in flight: it
+   * attaches a second listener, posts the message again, and calls `reload()` twice in the
+   * same task. `skipWaiting` is idempotent and the second `reload()` lands on a document that
+   * is already going, so the cost of that is nothing and the cost of preventing it is a piece
+   * of state on the one component in the root layout that every visitor downloads.
    */
   const takeUpdate = (worker: ServiceWorker): void => {
     navigator.serviceWorker.addEventListener(

@@ -38,6 +38,7 @@
     "check:names": "node scripts/check-game-names.mjs",
     "check:source-secrets": "node scripts/check-source-secrets.mjs",
     "emit:host-config": "node scripts/emit-host-config.mjs",
+    "emit:service-worker": "node scripts/emit-service-worker.mjs",
     "check:headers": "node scripts/check-headers.mjs",
     "emit:attribution": "node scripts/emit-attribution.mjs",
     "check:attribution": "node scripts/emit-attribution.mjs --check",

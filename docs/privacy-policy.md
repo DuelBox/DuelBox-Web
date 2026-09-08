@@ -147,7 +147,8 @@ is the passing one.
 | No analytics in the built output | grep `apps/web/out` for `UA-\d{4,}`, `G-[A-Z0-9]{8,}`, `GTM-`, `gtag` | Two matches, both the privacy page's own sentence saying there are none |
 | Fonts are self-hosted | `apps/web/src/styles/fonts.css` uses relative `src: url('./fonts/…woff2')`; built CSS references only `/_next/static/media/*.woff2`; grep `apps/web/out` for `googleapis`/`gstatic` | Nothing found. The `<head>` previously carried a `preconnect` and a Google Fonts stylesheet; both were removed when the site's own CSP was found to be blocking them |
 | One storage key, and only that | grep for `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches.` | One writer: `apps/web/src/lib/last-mode.ts`, key `duelbox:last-mode`. No other `setItem` anywhere |
-| No service worker, no app cache | search for `sw.js`, `service-worker*`, `manifest.webmanifest`, `next-pwa`, `workbox`, `serwist`; grep `apps/web/out` for `serviceWorker` | None exist. `apps/web/public` does not exist |
+| The cache holds only this site's own files | in the browser, on this site: `(await caches.keys()).map(async n => (await (await caches.open(n)).keys()).map(r => r.url))` — or read `apps/web/public/sw.js`, whose fetch handler returns early unless `new URL(request.url).origin === self.location.origin` | Confirmed. Two caches, `duelbox-shell-<revision>` and `duelbox-runtime-<revision>`, holding URLs on this origin and nothing else. `scripts/check-zero-cost.mjs` holds the worker to three properties that say it may only ever answer a request the page already made, and fails the build otherwise |
+| The worker sends nothing anywhere | grep `apps/web/public/sw.js` for `push`, `periodicsync`, `sync`, `sendBeacon`, `Notification`, and for any absolute URL | None present. It registers `install`, `activate`, `fetch` and `message` and no other event; `check-zero-cost.mjs` fails the build on any of the others, proved by mutation |
 | No device fingerprinting | grep for `navigator.userAgent`, `navigator.language`, `hardwareConcurrency`, `getGamepads`, `mediaDevices`, `geolocation`, `screen.` | None present. Every "screen" hit is the English word in prose |
 | The lint ban is real | `eslint.config.js`, the block over `packages/engine/**`, `packages/game-sdk/**`, `packages/games/**` sets `no-restricted-globals` on `Date`, `window`, `document`, `devicePixelRatio`, `screen`, `navigator`, `requestAnimationFrame`, `performance`, `matchMedia`, and `no-restricted-properties` on `Math.random` | Confirmed. One exemption, `packages/engine/src/loop.ts` |
 | The network ban is enforced at build time | `scripts/check-zero-cost.mjs`, property `Gameplay never touches the network` | Confirmed, with the scope caveat below |
@@ -179,12 +180,21 @@ updated; this policy is the one that matches the code.
 
 ### What "offline" means here, and what it does not
 
-There is no service worker and no cache manifest. Once a page and its chunk are in the tab a
-match runs with no further requests at all — the simulation, the bots and the physics are all
-on the device, proved by `e2e/offline.spec.ts`, which aborts every request after load and
-plays a bot match through to a scored result. That is **not the same as working offline**: a
-cold load with no connection, or a hard reload of a page that was never opened, depends
-entirely on the browser's ordinary HTTP cache, and nothing in this repository guarantees it.
+Two different claims live here and this section exists to keep them apart.
+
+Once a page and its chunk are in the tab a match runs with no further requests at all — the
+simulation, the bots and the physics are all on the device, proved by `e2e/offline.spec.ts`,
+which aborts every request after load and plays a bot match through to a scored result.
+
+A **cold load** with no connection is the second claim, and until the service worker was
+built it was not one this site could make: it depended entirely on the browser's ordinary
+HTTP cache and nothing here guaranteed it. It is guaranteed now, for a game this device has
+opened before — the same spec cuts the network at the browser, opens a game in a fresh tab
+and plays it out. It is **not** guaranteed for a game this device has never opened; that is
+not saved, and the site says so on a page of its own rather than showing a browser error.
+
+What that cache holds is the site's own files and nothing about you; see *What your browser
+keeps a copy of* above for what is in it and how to clear it.
 The README, CLAUDE.md and ADR 0002 describe the product in the same terms, so no document
 promises an offline cache this build does not ship.
 
