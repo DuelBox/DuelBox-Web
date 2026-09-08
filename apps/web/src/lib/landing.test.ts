@@ -12,6 +12,7 @@ import { AMERICAN, NEVER } from './house-voice';
 import { LAST_MODE_KEY } from './last-mode';
 import { BOT_DIFFICULTIES } from './match-setup';
 import { PLAYER_DATA_KEYS } from './player-data';
+import { CATALOGUE_KEY } from './catalogue-filter-key';
 import { HINTS_SEEN_KEY } from './control-hints-key';
 import { KEY_BINDINGS_KEY } from './key-bindings-key';
 import { PLAYER_NAMES_KEY } from './player-names';
@@ -283,6 +284,7 @@ describe('the numbers the landing copy states', () => {
     [TOURNAMENT_KEY]: /tournament/i,
     [KEY_BINDINGS_KEY]: /keys you (chose|picked)|keys for the two seats/i,
     [HINTS_SEEN_KEY]: /first-play hints|hints you have seen/i,
+    [CATALOGUE_KEY]: /sorted the catalogue|catalogue order|sort order/i,
   };
 
   /**
