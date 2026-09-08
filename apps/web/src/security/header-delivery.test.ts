@@ -36,7 +36,7 @@ import {
   problemsFor,
 } from '../../../../scripts/header-delivery.mjs';
 import { SECURITY_HEADERS } from '../../../../scripts/security-headers.mjs';
-import { FRAME_GUARD } from '../app/frame-guard';
+import { FRAMED_ATTRIBUTE, FRAME_GUARD } from '../app/frame-guard';
 
 const ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 
@@ -212,13 +212,33 @@ describe('the frame guard, which is all that stands in for a header nobody serve
     expect(FRAME_GUARD).toContain('appendChild(s)');
   });
 
-  it('fails safe if the notice never lands', () => {
-    // The notice is the only part React can clobber. What must not depend on it is the
-    // hiding — so the rule is installed synchronously and nothing ever removes it.
-    const beforeListener = FRAME_GUARD.slice(0, FRAME_GUARD.indexOf('addEventListener'));
-    expect(beforeListener).toContain('visibility:hidden!important');
+  it('does the whole refusal synchronously, with nothing deferred and nothing undone', () => {
+    // The hiding must not wait for an event, a frame or a stylesheet. It used to build the
+    // notice from a `DOMContentLoaded` listener, which is the one part of this React could
+    // clobber on a hydration mismatch; the notice is markup in `layout.tsx` now and this
+    // script is the decision alone (#2545). If a listener ever comes back, the rule above it
+    // is what must still be unconditional.
+    expect(FRAME_GUARD).not.toContain('addEventListener');
+    expect(FRAME_GUARD).not.toContain('setTimeout');
     expect(FRAME_GUARD).not.toContain('remove()');
     expect(FRAME_GUARD).not.toContain('visibility=""');
+  });
+
+  it('stamps the attribute the stylesheet and the layout both key off', () => {
+    // The only channel out of the before-paint script. Three files have to agree on it;
+    // `app/frame-notice.test.ts` holds the other two against the same constant.
+    expect(FRAMED_ATTRIBUTE).toBe('data-framed');
+    expect(FRAME_GUARD).toContain(`setAttribute("${FRAMED_ATTRIBUTE}","")`);
+  });
+
+  it('stays small, because every byte of it is paid 108 times over (#2545)', () => {
+    // Not a style preference. The root layout is serialised into the RSC payload of every
+    // exported route and `next/link` prefetches the lot on a browse, so this string is the
+    // most expensive place in the repository to write a byte: 708 -> 293 took 15 196 gzipped
+    // bytes off what a browse speculates. The ceiling is loose enough that an edit for
+    // clarity is not a failure and tight enough that building UI in here is; anything that
+    // needs the room should go to `globals.css`, which is fetched once instead of 108 times.
+    expect(FRAME_GUARD.length).toBeLessThan(350);
   });
 
   it('is claimed as a partial mitigation and never as the header', () => {

@@ -244,6 +244,25 @@ to each payload in the built export failed the build with `browsing the catalogu
 floor fired instead — `no route payloads at all — the export has stopped writing index.txt
 files` — because a guard that reads zero must never report a saving.
 
+The **fourteenth** is the clickjacking defence, and it is the plainest case in the list of a
+guard that reads a file instead of running it. On a host that serves neither
+`X-Frame-Options` nor CSP `frame-ancestors` — which is this one (#2481) — the inline
+`FRAME_GUARD` is the *entire* defence. Two things watched it, and both watched the text:
+`security/header-delivery.test.ts` asserts things about the source string, and
+`check-headers.mjs` looks for its first forty-two characters after a literal `<script>` in
+every exported page. Both of those pass on a guard that throws on its second line, and
+**nothing in the repository had ever put a page in a frame.** Found while cutting the script
+down for #2545, which is the useful part: it was rewritten to hide-and-flag, with the notice
+moved into the layout and its styling into `globals.css`, and the entire rewrite could have
+shipped a defence that did nothing with every existing check green. `e2e/frame-guard.spec.ts`
+frames a real page in Chromium and WebKit now, and it was watched failing with the refusal
+short-circuited. Two false starts are worth recording beside it, because each produced a red
+that looked like a bug in the test rather than in the page: a DuelBox page cannot be the
+framing page at all, since every one of them carries `default-src 'none'` with no `frame-src`;
+and framing a loopback address from an `about:blank` document is refused by Private Network
+Access before the server hears about it. In both the child never loaded, and what the report
+said was "element not found".
+
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard
