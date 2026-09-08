@@ -26,7 +26,6 @@ import { stripForbiddenKeys } from './hardened-json';
 import { HEAD_TO_HEAD_KEY, readRecord } from './head-to-head';
 import { CATALOGUE_KEY } from './catalogue-filter-key';
 import { HINTS_SEEN_KEY } from './control-hints-key';
-import { INSTALL_KEY } from './install-prompt-key';
 import { KEY_BINDINGS_KEY } from './key-bindings-key';
 import { LAST_MODE_KEY, rememberedGames } from './last-mode';
 import { isRecord, readJson, readVersioned, removeJson, writeJson } from './local-store';
@@ -65,7 +64,6 @@ export const PLAYER_DATA_KEYS: readonly string[] = [
   KEY_BINDINGS_KEY,
   HINTS_SEEN_KEY,
   CATALOGUE_KEY,
-  INSTALL_KEY,
 ];
 
 /** The settings store's own version, checked here only to count it as present. */
