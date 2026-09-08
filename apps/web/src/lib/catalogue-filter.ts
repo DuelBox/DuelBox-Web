@@ -14,7 +14,8 @@
  * index is the part of each game a filter can ask about, and nothing more.
  */
 
-import { KEY_PREFIX, readVersioned, writeVersioned } from './local-store';
+import { CATALOGUE_KEY } from './catalogue-filter-key';
+import { readVersioned, writeVersioned } from './local-store';
 
 /** The five things the browser knows about a game. The page builds one per catalogue row. */
 export interface CatalogueIndexEntry {
@@ -236,7 +237,7 @@ export function suggestions(
  * every other key, so it inherits the same failure story: absent, full or blocked storage
  * hands back the default and never throws.
  */
-export const CATALOGUE_KEY = `${KEY_PREFIX}catalogue`;
+export { CATALOGUE_KEY };
 
 /** The shape written today: `{ version: 1, sort }`. */
 const VERSION = 1;

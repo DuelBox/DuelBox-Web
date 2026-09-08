@@ -143,6 +143,9 @@ const CHROMIUM_ONLY = [
   // rasteriser does, and that is exactly what the card does not claim to hold. Same
   // reading as `tournament.spec.ts`.
   '**/share-card.spec.ts',
+  // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
+  // no-op there, so a second engine would be four copies of a hidden button (#195).
+  '**/install-prompt.spec.ts',
 ];
 
 /**
