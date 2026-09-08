@@ -26,16 +26,41 @@ const BLUE = 'rgb(33, 176, 232)';
 const seat = (page: Page, id: 'p1' | 'p2') =>
   page.getByRole('group', { name: 'Score' }).locator(`[data-seat="${id}"]`);
 
+/** Whether the stored settings say the seats are swapped — what the head script will read. */
+const storedSwap = (page: Page): Promise<boolean> =>
+  page.evaluate(() => {
+    try {
+      const raw = localStorage.getItem('duelbox:settings');
+      return raw !== null && (JSON.parse(raw) as { seatSwap?: unknown }).seatSwap === true;
+    } catch {
+      return false;
+    }
+  });
+
 async function swapOn(page: Page): Promise<void> {
   await page.goto('/settings/');
   // A statically exported page is on screen before it is interactive, and a press that lands
   // before the switch has hydrated does nothing at all — `page-transition.spec.ts` has the
-  // long form. The press is repeated until the switch answers it, which a press that worked
-  // does within a frame; on a loaded runner the first one landed early about once in twenty.
+  // long form. So the press is repeated until the store shows it landed, and *only* while
+  // the store shows it has not: the switch toggles, and a second press after a slow first
+  // one turns the setting straight back off — which, retrying on `aria-checked` alone, a
+  // loaded WebKit did about once in twenty. The press writes the store synchronously, so a
+  // read that says "on" is a press that reached it, and never one that is still arriving.
   await expect(async () => {
-    await settings(page).click();
-    await expect(settings(page)).toHaveAttribute('aria-checked', 'true', { timeout: 1_000 });
+    if (!(await storedSwap(page))) await settings(page).click();
+    expect(await storedSwap(page), 'the press reached the switch').toBe(true);
   }).toPass({ timeout: 15_000 });
+  await expect(settings(page)).toHaveAttribute('aria-checked', 'true');
+  // Then read it back from a fresh document before opening a game, because a fresh document
+  // is what the game's head script is. The press's own document sees its write at once; on
+  // WebKit under load, the next document once did not — the game came up un-swapped after a
+  // press the store had confirmed — so the wait is for the write to be durable, re-reading
+  // (never re-pressing: a second press would turn it off) until a new document agrees.
+  await expect(async () => {
+    await page.reload();
+    expect(await storedSwap(page), 'a fresh document reads the press').toBe(true);
+  }).toPass({ timeout: 15_000 });
+  await expect(settings(page)).toHaveAttribute('aria-checked', 'true');
 }
 
 async function startMiniSoccer(page: Page): Promise<void> {
@@ -75,14 +100,12 @@ test.describe('swapping the seat colours', () => {
 
   test('recolours the near seat on the scoreboard without changing its shape', async ({ page }) => {
     await startMiniSoccer(page);
-    const before = await nearGlyph(page);
-    expect(before).toEqual({ shape: 'circle', fill: RED });
+    await expect.poll(() => nearGlyph(page)).toEqual({ shape: 'circle', fill: RED });
 
     await swapOn(page);
     await startMiniSoccer(page);
-    const after = await nearGlyph(page);
     // The circle is still a circle — rule 7's shape signal does not follow the colour.
-    expect(after).toEqual({ shape: 'circle', fill: BLUE });
+    await expect.poll(() => nearGlyph(page)).toEqual({ shape: 'circle', fill: BLUE });
     const far = seat(page, 'p2').locator('svg > *');
     expect(await far.evaluate((el) => el.tagName.toLowerCase())).toBe('rect');
     expect(await far.evaluate((el) => getComputedStyle(el).fill)).toBe(RED);
