@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   // the two paths rather than replacing one, so `/games/chess/` becomes
   // `/DuelBox-Web/games/chess/` and not a route the origin has never served.
   metadataBase: new URL(`${SITE_URL}/`),
+  // Every route names itself as canonical (#201). Relative, so Next resolves it against the
+  // page being rendered rather than against this file: a query-string or hash variant of any
+  // route then points a crawler at the clean address. The three routes that already declare
+  // their own replace this rather than merging with it, which is why they still say so.
+  alternates: { canonical: './' },
   title: {
     default: 'DuelBox — 108 games for two players',
     template: '%s — DuelBox',

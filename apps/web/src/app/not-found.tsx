@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import styles from './not-found.module.css';
 
@@ -14,6 +15,20 @@ import styles from './not-found.module.css';
  * to guess what was meant: a wrong slug is not a search query, and a page that pretends to
  * know what you wanted is worse than one that admits it does not.
  */
+/**
+ * No canonical on the page that says a page does not exist (#201).
+ *
+ * The root layout gives every route a relative canonical that Next resolves against the
+ * page being rendered, and for this one that resolved to `/_not-found/` — an address the
+ * export never serves. A canonical pointing at a 404 is a claim about the wrong thing, and
+ * `scripts/check-canonicals.mjs` holds every exported page to a canonical that exists.
+ * `null` here overrides the inherited value rather than merging with it.
+ */
+export const metadata: Metadata = {
+  title: 'Page not found',
+  alternates: { canonical: null },
+};
+
 export default function NotFound() {
   return (
     <div className="db-wrap">
