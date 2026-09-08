@@ -112,12 +112,35 @@ curl -s "$U/" | grep -c 'top===w.self'                           # the frame gua
 # The security contact is reachable.
 curl -s -o /dev/null -w '%{http_code}\n' "$U/security.txt"
 curl -s -o /dev/null -w '%{http_code}\n' "$U/.well-known/security.txt"
+
+# The service worker is being served, and it is THIS build's copy.
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "$U/sw.js"   # expect 200 and a JS type
+curl -s "$U/sw.js" | grep -o 'duelbox-shell-[A-Za-z0-9._-]*' | head -1
 ```
+
+**That last line is the one that is new, and it is the one that matters.** It prints the
+cache name the served worker will create, which carries this build's revision. Compare it
+with what the previous deploy printed: **if it has not changed, the deploy did not reach the
+worker**, and every device that already has the site will go on serving the old build out of
+its own cache with nothing to tell it otherwise. A route-status check cannot see this,
+because the routes answer 200 either way — from the CDN for you, from the cache for them.
+
+A non-JavaScript `content_type`, or anything but 200, is the other half of the same failure:
+a browser refuses to register a worker served as `text/plain`, so the registration fails
+silently and, again, everybody keeps what they last installed.
 
 Then **open the site and play a match.** Two games, one turn-based and one real-time, on a
 phone if you have one. Every bug worth finding in this repository was found by running the
 product; the suite was green through all of them, and it is green through the three defects
 listed below.
+
+While you are there, with DevTools open on the live origin: **Application → Service Workers**
+should show one worker, `activated and is running`, with no second one stuck at *waiting*
+that nothing offered you; and the console should answer `await caches.keys()` with exactly
+one `duelbox-shell-` name, matching the one the curl above printed. Two names means the new
+worker's `activate` is not deleting the old build's cache, which is how a device ends up
+holding three copies of the site. On a second visit to a game you have already played,
+**Network → Size** should read *(ServiceWorker)* against every row.
 
 ### 4. What that check returns today, so you can tell new from old
 
@@ -192,26 +215,80 @@ will not save you — Route A will not either. In that case pin the dependency a
 
 ### What the caches do
 
+There are now **two** of them, and the second one is new since #2544. Read both.
+
 The live origin serves `cache-control: max-age=600` on **both** HTML and hashed assets
 (measured). So:
 
 - A visitor who loaded the bad page may keep it for **up to ten minutes** after the rollback
-  deploys. Plan the "it is fixed" message around that, not around the workflow finishing.
-- There is **no service worker and no app cache** — verified: no `sw.js`, no
-  `service-worker*`, no `next-pwa`, no `workbox`, and nothing registering one. **A bad build
-  cannot pin itself in anyone's browser.** That is the single most important fact about
-  rollback here, and it is why a ten-minute worst case is the whole story.
+  deploys, on the CDN's account alone.
 - `x-proxy-cache` / `via: varnish` in the response headers confirm a CDN in front. There is no
   purge control available to us; waiting out `max-age` is the mechanism.
 
+**And there is a service worker, which holds a copy of the shell on the device.** This
+paragraph used to say the opposite and used to say it was the single most important fact
+about rolling back here. It was, and the fact has changed, so the conclusion has too.
+
+A returning visitor is now served the site out of their own browser's cache. That is the
+whole point of #2445 — the second play of a game asks the network for nothing — and it is
+also, stated plainly, **a bad build being handed back to somebody by their own device.** The
+ten-minute CDN figure is no longer the worst case, and planning an "it is fixed" message
+around it will be wrong.
+
+What bounds it instead is the update path, and it is worth knowing exactly, because "the
+service worker will sort it out" is how a stranded fleet happens:
+
+- **The browser re-fetches `sw.js` on navigation**, not on our schedule and not on the
+  visitor's. That check is the entire freshness mechanism. It does not go through the
+  worker's cache, and no page waits on it.
+- **A rollback changes `sw.js`**, because `scripts/emit-service-worker.mjs` writes the build's
+  revision into it. Different bytes are the only trigger there is; a deploy that somehow left
+  that file byte-identical would reach nobody who already has the site, which is the failure
+  mode to be frightened of and the reason the revision is in the file rather than beside it.
+- **The new worker installs and then waits.** It does not take over a tab mid-match. The page
+  shows a `role="status"` offering the new version and a **Reload** button, and taking it is
+  what swaps the build. A visitor who ignores the prompt keeps the bad build in that tab.
+- **A visitor who closes every tab of the site and comes back gets the new worker anyway**,
+  because a waiting worker activates once the old one has no clients left. So the realistic
+  spread after a rollback deploy is: seconds for anyone who takes the prompt, one visit for
+  anyone who closes the tab, and *indefinitely* for a tab left open and ignored.
+
+So the honest worst case is no longer bounded by a timer at all. It is bounded by the
+visitor. There is no push, no kill switch and no way to reach a device — by design, and the
+privacy policy depends on it staying that way.
+
+**The one failure that strands everybody is a worker that cannot update**, and it is the
+thing this runbook now has to check on every release rather than assume. Two shapes of it:
+a `sw.js` that 404s or is served with the wrong content type, so the registration fails and
+every device keeps whatever it last installed; and a worker whose `activate` throws, so it
+never claims and never replaces the one before it. Neither shows up in a route-status check,
+because the routes are being answered out of the cache. Step 3 below has the check that does
+see it, and it is the reason the release checklist grew a line.
+
+If you are rolling back **because the worker itself is broken**, a revert is still the right
+move and is still not instant: the fix has to be installed by the same mechanism that is
+broken. Nothing in this repository can shorten that. `docs/pwa.md` has the manual escape —
+what to tell a person who is stuck, and how to clear a worker by hand — and it is the only
+answer there is.
+
 ### What cannot be rolled back
 
-Nothing. There is no database, no migration, no user state on any server, and no accounts.
-The only thing that persists across a release is one browser-local preference key,
-`duelbox:last-mode`, which holds each game's last-used mode, difficulty and round count. If a
-release changes its shape, `apps/web/src/lib/last-mode.ts` wraps every read in a `try/catch`
-that falls back to defaults — so a stale value degrades to "the setup form starts empty",
-never to a broken page. Bump its `version` field rather than inventing a migration.
+Nothing **of ours**. There is no database, no migration, no user state on any server, and no
+accounts. What persists across a release is entirely on the visitor's device, and there are
+two kinds of it.
+
+**The stores.** The keys in `PLAYER_DATA_KEYS` (`apps/web/src/lib/player-data.ts`) — seven of
+them today, and that array is what export, import and erase all walk. If a release changes
+the shape of one, the readers wrap every parse in a `try/catch` that falls back to defaults:
+`apps/web/src/lib/last-mode.ts` is the worked example, where a stale value degrades to "the
+setup form starts empty" rather than to a broken page. Bump the store's `version` field
+rather than inventing a migration.
+
+**The shell cache**, which is the new one. A rollback does not reach into it and nothing can:
+it is deleted by the *next* worker's `activate`, on the device, at whatever moment that
+device gets round to installing the next worker. See *What the caches do* above for what
+actually moves a visitor onto the rolled-back build, and `docs/pwa.md` for the manual escape
+if one of them is stuck and asking you why.
 
 ---
 
@@ -247,14 +324,19 @@ Release
 [ ] Seven routes return 200
 [ ] meta CSP, meta referrer, frame guard present in the served HTML
 [ ] /security.txt returns 200
+[ ] /sw.js returns 200 with a JavaScript content type
+[ ] The duelbox-shell- revision in the served /sw.js CHANGED from the last deploy
+[ ] On the live origin: one worker, activated; one duelbox-shell- cache; nothing stuck waiting
 [ ] Played one turn-based and one real-time game on the live origin
 [ ] Checked on a phone
 
 Rollback (if needed)
 [ ] Route chosen and why (A revert / B re-run)
 [ ] Deploy run completed
-[ ] Verification block re-run and green
-[ ] Ten minutes elapsed since the deploy before declaring it fixed (CDN max-age=600)
+[ ] Verification block re-run and green, including the two sw.js lines
+[ ] Ten minutes elapsed since the deploy before declaring the CDN clear (max-age=600)
+[ ] Said in the issue that returning visitors are NOT on that timer — they move when they
+    take the update prompt or come back to a closed tab, and a tab left open does not move
 [ ] Issue opened with cause, action, and what would have caught it
 ```
 
@@ -273,3 +355,11 @@ already handled:
 4. **No `not-found.tsx`**, so every 404 is Next's default page.
 5. **No custom domain**, so the site's URL contains the repository name and moving hosts
    changes every link anyone has saved. Worth deciding before that matters.
+6. **No way to force a device onto a new build.** Since #2544 a returning visitor is served
+   the shell from their own browser, and the only things that move them are the update prompt
+   they have to accept and the tab they have to close. There is no push channel, no kill
+   switch and no remote unregister, and there is not going to be one — every mechanism that
+   would provide it is a mechanism for reaching a player, which is the thing this product
+   does not have. It is a real limit and it is the price of the offline story; the mitigation
+   is that the prompt is offered promptly and cannot be missed, which is #194's whole job and
+   is why `e2e/offline.spec.ts` tests the Reload button rather than only the caching.

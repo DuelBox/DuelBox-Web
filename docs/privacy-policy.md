@@ -40,6 +40,43 @@ It holds only the setup: the mode, the difficulty and the round count, for each 
 have opened. **No scores, no names, no times, no identifiers.** Clearing your browser's site
 data removes it, and nothing else remembers it.
 
+### What your browser keeps a copy of, so the site opens without a connection
+
+Copies of this site's own files. Nothing about you.
+
+The section above is about the one thing the site *writes down*. This is a different kind of
+storage and it deserves its own paragraph rather than a clause, because it is larger, it
+arrived recently, and a reader who found it themselves would be right to want it mentioned.
+
+A **service worker** — a small script your browser runs on this site's behalf — saves the
+site's pages, its JavaScript, its stylesheets, its fonts and its icons the first time you
+visit, and then saves each game's page and code on the device you played it on. That is what
+makes a game you have already opened start and play with no connection at all, and it is why
+opening it a second time asks the network for nothing.
+
+**Everything in it is a file this site served you.** The same HTML, JavaScript, CSS, `.woff2`
+fonts and SVG icons GitHub Pages sent to your browser, stored in your browser's Cache Storage
+under two names beginning `duelbox-shell-` and `duelbox-runtime-`. There is nothing in it
+that came from you: no scores, no names, no settings, no identifier, and no log of what you
+did — only the site's own files, which you can list yourself with the console command in the
+verification table below.
+
+**It goes nowhere.** The worker answers requests your browser was already making and does
+nothing else. It has no analytics, no error reporting, no beacon and no counter; every URL it
+touches is on this origin, and it refuses to answer a request for any other. There is no
+server of ours for it to talk to, which is the same reason the rest of this page is short.
+
+**You control it, and it is not permanent.** Clearing your browser's site data removes it
+along with everything in the section above. It is replaced wholesale whenever a new version
+of the site is published, and your browser may discard it on its own when it needs the space.
+[`docs/pwa.md`](pwa.md) has the step-by-step for removing it deliberately, in each browser,
+including what to do if the site seems stuck on an old version.
+
+**The whole catalogue is not downloaded.** Only games you actually open are saved. Pulling a
+hundred-odd games onto a phone that asked for one would be spending somebody else's data
+allowance, so it is not done, and the feature that would do it deliberately and with a
+progress bar is on the backlog rather than switched on quietly (#196).
+
 ### Cookies
 
 There are none. The site sets no cookies, and there is no server to set one.
