@@ -143,6 +143,11 @@ const CHROMIUM_ONLY = [
   // rasteriser does, and that is exactly what the card does not claim to hold. Same
   // reading as `tournament.spec.ts`.
   '**/share-card.spec.ts',
+  // `attract-mode.spec.ts` (#165) stubs `navigator.getBattery` and `navigator.connection`,
+  // which are Chromium's alone — WebKit has neither, so the stubs would stub nothing — and a
+  // bot-versus-bot match is the same simulation on every engine by rule 8. A second engine
+  // would re-run the catalogue's idle timer to learn nothing.
+  '**/attract-mode.spec.ts',
 ];
 
 /**
