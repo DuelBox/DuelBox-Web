@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Canvas2DRenderer,
   FixedLoop,
+  GamepadManager,
   InputManager,
   InputRecorder,
   InputView,
@@ -11,6 +11,7 @@ import {
   exportTrace,
   RunLoop,
   browserClock,
+  browserGamepadSource,
   clampDevicePixelRatio,
   negotiateSharedLogical,
   negotiateSharedViewport,
@@ -22,6 +23,7 @@ import {
   type LogicalSize,
   type SeatId,
   type SeatInputState,
+  type GamepadEvent,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
@@ -34,6 +36,11 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import { readBindings } from '@/lib/key-bindings';
+import {
+  createRendererBackend,
+  preloadRendererBackend,
+  webglRendererEnabled,
+} from '@/lib/renderer-backend';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
 import { readSettings } from '@/lib/settings';
@@ -93,6 +100,21 @@ export interface GameHostProps {
   onSeatInput?: (seat: SeatId) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
+  /**
+   * A controller was plugged in, unplugged, or moved to the other seat (#130).
+   *
+   * Fired from the fixed step on the poll that saw the edge, and always paired with
+   * {@link onRequestPause}: a seat that just gained or lost its instrument mid-rally is the
+   * one thing this host will stop a live match for on its own, because the alternative is
+   * a player whose pad went dead discovering it by losing.
+   */
+  onGamepad?: (event: GamepadEvent) => void;
+  /**
+   * Hands the shell the one manual control the acceptance asks for: swapping which pad drives
+   * which seat, for the pair who were handed the wrong ones. Given once per match, like
+   * `onTraceReady`, because the manager lives in the effect.
+   */
+  onGamepadReady?: (controls: { swap: () => void }) => void;
   /**
    * The match cannot go on, and the shell has to say so.
    *
@@ -171,6 +193,8 @@ export function GameHost({
   onActiveSeat,
   onSeatInput,
   onRequestPause,
+  onGamepad,
+  onGamepadReady,
   onError,
   recordTrace = false,
   onTraceReady,
@@ -194,16 +218,33 @@ export function GameHost({
   onSeatInputRef.current = onSeatInput;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onGamepadRef = useRef(onGamepad);
+  onGamepadRef.current = onGamepad;
+  const onGamepadReadyRef = useRef(onGamepadReady);
+  onGamepadReadyRef.current = onGamepadReady;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
 
+  /**
+   * Whether the renderer can be built yet (#16). True from the first render in every build
+   * made without `NEXT_PUBLIC_RENDERER=webgl` — `webglRendererEnabled()` is a literal after
+   * the build folds it — so the default path renders exactly when it always did. With the
+   * flag on, the WebGL module is fetched first and the match starts one tick later.
+   */
+  const [rendererReady, setRendererReady] = useState(!webglRendererEnabled());
   useEffect(() => {
+    if (rendererReady) return;
+    void preloadRendererBackend().then(() => {
+      setRendererReady(true);
+    });
+  }, [rendererReady]);
+
+  useEffect(() => {
+    if (!rendererReady) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
 
     // The one play area both players share, negotiated once before the first frame (rule 9,
     // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
@@ -215,7 +256,14 @@ export function GameHost({
     // equal for any pair the shell would actually start.
     const peerBox = peerLogical ?? manifest.logical;
     const logical = negotiateSharedLogical(manifest.logical, peerBox);
-    const renderer = new Canvas2DRenderer(context, logical);
+    // Which backend is a build-time decision made in `lib/renderer-backend.ts`; this host
+    // reads nothing off the renderer that is not on `HostRenderer` (#16).
+    const built = createRendererBackend(canvas, logical);
+    if (built === null) return;
+    // Rebound after the null check because `resize` below is a hoisted function declaration,
+    // and TypeScript does not carry a narrowing into one.
+    const backend = built;
+    const renderer = backend.renderer;
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
     // identically on every device — only what is drawn changes — or two devices would
@@ -277,6 +325,42 @@ export function GameHost({
     const recorder = recordTrace ? new InputRecorder(manager) : null;
     const input: InputManager | InputRecorder = recorder ?? manager;
 
+    /**
+     * The pads (#130). `GamepadManager` and `browserGamepadSource` had both been in the
+     * engine, with tests, and called by nothing — the fifth library this repository was
+     * found to have written and never wired. This is the wiring: polled inside the fixed
+     * step so a pad's intent reaches the same step a key's does, and read through
+     * `setSeatAnalog`, so a game never learns which instrument a seat is holding.
+     *
+     * Rule 5: `poll()` and `setSeatAnalog` mutate in place; the one thing on this path that
+     * allocates is `navigator.getGamepads()` itself, which is the browser's and is argued in
+     * `loop.ts`. `usedGamepad` is a two-slot typed array for the same reason `usedInput` is.
+     */
+    const gamepads = new GamepadManager(browserGamepadSource());
+    onGamepadReadyRef.current?.({
+      swap: () => {
+        const p1 = gamepads.padOf('p1');
+        const p2 = gamepads.padOf('p2');
+        // Two pads: each takes the other's seat. One pad: it crosses to the empty seat.
+        // None: nothing to swap, and `reassign` is not called so no event is raised.
+        if (p1 !== null && p2 !== null) {
+          gamepads.reassign('p1', p2);
+          gamepads.reassign('p2', p1);
+        } else if (p1 !== null) {
+          gamepads.reassign('p2', p1);
+        } else if (p2 !== null) {
+          gamepads.reassign('p1', p2);
+        }
+        gamepads.clearEvents();
+      },
+    });
+    /** Feeds one seat's pad reading into the manager, or zeros when it has no pad. */
+    const feedSeat = (seat: SeatId): void => {
+      const reading = gamepads.reading(seat);
+      if (reading === null) input.setSeatAnalog(seat, 0, 0, false);
+      else input.setSeatAnalog(seat, reading.moveX, reading.moveY, reading.action);
+    };
+
     gameRef.current = game;
     // The presentation is read through a getter over this mutable, not baked in, so it can be
     // flipped live by the dev toggle below without rebuilding the match (#1863). Switching it
@@ -327,7 +411,7 @@ export function GameHost({
 
     // The element is passed in rather than closed over: TypeScript will not carry the
     // null-narrowing of a ref into a hoisted function declaration.
-    function resize(el: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
+    function resize(el: HTMLCanvasElement): void {
       const dpr = clampDevicePixelRatio(globalThis.devicePixelRatio);
       const cssWidth = el.clientWidth;
       const cssHeight = el.clientHeight;
@@ -340,15 +424,16 @@ export function GameHost({
       lastDpr = dpr;
       el.width = Math.round(cssWidth * dpr);
       el.height = Math.round(cssHeight * dpr);
-      // Draw in CSS pixels; the backing store carries the device ratio.
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Draw in CSS pixels; the backing store carries the device ratio. The 2D backend takes
+      // it as a context transform, the WebGL one as a number — the backend knows which.
+      backend.setDevicePixelRatio(dpr);
       view = negotiateSharedViewport(
         { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
         peerBox,
       ).view;
       renderer.setViewport(view);
     }
-    resize(canvas, context);
+    resize(canvas);
 
     // Coalesced into one animation frame. The observer can fire several times for a
     // single chrome transition, and reallocating the backing store on each is the layout
@@ -357,7 +442,7 @@ export function GameHost({
       if (resizeHandle !== 0) return;
       resizeHandle = globalThis.requestAnimationFrame(() => {
         resizeHandle = 0;
-        resize(canvas, context);
+        resize(canvas);
       });
     });
     observer.observe(canvas);
@@ -542,7 +627,7 @@ export function GameHost({
         // scale and letterbox offset on every frame rather than leaving them on the
         // context, so the first frame back sets them itself.
         lastWidth = -1;
-        resize(canvas, context);
+        resize(canvas);
       },
     );
 
@@ -554,6 +639,22 @@ export function GameHost({
         // that could disagree. A getter over a boolean, so the step path allocates
         // nothing for it (rule 5).
         if (renderer.surfaceLost) return;
+        // The pads, every live step and before the input is sampled, so a stick's intent
+        // reaches the step it was read on. Polled while paused too: a pad that arrives
+        // during the pause is seated by the time the board comes back, and one that leaves
+        // during it is reported rather than discovered on the first live step.
+        gamepads.poll();
+        feedSeat('p1');
+        feedSeat('p2');
+        const edges = gamepads.events;
+        if (edges.length > 0) {
+          // A hot-plug is the one thing this host stops a live match for on its own (#130).
+          // Reported before the pause so the shell can say what happened on the panel it
+          // is about to show.
+          for (const edge of edges) onGamepadRef.current?.(edge);
+          gamepads.clearEvents();
+          if (isSimulating(phaseRef.current)) onRequestPauseRef.current?.();
+        }
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
@@ -766,7 +867,11 @@ export function GameHost({
     // the query parameter had been resolved in an effect, so the recorder was never made at all
     // and the trace stayed empty. Rebuilding costs nothing where it actually happens: recording
     // is decided on the lobby screen, before there is a match to lose.
+    //
+    // `rendererReady` is the gate at the top of the effect (#16): false only in a build made
+    // with the WebGL flag, until its module has been fetched, and then true for good.
   }, [
+    rendererReady,
     manifest,
     createGame,
     seed,

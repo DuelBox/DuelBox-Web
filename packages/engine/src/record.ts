@@ -26,6 +26,13 @@ export type InputEvent =
   | { readonly kind: 'pointerCancel'; readonly id: number }
   | { readonly kind: 'boardSeat'; readonly seat: SeatId }
   | { readonly kind: 'split'; readonly split: ZoneSplit }
+  | {
+      readonly kind: 'analog';
+      readonly seat: SeatId;
+      readonly x: number;
+      readonly y: number;
+      readonly action: boolean;
+    }
   | { readonly kind: 'clear' };
 
 export interface RecordedFrame {
@@ -115,6 +122,32 @@ export class InputRecorder {
   setSplit(split: ZoneSplit): void {
     this.#pending.push({ kind: 'split', split });
     this.#input.setSplit(split);
+  }
+
+  /** What each seat's pad last read, so a poll that changes nothing writes nothing down. */
+  readonly #lastAnalog: Record<SeatId, { x: number; y: number; action: boolean }> = {
+    p1: { x: 0, y: 0, action: false },
+    p2: { x: 0, y: 0, action: false },
+  };
+
+  /**
+   * A gamepad reading (#130), recorded only when it differs from the last one.
+   *
+   * The host calls this every step for both seats whether or not a pad is plugged in, so
+   * writing every call down would put two events on every frame of every recording — a trace
+   * of a keyboard match would be mostly zeros about a pad nobody had. A reading is an event
+   * only on the step it changes, which is also what makes a replay exact: `setSeatAnalog`
+   * persists a value until the next call, so replaying the changes reproduces the holds.
+   */
+  setSeatAnalog(seat: SeatId, x: number, y: number, action: boolean): void {
+    const last = this.#lastAnalog[seat];
+    if (last.x !== x || last.y !== y || last.action !== action) {
+      last.x = x;
+      last.y = y;
+      last.action = action;
+      this.#pending.push({ kind: 'analog', seat, x, y, action });
+    }
+    this.#input.setSeatAnalog(seat, x, y, action);
   }
 
   /** A query rather than a change, so it is delegated and not written down. */
@@ -219,6 +252,9 @@ function applyEvent(input: InputManager, event: InputEvent): void {
     case 'split':
       input.setSplit(event.split);
       return;
+    case 'analog':
+      input.setSeatAnalog(event.seat, event.x, event.y, event.action);
+      return;
     case 'clear':
       input.clear();
       return;
@@ -316,6 +352,7 @@ const KINDS = new Set([
   'pointerCancel',
   'boardSeat',
   'split',
+  'analog',
   'clear',
 ]);
 
@@ -337,5 +374,17 @@ function checkEvent(event: unknown, at: number): void {
   }
   if (kind === 'boardSeat' && value['seat'] !== 'p1' && value['seat'] !== 'p2') {
     throw new Error(`frame ${at}: a boardSeat names ${String(value['seat'])}`);
+  }
+  if (kind === 'analog') {
+    if (value['seat'] !== 'p1' && value['seat'] !== 'p2') {
+      throw new Error(`frame ${at}: an analog reading names ${String(value['seat'])}`);
+    }
+    if (
+      typeof value['x'] !== 'number' ||
+      typeof value['y'] !== 'number' ||
+      typeof value['action'] !== 'boolean'
+    ) {
+      throw new Error(`frame ${at}: an analog reading is missing a component`);
+    }
   }
 }

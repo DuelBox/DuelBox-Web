@@ -222,3 +222,57 @@ describe('refusing a prototype-pollution payload (#2365)', () => {
     expect(replay(trace, 120)).toEqual(live);
   });
 });
+
+describe('recording a gamepad (#130)', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 800, height: 600 };
+
+  it('writes a reading down on the step it changes and on no other', () => {
+    const input = new InputManager(SIZE);
+    const recorder = new InputRecorder(input);
+    recorder.setSeatAnalog('p1', 0, 0, false); // the host's every-step zero for an empty seat
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, false);
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, false);
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, true);
+    recorder.beginStep(STEP);
+    const frames = recorder.toTrace('sumo', 1, STEP).frames;
+    expect(frames.map((frame) => frame.at)).toEqual([1, 3]);
+    expect(frames[0]?.events).toEqual([
+      { kind: 'analog', seat: 'p1', x: 0.5, y: 0, action: false },
+    ]);
+  });
+
+  it('replays a held stick as the hold it was', () => {
+    const recorder = new InputRecorder(new InputManager(SIZE));
+    const seen: number[] = [];
+    for (let step = 0; step < 6; step += 1) {
+      recorder.setSeatAnalog('p2', step >= 2 && step < 5 ? -1 : 0, 0, false);
+      seen.push(recorder.beginStep(STEP).seat('p2').moveX);
+    }
+    const trace = importTrace(exportTrace(recorder.toTrace('sumo', 1, STEP)));
+    const replayed = new InputManager(SIZE);
+    const player = new TracePlayer(trace);
+    const again: number[] = [];
+    for (let step = 0; step < 6; step += 1) {
+      player.apply(replayed, step);
+      again.push(replayed.beginStep(STEP).seat('p2').moveX);
+    }
+    expect(seen).toEqual([0, 0, -1, -1, -1, 0]);
+    expect(again).toEqual(seen);
+  });
+
+  it('refuses an analog event with a component missing', () => {
+    const text = JSON.stringify({
+      version: 1,
+      game: 'sumo',
+      seed: 1,
+      logical: SIZE,
+      fixedDeltaSeconds: STEP,
+      frames: [{ at: 0, events: [{ kind: 'analog', seat: 'p1', x: 0.5, y: 0 }] }],
+    });
+    expect(() => importTrace(text)).toThrow(/missing a component/);
+  });
+});
