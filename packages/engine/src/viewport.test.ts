@@ -6,6 +6,8 @@ import {
   isInsideLogical,
   logicalToViewport,
   negotiateSharedLogical,
+  negotiateSharedViewport,
+  screenOrientation,
   viewportToLogical,
 } from './viewport.js';
 
@@ -358,5 +360,193 @@ describe('negotiateSharedLogical', () => {
     expect(() =>
       negotiateSharedLogical({ width: 800, height: Number.NaN }, { width: 800, height: 600 }),
     ).toThrow(RangeError);
+  });
+});
+
+describe('screenOrientation', () => {
+  it('reads a real screen the way a person holding it would', () => {
+    expect(screenOrientation(320, 568)).toBe('portrait');
+    expect(screenOrientation(393, 852)).toBe('portrait');
+    expect(screenOrientation(768, 1024)).toBe('portrait');
+    expect(screenOrientation(844, 390)).toBe('landscape');
+    expect(screenOrientation(1440, 900)).toBe('landscape');
+    expect(screenOrientation(3440, 1440)).toBe('landscape');
+  });
+
+  it('answers null while the screen has no shape, rather than flapping', () => {
+    // The frame or two in the middle of a real rotation, and the collapsed window
+    // `fitViewport` already answers with scale 0 rather than a throw. A function that had to
+    // pick one of two words here would pick a different one each frame, and a rotate hint
+    // downstream of it would blink on and off while the device turned.
+    expect(screenOrientation(0, 0)).toBeNull();
+    expect(screenOrientation(390, 0)).toBeNull();
+    expect(screenOrientation(0, 844)).toBeNull();
+    expect(screenOrientation(-390, 844)).toBeNull();
+    expect(screenOrientation(Number.NaN, 844)).toBeNull();
+    expect(screenOrientation(390, Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it('breaks the square tie towards landscape, and the tie costs no player anything', () => {
+    expect(screenOrientation(800, 800)).toBe('landscape');
+
+    // Why the arbitrary tie-break is free: on a square screen a box and that same box turned
+    // on its side letterbox to exactly the same drawn area, so whichever way the tie falls,
+    // neither player gets a larger board out of it. This is the claim `screenOrientation`'s
+    // docstring makes, asserted rather than left standing.
+    const upright = fitViewport({ width: 600, height: 1000 }, 800, 800);
+    const sideways = fitViewport({ width: 1000, height: 600 }, 800, 800);
+    expect(upright.scale).toBe(sideways.scale);
+    expect(upright.width * upright.height).toBe(sideways.width * sideways.height);
+  });
+
+  it('cannot be used as a device query from inside a game', () => {
+    // Rule 10 in the one form it can be checked here. A game is handed a LogicalSize and
+    // never a screen size, so the only argument it *has* to pass is its own box — and the
+    // answer to that is a constant of the match, identical on a phone and on a laptop, which
+    // tells the game nothing whatever about the device it is running on.
+    const box = { width: 600, height: 1000 };
+    expect(screenOrientation(box.width, box.height)).toBe('portrait');
+    expect(screenOrientation(box.width, box.height)).toBe(screenOrientation(600, 1000));
+  });
+});
+
+/**
+ * A match survives being turned over, and the naive way to implement #1886 does not.
+ *
+ * #1886 asks for two things that pull against each other: "re-layout rather than letterbox
+ * where the game supports both", and "never lose match state across an orientation change".
+ * Rule 8 leaves exactly one lever for the first — the *logical size* a game is given — and
+ * pulling that lever mid-match is what breaks the second, because every position a game holds
+ * is expressed in that box. So the design is: the box is chosen once, when the match starts,
+ * and a rotation after that changes the letterboxing and nothing else.
+ *
+ * Asserting only the first half of that would be worth very little: a simulation stepped
+ * across a resize is trivially unchanged if nothing in the test ever varies the box, and a
+ * test that cannot fail is a test nobody has seen. So the second half is here too — the same
+ * simulation, driven across the same rotation with the box re-chosen from the screen — and it
+ * is required to *diverge*. That is what makes the first assertion mean something.
+ */
+describe('a rotation mid-match', () => {
+  const PORTRAIT_BOX = { width: 600, height: 1000 };
+  /** What a game supporting both orientations would declare as its second box. */
+  const LANDSCAPE_BOX = { width: 1000, height: 600 };
+
+  interface Puck {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+  }
+
+  /**
+   * One fixed step of a deterministic simulation that genuinely depends on its box: a puck
+   * reflecting off the four walls. Nothing here is a pixel — the arguments are logical units,
+   * which is the only thing a game is ever handed.
+   */
+  function step(puck: Puck, box: { width: number; height: number }): void {
+    puck.x += puck.vx;
+    puck.y += puck.vy;
+    if (puck.x < 0) {
+      puck.x = -puck.x;
+      puck.vx = -puck.vx;
+    } else if (puck.x > box.width) {
+      puck.x = 2 * box.width - puck.x;
+      puck.vx = -puck.vx;
+    }
+    if (puck.y < 0) {
+      puck.y = -puck.y;
+      puck.vy = -puck.vy;
+    } else if (puck.y > box.height) {
+      puck.y = 2 * box.height - puck.y;
+      puck.vy = -puck.vy;
+    }
+  }
+
+  /** The screens one phone passes through when somebody turns it over mid-rally. */
+  const SCREENS: readonly { readonly label: string; readonly w: number; readonly h: number }[] = [
+    { label: 'upright', w: 390, h: 844 },
+    // Real devices report a zero-height frame part-way through a rotation; the match must not
+    // notice it any more than it notices the two orientations either side of it.
+    { label: 'mid-turn', w: 390, h: 0 },
+    { label: 'sideways', w: 844, h: 390 },
+    { label: 'upright again', w: 390, h: 844 },
+  ];
+
+  const STEPS_PER_SCREEN = 60;
+
+  /**
+   * Steps the puck through every screen in turn, refitting the viewport at each one, and
+   * returns the state after every step. `chooseBox` is the whole variable under test: the
+   * design freezes the box at match start, and the counterfactual re-derives it from the
+   * screen the way "re-layout on rotate" would.
+   */
+  function play(chooseBox: (w: number, h: number) => { width: number; height: number }): {
+    readonly trace: readonly string[];
+    readonly boxes: readonly string[];
+  } {
+    const puck: Puck = { x: 137, y: 251, vx: 23, vy: 41 };
+    const trace: string[] = [];
+    const boxes: string[] = [];
+    for (const screenSize of SCREENS) {
+      const box = chooseBox(screenSize.w, screenSize.h);
+      const shared = negotiateSharedViewport(
+        { logical: box, screenWidth: screenSize.w, screenHeight: screenSize.h, insets: NO_INSETS },
+        box,
+      );
+      boxes.push(`${String(shared.view.logicalWidth)}x${String(shared.view.logicalHeight)}`);
+      for (let i = 0; i < STEPS_PER_SCREEN; i += 1) {
+        step(puck, shared.logical);
+        trace.push(`${puck.x.toFixed(6)},${puck.y.toFixed(6)}`);
+      }
+    }
+    return { trace, boxes };
+  }
+
+  /** The design: the box is settled at match start and the screen is never asked again. */
+  const frozen = () => PORTRAIT_BOX;
+
+  /** The tempting implementation of "re-layout rather than letterbox", asked every frame. */
+  const perScreen = (w: number, h: number) =>
+    screenOrientation(w, h) === 'landscape' ? LANDSCAPE_BOX : PORTRAIT_BOX;
+
+  it('preserves the simulation exactly, step for step', () => {
+    const rotated = play(frozen);
+    // The same match played out on one screen that never moves. Identical, to the digit.
+    const still = (() => {
+      const puck: Puck = { x: 137, y: 251, vx: 23, vy: 41 };
+      const trace: string[] = [];
+      for (let i = 0; i < SCREENS.length * STEPS_PER_SCREEN; i += 1) {
+        step(puck, PORTRAIT_BOX);
+        trace.push(`${puck.x.toFixed(6)},${puck.y.toFixed(6)}`);
+      }
+      return trace;
+    })();
+    expect(rotated.trace).toEqual(still);
+  });
+
+  it('hands the game the same box on every screen it passes through, collapsed included', () => {
+    // The state-preservation guarantee, stated as the property that produces it: the pair the
+    // host holds for a match is a fixed box plus a letterboxing of it, and only the second
+    // half is allowed to move. A collapsed frame in the middle of the turn keeps the box too.
+    const { boxes } = play(frozen);
+    expect(boxes).toEqual(['600x1000', '600x1000', '600x1000', '600x1000']);
+    expect(screenOrientation(390, 0)).toBeNull();
+  });
+
+  it('would lose the match state if the box were re-chosen from the screen', () => {
+    // The counterfactual, and the reason the first assertion above is worth writing. Nothing
+    // in `play` changed but the one function that picks the box; the puck is in a different
+    // place from the first step after the turn onwards, which mid-rally is a match two people
+    // just lost to a gesture neither thought of as an input.
+    const frozenPlay = play(frozen);
+    const rebuilt = play(perScreen);
+    expect(rebuilt.boxes).toEqual(['600x1000', '600x1000', '1000x600', '600x1000']);
+    expect(rebuilt.trace).not.toEqual(frozenPlay.trace);
+
+    // And precisely where it diverges: everything before the turn matches, and the first step
+    // after it does not.
+    const beforeTurn = 2 * STEPS_PER_SCREEN;
+    expect(rebuilt.trace.slice(0, beforeTurn)).toEqual(frozenPlay.trace.slice(0, beforeTurn));
+    expect(rebuilt.trace[beforeTurn]).not.toBe(frozenPlay.trace[beforeTurn]);
   });
 });

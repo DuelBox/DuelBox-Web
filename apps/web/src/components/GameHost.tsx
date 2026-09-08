@@ -83,11 +83,19 @@ export interface GameHostProps {
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
   /**
-   * A throw escaped the game's `update()` or `render()` (#151).
+   * The match cannot go on, and the shell has to say so.
    *
-   * A React error boundary cannot catch this — it happens in a `requestAnimationFrame`
-   * callback, outside React — so the host catches it, stops the loop, and reports it here.
-   * The shell raises the recovery UI; the host never decides on its own that a match is over.
+   * Two things arrive here and they are not the same failure. A throw escaping the game's
+   * `update()` or `render()` (#151) is the first: a React error boundary cannot catch it,
+   * because it happens in a `requestAnimationFrame` callback outside React, so the host
+   * catches it, stops the loop, and reports it. The second is a drawing surface this
+   * device has proved it cannot keep (#101) — nothing threw, but there is nowhere left to
+   * draw, and a match that keeps stepping into a canvas the browser has taken away is a
+   * blank rectangle with a simulation behind it.
+   *
+   * Both end the same way and so both come through one prop: the shell raises the one
+   * recovery screen, which offers Restart — remounting this host and asking the browser
+   * for a fresh context — or Quit. The host never decides on its own that a match is over.
    */
   onError?: (error: unknown) => void;
   /**
@@ -452,9 +460,60 @@ export function GameHost({
       onErrorRef.current?.(error);
     }
 
+    /**
+     * The drawing surface can be taken away, and unhandled that is the blank rectangle
+     * #101 is about.
+     *
+     * The issue says WebGL. There is none in this repository — every game draws through
+     * `Canvas2DRenderer` and the only `getContext` on this page asks for `'2d'` — but a 2D
+     * context is lost under the same memory pressure and fires the same pair of events
+     * under the names `contextlost` and `contextrestored`. Nothing listened for either,
+     * so a phone that reclaimed this canvas mid-match left both players looking at an
+     * empty box with the simulation still running behind it, and the only clue was that
+     * nothing moved.
+     *
+     * Two responses, and neither of them is a screen this component draws for itself. A
+     * loss the renderer still expects to recover from is the same event as the window
+     * going away: clear whatever was held down and ask the shell to pause, which is where
+     * every other "not right now" already goes. A surface the renderer has given up on is
+     * the same event as a game that threw: the match is over and the shell's one recovery
+     * screen offers Restart or Quit. A third screen inside the host would be the bespoke
+     * copy of a shell feature CLAUDE.md calls a bug, and it would ship on the play route
+     * to say what two existing screens already say.
+     */
+    const stopSurfaceWatch = renderer.watchSurface(
+      canvas,
+      (abandoned) => {
+        if (abandoned) {
+          onGameError(new Error('The drawing surface was lost twice, so the match stopped.'));
+          return;
+        }
+        // Exactly what `onBlur` does and for its reason: a key or a finger held when the
+        // surface went must not still be held when it comes back.
+        input.clear();
+        onRequestPauseRef.current?.();
+      },
+      () => {
+        // Everything the *context* held went with the surface, the device-pixel-ratio
+        // transform included, and `resize` returns early unless a measurement changed —
+        // which after a restore it has not. Without this line the canvas comes back and
+        // every frame after it draws at 1/dpr into the corner of a full-size backing
+        // store. The renderer's own viewport needs nothing: `beginFrame` re-applies the
+        // scale and letterbox offset on every frame rather than leaving them on the
+        // context, so the first frame back sets them itself.
+        lastWidth = -1;
+        resize(canvas, context);
+      },
+    );
+
     const loop = new FixedLoop({
       update(dt) {
         if (crashed) return;
+        // Never step into a canvas nobody can see (#101). The renderer is the one answer
+        // to whether there is anywhere to draw, so this host keeps no second copy of it
+        // that could disagree. A getter over a boolean, so the step path allocates
+        // nothing for it (rule 5).
+        if (renderer.surfaceLost) return;
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
@@ -488,6 +547,10 @@ export function GameHost({
       },
       render(alpha) {
         if (crashed) return;
+        // Nothing drawn now would reach a screen, and the frame would cost a full render
+        // to be thrown away. The renderer would swallow it safely either way; this is the
+        // saving, not the safety.
+        if (renderer.surfaceLost) return;
         // The only thing the overlay adds to the hot path, and the one number it cannot get
         // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
         if (process.env.NODE_ENV !== 'production') debugFrames += 1;
@@ -628,6 +691,7 @@ export function GameHost({
       loopRef.current = null;
       gameRef.current = null;
       observer.disconnect();
+      stopSurfaceWatch();
       motion.removeEventListener('change', onMotionChange);
       document.removeEventListener('visibilitychange', onVisibility);
       el.removeEventListener('pointerdown', onPointerDown);

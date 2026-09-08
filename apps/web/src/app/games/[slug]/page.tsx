@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { categorySlug } from '@/lib/categories';
+import { offeredModes } from '@/lib/match-setup';
 import { formatRound } from '@/lib/format';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { SITE_SHARE_IMAGE, shareImageFor } from '@/lib/share-image';
@@ -123,8 +124,28 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
           <h1 className={styles.title}>{game.name}</h1>
           {game.rule ? <p className={styles.rule}>{game.rule}</p> : null}
 
+          {/*
+            `offeredModes`, not `game.modes`, and the difference is six live broken promises.
+
+            The manifest's vocabulary is `friend | bot | solo`; the shell's `PlayMode` is
+            `friend | bot`. Nothing in `apps/web` seats one player alone — there is no route,
+            no reducer state and no seating rule for it — so `solo` is a mode this build
+            cannot start. Six games declare it anyway (animal-stack, blocks, brainrot-stack,
+            maze-paint, solitaire, sudoku), and each of their pages was rendering a card
+            reading "Play solo — Chase your own best score, no opponent needed." one click
+            away from a lobby that offers "Play together here" and "Play against Pip" and
+            nothing else.
+
+            The declarations are not wrong and are deliberately left alone: they record what
+            the genre does, which is what `data/catalog.yaml` and the manifests were made to
+            agree about (#2531), and `packages/games/solitaire/src/manifest.ts` says as much
+            in its own comment. `scripts/validate-manifests.mjs` names all six and points at
+            #1749 so the gap is visible rather than lost. What was wrong was this page
+            treating an observation as an offer. It advertises what a player can actually
+            press, and nothing else.
+          */}
           <div className={styles.modes}>
-            {game.modes.map((mode) => {
+            {offeredModes(game.modes).map((mode) => {
               const copy = MODE_COPY[mode];
               if (!copy) return null;
               return (

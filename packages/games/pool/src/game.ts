@@ -22,11 +22,28 @@ import {
   strike,
 } from './rules.js';
 import type { BotDifficulty, Game as Position } from './rules.js';
+import {
+  CUE_STROKE_MARGIN,
+  FOUL_ROW,
+  FOUL_SIZE,
+  GUIDE_STROKE_MARGIN,
+  MARKER_SIZE,
+  PULL_DEADZONE,
+  STATUS_ROW,
+  STATUS_SIZE,
+  cueLength,
+  cueTip,
+  guideLength,
+  powerForPull,
+  roomAlong,
+  rowCentre,
+} from './layout.js';
 
-/** How far a pull-back has to travel for full power, in logical units. */
-export const PULL_FOR_FULL_POWER = 260;
-/** A pull shorter than this is a tap rather than a shot, and is ignored. */
-export const PULL_DEADZONE = 18;
+// Re-exported rather than moved out of sight. Both are part of what this game's control
+// *is*, and both were read from here before `layout.ts` existed; the placement lives with
+// the rest of the placement now, and the name a caller reaches for has not moved.
+export { PULL_DEADZONE, PULL_FOR_FULL_POWER } from './layout.js';
+
 /** Seconds of holding the action key for full power on a keyboard. */
 export const HOLD_FOR_FULL_POWER = 1.1;
 export const AIM_TURN_RATE = 2.2;
@@ -173,12 +190,28 @@ export class PoolGame implements Game {
 
     if (pointer !== null) {
       toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+      // Deliberately NOT clamped into the box, though it was for a while (#1965).
+      //
+      // The host captures the pointer and converts with `viewportToLogical`, which clamps
+      // nothing, so a drag off the canvas keeps arriving in logical coordinates — and a
+      // screen with letterbox bars to drag into would buy a harder shot than a phone whose
+      // canvas meets the glass. Clamping looked like the fix and is not: `pullSpan` already
+      // measures the draw against the room inside the box, so full power is reached *at* the
+      // edge and a finger beyond it changes nothing. Putting the clamp back failed no test,
+      // which is how a guard turns out to be guarding something else's property. What it did
+      // do was bend the aim, because a per-axis clamp of a diagonal drag is not a point on
+      // the same ray. Unclamped, the aim follows the finger and the power does not.
       const dx = cue.x - this.#pointerWorld.x;
       const dy = cue.y - this.#pointerWorld.y;
       const pull = Math.hypot(dx, dy);
       if (pull > PULL_DEADZONE) {
         this.#angle = Math.atan2(dy, dx);
-        this.#power = clamp(pull / PULL_FOR_FULL_POWER, 0, 1);
+        // Full power is the shorter of a full draw and the table actually behind the ball,
+        // so a ball tight on a cushion is played with a short action rather than not at all.
+        this.#power = powerForPull(
+          pull,
+          roomAlong(cue.x, cue.y, -dx / pull, -dy / pull, this.#logical),
+        );
       }
     }
 
@@ -317,26 +350,31 @@ export class PoolGame implements Game {
     if (cue.potted) return;
     const palette = SEAT_PALETTE[this.#position.seat];
 
-    // The line the ball will take, drawn to the first cushion rather than for ever.
-    const length = 180 + this.#power * 220;
-    renderer.line(
-      cue.x,
-      cue.y,
-      cue.x + Math.cos(this.#angle) * length,
-      cue.y + Math.sin(this.#angle) * length,
-      3,
-      COLOUR_GUIDE,
+    const cos = Math.cos(this.#angle);
+    const sin = Math.sin(this.#angle);
+
+    // The line the ball will take, stopped at the first cushion rather than drawn for ever
+    // and left to the frame clip to end. Same picture, and now a picture this game can be
+    // held to: nothing it draws leaves the logical box.
+    const length = guideLength(
+      roomAlong(cue.x, cue.y, cos, sin, this.#logical, GUIDE_STROKE_MARGIN),
+      this.#power,
     );
+    renderer.line(cue.x, cue.y, cue.x + cos * length, cue.y + sin * length, 3, COLOUR_GUIDE);
     renderer.strokeCircle(cue.x, cue.y, BALL_RADIUS + 5, 2, palette.base);
 
     // The cue itself, drawn back behind the ball by how hard the shot will be. A player
-    // reads power from the cue's position, not from a number.
-    const back = 34 + this.#power * 120;
+    // reads power from the cue's position, not from a number — so it has to be on screen at
+    // the moment they are pulling hardest, which a fixed-length cue behind a ball on the
+    // cushion was not.
+    const behind = roomAlong(cue.x, cue.y, -cos, -sin, this.#logical, CUE_STROKE_MARGIN);
+    const tip = cueTip(behind, this.#power);
+    const butt = tip + cueLength(behind);
     renderer.line(
-      cue.x - Math.cos(this.#angle) * back,
-      cue.y - Math.sin(this.#angle) * back,
-      cue.x - Math.cos(this.#angle) * (back + 150),
-      cue.y - Math.sin(this.#angle) * (back + 150),
+      cue.x - cos * tip,
+      cue.y - sin * tip,
+      cue.x - cos * butt,
+      cue.y - sin * butt,
       7,
       palette.base,
     );
@@ -353,21 +391,28 @@ export class PoolGame implements Game {
           : onBlack(this.#position, seat)
             ? 'On the black'
             : `${String(left)} to go`;
-    renderer.text(line, TABLE_WIDTH / 2, TABLE_HEIGHT + 44, 30, COLOUR_TEXT, 'centre');
+    const statusY = rowCentre(this.#logical, STATUS_ROW, STATUS_SIZE);
+    renderer.text(line, TABLE_WIDTH / 2, statusY, STATUS_SIZE, COLOUR_TEXT, 'centre');
     if (this.#position.fouled) {
       renderer.text(
         'Foul — cue ball replaced',
         TABLE_WIDTH / 2,
-        TABLE_HEIGHT + 80,
-        24,
+        rowCentre(this.#logical, FOUL_ROW, FOUL_SIZE),
+        FOUL_SIZE,
         COLOUR_MUTED,
         'centre',
       );
     }
-    // A marker a seat's own colour, so which side you are is never a memory test.
+    // A marker a seat's own colour, so which side you are is never a memory test. Sat on the
+    // status line rather than at its own offset from the table, so the two move together if
+    // the strip ever changes shape.
     const palette = SEAT_PALETTE[seat];
-    renderer.rect(CUSHION, TABLE_HEIGHT + 26, 26, 26, palette.base);
-    if (seat === 'p1') renderer.strokeCircle(CUSHION + 13, TABLE_HEIGHT + 39, 7, 3, palette.deep);
-    else renderer.rect(CUSHION, TABLE_HEIGHT + 35, 26, 8, palette.deep);
+    const markerTop = statusY - MARKER_SIZE / 2;
+    renderer.rect(CUSHION, markerTop, MARKER_SIZE, MARKER_SIZE, palette.base);
+    if (seat === 'p1') {
+      renderer.strokeCircle(CUSHION + MARKER_SIZE / 2, statusY, 7, 3, palette.deep);
+    } else {
+      renderer.rect(CUSHION, statusY - 4, MARKER_SIZE, 8, palette.deep);
+    }
   }
 }

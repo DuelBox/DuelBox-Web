@@ -18,7 +18,12 @@ export const manifest = parseGameManifest({
   controls: {
     keyboard:
       'Player one A and D then hold Space, player two arrows then hold Enter: aim, build power, release',
-    pointer: 'Pull back from the cue ball and let go — further back is a harder shot',
+    // The second clause is the whole of #1965's control fix, in the one place a player is
+    // told about it: full power is the edge of the table rather than a fixed distance, so a
+    // ball tight on a cushion can still be hit hard with a short draw. Without it, someone
+    // on the rail would pull until their finger left the glass and wonder why nothing came.
+    pointer:
+      'Pull back from the cue ball and let go — further back is harder, and the table edge is as hard as it goes',
   },
   tags: ['sports', 'physics'],
 });

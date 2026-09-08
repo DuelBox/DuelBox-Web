@@ -9,7 +9,7 @@ import styles from './MatchOptions.module.css';
  * The two things a player settles before a match starts: how hard the bot tries, and how
  * many rounds it takes to win.
  *
- * Both existed and neither could be reached. Every one of the 107 games implements three
+ * Both existed and neither could be reached. Every one of the 108 games implements three
  * tiers, each tuned over many commits and each with a measured win rate written into its
  * spec, and the shell hardcoded `normal`; the SDK implements best-of and the shell
  * hardcoded one round. This is the screen that hands both back to the player.
@@ -31,6 +31,13 @@ export interface MatchOptionsProps {
    *
    * False for a game with no bot to play, where a difficulty control would be offering a
    * choice that changes nothing. Every playable manifest offers one today.
+   *
+   * A boolean rather than the mode list, and the caller derives it: this panel settles what a
+   * match is like once it has started, and which matches can be started at all is a question
+   * one step earlier. `offeredModes` in `lib/match-setup.ts` is where that question is answered
+   * now, and `scripts/validate-manifests.mjs` fails the build if a manifest declares a mode
+   * nothing can start — so a `true` arriving here means a bot that has been played against in
+   * a trace, not a manifest that spells the word (#1749).
    */
   showDifficulty: boolean;
   difficulty: BotDifficulty;

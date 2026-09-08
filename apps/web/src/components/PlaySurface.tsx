@@ -771,8 +771,17 @@ export function PlaySurface({ slug }: { slug: string }) {
                   Or play a tournament: {TOURNAMENT_LENGTH} games drawn at random, starting with
                   this one. First to {legsToWin(TOURNAMENT_LENGTH)} takes it.
                 </p>
+                {/*
+                  `ordered`, not a hardcoded pair. These two buttons used to be written out as
+                  `['friend', 'bot'] as const`, ignoring `manifest.modes` entirely — so a game
+                  that declared only `friend` would still have offered "Tournament against Pip".
+                  Nothing is dead today because every one of the 108 games declares `bot`, which
+                  is exactly why it would have stayed unnoticed until the first one did not.
+                  It reads from the same list the start buttons above it do, so the two can
+                  never disagree about what this game can be played as.
+                */}
                 <div className={styles.modes}>
-                  {(['friend', 'bot'] as const).map((against) => (
+                  {ordered.map((against) => (
                     <button
                       key={against}
                       type="button"
