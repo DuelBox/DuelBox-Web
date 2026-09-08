@@ -24,6 +24,7 @@
 import { FAVOURITES_KEY, readFavourites } from './favourites';
 import { stripForbiddenKeys } from './hardened-json';
 import { HEAD_TO_HEAD_KEY, readRecord } from './head-to-head';
+import { BEST_SCORES_KEY } from './best-scores-key';
 import { CATALOGUE_KEY } from './catalogue-filter-key';
 import { HINTS_SEEN_KEY } from './control-hints-key';
 import { INSTALL_KEY } from './install-prompt-key';
@@ -66,6 +67,7 @@ export const PLAYER_DATA_KEYS: readonly string[] = [
   HINTS_SEEN_KEY,
   CATALOGUE_KEY,
   INSTALL_KEY,
+  BEST_SCORES_KEY,
 ];
 
 /** The settings store's own version, checked here only to count it as present. */

@@ -591,3 +591,39 @@ describe('the opening seat across the rounds of a best-of', () => {
     }
   });
 });
+
+describe('a one-seat run (#1750)', () => {
+  /**
+   * The machine has no solo branch, and this is the test that says it does not need one.
+   *
+   * A solo run is a one-round match in which only `p1`'s tally ever moves and the game — not
+   * the shell — says when it is over, by reporting an outcome. Everything the machine does
+   * with that is what it already does: the outcome ends the round, one round ends the match,
+   * and `matchOutcome` carries whatever seat the game named. The shell reads that as "the run
+   * is over" and shows a score, never the seat.
+   */
+  const rules = { win: { kind: 'first-to', target: 1 }, rounds: 1, countdownSeconds: 3 } as const;
+
+  it('keeps running while only the near seat scores and the game has not called it', () => {
+    let state = reduce(initialMatchState(), { kind: 'start', seed: 7 }, rules);
+    state = reduce(state, { kind: 'tick', seconds: 3 }, rules);
+    expect(state.phase).toBe('playing');
+    state = reduce(state, { kind: 'score', tally: { p1: 4, p2: 0 }, outcome: null }, rules);
+    state = reduce(state, { kind: 'score', tally: { p1: 9, p2: 0 }, outcome: null }, rules);
+    expect(state.phase).toBe('playing');
+    expect(state.tally).toEqual({ p1: 9, p2: 0 });
+  });
+
+  it('ends the run the moment the game reports an outcome, whichever seat it names', () => {
+    let state = reduce(initialMatchState(), { kind: 'start', seed: 7 }, rules);
+    state = reduce(state, { kind: 'tick', seconds: 3 }, rules);
+    // A split board whose only tower fell names the far seat; a grid that filled names the
+    // near one. Both are "over" to the shell, and neither is shown as a winner.
+    for (const named of ['p1', 'p2', 'draw'] as const) {
+      const over = reduce(state, { kind: 'score', tally: { p1: 9, p2: 0 }, outcome: named }, rules);
+      expect(over.phase).toBe('match-over');
+      expect(over.matchOutcome).toBe(named);
+      expect(over.tally.p1).toBe(9);
+    }
+  });
+});

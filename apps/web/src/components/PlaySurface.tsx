@@ -20,6 +20,7 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
+import { recordRunScore, type RunResult } from '@/lib/best-scores';
 import { gamepadNotice } from '@/lib/gamepad-notice';
 import { MATCH_FINISHED } from '@/lib/install-prompt-key';
 import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
@@ -56,6 +57,9 @@ import { clearTournament, readTournament, writeTournament } from '@/lib/tourname
 import {
   DEFAULT_SETUP,
   botSeatsFor,
+  isSolo,
+  offeredModes,
+  soloRules,
   matchRulesFor,
   type BotDifficulty,
   type MatchSetup,
@@ -191,6 +195,17 @@ export function PlaySurface({ slug }: { slug: string }) {
   const opponent: Opponent = botSeats === undefined ? 'friend' : 'bot';
 
   /**
+   * One player alone (#1750). Decided once per match from the same `mode` everything else
+   * reads, and it changes four things and no more: the presentation the host is handed, the
+   * shape of the scoreboard, what the result screen says, and which store the ending goes to
+   * — a best score for this game rather than a head-to-head, because a run has nobody on the
+   * other side of it to have a record against.
+   */
+  const solo = mode !== null && isSolo(mode);
+  /** The run's result, settled once by the same effect that writes it. */
+  const [run, setRun] = useState<RunResult | null>(null);
+
+  /**
    * The head-to-head at this game *before* the match now on screen, from storage.
    *
    * It was the tally for one sitting, held here and nowhere else, so five matches on
@@ -228,8 +243,10 @@ export function PlaySurface({ slug }: { slug: string }) {
     // A tournament leg is a single match whatever the player's remembered length says: the
     // tournament is the best-of, and seven best-of-threes is a different product
     // (`docs/tournament.md`).
-    () => matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds),
-    [legMatch, setup.rounds],
+    // A solo run is always one round, whatever length is remembered: a best-of is two
+    // people taking turns to lose, and there is nobody to take turns with (#1750).
+    () => (solo ? soloRules() : matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds)),
+    [legMatch, setup.rounds, solo],
   );
 
   const [match, send] = useReducer(
@@ -379,6 +396,13 @@ export function PlaySurface({ slug }: { slug: string }) {
     // is worse than recording nothing.
     if (outcome === null || counted.current === seed) return;
     counted.current = seed;
+    if (solo) {
+      // A run, not a match: nothing goes on the head-to-head, which counts wins between two
+      // seats, and the number the player wanted is whether they beat themselves.
+      setRun(recordRunScore(slug, match.tally.p1));
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
     // Write only. What the result screen shows is `addOutcome` applied to the same tally
     // this call is about to write, from the same function, so the two cannot be different
     // arithmetic — and the panel does not have to wait for a second commit to be right.
@@ -398,7 +422,7 @@ export function PlaySurface({ slug }: { slug: string }) {
     const advanced = reduceTournament(tournament, { kind: 'report', outcome });
     writeTournament(advanced);
     setTournament(advanced);
-  }, [match.phase, match.matchOutcome, seed, slug, opponent, tournament]);
+  }, [match.phase, match.matchOutcome, match.tally.p1, seed, slug, opponent, solo, tournament]);
 
   /**
    * A buzz when a round ends and another when the match does (#135).
@@ -531,6 +555,7 @@ export function PlaySurface({ slug }: { slug: string }) {
       setLegMatch(isCurrentLeg(tournament, slug));
       setMode(chosen);
       setActiveSeat(null);
+      setRun(null);
       const next = seed + 1;
       setSeed(next);
       // The seed goes with the event: it is what the match machine flips its opening-seat
@@ -593,6 +618,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
+    setRun(null);
     setGameError(null);
     handoffFrom.current = null;
     setHandoffTo(null);
@@ -603,6 +629,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const quit = useCallback(() => {
     setMode(null);
+    setRun(null);
     setLegMatch(false);
     setExitOpen(false);
     setGameError(null);
@@ -732,7 +759,7 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   if (match.phase === 'idle' || mode === null) {
     const remembered = setup.mode;
-    const offered = manifest.modes.filter((m): m is Mode => m === 'friend' || m === 'bot');
+    const offered = offeredModes(manifest.modes);
     // The remembered mode leads, so the button under the player's thumb is the one they
     // used last. Order, not preselection — nothing starts without a deliberate press.
     const ordered = [...offered].sort((a, b) => {
@@ -799,7 +826,11 @@ export function PlaySurface({ slug }: { slug: string }) {
                     start(offer);
                   }}
                 >
-                  {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
+                  {offer === 'friend'
+                    ? 'Play together here'
+                    : offer === 'bot'
+                      ? `Play against ${SEAT_CHARACTERS.p2}`
+                      : 'Play solo'}
                 </button>
               ))}
             </div>
@@ -829,20 +860,27 @@ export function PlaySurface({ slug }: { slug: string }) {
                   never disagree about what this game can be played as.
                 */}
                 <div className={styles.modes}>
-                  {ordered.map((against) => (
-                    <button
-                      key={against}
-                      type="button"
-                      className={styles.secondary}
-                      onClick={() => {
-                        beginTournament(against);
-                      }}
-                    >
-                      {against === 'friend'
-                        ? 'Tournament together'
-                        : `Tournament against ${SEAT_CHARACTERS.p2}`}
-                    </button>
-                  ))}
+                  {/* Two seats only. A tournament is seven games between the same two
+                      people or a person and a bot; a solo run has nobody to draw a line-up
+                      against, so the filter here is `isSolo` rather than the shell's list
+                      (#1750). `lib/tournament.ts` types its opponent as `Opponent`, which has
+                      no solo member, so the machine refuses it as well as the button. */}
+                  {ordered
+                    .filter((against) => !isSolo(against))
+                    .map((against) => (
+                      <button
+                        key={against}
+                        type="button"
+                        className={styles.secondary}
+                        onClick={() => {
+                          if (!isSolo(against)) beginTournament(against);
+                        }}
+                      >
+                        {against === 'friend'
+                          ? 'Tournament together'
+                          : `Tournament against ${SEAT_CHARACTERS.p2}`}
+                      </button>
+                    ))}
                 </div>
               </>
             )}
@@ -883,6 +921,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   const hudProps = {
     state: match,
     rounds: rules.rounds ?? 1,
+    solo,
     activeSeat,
     seatNames,
     botSeats,
@@ -927,9 +966,14 @@ export function PlaySurface({ slug }: { slug: string }) {
               createGame={create}
               seed={seed}
               phase={match.phase}
-              presentation="shared-screen"
+              // A solo run is one player on the whole viewport, upright, and it always opens
+              // on the only seat there is: the match machine's coin would otherwise hand the
+              // opening to a far seat nobody is in, and a turn-board game would wait forever
+              // for it (#1750).
+              presentation={solo ? 'single-seat' : 'shared-screen'}
               localSeat="p1"
-              openingSeat={match.openingSeat}
+              openingSeat={solo ? 'p1' : match.openingSeat}
+              solo={solo}
               {...(botSeats ? { botDifficulty: botSeats } : {})}
               onTick={handleTick}
               onScore={handleScore}
@@ -996,7 +1040,8 @@ export function PlaySurface({ slug }: { slug: string }) {
             record={record}
             nextGame={nextGame}
             slug={slug}
-            presentation="shared-screen"
+            presentation={solo ? 'single-seat' : 'shared-screen'}
+            solo={solo && run !== null ? run : undefined}
             notice={gamepadEdge === null ? undefined : gamepadNotice(gamepadEdge, seatNames)}
             onSwapControllers={
               gamepadEdge === null || swapGamepads === null

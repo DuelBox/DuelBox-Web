@@ -54,6 +54,23 @@ function tallySentence(roundWins: Tally, seatNames: SeatNames): string {
  * `rounds` is the match length the player chose, because a single-round match ends with
  * "Game over" and has no round tally worth reading — exactly as the panel has none.
  */
+/**
+ * What a finished solo run says out loud (#1750).
+ *
+ * No winner, because there was nobody to beat: the score, and whether it is the best this
+ * device has seen. "Game over" is kept as the heading so the ending is announced with the
+ * same first two words a two-seat run uses — the words a listener has learned mean the board
+ * has stopped.
+ */
+export function soloAnnouncement(
+  state: AnnouncableState,
+  run: { readonly score: number; readonly best: number; readonly isNewBest: boolean },
+): string {
+  if (state.phase !== 'match-over' || state.matchOutcome === null) return '';
+  const best = run.isNewBest ? 'A new best.' : `Best ${String(run.best)}.`;
+  return `Game over. Score ${String(run.score)}. ${best}`;
+}
+
 export function resultAnnouncement(
   state: AnnouncableState,
   rounds: number,

@@ -131,7 +131,7 @@ export class AnimalStackGame implements Game {
       resetGrip(this.#grips[seat]);
       clearIntent(this.#intents[seat]);
     }
-    resetMatch(this.#match);
+    resetMatch(this.#match, context.solo === true);
   }
 
   update(fixedDeltaSeconds: number, input: InputState): void {
