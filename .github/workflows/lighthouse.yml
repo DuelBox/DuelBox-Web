@@ -1,0 +1,79 @@
+# Lighthouse, on every pull request and every push to main, failing below the thresholds in
+# `lighthouserc.json` (#184).
+#
+# ## Against the export, not a preview deployment
+#
+# The issue asks for "each PR preview". This repository has no preview host — #64 (Vercel)
+# was never connected, and ADR 0001 chose a host for its bandwidth position rather than for
+# previews — so this runs against `apps/web/out` served locally by the same `serve` the
+# Playwright suite uses. That is not a compromise: the export IS the artefact a host serves,
+# byte for byte, and a preview would add a CDN's latency to a measurement that already
+# simulates a worse network than any CDN. What a preview would buy is a URL a reviewer can
+# open on a phone, which is #64's reason to exist and not this file's.
+#
+# ## What the thresholds are, and what they are not
+#
+# `docs/performance-budgets.md` states *field* targets — LCP 2.5 s, INP 200 ms, CLS 0.1 on a
+# mid-range Android over 4G. Lighthouse is a lab: simulated throttling at 150 ms RTT, 1.6 Mbps
+# and a 4x CPU slowdown, which is the "slow 4G" model and harsher than the field assumption.
+# So the assertions hold the lab proxies, at the numbers the export actually produces with
+# room for run-to-run variance, and they were set from a measured run rather than copied
+# from the document:
+#
+#   - performance >= 0.85. Measured 0.90-0.96; the catalogue read 0.90 and 0.96 on consecutive
+#     runs of the same build, so 0.9 would have failed at random.
+#   - LCP <= 4.0 s, which is the document's "poor" boundary, not its "good" one. Measured
+#     2.9-3.5 s simulated, dominated by the three self-hosted faces (86 KB) swapping in. The
+#     field 2.5 s can only be verified in the field, and this site collects no field data by
+#     design (the privacy page promises no analytics).
+#   - TBT <= 200 ms as the lab stand-in for INP. Measured 0-24 ms.
+#   - CLS <= 0.1. Measured 0.000 — there is no <img> in the export and the tiles are inline
+#     SVG, which `scripts/check-images.mjs` holds.
+#   - accessibility >= 0.95, best-practices >= 0.9, seo >= 0.9. Measured 1.0, 1.0, 1.0.
+#
+# Median of three runs per URL. Four URLs: the landing page, the catalogue, one game's page
+# and one play route — one of each shape the site has.
+#
+# `@lhci/cli` by exact version through `npx` rather than a marketplace action, because
+# `docs/secure-coding.md` rule 9 requires third-party actions to be SHA-pinned and verified,
+# and a pinned npm version is the same guarantee with one fewer thing to verify. The report
+# is uploaded whether or not the assertions held: a report you can only see when the run is
+# green tells you nothing on the morning you need it.
+name: Lighthouse
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The same build `verify` and the e2e shards make; the jobs run in parallel and share
+      # nothing, so each builds its own.
+      - run: pnpm build
+      - run: npx --yes @lhci/cli@0.15.1 autorun
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14
