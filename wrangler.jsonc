@@ -1,0 +1,41 @@
+{
+  // Cloudflare Workers Static Assets.
+  //
+  // `apps/web/out` is the whole site — `output: 'export'` means there is no server
+  // runtime to deploy, so this Worker has no `main` script at all. Cloudflare serves
+  // the directory directly from its edge and never invokes a script, which keeps the
+  // zero-cost property `scripts/check-zero-cost.mjs` guards: no request-time compute.
+  //
+  // This is the "one small replaceable file per host" that docs/deploy.md asks for.
+  // Deleting it costs nothing; the artefact is unchanged and every other host still
+  // reads the same `out/` directory.
+  "name": "duelbox-web",
+  "compatibility_date": "2026-08-29",
+
+  // The Worker exists but had *no route attached* — the dashboard showed "No URLs
+  // enabled", so every deployment sat there unreachable. This turns the
+  // `*.workers.dev` subdomain back on, which is what gives the site a public URL.
+  "workers_dev": true,
+
+  "assets": {
+    "directory": "apps/web/out",
+
+    // `trailingSlash: true` exports each route as `<route>/index.html`.
+    // "auto-trailing-slash" resolves `/games` and `/games/` to that file, so both
+    // spellings work and neither redirects into a loop.
+    "html_handling": "auto-trailing-slash",
+
+    // Next's export writes a real `404.html`. Serve it, with a 404 status, rather
+    // than Cloudflare's default bare body. NOT "single-page-application": that
+    // answers 200 for every unknown path, which would make missing pages invisible
+    // to crawlers and to the e2e suite.
+    "not_found_handling": "404-page",
+  },
+
+  // No `NEXT_PUBLIC_BASE_PATH` here, deliberately. That variable exists for GitHub
+  // Pages, which serves a project page from `/<repo>/`. Cloudflare serves from the
+  // root, so the prefix must stay empty — building with it set makes every asset URL
+  // point at `/DuelBox-Web/_next/...`, which 404s on this origin and leaves a page
+  // that renders but runs no JavaScript.
+  "observability": { "enabled": true },
+}

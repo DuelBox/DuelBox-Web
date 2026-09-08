@@ -49,8 +49,20 @@ const ALL_ENGINES = process.env.DUELBOX_ALL_ENGINES === '1';
  * `record.spec.ts` deliberately is NOT here, and it is the useful contrast: it plays a
  * match to its end, so it exercises the canvas, the loop and the page lifecycle, which is
  * exactly the code that differs between engines.
+ *
+ * `kill-switch.spec.ts` (#208) is the plainest member of the list. Every assertion in it is
+ * a request, a status code or a sentence in the served HTML — whether a switched-off game
+ * has a play route at all, whether anything still offers it, and whether its own page says
+ * so honestly. There is no pointer, no key, no canvas and no storage in it. It is also
+ * mostly empty by design: with nothing switched off it runs one positive control, and four
+ * copies of one control is four times nothing.
  */
-const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts', '**/no-javascript.spec.ts'];
+const CONTENT_ONLY = [
+  '**/smoke.spec.ts',
+  '**/category-hubs.spec.ts',
+  '**/no-javascript.spec.ts',
+  '**/kill-switch.spec.ts',
+];
 
 /**
  * The axe-core scan, on Chromium alone, on the same argument as `CONTENT_ONLY` above.
@@ -68,14 +80,27 @@ const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts', '**/no-jav
  * so a second one would re-confirm the verdict rather than test it, and the property that
  * could differ between engines — how a fade is painted — is not the property under test.
  *
- * It is also the list that spec *must* be in, which is a stronger reason than the one above.
- * Its layout-shift measurement reads `PerformanceObserver` entries of type `layout-shift`,
- * an API only Chromium implements: on WebKit the observer would never fire, the total would
- * be zero, and the assertion would pass having measured nothing at all. A guard that cannot
- * fail on an engine is worse on that engine than no guard, so it is only run where the
- * number is real.
+ * It is also the list that spec *must* be in, which is a stronger reason than the one above
+ * — though that reason is parked rather than live today, and the difference matters to
+ * anyone reading this to decide where a spec goes. Its layout-shift measurement reads
+ * `PerformanceObserver` entries of type `layout-shift`, an API only Chromium implements: on
+ * WebKit the observer would never fire, the total would be zero, and the assertion would
+ * pass having measured nothing at all. A guard that cannot fail on an engine is worse on
+ * that engine than no guard, so it is only run where the number is real. That test is
+ * `test.fixme` under #2539, so what runs in the file today asks `getAnimations()` for a
+ * play state, which every engine implements; the spec stays here for the day #2539 unparks
+ * the measurement, and on the opacity argument above in the meantime.
  *
  * If a rule ever fires on one engine and not another, this is the list to take it out of.
+ *
+ * `visual.spec.ts` (#227) is here on a stronger version of the same argument, and on one of
+ * its own. A screenshot is a picture of one engine at one size: a second project does not
+ * re-confirm a verdict, it needs a whole second set of baselines to have a verdict at all.
+ * On all four that is four sets of images, four times the bytes in the repository, and four
+ * diffs to read on the day somebody moves a padding token — to learn four times over that
+ * the token moved. The spec sets its own two viewports, and what it photographs is layout
+ * and colour rather than anything an engine decides; where engines really do differ on this
+ * shell — insets, pointers, the canvas — specs that run on all four already cover it.
  *
  * `tournament.spec.ts` is here on the first of those arguments rather than the second. What
  * it asserts is a state machine, a `localStorage` document and the markup drawn from them,
@@ -85,8 +110,34 @@ const CONTENT_ONLY = ['**/smoke.spec.ts', '**/category-hubs.spec.ts', '**/no-jav
  * about seventy seconds of authorised waiting to re-confirm a canvas somebody else has
  * already confirmed. It is the most expensive spec in the suite per run, which is the
  * strongest reason of all to run it once.
+ *
+ * `game-record.spec.ts` (#160, #162) is here on `tournament.spec.ts`'s reading, and it is
+ * the cleaner case of the two because it never plays a match at all. It writes the
+ * head-to-head document the way `lib/head-to-head.ts` writes it and asks two pages what
+ * they made of it; a stored string, a sum and the markup drawn from them are not things
+ * engines disagree about. What it would have been worth keeping on four projects is the
+ * shape of the record block on a narrow screen — and that is not this spec's question:
+ * `safe-area.spec.ts` already opens a game page on all four and fails if the page scrolls
+ * sideways, which is the assertion that would actually catch a row too wide to fit.
+ *
+ * `prefetch.spec.ts` (#185) counts network scheduling and the bytes it moves, which
+ * `offline.spec.ts` records as the one thing that genuinely differs between these engines —
+ * "WebKit schedules all of it differently from Chromium, which is why this only ever failed
+ * in CI". A count that means one thing on Chromium and another on WebKit is not a guard on
+ * either. It stood down from inside its own test bodies until it was listed here, which
+ * cost nine browser contexts a run — built by the `page` fixture, then discarded by a
+ * runtime `test.skip`, two of them real WebKit — on a job this file has already been split
+ * twice to keep inside its budget. The skip and this line were always meant to be one
+ * decision, and the spec's header said so; this is that decision.
  */
-const CHROMIUM_ONLY = ['**/axe.spec.ts', '**/page-transition.spec.ts', '**/tournament.spec.ts'];
+const CHROMIUM_ONLY = [
+  '**/axe.spec.ts',
+  '**/page-transition.spec.ts',
+  '**/tournament.spec.ts',
+  '**/visual.spec.ts',
+  '**/game-record.spec.ts',
+  '**/prefetch.spec.ts',
+];
 
 /**
  * Specs that set their own viewport and therefore want one project *per engine*, not four.
@@ -135,6 +186,60 @@ export default defineConfig({
   // Spread rather than `workers: undefined`, which `exactOptionalPropertyTypes` refuses.
   ...(process.env.CI ? { workers: 2 } : {}),
   reporter: process.env.CI ? 'github' : 'list',
+  /**
+   * A screenshot baseline is never written by a run that did not ask for one (#227).
+   *
+   * Playwright's default is `'missing'`: a comparison with no baseline writes the picture it
+   * just took into the source tree, attaches it as the *expected* image, and fails with "…,
+   * writing actual." Three things wrong with that here, none of them fatal and all of them
+   * avoidable by asking for the behaviour we want. An ordinary `pnpm e2e` on a Mac would
+   * leave `-darwin` PNGs behind that nobody asked for. The message reads as though the run
+   * had fixed something, when what it did was overwrite the question with the answer. And
+   * the attachment labelled "expected" is a picture of the very change under review.
+   *
+   * With `'none'` a missing baseline is `A snapshot doesn't exist at …`, exit code 1, and
+   * nothing on disk. Watched, not assumed: one baseline moved aside, `CI=1`, this config —
+   * "1 failed", nothing written, and the retry failed too; the same run with `-u missing`
+   * (which is the default's behaviour) — "1 failed" and the file recreated.
+   *
+   * The hazard worth writing down is the one that is **not** here: a written-then-retried
+   * snapshot would pass on the retry and land as flaky, which is a guard that cannot fail.
+   * Playwright closes that itself — `handleMissing` returns `shouldNotRetryTest` in that
+   * mode — so this setting is about the three things above and not about that. `-u` on the
+   * command line still overrides it, which is how a baseline is made and a change accepted.
+   */
+  updateSnapshots: 'none',
+  expect: {
+    toHaveScreenshot: {
+      /**
+       * `-linux` on every file, from a suite that only runs on Linux, so that the one thing
+       * a reader has to know about these images is legible in `ls`. `e2e/visual.spec.ts`
+       * carries the reasoning and `.gitignore` keeps everybody else's platform out.
+       */
+      pathTemplate: 'e2e/__screenshots__/{arg}{-projectName}{-platform}{ext}',
+      /**
+       * Every pixel, exactly, and **not** Playwright's default of `0.2`.
+       *
+       * That default is a distance in YIQ space, and pixelmatch counts a pixel as different
+       * only past `35215 * threshold²` — 1408 at `0.2`, which is a **pure luminance shift of
+       * 52 of 255 on every pixel of the page, tolerated**. This was not read off a document;
+       * it was watched. `--db-muted` (#6e7488, 4.65:1, the smallest ratio this product lets
+       * body text stand on) was swapped for `--db-faint` (#9aa0b4, 2.45:1, the token that
+       * must never carry body text) in the built stylesheet, and all five screens passed:
+       * the swap is a delta of 978, comfortably inside 1408. The one regression this
+       * repository would least like to ship is the one the default cannot see.
+       *
+       * So: 0. Two shots of one page by one build of one browser on one platform are the
+       * same bytes — this suite's own run-to-run stability is the evidence — and a guard
+       * that starts exact can be loosened against a real diff. If runner-to-runner variance
+       * ever appears, the failure names the pixel count, and the answer is a small
+       * `maxDiffPixels`, never a bigger threshold: a pixel budget tolerates a few pixels
+       * anywhere, while a threshold tolerates a systematic shift everywhere, which is
+       * exactly what was just demonstrated to be invisible.
+       */
+      threshold: 0,
+    },
+  },
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',

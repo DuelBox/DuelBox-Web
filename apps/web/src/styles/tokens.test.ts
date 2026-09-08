@@ -128,6 +128,216 @@ describe('the design tokens', () => {
   });
 });
 
+/**
+ * The palette is the only place a colour is written down.
+ *
+ * "CSS modules use the `var(--db-*)` tokens; no raw hex" has been a house rule for as long
+ * as there have been house rules, and until this test it was enforced by nothing at all.
+ * The block above only checks that a `var()` names a token that exists; a stylesheet that
+ * declines to use `var()` and writes the colour out by hand walks past it, and past
+ * `breakpoints.test.ts`, `motion.test.ts` and `safe-area.test.ts` too, none of which look at
+ * colour. There is no stylelint in this repository to catch it either. It had already
+ * drifted: thirteen `color: #fff` declarations across eight stylesheets on the day this was
+ * written, every one of them the `--db-paper` white spelled a second way.
+ *
+ * That is not pedantry about spelling. A palette is only a palette while every use of it
+ * goes through it — the moment a value is copied, changing the token stops changing the
+ * page, and the copy is invisible in a diff of the file that matters. The same page already
+ * carries the scar: `page.module.css` records a hand-copied `#a06f00` that shipped at
+ * 3.93:1, below AA, because it was a colour nobody could see from the palette.
+ *
+ * ## What counts as writing one down
+ *
+ * The first version of this scanned for `#` and nothing else, and its own headline sentence
+ * was false the day it was written twice over. `rgb()`, `hsl()`, `oklch()` and the CSS
+ * colour keywords are colours a hand can write just as easily — `background: white` is the
+ * thirteen-declaration drift above, spelled a third way — and there was already one live
+ * `rgb(0 0 0 / 45%)` outside the palette when this was widened. And a colour is not only
+ * written in CSS: `app/layout.tsx` carried `themeColor: '#4b3beb'`, the brand spelled a
+ * second time in a TypeScript object, so changing `--db-brand` changed the page and left the
+ * browser's own chrome on the old purple. So both halves are scanned: every colour form in a
+ * stylesheet's *values*, and hex anywhere in the shell's TypeScript.
+ *
+ * Values rather than whole files, for the CSS half, because a class called `.gold` is a name
+ * and not a colour. `transparent` and `currentColor` stay allowed: neither is a colour this
+ * palette could hold — one is the absence of paint and the other is whatever the cascade
+ * already decided — and `color-mix(in srgb, var(--db-ink) 62%, transparent)` is composing
+ * tokens rather than inventing a value.
+ *
+ * ## The controls
+ *
+ * `tokens.css` and `styles/tokens.ts` are the exemptions and the only two, because they are
+ * the files where a colour is supposed to be a literal. They are also this guard's controls:
+ * the scanner is run over them and has to come back with the whole palette — hex *and* the
+ * `rgb()` the shadow tokens are written in — which is what stops the comment-stripping below
+ * from quietly turning the check into a pass over nothing. The keyword branch has no such
+ * file to be run against, because nothing in this repository writes a keyword colour, so it
+ * is controlled on two lines of input instead: one that is a colour and one, `white-space`,
+ * that has a colour's name inside a property that is not one.
+ */
+
+/** The palette itself, where a colour literal is the point rather than a leak. */
+const PALETTE = join(web, 'styles/tokens.css');
+
+/** The same palette for canvas code, and exempt for the same reason. */
+const PALETTE_TS = join(web, 'styles/tokens.ts');
+
+/** `#abc`, `#abcd`, `#aabbcc`, `#aabbccdd` — every hex form CSS accepts. */
+const HEX = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/gi;
+
+/**
+ * Every function that names a colour rather than composing ones already named.
+ *
+ * `color-mix()` is deliberately absent and does not match `color\s*\(` either, the hyphen
+ * seeing to that: mixing two tokens is using the palette, not going around it.
+ */
+const COLOUR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)?/gi;
+
+/**
+ * The CSS named colours, all of them.
+ *
+ * All rather than the dozen anybody would actually type, because "which ones did whoever
+ * wrote this think of?" is a question a reader should never have to ask of a guard. Not
+ * `transparent` and not `currentcolor`, which are keywords rather than colours — see above.
+ */
+const NAMED_COLOURS =
+  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue ' +
+  'blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk ' +
+  'crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki ' +
+  'darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen ' +
+  'darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue ' +
+  'dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite ' +
+  'gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki ' +
+  'lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan ' +
+  'lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen ' +
+  'lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen ' +
+  'linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen ' +
+  'mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream ' +
+  'mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid ' +
+  'palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum ' +
+  'powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown ' +
+  'seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen ' +
+  'steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow ' +
+  'yellowgreen';
+
+/**
+ * A named colour as a whole word.
+ *
+ * The boundaries are `[\w-]` rather than `\b` on purpose: `\bwhite\b` matches the `white` in
+ * `white-space`, which this file has seven of, and a guard that cries about `white-space:
+ * nowrap` is a guard somebody deletes.
+ */
+const NAMED = new RegExp(`(?<![\\w-])(?:${NAMED_COLOURS.split(' ').join('|')})(?![\\w-])`, 'gi');
+
+/** Line numbers a reader can go to, counted in the same text the match was found in. */
+function lineOf(code: string, index: number): number {
+  return code.slice(0, index).split('\n').length;
+}
+
+/**
+ * Comments blanked out, newlines kept.
+ *
+ * Blanked rather than removed so that a reported line number is the line the reader will
+ * find, and stripped rather than filtered afterwards because this repository writes issue
+ * numbers as `#178` and `#2516`: a scanner that could not tell those from a colour would
+ * report ten false positives on its first run and be deleted by the end of the week.
+ */
+function withoutComments(source: string, lineComments: boolean): string {
+  const blank = (comment: string): string => comment.replace(/[^\n]/g, ' ');
+  const blocks = source.replace(/\/\*[\s\S]*?\*\//g, blank);
+  return lineComments ? blocks.replace(/\/\/[^\n]*/g, blank) : blocks;
+}
+
+/**
+ * Every colour written by hand in one stylesheet, as `file:line value`.
+ *
+ * Declaration values only — everything from a `:` to the end of the declaration — so a
+ * selector, a property name and an `@media` feature are all outside it.
+ */
+function rawColours(source: string, label: string): string[] {
+  const code = withoutComments(source, false);
+  const found: string[] = [];
+  for (const declaration of code.matchAll(/:[^;{}]*/g)) {
+    for (const pattern of [HEX, COLOUR_FUNCTION, NAMED]) {
+      for (const match of declaration[0].matchAll(pattern)) {
+        const at = declaration.index + match.index;
+        found.push(`${label}:${String(lineOf(code, at))} ${match[0].trim()}`);
+      }
+    }
+  }
+  return found;
+}
+
+/** The same question of a TypeScript file, where the form that has ever appeared is hex. */
+function hexInSource(source: string, label: string): string[] {
+  const code = withoutComments(source, true);
+  return [...code.matchAll(HEX)].map(
+    (match) => `${label}:${String(lineOf(code, match.index))} ${match[0]}`,
+  );
+}
+
+/** Every module the shell is built from, tests aside: they hold fixtures, and fixtures hold colours. */
+function sources(dir: string, found: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) sources(path, found);
+    else if (/\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path)) found.push(path);
+  }
+  return found;
+}
+
+const named = (path: string): string => path.slice(web.length + 1);
+const read = (path: string): string => readFileSync(path, 'utf8');
+
+describe('colour lives in the palette', () => {
+  const sheets = stylesheets(web);
+
+  it('can see a colour at all, which is what makes the next tests mean something', () => {
+    // Run against the two files that are allowed to be full of them. If a pattern or the
+    // comment stripper ever stops working, this goes to nothing and says so here, rather
+    // than letting the checks below pass by finding nothing anywhere.
+    const palette = rawColours(read(PALETTE), 'tokens.css');
+    expect(palette.filter((hit) => hit.includes('#')).length, 'hex in tokens.css').toBeGreaterThan(
+      20,
+    );
+    expect(
+      palette.filter((hit) => hit.includes('rgb(')).length,
+      'rgb() in tokens.css — the shadow tokens, and the branch no hex control can cover',
+    ).toBeGreaterThan(2);
+    expect(hexInSource(read(PALETTE_TS), 'tokens.ts').length, 'hex in tokens.ts').toBeGreaterThan(
+      20,
+    );
+  });
+
+  it('can tell a colour keyword from a property that has one inside its name', () => {
+    // The branch with no real file to be run against: nothing in this repository writes a
+    // keyword colour, so a scan of the tree cannot prove this pattern works, and an inert
+    // pattern would be indistinguishable from a clean result.
+    expect(rawColours('.a { background: white; }', 'probe')).toEqual(['probe:1 white']);
+    expect(rawColours('.a { white-space: nowrap; }', 'probe')).toEqual([]);
+  });
+
+  it('and no stylesheet writes one by hand', () => {
+    const raw = sheets
+      .filter((path) => path !== PALETTE)
+      .flatMap((path) => rawColours(read(path), named(path)));
+    expect(
+      raw,
+      `write the colour as a var(--db-*) token from styles/tokens.css: ${raw.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('and no module writes one either, where no stylesheet can see it', () => {
+    const raw = sources(web)
+      .filter((path) => path !== PALETTE_TS)
+      .flatMap((path) => hexInSource(read(path), named(path)));
+    expect(
+      raw,
+      `read the colour from styles/tokens.ts rather than spelling it again: ${raw.join(', ')}`,
+    ).toEqual([]);
+  });
+});
+
 describe("the catalogue card's seat marks", () => {
   // Rule 7 applies to the shell as much as to a game, and this is the seat signal a player
   // meets first. The greyscale harness in `apps/web/src/data` walks games and never looks

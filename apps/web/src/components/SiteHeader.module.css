@@ -88,14 +88,14 @@
   display: inline-flex;
   align-items: center;
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border-radius: var(--db-radius);
   font-weight: 600;
   box-shadow: 0 3px 0 var(--db-brand-deep);
 }
 
 .cta:hover {
-  color: #fff;
+  color: var(--db-paper);
   background: var(--db-brand-deep);
 }
 

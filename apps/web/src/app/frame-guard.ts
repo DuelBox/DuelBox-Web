@@ -22,6 +22,25 @@
  * takes its `window` as an argument so it can be handed a fake and tested without one.
  */
 
+/**
+ * The attribute `FRAME_GUARD` stamps on `<html>` when it refuses the frame it is in.
+ *
+ * The only channel between the before-paint script and the rest of the page: the script
+ * decides, `globals.css` reveals `#db-framed`, and `app/layout.tsx` renders it. Named here
+ * because all three have to agree and `frame-notice.test.ts` reads this constant to check
+ * that they do.
+ */
+export const FRAMED_ATTRIBUTE = 'data-framed';
+
+/** The id of the notice a refused page shows, rendered by `app/layout.tsx`. */
+export const FRAMED_NOTICE_ID = 'db-framed';
+
+/** What that notice says, and the text `frame-notice.test.ts` holds the layout to. */
+export const FRAMED_NOTICE_TEXT = 'DuelBox does not run inside a frame.';
+
+/** The label on the way out of the frame. */
+export const FRAMED_NOTICE_LINK = 'Open DuelBox in a new tab';
+
 /** In an allowlist, the token meaning "an ancestor whose origin equals this page's own". */
 export const SELF_TOKEN = 'self';
 
@@ -231,11 +250,27 @@ export function checkFrame(win: FrameWindow, allowlist: readonly string[]): Fram
 /**
  * The synchronous, header-free clickjacking defence injected inline into every page by
  * `app/layout.tsx`. On a host that serves no response headers (GitHub Pages, #2481), this is
- * what actually stops another site framing a DuelBox page: the first line hides `<html>`
- * during parse, before anything paints, and the notice is attached once the body exists.
+ * what actually stops another site framing a DuelBox page: it hides `<html>` during parse,
+ * before anything paints, and stamps `data-framed` on the document element so the stylesheet
+ * can reveal the notice the layout has already rendered.
  *
- * It ships in each page's markup rather than a bundled chunk, so it is written terse and its
- * reasoning lives in the block comment on the WIP-side history rather than here.
+ * **It does the deciding and nothing else, and that is a size decision (#2545).** Next
+ * serialises the root layout into the RSC route payload of every exported route, so each
+ * character in this string is paid 108 times over by a browse of the catalogue that presses
+ * nothing — `next/link` prefetches the payload of every card that passes near the viewport.
+ * Building the notice from script here cost 708 bytes in each of 108 payloads; declaring the
+ * notice in the layout and styling it in `globals.css` — a file fetched once — costs 293 here
+ * and moves the rest into a stylesheet. Measured on the built export, gzipped: **15 196 B off
+ * the speculated total**, and `size-budget.json` carries the number beside the budget.
+ *
+ * Two things must stay true of whatever replaces this:
+ *
+ * - The hiding is installed **synchronously**, in a stylesheet rule marked `!important`, and
+ *   nothing ever takes it back. Not an inline style and not a rewritten body: React
+ *   re-renders the document on a hydration mismatch and would undo either, so the page would
+ *   go dark and come back framed and live.
+ * - The notice is **not built by this script**. It is markup in the React tree now, so the
+ *   one part React could clobber is a part React owns.
  *
  * The one exemption is the embed route (#2367): `/embed/<slug>/` is the single surface a
  * framed page is *meant* to be, so the buster returns early there and lets `EmbedFrame`'s own
@@ -250,12 +285,10 @@ export const FRAME_GUARD = [
   '(function(){var w=window;if(w.top===w.self)return;',
   'if(w.location.pathname.indexOf("/embed/")!==-1)return;',
   'var d=w.document,s=d.createElement("style");',
-  's.textContent="html{visibility:hidden!important}#db-framed{visibility:visible!important;',
-  'position:fixed;inset:0;background:#fff;color:#111;font:1rem/1.5 system-ui,sans-serif;padding:2rem}";',
+  's.textContent="html{visibility:hidden!important}";',
   '(d.head||d.documentElement).appendChild(s);',
-  'd.addEventListener("DOMContentLoaded",function(){',
-  'var n=d.createElement("div");n.id="db-framed";',
-  'var a=d.createElement("a");a.href=w.location.href;a.target="_blank";a.rel="noopener";',
-  'a.textContent="Open DuelBox in a new tab";',
-  'n.append("DuelBox does not run inside a frame. ",a);d.body.appendChild(n)})})()',
+  // What `globals.css` keys the notice off. An attribute rather than a class, because
+  // `<html>` carries `data-theme` and `data-seat-palette` from the theme script beside it
+  // and this is the same kind of statement about the document's situation.
+  `d.documentElement.setAttribute("${FRAMED_ATTRIBUTE}","")})()`,
 ].join('');

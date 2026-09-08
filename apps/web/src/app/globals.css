@@ -129,6 +129,36 @@ canvas {
   display: block;
 }
 
+/* The notice a framed page shows, and the visible half of the clickjacking defence
+   (#2367, #2545).
+
+   `app/frame-guard.ts` runs before paint, hides `<html>` with a rule of its own, and stamps
+   `data-framed` here. Everything else about the notice lives in this file rather than in that
+   script because the script is serialised into all 108 route payloads and this stylesheet is
+   fetched once — the measurement is in `size-budget.json`.
+
+   Fail-closed by construction: if this stylesheet never arrives, the `display: none` below
+   never arrives either, but neither does the reveal — and the guard's own
+   `html{visibility:hidden!important}` is still in force, so a framed page shows nothing at
+   all rather than showing itself. */
+#db-framed {
+  display: none;
+}
+
+html[data-framed] #db-framed {
+  display: block;
+  /* Beats the guard's `html{visibility:hidden!important}` on this subtree, and only this
+     one: an id selector outranks the element selector the guard uses, and `visibility`
+     inherits, so the link inside is visible too. */
+  visibility: visible !important;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  padding: var(--db-space-6);
+  background: var(--db-paper);
+  color: var(--db-ink);
+}
+
 .db-skip {
   position: absolute;
   left: max(var(--db-space-4), var(--db-safe-left));
@@ -136,7 +166,7 @@ canvas {
   z-index: 100;
   padding: var(--db-space-3) var(--db-space-4);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border-radius: var(--db-radius-sm);
   font-weight: 600;
   transition: top var(--db-duration) var(--db-ease);
@@ -145,7 +175,7 @@ canvas {
 .db-skip:focus {
   /* The first thing a keyboard user reaches must not land under a notch. */
   top: max(var(--db-space-4), var(--db-safe-top));
-  color: #fff;
+  color: var(--db-paper);
 }
 
 .db-shell {
@@ -404,7 +434,7 @@ html[data-match='live'] .db-net-bar {
   border: 0;
   border-radius: var(--db-radius-pill);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

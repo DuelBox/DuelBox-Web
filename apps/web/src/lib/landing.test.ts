@@ -5,13 +5,22 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE, type CatalogueEntry } from '../data/catalogue.generated';
 import { isPlayable } from '../data/registry';
 import { CATEGORY_HUBS } from './categories';
+import { FAVOURITES_KEY } from './favourites';
 import { formatRound } from './format';
+import { HEAD_TO_HEAD_KEY } from './head-to-head';
 import { AMERICAN, NEVER } from './house-voice';
+import { LAST_MODE_KEY } from './last-mode';
 import { BOT_DIFFICULTIES } from './match-setup';
+import { PLAYER_DATA_KEYS } from './player-data';
+import { PLAYER_NAMES_KEY } from './player-names';
+import { RECENT_KEY } from './recent';
+import { SETTINGS_KEY } from './settings';
 import { TOURNAMENT_LENGTH, legsToWin } from './tournament';
+import { TOURNAMENT_KEY } from './tournament-store';
 import * as landing from './landing';
 import {
   FEATURED_COUNT,
+  FREE_SECTION,
   LANDING_SECTIONS,
   WAYS_TO_PLAY,
   featuredGames,
@@ -251,6 +260,54 @@ describe('the numbers the landing copy states', () => {
     expect(wrong, `a number in prose is a number nothing can check:\n${wrong.join('\n')}`).toEqual(
       [],
     );
+  });
+
+  /**
+   * The words this page would use for each thing the site stores, one per key.
+   *
+   * A table rather than a scan for nouns, because "settings" appears in this section in a
+   * sentence that is not a list — and it is held against `PLAYER_DATA_KEYS`, so a store
+   * added through `lib/local-store.ts` fails the test below by having no wording here at
+   * all. That is the half `lib/privacy-claims.test.ts` learned to check the hard way: one
+   * writer means the keys are findable, and findable is not the same as found.
+   */
+  const STORE_WORDS: Readonly<Record<string, RegExp>> = {
+    [LAST_MODE_KEY]: /setup you last|last used for each game/i,
+    [FAVOURITES_KEY]: /\bfavourites\b/i,
+    [RECENT_KEY]: /games you played last|recently played/i,
+    [SETTINGS_KEY]: /your settings/i,
+    [HEAD_TO_HEAD_KEY]: /head-to-head/i,
+    [PLAYER_NAMES_KEY]: /names you (chose|gave)|names for the two seats/i,
+    [TOURNAMENT_KEY]: /tournament/i,
+  };
+
+  /**
+   * The section that says what is kept on the device names all of the stores or none.
+   *
+   * It named four of seven — favourites, recently played, settings and the head-to-head —
+   * and stayed at four while the chosen setup, the two seat names and a tournament in
+   * progress were added, on the highest-traffic route on the site. The privacy page had the
+   * identical drift and is now counted against `PLAYER_DATA_KEYS`; this paragraph is prose
+   * rather than a list, so what it is held to is the honest pair of options: enumerate the
+   * lot, or point at the page that does and enumerate nothing.
+   */
+  it('names every store the site writes, or none of them', () => {
+    const unworded = PLAYER_DATA_KEYS.filter((key) => !(key in STORE_WORDS));
+    expect(
+      unworded,
+      'a store with no wording in STORE_WORDS: add how this page would say it, then decide' +
+        ' whether it belongs in the copy — this test cannot tell you which.',
+    ).toEqual([]);
+
+    const prose = FREE_SECTION.paragraphs.join(' ');
+    const named = PLAYER_DATA_KEYS.filter((key) => STORE_WORDS[key]?.test(prose) === true);
+    expect(
+      named.length === 0 || named.length === PLAYER_DATA_KEYS.length,
+      `"${FREE_SECTION.heading}" names ${String(named.length)} of the ${String(
+        PLAYER_DATA_KEYS.length,
+      )} things this site stores: ${named.join(', ')}. Name all of them or leave the list to` +
+        ' the privacy page, which is counted against PLAYER_DATA_KEYS on every push.',
+    ).toBe(true);
   });
 
   it('describes the tournament the machine actually runs', () => {

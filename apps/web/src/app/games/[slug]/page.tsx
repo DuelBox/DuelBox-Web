@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { categorySlug } from '@/lib/categories';
 import { offeredModes } from '@/lib/match-setup';
+import { killSwitchFor } from '@/lib/flags';
 import { formatRound } from '@/lib/format';
+import type { Opponent } from '@/lib/head-to-head';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { SITE_SHARE_IMAGE, shareImageFor } from '@/lib/share-image';
 import { absoluteUrl } from '@/lib/site';
 import { serialiseJsonLd, videoGameJsonLd } from '@/lib/structured-data';
 import { FavouriteButton } from '@/components/FavouriteButton';
+import { GameRecord } from '@/components/GameRecord';
 import { GameTile } from '@/components/GameTile';
 import { GameCard } from '@/components/GameCard';
 import { TileSprite } from '@/components/TileSprite';
@@ -73,6 +76,23 @@ const MODE_COPY: Record<string, { title: string; body: string }> = {
   },
 };
 
+/**
+ * The head-to-head this device has for this game, one row per kind of match (#162).
+ *
+ * Keyed by mode and read exactly as `MODE_COPY` above is, so a mode with no head-to-head in
+ * it falls out rather than needing a rule of its own: `solo` is one person against their own
+ * best score, and there is nobody on the other side of it to be ahead of.
+ *
+ * `far` is what the wins on the other side of the line are called — the far seat's own name
+ * between two people, and the bot where a bot is sitting in it, since `botSeatsFor()` hands
+ * the bot seat two and nothing else. The near side is the near seat in both rows for the
+ * same reason.
+ */
+const RECORD_ROWS: Record<string, { title: string; opponent: Opponent; far: string }> = {
+  friend: { title: 'Between the two of you', opponent: 'friend', far: SEAT_CHARACTERS.p2 },
+  bot: { title: 'Against the bot', opponent: 'bot', far: 'the bot' },
+};
+
 export default async function GamePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const game = find(slug);
@@ -90,6 +110,17 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
    * the game sits one click away.
    */
   const controls = CONTROLS.get(game.slug);
+
+  /**
+   * The third case, and the reason this page is the one a switched-off game keeps (#208).
+   *
+   * A game the kill switch has taken off the site has no play route, so every link to it
+   * lands here — and "still being built" would be a lie about a game that was built, played
+   * and then found broken. It is asked first because a switched-off game still has its
+   * controls table, so the branch below would otherwise offer a match this build cannot
+   * start.
+   */
+  const switchedOff = killSwitchFor(game.slug);
 
   return (
     <div className="db-wrap">
@@ -143,21 +174,33 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
             #1749 so the gap is visible rather than lost. What was wrong was this page
             treating an observation as an offer. It advertises what a player can actually
             press, and nothing else.
-          */}
-          <div className={styles.modes}>
-            {offeredModes(game.modes).map((mode) => {
-              const copy = MODE_COPY[mode];
-              if (!copy) return null;
-              return (
-                <div key={mode} className={styles.mode}>
-                  <strong>{copy.title}</strong>
-                  <span>{copy.body}</span>
-                </div>
-              );
-            })}
-          </div>
 
-          {controls ? (
+            Withheld entirely from a switched-off game, for the same reason one level up:
+            every one of these cards is written as an offer, and an offer sitting a line
+            above "switched off at the moment" is a page contradicting itself in the reader's
+            own eyeline. CLAUDE.md's eighth and ninth entries are both that shape.
+          */}
+          {switchedOff ? null : (
+            <div className={styles.modes}>
+              {offeredModes(game.modes).map((mode) => {
+                const copy = MODE_COPY[mode];
+                if (!copy) return null;
+                return (
+                  <div key={mode} className={styles.mode}>
+                    <strong>{copy.title}</strong>
+                    <span>{copy.body}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {switchedOff ? (
+            <p className={styles.soon}>
+              {game.name} is switched off at the moment. {switchedOff.reason} It comes back on here
+              as soon as that is put right, and nothing else in the catalogue is affected.
+            </p>
+          ) : controls ? (
             <>
               <Link href={`/play/${game.slug}/`} className={styles.play}>
                 Play {game.name}
@@ -173,6 +216,47 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                   </>
                 ) : null}
               </dl>
+
+              {/*
+                What the two of you have done at this one (#162), which until now existed
+                only in storage and on the settings page's five most played.
+
+                Everything here but the six numbers is server-rendered: the heading, the two
+                row labels and the note are markup, and `scripts/check-size.mjs` counts
+                JavaScript, so the words are free and only the counts are paid for. That is
+                also why the labels are props on `GameRecord` rather than strings inside it.
+
+                It is the last thing in this column deliberately. The counts arrive a frame
+                after the page paints, and while the rows are in the exported HTML either
+                way — dashes until the read lands — a block whose height could change is
+                better below the controls than above them.
+              */}
+              <section className={styles.record}>
+                <h2 className={styles.recordTitle}>Your record here</h2>
+                <dl className={styles.tallies}>
+                  {game.modes.map((mode) => {
+                    const row = RECORD_ROWS[mode];
+                    if (!row) return null;
+                    return (
+                      <div key={mode}>
+                        <dt>{row.title}</dt>
+                        <dd>
+                          <GameRecord
+                            slug={game.slug}
+                            opponent={row.opponent}
+                            near={SEAT_CHARACTERS.p1}
+                            far={row.far}
+                          />
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+                <p className={styles.recordNote}>
+                  Counted on this device only, kept in this browser and sent nowhere. The settings
+                  page clears it.
+                </p>
+              </section>
             </>
           ) : (
             <p className={styles.soon}>

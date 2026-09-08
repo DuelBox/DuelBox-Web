@@ -49,7 +49,7 @@
   border: none;
   border-radius: var(--db-radius);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font: inherit;
   font-weight: 700;
   cursor: pointer;

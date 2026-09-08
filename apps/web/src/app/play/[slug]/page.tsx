@@ -4,7 +4,17 @@ import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
 import { PlaySurface } from '@/components/PlaySurface';
 
-/** Only games with a playable build get a play route; the rest keep their catalogue page. */
+/**
+ * Only games with a playable build get a play route; the rest keep their catalogue page.
+ *
+ * `PLAYABLE` is the registry's answer *after* the kill switch (#208), so a game switched off
+ * in `lib/flags.ts` has no exported page here at all and the host answers `/play/<slug>/`
+ * with `not-found.tsx`. That is the whole of what this route does about a switch, and it is
+ * deliberate: this page is the shell a match mounts into, so there is nothing honest for it
+ * to say that the game's own page — which stays, and explains itself — does not say better.
+ * A branch here would be code no build can reach, which is the shape of guard this
+ * repository keeps finding it never ran.
+ */
 export function generateStaticParams() {
   return PLAYABLE.map((slug) => ({ slug }));
 }
@@ -50,9 +60,20 @@ export default async function PlayPage({ params }: { params: Promise<{ slug: str
         is what the page shows.
 
         Here rather than in `PlaySurface`, for the reason the heading above is here: this is a
-        server component, so it is in the exported HTML and costs neither budget a byte — the
-        size guard walks JavaScript alone. The browser renders a `<noscript>` only when
-        scripting is off, so a visitor with script sees none of it.
+        server component, so it is in the exported HTML rather than in a chunk. The browser
+        renders a `<noscript>` only when scripting is off, so a visitor with script sees none
+        of it.
+
+        It does not follow that it is free, and this block is the measurement that says so.
+        Server-rendered markup costs neither *JavaScript* budget — but the router's payload
+        for this route carries it too, and `next/link` fetches that payload for every card a
+        catalogue browse scrolls past. Measured by stripping this block out of each of the
+        108 built payloads and gzipping them again: 207 bytes here, **22.4 KB speculated on
+        every visitor who browses the grid**, for a block only a visitor with scripting off
+        ever reads. That is more than the whole batch cost on both script budgets put
+        together, and nothing could see it until `speculatedBytes` in `size-budget.json`.
+        It is worth keeping — a page that tells somebody to wait forever is worse — but
+        "costs nothing" was the wrong sentence, and it was written here first.
       */}
       <noscript>
         <div className="db-panel">

@@ -4,7 +4,14 @@ import { useCallback, useEffect, useId, useState, type ChangeEvent } from 'react
 import type { SeatId } from '@duelbox/engine';
 import { clearFavourites, FAVOURITES_KEY } from '@/lib/favourites';
 import { hapticsSupported, vibrate } from '@/lib/haptics';
-import { clearRecord, HEAD_TO_HEAD_KEY, mostPlayed, type GameRecord } from '@/lib/head-to-head';
+import {
+  clearRecord,
+  HEAD_TO_HEAD_KEY,
+  mostPlayed,
+  readRecord,
+  type GameRecord,
+  type Tally,
+} from '@/lib/head-to-head';
 import { LAST_MODE_KEY } from '@/lib/last-mode';
 import {
   exportPlayerData,
@@ -54,6 +61,9 @@ const EMPTY_SUMMARY: Summary = {
 
 /** How many games the record lists here. Enough to recognise a habit, not a second catalogue. */
 const MOST_PLAYED = 5;
+
+/** What each count reads as before storage has been read, and with no scripting at all. */
+const UNREAD_TALLY = { p1: '–', p2: '–', draws: '–' } as const;
 
 /**
  * A slug as a title.
@@ -115,6 +125,7 @@ export function SettingsPanel() {
   const [supported, setSupported] = useState(false);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
   const [played, setPlayed] = useState<readonly { slug: string; record: GameRecord }[]>([]);
+  const [overall, setOverall] = useState<Tally | null>(null);
   const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
   const [status, setStatus] = useState('');
 
@@ -128,6 +139,7 @@ export function SettingsPanel() {
   const refresh = useCallback(() => {
     setSummary(playerDataSummary());
     setPlayed(mostPlayed(MOST_PLAYED));
+    setOverall(readRecord().overall);
     setNames(readPlayerNames());
   }, []);
 
@@ -253,6 +265,12 @@ export function SettingsPanel() {
   const percent = Math.round(settings.volume * 100);
   const volumeId = `${id}-volume`;
   const importId = `${id}-import`;
+  // Before the effect has run there is no record to state, and `components/GameRecord.tsx`
+  // makes the argument this follows: a zero is a claim — "you two have never finished one" —
+  // and a dash is what a component that has not read anything is entitled to say. This page
+  // is exported once for everybody, so the zeros were what a pair fifty matches in saw at
+  // first paint, and the whole of what a visitor with scripting off ever sees here.
+  const record = overall ?? UNREAD_TALLY;
 
   return (
     <div className={styles.panel}>
@@ -529,6 +547,34 @@ export function SettingsPanel() {
         ) : (
           <p className={styles.note}>Nothing yet. Finish a match and it appears here.</p>
         )}
+
+        {/*
+          #160's overall record, which `readRecord` has summed on every read since it was
+          written and which nothing has ever shown a player. The settings page listed the
+          five most played games and the number of matches this device has finished; the one
+          figure that answers "who is ahead" went nowhere.
+
+          A sentence rather than a scoreboard, and it says which seat is which in words: this
+          page may not spell the two seat names — `lib/seats.ts` is the only file allowed to,
+          and importing it here would drag `@duelbox/engine` onto every non-play route for
+          two proper nouns — and three numbers in a row with no legend are three numbers a
+          reader is entitled to read the other way round. Words are also what survives
+          greyscale, which is the rule the compact tally above satisfies with its W, L and D.
+
+          After the list rather than before it, for the same reason the list is last: the
+          three counts are in the exported HTML as dashes and the read only replaces them
+          with digits, so nothing here adds structure after hydration — but the list above
+          does grow rows, and a block it pushes down is better than a block that pushes it.
+        */}
+        <h3 className={styles.subhead}>Between the two of you</h3>
+        <p className={styles.overall}>
+          The near seat has won {record.p1}, the far seat {record.p2}, and {record.draws} ended
+          level.
+        </p>
+        <p className={styles.note}>
+          Every game added up. Matches against the bot are not in it: a bot&apos;s wins belong to
+          nobody.
+        </p>
       </section>
 
       {/* Always rendered, even empty: a live region that appears along with its first
