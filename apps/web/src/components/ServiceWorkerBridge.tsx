@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BASE_PATH } from '@/app/base-path';
 import {
   OFFLINE_NOTICE,
@@ -12,6 +12,23 @@ import {
   workerScope,
   workerScriptUrl,
 } from '@/lib/offline-state';
+import { MATCH_FINISHED, type BeforeInstallPromptEvent } from '@/lib/install-prompt-key';
+
+/**
+ * The install offer (#195): its store, its rule and its two buttons all arrive on demand.
+ *
+ * This component is in the root layout, so every byte of it is shell. The offer only ever
+ * shows on a result screen, so the decision (`lib/install-prompt`) is fetched when a match
+ * finishes and the buttons (`InstallOffer`) are mounted through `lazy()` only once it has
+ * said yes. Measured: with both inline, the shell was 310 B over; like this it fits.
+ */
+const loadInstallStore = () => import('@/lib/install-prompt');
+const InstallOffer = lazy(() => import('./InstallOffer'));
+type InstallStore = Awaited<ReturnType<typeof loadInstallStore>>;
+interface ReadyOffer {
+  readonly event: BeforeInstallPromptEvent;
+  readonly store: InstallStore;
+}
 import styles from './ServiceWorkerBridge.module.css';
 
 /**
@@ -64,6 +81,10 @@ export function ServiceWorkerBridge() {
   const [online, setOnline] = useState(true);
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const [announced, setAnnounced] = useState(false);
+  /** The browser's install event, captured and held until a match has been played (#195). */
+  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  /** The offer, once a match has finished and the store has said yes; null is "say nothing". */
+  const [offer, setOffer] = useState<ReadyOffer | null>(null);
 
   /**
    * The connection, from the browser's own events.
@@ -185,7 +206,51 @@ export function ServiceWorkerBridge() {
   /**
    * The words go in one commit after the region does. See the note at the top of the file.
    */
-  const speaking = !online || waiting !== null;
+  /**
+   * The install offer (#195): capture, defer, ask once after a finished match.
+   *
+   * `beforeinstallprompt` arrives seconds into a first visit, which is the worst moment to
+   * ask — a visitor who has played nothing has no reason to say yes, and a prompt dismissed
+   * then is one Chromium will not offer again for months. `preventDefault` stops the browser's
+   * own mini-infobar and hands the decision here; the event is held in state and nothing is
+   * shown until `PlaySurface` raises `MATCH_FINISHED`, which it does after recording a result.
+   * A "Not now" is remembered for thirty days in `lib/install-prompt.ts`, which is also where
+   * the rule lives, in one pure function with a test per clause.
+   */
+  useEffect(() => {
+    const capture = (event: Event): void => {
+      event.preventDefault();
+      setInstallEvent(event as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', capture);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', capture);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (installEvent === null) return;
+    let live = true;
+    const finished = (): void => {
+      void loadInstallStore().then((store) => {
+        if (!live) return;
+        const ready = store.shouldOfferInstall({
+          hasPrompt: true,
+          matchFinished: true,
+          memory: store.readInstallMemory(),
+          now: Date.now(),
+        });
+        setOffer(ready ? { event: installEvent, store } : null);
+      });
+    };
+    window.addEventListener(MATCH_FINISHED, finished);
+    return () => {
+      live = false;
+      window.removeEventListener(MATCH_FINISHED, finished);
+    };
+  }, [installEvent]);
+
+  const speaking = !online || waiting !== null || offer !== null;
   useEffect(() => {
     setAnnounced(speaking);
   }, [speaking]);
@@ -227,6 +292,18 @@ export function ServiceWorkerBridge() {
   return (
     <div className="db-net-bar" role="status">
       {online ? null : <span>{OFFLINE_NOTICE}</span>}
+      {offer === null ? null : (
+        <Suspense fallback={null}>
+          <InstallOffer
+            event={offer.event}
+            store={offer.store}
+            onDone={() => {
+              setOffer(null);
+              setInstallEvent(null);
+            }}
+          />
+        </Suspense>
+      )}
       {waiting === null ? null : (
         <>
           <span>{UPDATE_NOTICE}</span>

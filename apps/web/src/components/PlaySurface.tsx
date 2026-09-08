@@ -20,6 +20,7 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
+import { MATCH_FINISHED } from '@/lib/install-prompt-key';
 import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import {
@@ -374,6 +375,8 @@ export function PlaySurface({ slug }: { slug: string }) {
     // this call is about to write, from the same function, so the two cannot be different
     // arithmetic — and the panel does not have to wait for a second commit to be right.
     recordResult(slug, outcome, opponent);
+    // The first moment an install offer could reasonably be answered yes (#195).
+    window.dispatchEvent(new Event(MATCH_FINISHED));
     /**
      * And the tournament, if this is the game it is waiting on.
      *
