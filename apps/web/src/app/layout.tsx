@@ -140,6 +140,8 @@ else el.removeAttribute('data-theme');
 var seats=s?s.seatPalette:null;
 if(seats==='colourblind')el.setAttribute('data-seat-palette','colourblind');
 else el.removeAttribute('data-seat-palette');
+if(s&&s.seatSwap===true)el.setAttribute('data-seat-swap','');
+else el.removeAttribute('data-seat-swap');
 }catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {

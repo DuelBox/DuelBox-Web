@@ -108,6 +108,8 @@ export {
   seatPalette,
   setActiveSeatPalette,
   activeSeatPaletteId,
+  setSeatSwap,
+  seatSwapped,
 } from './palette.js';
 export type { SeatPalette, SeatPaletteId } from './palette.js';
 

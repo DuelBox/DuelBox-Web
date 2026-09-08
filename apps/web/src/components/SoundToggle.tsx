@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, readSettings, writeSettings, type Settings } from '@/lib/settings';
-import { applySeatPalette, applyTheme } from '@/lib/theme';
+import { applySeatPalette, applySeatSwap, applyTheme } from '@/lib/theme';
 import styles from './SoundToggle.module.css';
 
 /**
@@ -77,6 +77,7 @@ export function useSettings(): readonly [Settings, (patch: Partial<Settings>) =>
       // which `GameHost` selects at match start.
       applyTheme(next.theme);
       applySeatPalette(next.seatPalette);
+      applySeatSwap(next.seatSwap);
       void import('@/lib/audio').then((module) => {
         module.applySoundSettings(next);
       });

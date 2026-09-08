@@ -63,6 +63,14 @@ export interface Settings {
   /** Seat colours, `default` unless the player chose the colour-blind pair (#174). */
   readonly seatPalette: SeatPaletteChoice;
   /**
+   * Whether the two seats' colours are exchanged (#161): the near seat takes the far seat's
+   * colour and vice versa. A third axis on the palette rather than a third palette — it is
+   * the same pair either way round — and it is colour only: the shapes and the names stay
+   * with their seats, because rule 7 says a seat differs by shape as well as colour, and a
+   * shape that followed the colour would defeat that.
+   */
+  readonly seatSwap: boolean;
+  /**
    * Assist-mode speed multiplier in [{@link MIN_GAME_SPEED}, 1] (#179). Scales how much
    * wall-clock time feeds the fixed loop, so the simulation runs the same steps in the
    * same order at every speed — it is slowed, never changed. `1` is full speed; below it
@@ -76,9 +84,10 @@ export const SETTINGS_KEY = `${KEY_PREFIX}settings`;
 
 /**
  * The shape written today: `{ version: 1, muted, volume, haptics, theme, seatPalette,
- * gameSpeed }`. The version is 1 and stays 1 through the three fields added for the
- * accessibility wave: each reads back as its default when absent, so no migration is
- * owed and a blob from before they existed is still a valid version-1 blob.
+ * seatSwap, gameSpeed }`. The version is 1 and stays 1 through the three fields added for
+ * the accessibility wave and the swap that followed them (#161): each reads back as its
+ * default when absent, so no migration is owed and a blob from before they existed is
+ * still a valid version-1 blob.
  */
 const VERSION = 1;
 
@@ -91,6 +100,7 @@ export const DEFAULT_SETTINGS: Settings = {
   haptics: false,
   theme: 'system',
   seatPalette: 'default',
+  seatSwap: false,
   gameSpeed: 1,
 };
 
@@ -124,6 +134,10 @@ function sanitise(value: Record<string, unknown>): Settings {
     seatPalette: SEAT_PALETTES.includes(seatPalette as SeatPaletteChoice)
       ? (seatPalette as SeatPaletteChoice)
       : DEFAULT_SETTINGS.seatPalette,
+    // A boolean, so anything that is not exactly `true` reads as the default: an old blob
+    // has no field and reads `false`, which is what "the seats as they have always been"
+    // means. The version stays 1 for the same reason it stayed 1 through #174.
+    seatSwap: value['seatSwap'] === true,
     gameSpeed:
       typeof speed === 'number' && Number.isFinite(speed)
         ? Math.min(1, Math.max(MIN_GAME_SPEED, speed))

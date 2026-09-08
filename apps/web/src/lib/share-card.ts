@@ -1,8 +1,8 @@
-import type { SeatId } from '@duelbox/engine';
+import { SEAT_PALETTE, type SeatId } from '@duelbox/engine';
 import { containsBlockedWord } from '@duelbox/game-sdk';
 import { SEAT_CHARACTERS, type SeatNames } from './seats';
 import { absoluteUrl } from './site';
-import { colour, seatColour } from '../styles/tokens';
+import { colour } from '../styles/tokens';
 
 /**
  * The result of a match as a picture two people can send to a third (#164).
@@ -214,8 +214,11 @@ function drawGlyph(
   y: number,
   half: number,
 ): void {
-  ctx.fillStyle = seatColour[seat].base;
-  ctx.strokeStyle = seatColour[seat].deep;
+  // The engine's live palette rather than the brand pair in `styles/tokens.ts`: it carries the
+  // player's palette choice (#174) and the seat swap (#161), so the card shows the colours the
+  // board was played in. The shapes beside the names are still per seat and do not move.
+  ctx.fillStyle = SEAT_PALETTE[seat].base;
+  ctx.strokeStyle = SEAT_PALETTE[seat].deep;
   ctx.lineWidth = half / 4;
   if (seat === 'p1') {
     ctx.beginPath();

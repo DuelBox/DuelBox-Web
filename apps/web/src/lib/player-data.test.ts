@@ -151,6 +151,7 @@ describe('exporting', () => {
           haptics: false,
           theme: 'system',
           seatPalette: 'default',
+          seatSwap: false,
           gameSpeed: 1,
         },
         [HEAD_TO_HEAD_KEY]: {
@@ -227,6 +228,7 @@ describe('importing', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
     });
     // The record travels with everything else (#2448): a pair who move to a new phone

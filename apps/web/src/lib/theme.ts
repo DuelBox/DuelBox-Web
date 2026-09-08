@@ -68,3 +68,18 @@ export function applySeatPalette(palette: SeatPaletteChoice): void {
   if (attribute === null) document.documentElement.removeAttribute('data-seat-palette');
   else document.documentElement.setAttribute('data-seat-palette', attribute);
 }
+
+/**
+ * Puts the seat-colour swap (#161) into effect for the shell by setting or clearing
+ * `data-seat-swap` on `<html>`. `tokens.css` exchanges the two seats' colour tokens under
+ * that attribute, for both palettes and both themes, so every `var(--db-p1)` in the shell
+ * — the scoreboard, the HUD, the seat glyphs — follows. The glyphs' shapes do not: they are
+ * drawn per seat and read the tokens, so a swap recolours a circle and never turns it into
+ * a square (rule 7). The games take the same swap through the engine's `setSeatSwap`, which
+ * `PlaySurface` calls beside `setActiveSeatPalette`; this is the shell's half.
+ */
+export function applySeatSwap(swapped: boolean): void {
+  if (typeof document === 'undefined') return;
+  if (swapped) document.documentElement.setAttribute('data-seat-swap', '');
+  else document.documentElement.removeAttribute('data-seat-swap');
+}

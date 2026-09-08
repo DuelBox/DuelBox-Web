@@ -48,6 +48,7 @@ describe('the defaults', () => {
       // the seats keep the brand palette (#174), and the match runs at full speed (#179).
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
     });
   });
@@ -77,6 +78,7 @@ describe('reading and writing settings', () => {
     writeSettings({ haptics: true });
     writeSettings({ theme: 'dark' });
     writeSettings({ seatPalette: 'colourblind' });
+    writeSettings({ seatSwap: true });
     writeSettings({ gameSpeed: 0.75 });
     expect(readSettings()).toEqual({
       muted: true,
@@ -84,6 +86,7 @@ describe('reading and writing settings', () => {
       haptics: true,
       theme: 'dark',
       seatPalette: 'colourblind',
+      seatSwap: true,
       gameSpeed: 0.75,
     });
   });
@@ -122,6 +125,7 @@ describe('reading and writing settings', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
     });
   });
@@ -154,7 +158,7 @@ describe('surviving whatever is actually in storage', () => {
       fakeStorage({
         [SETTINGS_KEY]:
           '{"version":1,"muted":true,"volume":"loud","haptics":"yes",' +
-          '"theme":42,"seatPalette":"colourblind","gameSpeed":"fast"}',
+          '"theme":42,"seatPalette":"colourblind","seatSwap":"yes","gameSpeed":"fast"}',
       }),
     );
     expect(readSettings()).toEqual({
@@ -163,6 +167,8 @@ describe('surviving whatever is actually in storage', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'colourblind',
+      // A boolean that is not exactly `true` reads as the default (#161).
+      seatSwap: false,
       gameSpeed: 1,
     });
   });
@@ -178,6 +184,7 @@ describe('surviving whatever is actually in storage', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
     });
   });
