@@ -21,6 +21,58 @@
   position: relative;
 }
 
+/*
+ * The preview loop (#82), which is the tile's own art moving and nothing else.
+ *
+ * The issue asks for "a cheap looping preview on hover or focus", imagining a clip beside
+ * a static thumbnail. There is no clip and there is no thumbnail: rule 1 means no art has
+ * been made, and every tile is generated geometry drawn once per page into `TileSprite` and
+ * referenced from here with `<use>`. So the preview is the mark and the chip lifting gently
+ * on the ground while the card is hovered or has keyboard focus — the same tile, in motion —
+ * and it costs zero bytes of asset and zero bytes of script. "Preview asset under 60 KB and
+ * lazy-loaded" is met at 0 B, which is the only number it could honestly be.
+ *
+ * Timed by a token, like every other motion in the shell, so `styles/motion.test.ts` can
+ * see it and the reduced-motion block in `tokens.css` collapses it. And switched off outright
+ * below, twice: `prefers-reduced-motion` because a looping thing next to 108 other looping
+ * things is exactly what that preference is for, and `prefers-reduced-data` because the
+ * issue names save-data, and although this loop fetches nothing, a player who has asked for
+ * less is asking for a quieter page as much as a cheaper one.
+ *
+ * `transform-box: fill-box` so the origin is the shape's own centre and not the SVG's
+ * corner — without it a `<use>` scales and spins about the top-left of the viewBox.
+ */
+.card:hover .art use,
+.card:focus-visible .art use {
+  animation: preview calc(var(--db-duration-slow) * 3) var(--db-ease) infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The chip is the last `<use>` and stays put, so the loop reads as the piece moving on the
+   board rather than the whole tile wobbling. */
+.card:hover .art use:last-of-type,
+.card:focus-visible .art use:last-of-type {
+  animation: none;
+}
+
+@keyframes preview {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-4%) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  .card:hover .art use,
+  .card:focus-visible .art use {
+    animation: none;
+  }
+}
+
 .seats {
   position: absolute;
   left: var(--db-space-2);

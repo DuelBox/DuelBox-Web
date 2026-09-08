@@ -73,7 +73,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Nine things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Ten things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -98,6 +98,7 @@ export default function PrivacyPage() {
             The keys you have chosen for each seat, if you change them from the defaults. The
             settings page shows them and puts either seat back to its defaults.
           </li>
+          <li>The order you last sorted the catalogue in, so it opens the same way next time.</li>
           <li>
             Which games have already shown you their first-play hints, so the note saying which half
             of the screen is whose appears once per game and not every time. The settings page asks
