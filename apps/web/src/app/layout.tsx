@@ -148,31 +148,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* First in the body so it runs during parse, before the ground is painted. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FRAME_GUARD }} />
-        {/*
-          What a refused frame shows, and it is markup rather than script for two reasons.
-
-          **Size (#2545).** Next serialises this whole tree into the `index.txt` route payload
-          of every exported route, and `next/link` prefetches the payload of every catalogue
-          card that comes near the viewport — so a browse that presses nothing fetches all 108
-          of them. Bytes in the guard script above are therefore paid 108 times; bytes in
-          `globals.css` are paid once. Everything about this notice that can live in a
-          stylesheet does, and what is left here is the sentence and the link.
-
-          **Hydration.** The script used to build this element and append it to `<body>` after
-          `DOMContentLoaded`, which is the one part of the defence React could have clobbered
-          on a mismatch. In the tree, React owns it.
-
-          `href="."` rather than `location.href`: `trailingSlash: true` means every route is a
-          directory, so `.` is this page — resolved by the browser, with no script and no
-          origin to interpolate into markup. Hidden by `globals.css` until `<html>` carries
-          `data-framed`, so it costs a normal visitor a `display: none` rule.
-        */}
-        <div id={FRAMED_NOTICE_ID}>
-          {`${FRAMED_NOTICE_TEXT} `}
-          <a href="." target="_blank" rel="noopener">
-            {FRAMED_NOTICE_LINK}
-          </a>
-        </div>
         <a className="db-skip" href="#main">
           Skip to content
         </a>
@@ -234,6 +209,41 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           because two of them here would break `e2e/settings.spec.ts` and
           `e2e/record.spec.ts`, which both ask for the only one.
         */}
+        {/*
+          What a refused frame shows, and it is markup rather than script for two reasons.
+
+          **Size (#2545).** Next serialises this whole tree into the `index.txt` route payload
+          of every exported route, and `next/link` prefetches the payload of every catalogue
+          card that comes near the viewport — so a browse that presses nothing fetches all 108
+          of them. Bytes in the guard script above are therefore paid 108 times; bytes in
+          `globals.css` are paid once. Everything about this notice that can live in a
+          stylesheet does, and what is left here is the sentence and the link.
+
+          **Hydration.** The script used to build this element and append it to `<body>` after
+          `DOMContentLoaded`, which is the one part of the defence React could have clobbered
+          on a mismatch. In the tree, React owns it.
+
+          `href="."` rather than `location.href`: `trailingSlash: true` means every route is a
+          directory, so `.` is this page — resolved by the browser, with no script and no
+          origin to interpolate into markup. Hidden by `globals.css` until `<html>` carries
+          `data-framed`, so it costs a normal visitor a `display: none` rule.
+
+          **Last in the body, not first**, and that is a regression this had before it was
+          moved. Rendered next to the scripts it belongs with, it became the first `a[href]`
+          in the document, ahead of the skip link — `e2e/screen-reader.spec.ts` reads document
+          order rather than tab order, and it is right to: the skip link is the first thing a
+          keyboard or screen-reader user must meet, and "it is `display: none`, so a browser
+          skips it" is an argument about focus that says nothing about a virtual cursor. It is
+          `position: fixed; inset: 0` when it shows, so nothing about where it sits in the
+          document affects where it is painted — and on a framed page everything above it is
+          `visibility: hidden`, so its link is the only focusable thing left.
+        */}
+        <div id={FRAMED_NOTICE_ID}>
+          {`${FRAMED_NOTICE_TEXT} `}
+          <a href="." target="_blank" rel="noopener">
+            {FRAMED_NOTICE_LINK}
+          </a>
+        </div>
         <ServiceWorkerBridge />
       </body>
     </html>

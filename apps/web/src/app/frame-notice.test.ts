@@ -48,6 +48,15 @@ describe('the notice a framed page shows', () => {
     expect(FRAME_GUARD).not.toContain('createElement("div")');
   });
 
+  it('comes after the skip link, which is the first thing anybody must meet', () => {
+    // Regression. Rendered beside the scripts at the top of the body — where it looks like it
+    // belongs, next to the guard that reveals it — it became the first `a[href]` in the
+    // document and `e2e/screen-reader.spec.ts` went red. `display: none` keeps it out of the
+    // *tab* order and says nothing about a virtual cursor, and it is `position: fixed` when it
+    // shows, so it can sit anywhere in the document without moving on screen.
+    expect(layout.indexOf('id={FRAMED_NOTICE_ID}')).toBeGreaterThan(layout.indexOf('"db-skip"'));
+  });
+
   it('links out of the frame with the current page, target and rel', () => {
     // `.` is this directory, and `trailingSlash: true` makes every route one — so this is the
     // page the visitor is on, resolved by the browser rather than interpolated from

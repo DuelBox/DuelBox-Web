@@ -194,7 +194,18 @@ it can see a single 16-byte allocation before it asserts the absence of one — 
 is not closed: a game's `update()` is its own compilation unit with its own inlining budget,
 a plausible two-puck one costs 64 bytes a step with every engine call inside it free, and no
 game here measures itself. The benchmark's header says so in as many words rather than
-implying a coverage it does not have.
+implying a coverage it does not have. And the ceiling it enforces had to come down one
+notch on contact with a second engine: **the identical source reads 0.000 B/call on V8 26 and
+16.000 on V8 12.4**, which is the Node 22 CI runs, because whether a double crossing a call is
+materialised is the optimiser's decision and the inlining budget is spent by the *caller*. The
+proof is inside the benchmark: take the two `mix` calls out of the remote-pair case and the
+`beginStep` pair beside them reads 0.000 on the engine that read 16 with them — a shorter
+caller, not a changed callee. A benchmark whose own closure decides the verdict cannot assert
+that verdict about the code, and `calibration` cannot save it, because it is one caller and
+inlining is decided per caller. So a single boxed double is now **reported by name with the V8
+version** and passes; two of them, or an object, an array, a closure or a string, still fails,
+and none of those depends on a budget. Watched failing with an object planted in
+`InputManager.beginStep`: 48 B/call, five cases red.
 
 The **twelfth** was found while reviewing the batch that added the eleventh, and it is the
 shortest story here: "CSS modules use the `var(--db-*)` tokens; no raw hex" was enforced by
