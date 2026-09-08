@@ -292,6 +292,20 @@ one of those scripts loses the attribute, everybody fetches it, it is shell agai
 build says so. Watched failing both ways: with the attribute stripped from all 353 pages, and
 with the file left in the manifest and unreferenced by any of them.
 
+The **sixteenth** is the audio vocabulary, and it is the mildest shape in this list: not a guard
+that was false, but two guards that **could only ever pass**. `sound-events.ts` declares fourteen
+cues, eight of them `owner: 'game'`, and `sound-visuals.test.ts` walks all 108 game packages
+looking for a game emitting one it should not, or one with no drawn counterpart. Both scans read
+every file and find nothing, every time, for a reason neither of them states: **`GameContext`
+carries no way to make a sound at all**, so not one of those eight is reachable by anybody.
+`GameSoundBus` — the typed bus written so that a game raising the shell's countdown would be a
+compile error — has no caller either. To their credit both tests say in their own comments that
+they are vacuous today; what was missing is anything aimed at the moment they stop being. That is
+now `the seam a game would emit through`: it reads `GameContext` and fails when it grows anything
+that looks like audio, with the review in the failure message, because that is the commit where
+#180's "playable with sound off" stops holding by construction and starts needing a per-game
+pass. Watched failing with an `audio` field added to the context.
+
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard

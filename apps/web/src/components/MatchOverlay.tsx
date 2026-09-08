@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
@@ -49,6 +49,8 @@ export interface MatchOverlayProps {
   record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
+  /** This game's route slug, for the address the share card prints (#164). */
+  slug: string;
   /**
    * How the match is presented, so the count-in reads upright for whoever is looking (#142).
    * Shared-screen draws it twice, once turned; single-seat draws it once. Defaults to
@@ -105,6 +107,7 @@ function Phase({
   seatNames,
   record,
   nextGame,
+  slug,
   presentation = 'shared-screen',
   notice,
   onSwapControllers,
@@ -205,6 +208,17 @@ function Phase({
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
               Rematch
             </button>
+            {state.matchOutcome !== null ? (
+              <ShareResult
+                slug={slug}
+                game={manifest.name}
+                seatNames={seatNames}
+                outcome={state.matchOutcome}
+                // The score a person would read off the panel: the round tally for a best-of,
+                // this round's tally for a single round — the same choice the line above makes.
+                score={rounds > 1 ? state.roundWins : state.tally}
+              />
+            ) : null}
             {/* prefetch={false} on both links here: the Next router otherwise warms these
                 routes' chunks while a match is running, downloading another game's code
                 during play for a link the player may never take. A match should need
@@ -423,6 +437,68 @@ function Panel({
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * The Share button and the line it reports through (#164).
+ *
+ * The card's code arrives by `import()` on the first press and not before — the
+ * `SoundToggle` → `lib/audio` precedent — so a pair who never share never download a canvas
+ * renderer. It is the play route either way, but "on demand" is only honest if the demand
+ * actually happens.
+ *
+ * The status line is `aria-live` without `role="status"`, deliberately: the overlay already
+ * has the one status region on the page (the announcement above the panels), and
+ * `e2e/record.spec.ts` asks for "the" one.
+ */
+function ShareResult({
+  slug,
+  game,
+  seatNames,
+  outcome,
+  score,
+}: {
+  slug: string;
+  game: string;
+  seatNames: SeatNames;
+  outcome: SeatId | 'draw';
+  score: Readonly<Record<SeatId, number>>;
+}) {
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const share = () => {
+    setBusy(true);
+    setStatus(null);
+    void import('@/lib/share-card')
+      .then(async (card) => {
+        const data = { game, slug, names: seatNames, score, outcome };
+        const blob = await card.renderShareCard(data);
+        const result = await card.shareOrDownload(blob, data);
+        setStatus(
+          result === 'downloaded'
+            ? `Saved as ${card.shareCardFilename(data)}.`
+            : result === 'shared'
+              ? 'Shared.'
+              : null,
+        );
+      })
+      .catch(() => {
+        setStatus('The picture could not be made. Try again.');
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  };
+  return (
+    <>
+      <button type="button" className={styles.secondary} onClick={share} disabled={busy}>
+        Share result
+      </button>
+      <p className={styles.shareStatus} aria-live="polite">
+        {status}
+      </p>
+    </>
   );
 }
 

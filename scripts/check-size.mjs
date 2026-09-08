@@ -440,6 +440,141 @@ if (workerFiles.length > 1) {
 }
 console.log(`check-size: service worker (paid once, and again on every deploy) ${kb(workerBytes)}`);
 
+// ---------------------------------------------------------------------------------
+// Sessions: what a phone downloads, rather than what the build emits (#2446, #2419).
+// ---------------------------------------------------------------------------------
+// Every line above is a fact about JavaScript, and a session is not made of JavaScript. A
+// first visit fetches a document, its stylesheets, three self-hosted faces, the shell, the
+// worker, the play route's code and one game's chunk; a browse of the catalogue fetches a
+// document twice the size and 108 route payloads instead of a game. Neither total existed
+// anywhere: `check-zero-cost.mjs` prints a "session weight", and that figure is the *raw*
+// size of the scripts one play page references — polyfills nobody fetches included, the
+// game chunk that arrives by `import()` excluded, and no document, stylesheet or font at
+// all. It is a ratchet on one page's script tags, which is what it was written to be. These
+// three are the wire bytes of a whole session, gzipped like everything else here.
+//
+// Fonts are counted at their file size, not re-gzipped: a woff2 is Brotli-compressed
+// internally and gzip adds about 0.1% to it, so the file size is the wire size. Only the
+// base subsets are counted as fetched — `unicode-range` on each `@font-face` means the
+// `-latin-ext` faces are requested only when a glyph in that range is rendered, which no
+// English page does; they are reported beside the total rather than hidden in it.
+//
+// Not counted, and why: the share image (`/og/…png`) is fetched by link unfurlers, never by
+// a browser rendering the page; the `latin-ext` faces, for the reason above; and the dozen
+// route payloads the landing page's own cards prefetch, which are the browsing line's
+// concern and are already inside `speculatedBytes`.
+function documentAt(route) {
+  const file = join(OUT, ...route.split('/').filter(Boolean), 'index.html');
+  try {
+    return { file, html: readFileSync(file, 'utf8') };
+  } catch {
+    failures.push(`${route} is not in the export, so no session that starts there can be measured`);
+    return { file, html: '' };
+  }
+}
+
+/** The stylesheets a document links, on disk. */
+function stylesheetsOf(html) {
+  return [...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g)].map((match) =>
+    join(OUT, (match[1] ?? '').replace(/^\//, '')),
+  );
+}
+
+/** The font files a set of stylesheets declares, split into base subsets and conditional ones. */
+function fontsOf(stylesheets) {
+  const base = new Set();
+  const conditional = new Set();
+  for (const sheet of stylesheets) {
+    let css;
+    try {
+      css = readFileSync(sheet, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const match of css.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
+      const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
+      const file = join(OUT, url.replace(/^\//, ''));
+      (url.includes('-latin-ext') ? conditional : base).add(file);
+    }
+  }
+  return { base: [...base], conditional: [...conditional] };
+}
+
+const fileBytes = (file) => {
+  try {
+    return statSync(file).size;
+  } catch {
+    failures.push(`${relative(OUT, file)} is referenced by a page and not in the export`);
+    return 0;
+  }
+};
+const sum = (files, weigh) => files.reduce((total, file) => total + weigh(file), 0);
+
+const landing = documentAt('/');
+const catalogue = documentAt('/games/');
+const landingSheets = stylesheetsOf(landing.html);
+const catalogueSheets = stylesheetsOf(catalogue.html);
+const landingFonts = fontsOf(landingSheets);
+const catalogueFonts = fontsOf(catalogueSheets);
+
+// The controls, before any total is believed. A stylesheet parse that stopped matching would
+// count zero fonts and zero CSS, and the totals below would read as a saving.
+if (landingSheets.length === 0)
+  failures.push('the landing page links no stylesheet — the parse has stopped matching');
+if (landingFonts.base.length === 0)
+  failures.push(
+    'no font file is declared by the landing stylesheets — the parse has stopped matching',
+  );
+if (gzipped(catalogue.file) < 10_000 && catalogue.html !== '') {
+  failures.push(
+    'the catalogue document is under 10 KB gzipped — the grid has stopped rendering into it',
+  );
+}
+
+const landingDocument = landing.html === '' ? 0 : gzipped(landing.file);
+const catalogueDocument = catalogue.html === '' ? 0 : gzipped(catalogue.file);
+const landingCss = sum(landingSheets, gzipped);
+const catalogueCss = sum(catalogueSheets, gzipped);
+const landingFontBytes = sum(landingFonts.base, fileBytes);
+const catalogueFontBytes = sum(catalogueFonts.base, fileBytes);
+
+/** Arrive, pick a game, play it: the landing page, then one play route and its game. */
+const firstSessionBytes =
+  landingDocument +
+  landingCss +
+  landingFontBytes +
+  shellBytes +
+  onDemandBytes +
+  biggestGame +
+  workerBytes;
+/** Arrive at the catalogue and scroll to the end of it, pressing nothing. */
+const browsingSessionBytes =
+  catalogueDocument +
+  catalogueCss +
+  catalogueFontBytes +
+  shellBytes +
+  speculatedBytes +
+  workerBytes;
+/** What the grid costs to be on screen at all, before the first card comes near the viewport. */
+const catalogueBytes = catalogueDocument + catalogueCss + catalogueFontBytes + shellBytes;
+
+console.log(
+  `check-size: first session (arrive, pick a game, play it) ${kb(firstSessionBytes)} =` +
+    ` document ${kb(landingDocument)} + css ${kb(landingCss)} + fonts ${kb(landingFontBytes)}` +
+    ` + shell ${kb(shellBytes)} + on demand ${kb(onDemandBytes)} + largest game ${kb(biggestGame)}` +
+    ` + worker ${kb(workerBytes)}`,
+);
+console.log(
+  `check-size: browsing session (scroll the whole catalogue) ${kb(browsingSessionBytes)} =` +
+    ` document ${kb(catalogueDocument)} + css ${kb(catalogueCss)} + fonts ${kb(catalogueFontBytes)}` +
+    ` + shell ${kb(shellBytes)} + speculated ${kb(speculatedBytes)} + worker ${kb(workerBytes)}`,
+);
+console.log(
+  `check-size: catalogue on screen (before any prefetch) ${kb(catalogueBytes)};` +
+    ` ${String(landingFonts.conditional.length)} latin-ext face(s) fetched only for a glyph in that range,` +
+    ` ${kb(sum(landingFonts.conditional, fileBytes))} not counted`,
+);
+
 // Nothing may fall between the buckets. A chunk this script cannot place is a chunk it is
 // not measuring, and the whole point of #2516 is that an unmeasured chunk is where the
 // bytes go to hide.
@@ -485,6 +620,29 @@ if (speculatedBytes > BUDGET.speculatedBytes) {
   failures.push(
     `browsing the catalogue speculates ${kb(speculatedBytes)} of route payloads, over the` +
       ` ${kb(BUDGET.speculatedBytes)} budget`,
+  );
+}
+
+// A budget that is not in the file is not a budget: `x > undefined` is false, so a missing
+// key would pass every build in silence. Named rather than defaulted.
+for (const key of ['firstSessionBytes', 'browsingSessionBytes', 'catalogueBytes']) {
+  if (typeof BUDGET[key] !== 'number') failures.push(`size-budget.json has no ${key}`);
+}
+if (firstSessionBytes > BUDGET.firstSessionBytes) {
+  failures.push(
+    `a first session is ${kb(firstSessionBytes)}, over the ${kb(BUDGET.firstSessionBytes)} budget`,
+  );
+}
+if (browsingSessionBytes > BUDGET.browsingSessionBytes) {
+  failures.push(
+    `a browsing session is ${kb(browsingSessionBytes)}, over the` +
+      ` ${kb(BUDGET.browsingSessionBytes)} budget`,
+  );
+}
+if (catalogueBytes > BUDGET.catalogueBytes) {
+  failures.push(
+    `the catalogue costs ${kb(catalogueBytes)} to put on screen, over the` +
+      ` ${kb(BUDGET.catalogueBytes)} budget`,
   );
 }
 
