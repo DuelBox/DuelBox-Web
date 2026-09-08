@@ -153,9 +153,10 @@ export const FREE_SECTION: LandingSection = {
     'What the site remembers, it remembers on your device: your favourites, the games you ' +
       'played last, your settings, and the running head-to-head between the two seats. The ' +
       'settings page shows the lot, writes it out to a file, and erases it in one press.',
-    'One limit, stated rather than buried. Once a page has loaded, playing it needs nothing ' +
-      'further from the network — but there is no offline cache yet, so opening the site, or ' +
-      'reloading it, does need a connection.',
+    'One limit, stated rather than buried. Your browser keeps a copy of the site and of each ' +
+      'game after you open it, so a game you have played before opens and plays with no ' +
+      'connection at all — but a game you have never opened is not on the device, and needs ' +
+      'one. The catalogue marks which games are here, in words.',
   ],
 };
 

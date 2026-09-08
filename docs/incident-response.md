@@ -119,9 +119,29 @@ the bleeding and revert afterwards.
 
 Two facts that decide how urgent it is:
 
-- **No service worker and no app cache**, verified. A bad build cannot pin itself in anyone's
-  browser. The worst case is the CDN's `max-age=600` — **ten minutes** after the rollback
-  deploys, everyone is on the fixed build.
+- **There is a service worker now, and this bullet used to say the opposite.** It said a bad
+  build could not pin itself in anyone's browser, and that was true until the worker landed.
+  It is not true any more, and this is the paragraph that decides how urgent a bad deploy is,
+  so read the mechanism rather than the summary.
+
+  A returning visitor is served the *previous* build's documents out of their own device
+  before the network is consulted — that is the whole point of it, and it is what makes the
+  site work on a train. What limits the damage is that the browser re-fetches `sw.js` on
+  every navigation, so a rollback reaches a device on its next page load: the new worker
+  installs, the page offers **Reload**, and taking it lands on the fixed build. A person who
+  does not take it stays on the broken one until they reopen the tab.
+
+  So the honest worst case is no longer ten minutes for everybody. It is: the CDN's
+  `max-age=600` for a first-time visitor, and *one navigation plus one accepted prompt* for a
+  returning one — which for somebody who leaves the tab open is unbounded. If a build is bad
+  enough that people must not keep using it, rolling back is not sufficient on its own; see
+  [`docs/pwa.md`](pwa.md) → *Clearing a worker that is stuck*, which is written for exactly this
+  moment.
+
+  What cannot happen is a device pinned to a broken build **permanently**: `sw.js` is
+  deliberately excluded from its own precache, so it is never answered from the cache and the
+  update check always reaches the origin. That is the property the rollback depends on, and
+  it is the one to check first if a rollback ever appears not to be landing.
 - **Nothing persists server-side**, so there is nothing to repair after the rollback. No
   migration, no queue, no half-written state.
 

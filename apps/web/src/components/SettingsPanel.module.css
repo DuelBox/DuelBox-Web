@@ -219,15 +219,39 @@
   font: inherit;
 }
 
-/* The theme, seat-colour and speed choosers. Sized like the text field so the section reads
-   as one column of controls, and given the same touch target as everything else on the page
-   — a browser draws a select shorter than that by default. `color-scheme: inherit` lets the
-   native option list follow the site's dark theme rather than the OS default. */
+/*
+ * The theme, seat-colour and speed choosers, and the second place `min-height` alone turned
+ * out not to be a touch target.
+ *
+ * The comment that stood here said these were "given the same touch target as everything else
+ * on the page — a browser draws a select shorter than that by default", and named
+ * `min-height` as how. That is true of Chromium and false of WebKit, which sizes a native
+ * `<select>` from its own metrics and ignores height, min-height and vertical padding while
+ * `appearance` is left at its default. Measured: **256x26** against the 48px token, on all
+ * three of these, on `notched-portrait` and on no other project — so the controls were the
+ * right size everywhere anybody was looking. `e2e/touch-targets.spec.ts` has been failing on
+ * `/settings/` for exactly this since the choosers landed, on main as well as here; it was
+ * invisible because main's e2e was already red for another reason.
+ *
+ * `CatalogBrowser.module.css` found and recorded the identical defect on the catalogue's sort
+ * control, and this is the same repair, deliberately: `appearance: none` is what makes the box
+ * ours to size, and it costs the native disclosure arrow, so the arrow is drawn back on the
+ * row rather than left absent — a select with no affordance reads as a text field.
+ * `.row::after` is a CSS triangle in `--db-ink`, which keeps the colour a token rather than
+ * the hex a background-image SVG would have forced, since a data URI cannot read a custom
+ * property. `pointer-events: none` so it never swallows a tap meant for the control under it,
+ * and the right padding below is what leaves room for it.
+ *
+ * `color-scheme: inherit` stays: it lets the native option list follow the site's dark theme
+ * rather than the OS default.
+ */
 .select {
+  appearance: none;
+  -webkit-appearance: none;
   flex: 0 1 16rem;
   min-width: 0;
   min-height: var(--db-touch-target);
-  padding-inline: var(--db-space-3);
+  padding-inline: var(--db-space-3) var(--db-space-6);
   border: 2px solid var(--db-border);
   border-radius: var(--db-radius);
   background: var(--db-paper);
@@ -236,6 +260,30 @@
   font-weight: 600;
   cursor: pointer;
   color-scheme: inherit;
+}
+
+/*
+ * The arrow the select gave up, drawn on the row that holds it.
+ *
+ * Only on rows that actually contain a select — `:has()` rather than a second class name, so
+ * the markup does not have to know which rows are choosers and the two can never disagree.
+ */
+.row:has(> .select) {
+  position: relative;
+}
+
+.row:has(> .select)::after {
+  content: '';
+  position: absolute;
+  right: var(--db-space-3);
+  top: 50%;
+  transform: translateY(-25%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--db-ink);
+  pointer-events: none;
 }
 
 .games {
