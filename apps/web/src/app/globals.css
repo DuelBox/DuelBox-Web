@@ -471,3 +471,30 @@ html[data-net='offline'] a[data-offline-ready='1']::after {
 html[data-net='offline'] a[data-offline-ready='0'] {
   opacity: 0.55;
 }
+
+/* The idle catalogue's match (#165). Global rather than a CSS module, and that is a size
+   decision: the stage arrives as an `import()` chunk, and a CSS module imported from an
+   async chunk puts webpack's stylesheet loader into the runtime every visitor downloads —
+   measured at 563 B on the shell for three rules. Here they are paid once, with the rest of
+   this file. It sits between the catalogue's heading and its grid, in flow, so it pushes
+   nothing above it and covers no card. */
+.db-attract {
+  display: grid;
+  gap: var(--db-space-2);
+  margin-block: var(--db-space-4) var(--db-space-5);
+}
+
+/* The width it is given and the height of a phone held sideways: enough to read a match,
+   never so tall that the cards fall below the fold. */
+.db-attract-canvas {
+  width: 100%;
+  height: clamp(12rem, 40vh, 22rem);
+  display: block;
+  background: var(--db-surface);
+  border-radius: var(--db-radius-lg);
+}
+
+.db-attract-caption {
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}
