@@ -55,6 +55,14 @@ export interface MatchOverlayProps {
    * shared-screen, the archetype default for everything the shell hosts today.
    */
   presentation?: Presentation | undefined;
+  /**
+   * Why the match paused itself, when it did (#130): a controller came or went. Shown on the
+   * pause panel and nowhere else, because the panel is the thing the pause put on screen and
+   * a second surface for one sentence is a second thing to focus-trap.
+   */
+  notice?: string | undefined;
+  /** Swaps which controller drives which seat; absent when no controller has been seen. */
+  onSwapControllers?: (() => void) | undefined;
   onResume: () => void;
   onQuit: () => void;
   onNextRound: () => void;
@@ -98,6 +106,8 @@ function Phase({
   record,
   nextGame,
   presentation = 'shared-screen',
+  notice,
+  onSwapControllers,
   onResume,
   onQuit,
   onNextRound,
@@ -111,6 +121,9 @@ function Phase({
     case 'paused':
       return (
         <Panel heading="Paused" role="dialog">
+          {/* The controller sentence first, because when it is present it is the reason the
+              board stopped, and "exactly where you left it" is then the second thing to know. */}
+          {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
           <p className={styles.detail}>The board is exactly where you left it.</p>
           {/* On demand during a match, as the issue asks: a player who has forgotten
               which keys are theirs should not have to quit to find out. */}
@@ -126,6 +139,15 @@ function Phase({
             <button type="button" className={styles.secondary} onClick={onRestart}>
               Restart
             </button>
+            {/* The manual half of "connection order plus manual reassignment" (#130): the
+                pair who were handed the wrong pads swap without re-plugging. Only offered
+                once a controller has been seen, so a keyboard-and-touch pair never meet a
+                button about a thing they do not have. */}
+            {onSwapControllers === undefined ? null : (
+              <button type="button" className={styles.secondary} onClick={onSwapControllers}>
+                Swap controllers
+              </button>
+            )}
             <Link className={styles.secondary} href="/settings/" prefetch={false}>
               Settings
             </Link>
