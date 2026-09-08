@@ -336,6 +336,36 @@ canvas {
  * announcement that blocks the game it is announcing about is a worse bug than the one it
  * reports.
  */
+/*
+ * The bar stays out of a running match, and that is a product decision before it is a fix.
+ *
+ * The worker deliberately does not `skipWaiting`: a new version installs and *waits*, so a
+ * match is never swapped out from under itself. Putting a "Reload" button over that same
+ * match invites exactly the interruption the waiting exists to prevent. And an "Offline"
+ * notice mid-match is noise by construction — once a game is running it needs nothing from
+ * the network, which is the whole claim this site makes about itself.
+ *
+ * It is also what CI found. `e2e/offline.spec.ts` manufactures a second deploy by appending
+ * a comment to the served `out/sw.js`, and its own note explains why that is safe: the
+ * revision does not move, so a worker registered in that window behaves identically. What
+ * the note did not anticipate is that *behaving* identically is not *being* identical — the
+ * bytes differ, so every other test running in parallel got a genuine `updatefound` and a
+ * Reload prompt. Playwright reported it exactly: "<button class=\"db-net-do\">Reload</button>
+ * from <div role=\"status\" class=\"db-net-bar\"> subtree intercepts pointer events", against
+ * the pause button, on the two notched projects — the viewports short enough for a bar
+ * pinned to the bottom to reach a HUD pinned to the bottom.
+ *
+ * `pointer-events: none` below stops the *bar* taking a press, but the Reload button inside
+ * it is a real control and must keep `auto`, so the container alone could never have been
+ * the whole answer. This is: while `data-match` says a match is live, there is nothing there
+ * to intercept. `PlaySurface` sets that attribute for the duration of a match and removes it
+ * after, so the prompt reappears the moment the player is back at a lobby or a result — a
+ * person is asked to reload when reloading costs them nothing, which is when they should be.
+ */
+html[data-match='live'] .db-net-bar {
+  display: none;
+}
+
 .db-net-bar {
   pointer-events: none;
   position: fixed;
