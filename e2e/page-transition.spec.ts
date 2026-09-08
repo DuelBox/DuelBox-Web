@@ -123,6 +123,20 @@ test('a control on the arriving page can be pressed while the page is still fadi
  * then the game's own chunk that `PlaySurface` asks for once it has mounted. About two and a
  * half seconds from the press to the lobby, measured.
  */
+/**
+ * No service worker in this file, and it is the difference between a test and a coin toss.
+ *
+ * Every test below models latency by holding requests in `page.route`. A registered service
+ * worker answers a navigation and its chunks from its own cache without a network request at
+ * all, so the hold never applies and the arrival this spec is written to observe is over
+ * before the first assertion looks at it — which is exactly how it failed the moment the
+ * worker (#192, #2546) landed on main: the panel read the whole lobby where `/^Loading/` was
+ * expected. Blocking it is not avoiding the interaction, it is removing a second mechanism
+ * from a measurement of the first; `e2e/offline.spec.ts` is where the worker's own behaviour
+ * is tested, with the network really gone rather than merely slowed.
+ */
+test.use({ serviceWorkers: 'block' });
+
 const HOLD_MS = 800;
 
 /**
