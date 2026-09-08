@@ -178,3 +178,84 @@ test.describe('remembering how you last played', () => {
     await expect(buttons.first()).toHaveText('Play together here');
   });
 });
+
+/**
+ * Changing a match while it is running (#2351).
+ *
+ * The rule under test is one sentence — between rounds, anything that still makes sense;
+ * mid-round, nothing — and `lib/match-changes.test.ts` holds every verdict it gives. What
+ * only a browser can show is that a change made between rounds reaches the next round
+ * without the round tally moving: the far seat handed from the bot to a person keeps the
+ * score, a best-of-three grown to five keeps the score, and the match then plays on.
+ *
+ * Crash It at hard, for the reason `bot-difficulty.spec.ts` gives: a hard bot settles a
+ * round against an idle human seat in about eight seconds, so a whole best-of is inside
+ * the budget. The seat is handed to a person and straight back, because a round with two
+ * idle people in it might never end — and a hand-over and back is still a hand-over, which
+ * is what the result screen is then expected to say.
+ */
+test.describe('changing a match between rounds (#2351)', () => {
+  test.describe.configure({ timeout: 150_000 });
+
+  test('keeps the score across a hand-over and a longer match, and says so', async ({ page }) => {
+    await page.goto('/play/crash-it/');
+    await page.getByRole('radio', { name: /Hard/ }).check();
+    await expect(page.getByRole('radio', { name: 'Best of 3' })).toBeChecked();
+    await page.getByRole('button', { name: /Play against/ }).click();
+
+    // Round one ends. Nothing can change mid-round, and the pause menu says why.
+    const nextRound = page.getByRole('button', { name: 'Next round' });
+    await expect(nextRound).toBeVisible({ timeout: 25_000 });
+    const result = page.getByRole('group', { name: 'Round 1' });
+    const before = (await result.textContent()) ?? '';
+    const score = /(\d) — (\d)/.exec(before);
+    expect(score, 'the round result carries the tally').not.toBeNull();
+
+    await page.getByText('Change something for the next round').click();
+    // Only lengths the score has not already decided are offered: a single round is behind
+    // the pair, and the match can only grow.
+    await expect(page.getByRole('radio', { name: '1 round' })).toHaveCount(0);
+    await page.getByRole('radio', { name: 'Best of 5' }).check();
+    await expect(result).toContainText('first to 3 takes it');
+    await expect(result).toContainText(`${score![1]} — ${score![2]}`);
+
+    // The far seat changes hands, and the tally does not move.
+    await page.getByRole('button', { name: 'Hand the far seat to a person' }).click();
+    await expect(result).toContainText(`${score![1]} — ${score![2]}`);
+    await expect(result).not.toContainText('(bot)');
+    await page.getByRole('button', { name: 'Let the bot take the far seat' }).click();
+    await expect(result).toContainText('(bot)');
+    await expect(result).toContainText(`${score![1]} — ${score![2]}`);
+    // Carrying the match to another device is refused up front, with the way that works.
+    await expect(result).toContainText('not built');
+    await expect(result).toContainText('export');
+
+    await nextRound.click();
+    await expect(page.getByRole('group', { name: 'Score' })).toContainText('Round 2 of 5');
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    const paused = page.getByRole('dialog', { name: 'Paused' });
+    await expect(paused).toContainText('finish this round first');
+    await expect(paused.getByRole('radio')).toHaveCount(0);
+    await paused.getByRole('button', { name: 'Resume' }).click();
+
+    // The match plays on to a best-of-five result, carrying round one with it — and a match
+    // whose far seat was in question goes on no record.
+    await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible({ timeout: 90_000 });
+    const over = page.getByRole('group', { name: 'Match over' });
+    await expect(over).toContainText(/3 — \d|\d — 3/);
+    await expect(over).toContainText('Not added to the record');
+    await expect(over).not.toContainText('All time in');
+  });
+
+  test('refuses every change in a tournament leg, and says the tournament settled it', async ({
+    page,
+  }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: /Tournament against/ }).click();
+    await page.getByRole('button', { name: 'Play game 1' }).click();
+    await page.getByRole('button', { name: 'Pause the match' }).click();
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toContainText(
+      'The tournament settled the seats, the bot and the length when it started.',
+    );
+  });
+});

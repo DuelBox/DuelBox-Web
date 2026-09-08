@@ -8,8 +8,11 @@ import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
 import { resultAnnouncement, soloAnnouncement } from '@/lib/match-announcement';
 import type { RunResult } from '@/lib/best-scores';
+import type { MatchChanges } from '@/lib/match-changes';
+import type { BotDifficulty, PlayMode } from '@/lib/match-setup';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
+import { MatchOptions } from './MatchOptions';
 import { countdownViews } from './countdown-views';
 import { SoundToggle } from './SoundToggle';
 import styles from './MatchOverlay.module.css';
@@ -79,6 +82,28 @@ export interface MatchOverlayProps {
    * of either), and the way on is "Go again" rather than "Rematch".
    */
   solo?: RunResult | undefined;
+  /**
+   * What the match may change about itself between rounds, and the hands that change it
+   * (#2351). Absent, nothing is offered and nothing is refused — the overlay then reads as
+   * it did before a match could change at all.
+   */
+  changing?: Changing | undefined;
+  /**
+   * The far seat changed hands during this match, so its ending went on no record: a bot's
+   * wins are not the far player's, and a match that was both belongs on neither map. The
+   * panel says so where the record line would have been.
+   */
+  unrecorded?: boolean | undefined;
+}
+
+export interface Changing {
+  readonly changes: MatchChanges;
+  /** Who holds the far seat now, so the hand-over offers the other. */
+  readonly mode: PlayMode;
+  readonly difficulty: BotDifficulty;
+  readonly onHandSeat: (to: 'friend' | 'bot') => void;
+  readonly onDifficulty: (difficulty: BotDifficulty) => void;
+  readonly onRounds: (rounds: number) => void;
 }
 
 export function MatchOverlay(props: MatchOverlayProps) {
@@ -127,6 +152,8 @@ function Phase({
   onRematch,
   onRestart,
   solo,
+  changing,
+  unrecorded = false,
 }: MatchOverlayProps) {
   switch (state.phase) {
     case 'countdown':
@@ -139,6 +166,12 @@ function Phase({
               board stopped, and "exactly where you left it" is then the second thing to know. */}
           {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
           <p className={styles.detail}>The board is exactly where you left it.</p>
+          {/* Why the pause menu offers no change of seat, bot or length: a round is running,
+              and `lib/match-changes.ts` says so in one sentence (#2351). A solo run has no
+              far seat to ask about. */}
+          {changing === undefined || changing.mode === 'solo' ? null : (
+            <p className={styles.detail}>{changing.changes.seat.reason}</p>
+          )}
           {/* On demand during a match, as the issue asks: a player who has forgotten
               which keys are theirs should not have to quit to find out. */}
           <Controls manifest={manifest} />
@@ -184,6 +217,7 @@ function Phase({
             {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2} · first to{' '}
             {Math.ceil(rounds / 2)} takes it
           </p>
+          {changing === undefined ? null : <NextRound rounds={rounds} {...changing} />}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onNextRound} autoFocus>
               Next round
@@ -237,7 +271,11 @@ function Phase({
               sittings rather than a count of tonight's rematches. The match on screen is
               already in it, so a settled match always has something here and the line
               cannot appear a frame after the buttons it sits above. */}
-          {record && record.p1 + record.p2 + record.draws > 0 ? (
+          {unrecorded ? (
+            <p className={styles.record}>
+              Not added to the record: the far seat changed hands during this match.
+            </p>
+          ) : record && record.p1 + record.p2 + record.draws > 0 ? (
             <p className={styles.record}>
               All time in {manifest.name}: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
               {record.draws > 0 ? `, ${record.draws} drawn` : ''}
@@ -278,6 +316,65 @@ function Phase({
     default:
       return null;
   }
+}
+
+/**
+ * What the pair may change before the next round, and why not what they may not (#2351).
+ *
+ * Closed by default: the result and the way on are what a round result is for, and a pair
+ * who want nothing changed should not have to read past three controls to find "Next round".
+ * A control that cannot be offered is replaced by its reason, said once however many
+ * controls share it — the reasons are `lib/match-changes.ts`'s, and the tests there hold
+ * that no refusal is silent. The device line is always a reason, because carrying a match
+ * to another device is not something this build can do live, and saying so here is better
+ * than a button that would have to say it after being pressed.
+ */
+function NextRound({
+  rounds,
+  changes,
+  mode,
+  difficulty,
+  onHandSeat,
+  onDifficulty,
+  onRounds,
+}: Changing & { rounds: number }) {
+  // The tier's refusal in a match with no bot is not news to anybody, so it is not said.
+  const refused = [changes.seat, changes.rounds, ...(mode === 'bot' ? [changes.difficulty] : [])];
+  const reasons = [...new Set(refused.filter((v) => !v.allowed).map((v) => v.reason))];
+  return (
+    <details className={styles.changes}>
+      <summary className={styles.summary}>Change something for the next round</summary>
+      <div className={styles.changeBody}>
+        {changes.seat.allowed ? (
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => {
+              onHandSeat(mode === 'bot' ? 'friend' : 'bot');
+            }}
+          >
+            {mode === 'bot' ? 'Hand the far seat to a person' : 'Let the bot take the far seat'}
+          </button>
+        ) : null}
+        {changes.difficulty.allowed || changes.rounds.allowed ? (
+          <MatchOptions
+            showDifficulty={changes.difficulty.allowed}
+            difficulty={difficulty}
+            onDifficulty={onDifficulty}
+            rounds={rounds}
+            onRounds={onRounds}
+            lengths={changes.rounds.allowed ? changes.rounds.choices : []}
+          />
+        ) : null}
+        {reasons.map((reason) => (
+          <p key={reason} className={styles.detail}>
+            {reason}
+          </p>
+        ))}
+        <p className={styles.detail}>{changes.device.reason}</p>
+      </div>
+    </details>
+  );
 }
 
 function Countdown({ remaining, presentation }: { remaining: number; presentation: Presentation }) {

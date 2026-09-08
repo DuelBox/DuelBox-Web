@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import type { MatchState } from '@duelbox/game-sdk';
 import type { SeatNames } from '@/lib/seats';
+import type { BotDifficulty } from '@/lib/match-setup';
 import { SeatGlyph } from './SeatGlyph';
 import { SoundToggle } from './SoundToggle';
 import styles from './MatchHud.module.css';
@@ -61,6 +62,11 @@ export interface MatchHudProps {
   clock?: string | undefined;
   /** True inside the clock's warning band, so the readout can flag that time is nearly up. */
   clockWarning?: boolean | undefined;
+  /**
+   * The bot's tier, while a bot is playing, said beside the round so a tier fixed for a
+   * whole tournament is visible in every leg rather than only where it was chosen (#2347).
+   */
+  tier?: BotDifficulty | undefined;
 }
 
 export function MatchHud({
@@ -74,7 +80,9 @@ export function MatchHud({
   clock,
   clockWarning = false,
   solo = false,
+  tier,
 }: MatchHudProps) {
+  const tierLabel = tier === undefined ? '' : ` · ${tier}`;
   const canPause = state.phase === 'playing' || state.phase === 'countdown';
   return (
     <div
@@ -97,11 +105,15 @@ export function MatchHud({
           <>
             <span className={styles.label}>
               Round {state.round} of {rounds}
+              {tierLabel}
             </span>
             <RoundPips rounds={rounds} state={state} seatNames={seatNames} />
           </>
         ) : (
-          <span className={styles.label}>{solo ? 'solo' : 'vs'}</span>
+          <span className={styles.label}>
+            {solo ? 'solo' : 'vs'}
+            {tierLabel}
+          </span>
         )}
         {clock === undefined ? null : (
           // The clock the SDK drives (#149). Monospace and tabular so the digits do not

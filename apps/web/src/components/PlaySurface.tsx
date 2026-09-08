@@ -65,6 +65,7 @@ import {
   type MatchSetup,
   type PlayMode,
 } from '@/lib/match-setup';
+import { describeChanges } from '@/lib/match-changes';
 import { GameHost } from './GameHost';
 import { TournamentTrack } from './TournamentTrack';
 import { TracePanel } from './TracePanel';
@@ -158,6 +159,17 @@ export function PlaySurface({ slug }: { slug: string }) {
    * appeared, and the HUD would grow round pips for a best-of nobody chose.
    */
   const [legMatch, setLegMatch] = useState(false);
+  /**
+   * Whether the far seat has changed hands during the match on screen (#2351).
+   *
+   * A match whose far seat was a bot for some rounds and a person for others belongs on
+   * neither head-to-head map — a bot's wins are not the far player's, and the store keeps
+   * the two apart on purpose — so its ending is written to neither, and the result screen
+   * says so. Set by any hand-over and cleared only by a new match: a seat handed over and
+   * straight back at the same round result is still a match whose seats were in question,
+   * and a record short one match is better than a record carrying a doubtful one.
+   */
+  const [mixed, setMixed] = useState(false);
   // Three reads of this device's storage, in one effect because they are one thing: what
   // this browser already knows before anybody presses Start.
   useEffect(() => {
@@ -172,17 +184,29 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [slug]);
 
   /**
+   * The bot's tier this match: the tournament's when this is a leg, the player's otherwise.
+   *
+   * A tournament fixes its tier when it starts (#2347), and a leg reads it from the record
+   * rather than from this game's remembered option — which is per game, so seven legs at
+   * seven games were seven tiers, whichever the player had last chosen at each of them.
+   */
+  const tier: BotDifficulty =
+    legMatch && tournament.difficulty !== undefined ? tournament.difficulty : setup.difficulty;
+
+  /**
    * Which seats a bot holds this match, and how hard it tries.
    *
    * Memoised because its identity has to be stable for the life of a match: it sits in
    * the game host's setup-effect dependencies, and when this was written inline it was a
    * fresh object on every render — the first countdown frame tore the game down and
-   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
-   * change while a match is running: the tier is only offered before one starts.
+   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency changes
+   * while a round is running: the tier and the far seat are offered before a match and
+   * between its rounds (#2351), and a change between rounds rebuilds the board the way a
+   * new opening seat already does.
    */
   const botSeats = useMemo(
-    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
-    [mode, setup.difficulty],
+    () => (mode === null ? undefined : botSeatsFor(mode, tier)),
+    [mode, tier],
   );
 
   /**
@@ -403,6 +427,12 @@ export function PlaySurface({ slug }: { slug: string }) {
       window.dispatchEvent(new Event(MATCH_FINISHED));
       return;
     }
+    if (mixed) {
+      // The far seat changed hands during this match (#2351): its ending belongs to neither
+      // head-to-head map, so it goes on neither. See `mixed`.
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
     // Write only. What the result screen shows is `addOutcome` applied to the same tally
     // this call is about to write, from the same function, so the two cannot be different
     // arithmetic — and the panel does not have to wait for a second commit to be right.
@@ -422,7 +452,17 @@ export function PlaySurface({ slug }: { slug: string }) {
     const advanced = reduceTournament(tournament, { kind: 'report', outcome });
     writeTournament(advanced);
     setTournament(advanced);
-  }, [match.phase, match.matchOutcome, match.tally.p1, seed, slug, opponent, solo, tournament]);
+  }, [
+    match.phase,
+    match.matchOutcome,
+    match.tally.p1,
+    seed,
+    slug,
+    opponent,
+    solo,
+    mixed,
+    tournament,
+  ]);
 
   /**
    * A buzz when a round ends and another when the match does (#135).
@@ -556,6 +596,7 @@ export function PlaySurface({ slug }: { slug: string }) {
       setMode(chosen);
       setActiveSeat(null);
       setRun(null);
+      setMixed(false);
       const next = seed + 1;
       setSeed(next);
       // The seed goes with the event: it is what the match machine flips its opening-seat
@@ -597,11 +638,19 @@ export function PlaySurface({ slug }: { slug: string }) {
           Math.random,
         ),
       ];
-      const drawn = reduceTournament(tournament, { kind: 'start', games, opponent: against });
+      const drawn = reduceTournament(tournament, {
+        kind: 'start',
+        games,
+        opponent: against,
+        // The tier the player has chosen here goes on the record and holds for every leg
+        // (#2347); each game's own remembered tier is not consulted again until the
+        // tournament is over.
+        ...(against === 'bot' ? { difficulty: setup.difficulty } : {}),
+      });
       writeTournament(drawn);
       setTournament(drawn);
     },
-    [slug, tournament],
+    [slug, tournament, setup.difficulty],
   );
 
   /**
@@ -619,6 +668,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   const rematch = useCallback(() => {
     setActiveSeat(null);
     setRun(null);
+    setMixed(false);
     setGameError(null);
     handoffFrom.current = null;
     setHandoffTo(null);
@@ -630,6 +680,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   const quit = useCallback(() => {
     setMode(null);
     setRun(null);
+    setMixed(false);
     setLegMatch(false);
     setExitOpen(false);
     setGameError(null);
@@ -648,6 +699,7 @@ export function PlaySurface({ slug }: { slug: string }) {
    */
   const restart = useCallback(() => {
     setActiveSeat(null);
+    setMixed(false);
     setExitOpen(false);
     setGameError(null);
     handoffFrom.current = null;
@@ -723,6 +775,26 @@ export function PlaySurface({ slug }: { slug: string }) {
     [slug],
   );
 
+  /**
+   * Hands the far seat from the bot to a person or back, between rounds (#2351).
+   *
+   * The same `mode` state a match starts with, so everything derived from it — who is a
+   * bot, what the seats are called, what the host is handed — follows in one render, and
+   * the host rebuilds the board for the next round with the new occupant in it. The round
+   * tally lives in the match machine, which is not told, so nothing anybody has won moves.
+   * Remembered as the last mode for the reason `start` remembers its own: the lobby leads
+   * with what this pair did last.
+   */
+  const handSeat = useCallback(
+    (to: 'friend' | 'bot') => {
+      writeSetup(slug, { mode: to });
+      setSetup((previous) => ({ ...previous, mode: to }));
+      setMode(to);
+      setMixed(true);
+    },
+    [slug],
+  );
+
   const suggested = useMemo(() => suggestNextGame(slug), [slug]);
 
   /** The game the tournament is waiting on, if there is a tournament and it is waiting. */
@@ -785,6 +857,7 @@ export function PlaySurface({ slug }: { slug: string }) {
           <TournamentTrack
             state={tournament}
             names={trackNames}
+            tier={tournament.difficulty}
             onLeave={leaveTournament}
             {...(legHere
               ? {
@@ -925,8 +998,20 @@ export function PlaySurface({ slug }: { slug: string }) {
     activeSeat,
     seatNames,
     botSeats,
+    // Said on the scoreboard for as long as a bot is playing, so a tier fixed for seven
+    // games is visible in all seven rather than only where it was chosen (#2347).
+    tier: botSeats === undefined ? undefined : tier,
     ...(clockView ? { clock: clockView.text, clockWarning: clockView.warning } : {}),
   };
+
+  /** What this match may still change about itself, and why not what it may not (#2351). */
+  const changes = describeChanges({
+    phase: match.phase,
+    mode,
+    leg: legMatch,
+    round: match.round,
+    roundWins: match.roundWins,
+  });
 
   /** Whether the match is live, which is when the exit control and the pull-to-refresh guard apply. */
   const matchLive =
@@ -947,7 +1032,12 @@ export function PlaySurface({ slug }: { slug: string }) {
           the board is live — the match HUD is the score that matters then, and a phone two
           people share has no height to spare for a second one. */}
       {tournament.phase === 'idle' || match.phase !== 'match-over' ? null : (
-        <TournamentTrack state={tournament} names={seatNames} onLeave={leaveTournament} />
+        <TournamentTrack
+          state={tournament}
+          names={seatNames}
+          tier={tournament.difficulty}
+          onLeave={leaveTournament}
+        />
       )}
 
       {/* Two people sit on opposite sides of one device, so the scoreboard faces both
@@ -1037,7 +1127,18 @@ export function PlaySurface({ slug }: { slug: string }) {
             manifest={manifest}
             rounds={rules.rounds ?? 1}
             seatNames={seatNames}
-            record={record}
+            // A match whose far seat changed hands went on no record, and a record line
+            // that added it would be showing a number the store does not hold.
+            record={mixed ? undefined : record}
+            unrecorded={mixed}
+            changing={{
+              changes,
+              mode,
+              difficulty: tier,
+              onHandSeat: handSeat,
+              onDifficulty: chooseDifficulty,
+              onRounds: chooseRounds,
+            }}
             nextGame={nextGame}
             slug={slug}
             presentation={solo ? 'single-seat' : 'shared-screen'}

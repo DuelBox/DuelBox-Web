@@ -88,6 +88,32 @@
   width: 100%;
 }
 
+/*
+ * What may change before the next round (#2351), folded away under one line: the round
+ * result is the news and "Next round" the way on, and three controls between them would
+ * push the button a thumb is looking for below the fold of a phone held sideways.
+ */
+.changes {
+  width: 100%;
+  text-align: center;
+}
+
+/* Tall enough for the finger that opens it, and the browser keeps its own marker. */
+.summary {
+  padding-block: var(--db-space-3);
+  color: var(--db-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.changeBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--db-space-3);
+  padding-top: var(--db-space-2);
+}
+
 .primary,
 .secondary {
   flex: 1 1 8rem;
