@@ -68,6 +68,7 @@ import { MatchOptions } from './MatchOptions';
 import { GameOptionsPanel } from './GameOptionsPanel';
 import { ExitControl } from './ExitControl';
 import { ControlHints } from './ControlHints';
+import { RotatePrompt } from './RotatePrompt';
 import { HandoffOverlay } from './HandoffOverlay';
 import { GameErrorBoundary } from './GameErrorBoundary';
 import { shouldHandOff } from './handoff';
@@ -951,6 +952,11 @@ export function PlaySurface({ slug }: { slug: string }) {
               while the board is live: before the countdown there is nothing to play, and after
               the match the result screen is what the pair are reading. */}
           {hintsDue && matchLive ? <ControlHints names={seatNames} used={seatUsed} /> : null}
+          {/* The rotate suggestion (#136), for the 71 games whose box has a long axis, and
+              only while the device is the other way round. It never pauses and never covers
+              the board — `RotatePrompt` carries the argument, including why there is no
+              orientation lock behind it. */}
+          {matchLive ? <RotatePrompt manifest={manifest} /> : null}
           {/* The pass-and-play hand-off blackout (#134), only for a game that opted in and
               only while a hand-off is in progress. It sits above the board so no frame of the
               previous seat's state shows through. */}

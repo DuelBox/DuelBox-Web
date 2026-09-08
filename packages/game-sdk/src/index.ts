@@ -12,6 +12,13 @@ export {
   supportedPresentations,
   supportsViewport,
   supportsDeviceClass,
+  // The orientation four, added by #1886 and reachable by nobody until now: the barrel is
+  // the package, and a function outside it is a function the shell cannot call. `#136`'s
+  // prompt is the first caller `rotateHintFor` has ever had.
+  preferredOrientation,
+  isDesignedForOrientation,
+  logicalForOrientation,
+  rotateHintFor,
 } from './manifest.js';
 export type {
   GameManifest,
@@ -20,6 +27,8 @@ export type {
   GameOption,
   GameOptionType,
   DeviceClass,
+  Orientation,
+  DeclaredOrientation,
 } from './manifest.js';
 
 export type {

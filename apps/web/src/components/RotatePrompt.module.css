@@ -1,0 +1,43 @@
+/*
+ * The rotate suggestion (#136), which must never stand in the way of a match.
+ *
+ * `pointer-events: none` on the layer and `auto` on the one control: a press anywhere but
+ * the dismiss button goes straight through to the board. That is what "non-blocking" has to
+ * mean on a surface where the game owns every pixel.
+ */
+.layer {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  padding: var(--db-space-3);
+  pointer-events: none;
+}
+
+.prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--db-space-3);
+  max-width: min(28rem, 100%);
+  padding: var(--db-space-2) var(--db-space-3);
+  border-radius: var(--db-radius-pill);
+  background: var(--db-ink);
+  color: var(--db-paper);
+  font-size: var(--db-text-sm);
+  text-align: left;
+}
+
+.dismiss {
+  flex: none;
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-3);
+  border: 1px solid var(--db-paper);
+  border-radius: var(--db-radius-pill);
+  background: transparent;
+  color: var(--db-paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+}

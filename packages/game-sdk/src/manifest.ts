@@ -569,6 +569,12 @@ export function logicalForOrientation(
  * with a preference and no layout for the other way has anything to say, and even then what
  * it has is a suggestion.
  *
+ * **The sentence that used to end this paragraph — "and null for every game in the catalogue
+ * as it stands" — was wrong the day it was written.** No game declares `alternateLogical`, and
+ * 71 declare an orientation, so this is non-null for 71 of 108 whenever the device is the
+ * other way up. `manifest.test.ts` now counts both numbers off the catalogue rather than
+ * stating them, because a count written into a comment is a count nothing recomputes.
+ *
  * What the shell does with a non-null answer is constrained, and the constraint is the
  * acceptance criterion rather than a style note: the prompt **must not block**. No overlay
  * over the board, no focus trap, no modal, nothing that stops the match — a pair who are
