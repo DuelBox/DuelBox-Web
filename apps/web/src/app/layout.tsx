@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { ServiceWorkerBridge } from '@/components/ServiceWorkerBridge';
 import { FRAME_GUARD } from './frame-guard';
 import { BASE_PATH } from './base-path';
 import { SITE_SHARE_IMAGE } from '@/lib/share-image';
@@ -167,6 +168,43 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </main>
           <SiteFooter />
         </div>
+        {/*
+          The page's end of the service worker (#192 #193 #194), and the only client
+          component this file mounts. Where it sits was decided rather than defaulted, so
+          the three reasons are here rather than in a commit message nobody will find.
+
+          **In the root layout at all**, because two of its three jobs are about the
+          document and not about a route. It stamps `data-net` on `<html>`, which is what
+          `globals.css` keys the offline catalogue annotations off; and a person who is
+          offered a new build has to be offered it wherever they are standing, which is
+          usually a game rather than the home page. Registered from one route instead, the
+          worker would install for the visitors who happened to open that route and for
+          nobody else — and every other route would go on being uncached while the site
+          claimed otherwise. It is a `'use client'` component in the shell every visitor
+          downloads, which is the cost; `ServiceWorkerBridge.tsx` is written to be small
+          because of it, and `size-budget.json` is where that cost is argued.
+
+          **A sibling of `.db-shell` rather than a child**, because the panel it can render
+          is `position: fixed`, and a fixed element is positioned against the nearest
+          ancestor carrying a `transform`, a `filter` or `contain` — not against the
+          viewport. `.db-shell` is the element a page-entry animation or a future layout
+          experiment reaches for first, and a bar nested inside it would then be laid out
+          against the shell on whichever routes had grown one. Nothing carries a transform
+          today — `db-page-in` animates opacity and sits on `.db-main`'s children — so this
+          is not a bug being fixed. It is a place where being outside costs nothing and
+          means nobody has to know this rule before adding one.
+
+          **Last rather than first**, because the one control it can grow is a button, and
+          the tab order of a page must not depend on the network. The skip link is the
+          first stop on every route and stays the first stop; a bar that appears when the
+          connection drops puts its Reload after the footer, where a control that arrived
+          while you were reading belongs. On almost every load this renders `null` and is
+          not in the document at all — which is also what keeps the site to a single
+          `role="status"` region, an argument `ServiceWorkerBridge.tsx` sets out in full
+          because two of them here would break `e2e/settings.spec.ts` and
+          `e2e/record.spec.ts`, which both ask for the only one.
+        */}
+        <ServiceWorkerBridge />
       </body>
     </html>
   );

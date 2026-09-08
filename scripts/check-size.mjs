@@ -86,7 +86,7 @@
  */
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -340,6 +340,31 @@ if (unsplit.length > 0) {
   failures.push(`no chunk of its own for: ${unsplit.join(', ')}`);
 }
 
+// ---------------------------------------------------------------------------------
+// The service worker, which is a class of its own and belongs in none of the others.
+// ---------------------------------------------------------------------------------
+// `sw.js` is emitted by `emit-service-worker.mjs` after the export, so it is a shipped
+// script that no page's import graph reaches: the page hands its URL to
+// `navigator.serviceWorker.register` and the browser fetches it. That makes every existing
+// bucket the wrong answer. It is not shell — no route loads it, and calling it shell would
+// charge it against a budget it has nothing to do with. It is not on demand — nobody
+// chooses it. It is not a game chunk, and it is emphatically not "never fetched", which is
+// the bucket it would otherwise fall into and the one that would have hidden it.
+//
+// So it is weighed on a line of its own. What that line means is different from the others
+// and worth stating: a visitor pays it once, and then again only when its bytes change,
+// which is the mechanism by which anything is ever fixed on a device that has been here
+// before. It is small and it should stay small, but the reason to hold it is not the same
+// reason the shell is held.
+const workerFiles = files.filter((file) => basename(file) === 'sw.js');
+const workerBytes = bytesOf(new Set(workerFiles));
+if (workerFiles.length > 1) {
+  failures.push(
+    `${String(workerFiles.length)} files named sw.js in the export; there can be exactly one`,
+  );
+}
+console.log(`check-size: service worker (paid once, and again on every deploy) ${kb(workerBytes)}`);
+
 // Nothing may fall between the buckets. A chunk this script cannot place is a chunk it is
 // not measuring, and the whole point of #2516 is that an unmeasured chunk is where the
 // bytes go to hide.
@@ -348,7 +373,8 @@ const unclassified = files.filter(
     !shellEager.has(file) &&
     !onDemand.has(file) &&
     !gameChunkFiles.has(file) &&
-    !neverFetched.has(file),
+    !neverFetched.has(file) &&
+    !workerFiles.includes(file),
 );
 if (unclassified.length > 0) {
   failures.push(

@@ -26,16 +26,68 @@ pnpm build          # → apps/web/out/
 | `manifest.webmanifest`, `icons/` | The web app manifest and its five icons |
 
 A host needs to do nothing for the offline story to work: the worker is a file like any
-other, its scope is the site root, and everything it needs travels in the export. Two host
-behaviours are worth knowing about anyway. A host that served `sw.js` with a long
-`cache-control` would slow down how fast a deploy reaches returning visitors — browsers cap
-the worker script's own cache at 24 hours, so it is bounded rather than broken, and GitHub
-Pages' `max-age=600` is well inside that. And a service worker requires a secure context, so
-the site must be on HTTPS or `localhost`; every host in this document is, and the e2e suite
-runs on `127.0.0.1`, which counts.
+other and everything it needs travels in the export. Two properties of it are worth knowing
+before the section that follows, because that section is a warning and these two are the
+facts it rests on.
 
-`docs/pwa.md` is the design record: what is cached, what deliberately is not, and how a
-stale worker is prevented from becoming permanent.
+**Its scope is the directory it is served from, which is not the origin root.** `sw.js` sits
+beside `index.html` in the export, so on a root-served host its scope is `/` and on the
+GitHub Pages *project* page it is `/DuelBox-Web/`. That is correct and sufficient — the whole
+site is under that prefix — but it means the worker's scope, and every URL in its precache
+list, must carry the base path or they name pages that are not there. That is the same
+`NEXT_PUBLIC_BASE_PATH` `next.config.ts` reads and `.github/workflows/deploy.yml` sets, and
+`apps/web/src/app/base-path.ts` names the worker's scope and its precache list, by those
+words, as two of the four places a hand-built URL has to carry it. A precache list that
+forgot it 404s every entry **on the deployed host and nowhere else** — not in `pnpm dev`, not
+in the e2e suite, both of which run root-served.
+
+**A service worker requires a secure context**, so the site must be on HTTPS or `localhost`.
+Every host in this document is, and the e2e suite runs on `127.0.0.1`, which counts.
+
+### `sw.js` must not be served with a long cache lifetime
+
+**This is the one host setting that can strand every visitor on a build you have already
+deleted**, and it is worth being blunt about because nothing in this repository can stop a
+host getting it wrong.
+
+The mechanism is short. A returning visitor is served the site out of the worker's cache and
+asks the network for nothing — that is #2445, and it is the feature. The *only* thing that
+tells that device a new build exists is the browser re-fetching `sw.js` on navigation and
+finding different bytes. Serve that file with a long `Cache-Control` and the browser answers
+its own check out of the HTTP cache, finds the same bytes it had, and concludes there is
+nothing new. The deploy is then live, correct, and invisible to everybody who already has the
+site.
+
+Two things bound the damage, and neither is a reason to relax:
+
+- **The specification caps the worker script's own HTTP cache at 24 hours** during an update
+  check, so `max-age=31536000` on `sw.js` behaves as `max-age=86400`. Bounded rather than
+  broken — but a day is a very long time to be shipping a fix nobody can receive.
+- **A registration's default `updateViaCache` is `'imports'`**, which makes the browser
+  bypass the HTTP cache entirely for the top-level worker script on an update check. That is
+  a property of how the worker is registered rather than of the host, so it is a real defence
+  and it is not one the host operator controls or can see. If a registration is ever changed
+  to `updateViaCache: 'all'`, the 24-hour cap is the only thing left.
+
+**This repository ships no cache directive of any kind.** `scripts/security-headers.mjs`
+generates nine headers and not one of them is a `Cache-Control`, so every file's lifetime is
+whatever the host does by default. On GitHub Pages that is `max-age=600` — ten minutes,
+measured against the live origin, recorded in `docs/release-runbook.md` — which is well
+inside the cap and needs no action. **On any other host it is that host's default, and moving
+hosts changes it silently.** So: on a host that lets you set response headers, set
+`Cache-Control: no-cache` on `/sw.js` (revalidate, not `no-store` — the file may be cached, it
+must be re-checked), and confirm it with the two `sw.js` lines in the release runbook's
+verification block. On a host that does not, check what it does by default before moving
+there, not after.
+
+The failure has no symptom on our side. Every route answers 200, the artefact is correct, CI
+is green, and a proportion of real people are on last week's build with no way to find out.
+The check that sees it is in `docs/release-runbook.md` step 3, and it is a check on the
+*revision inside the served `sw.js`* rather than on any status code.
+
+`docs/pwa.md` is the design record: what is cached, under which strategy, what deliberately
+is not, why the update waits rather than taking over, what is verified on which engines, and
+how to clear a worker that is stuck.
 
 The three config files are generated from one source,
 [`scripts/security-headers.mjs`](../scripts/security-headers.mjs), by

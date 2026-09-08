@@ -106,7 +106,23 @@ test.describe('the settings page', () => {
 
     await confirmPress(page, 'Clear recently played');
     await expect(recent).toHaveText('0');
-    await expect(page.getByRole('status')).toContainText('Recently played cleared');
+    /*
+     * `main`-scoped, not any live region on the document.
+     *
+     * These queries were unfiltered until the service worker landed, and were unambiguous only
+     * because the site had exactly one live region at a time. It has two now: `ServiceWorkerBridge`
+     * mounts a document-level `role="status"` bar for the network and for a waiting update, outside
+     * `.db-shell` and so outside `main`. While it is showing, an unfiltered query resolves to two
+     * elements and fails Playwright's strict mode — which is how this was found, on the one project
+     * where a parallel run of `offline.spec.ts` had put an update prompt on screen.
+     *
+     * Scoping to `main` says which status is meant structurally, rather than by repeating the text
+     * being asserted: the bar is about the document, this one is about what the person just pressed
+     * on this page.
+     */
+    await expect(page.getByRole('main').getByRole('status')).toContainText(
+      'Recently played cleared',
+    );
 
     await page.reload();
     await expect(page.locator('dl div', { hasText: 'Recently played' }).locator('dd')).toHaveText(
@@ -132,7 +148,7 @@ test.describe('the settings page', () => {
     });
 
     await confirmPress(page, 'Reset everything');
-    await expect(page.getByRole('status')).toContainText('erased');
+    await expect(page.getByRole('main').getByRole('status')).toContainText('erased');
     // The controls read the defaults again without a reload ...
     await expect(mute(page)).toHaveAttribute('aria-checked', 'false');
     // ... and storage really is empty, not merely reset to defaults.
@@ -160,7 +176,9 @@ test.describe('the settings page', () => {
         }),
       ),
     });
-    await expect(page.getByRole('status')).toContainText('Imported your settings');
+    await expect(page.getByRole('main').getByRole('status')).toContainText(
+      'Imported your settings',
+    );
     // Applied to the controls without a reload.
     await expect(mute(page)).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByRole('slider', { name: 'Volume' })).toHaveValue('0.5');
@@ -170,7 +188,9 @@ test.describe('the settings page', () => {
       mimeType: 'application/json',
       buffer: Buffer.from('{"hello":"world"}'),
     });
-    await expect(page.getByRole('status')).toContainText('not a DuelBox player-data export');
+    await expect(page.getByRole('main').getByRole('status')).toContainText(
+      'not a DuelBox player-data export',
+    );
     // And the refusal changed nothing.
     await expect(mute(page)).toHaveAttribute('aria-checked', 'true');
   });

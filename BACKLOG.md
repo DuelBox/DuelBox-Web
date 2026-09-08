@@ -569,20 +569,64 @@
 
 ### Offline and installability (7)
 
+Four of these shipped together under #2544 — #192, #193, #194 and #2445 — and they are
+recorded as one landing rather than four because they were never separable. A cache with no
+update path is a site nobody can fix; an indicator with no worker behind it is a light wired
+to nothing; and #2445 is the *measurement* of #192 rather than a feature standing beside it.
+`docs/pwa.md` is the design record and `e2e/offline.spec.ts` is the acceptance test — where
+an entry below says "verified by", that is the test that goes red if the feature is removed.
+
+Nothing is deleted from this list when it ships, and that is deliberate: the `(7)` in the
+heading above, every other section count, and the milestone table at the top of this file all
+sum to exactly the number of `- #` lines in it — 2426, three ways. Deleting an entry moves
+three numbers at once and silently. **So the counts here are of issues written down, not of
+issues still open**, and the `shipped` mark on an entry is what tells the two apart.
+
+The two P3s at the bottom are untouched. Nobody is building them, nothing below claims
+otherwise, and the worker that just landed makes neither of them free: #195 needs the
+`beforeinstallprompt` event, which WebKit does not fire at all, and #196 needs a quota
+strategy before it is allowed to pull a hundred game chunks onto somebody's phone.
+
 - #191 Add the web app manifest with maskable icons and shortcuts  
-  `priority:P2 size:S type:feat`
+  `priority:P2 size:S type:feat` · **half done, and the half that is missing is in the title**  
+  `apps/web/src/app/manifest.ts` ships the manifest with an `any` icon and a `maskable` one,
+  `display: 'standalone'`, and `start_url`/`scope`/every icon `src` carrying `BASE_PATH` —
+  all of it held by `apps/web/src/app/manifest.test.ts`. There are **no `shortcuts`**: the
+  key is absent from the manifest and the word appears nowhere in that file or its test, so
+  a long-press on the installed icon offers nothing. Left open on that.
 - #192 Implement the service worker with a strategy per asset class  
-  `priority:P2 size:L type:feat`
+  `priority:P2 size:L type:feat` · **shipped**  
+  `apps/web/public/sw.js`, with its precache list and its revision written in at build time
+  by `scripts/emit-service-worker.mjs`. Verified by `e2e/offline.spec.ts`, "the service
+  worker installs, claims the page and precaches the shell" — which runs on **all four
+  browser projects**, both Chromium and both WebKit, and asserts exactly one
+  `duelbox-shell-` cache, `/` and `/offline/` inside it, and more than twenty entries.
 - #193 Build the offline indicator and offline-aware catalog  
-  `priority:P2 size:M type:feat`
+  `priority:P2 size:M type:feat` · **shipped**  
+  Verified by `e2e/offline.spec.ts`, "the catalogue says which games are on this device, in
+  words": `html[data-net="offline"]`, a `role="status"` reading Offline, and every catalogue
+  link inside `#main` annotated `data-offline-ready="1"` or `"0"`. Rule 7 is the reason the
+  annotation is a word rather than a tint, and the count assertion on `header a[data-offline-ready]`
+  is what keeps the annotation off navigation chrome.
 - #194 Implement the service worker update prompt  
-  `priority:P2 size:M type:feat`
+  `priority:P2 size:M type:feat` · **shipped**  
+  Verified by `e2e/offline.spec.ts`, "the page offers a reload, and taking it lands on the
+  new worker", which manufactures a second deploy by rewriting the served `sw.js` and then
+  follows the whole chain: the new worker **waits** at `installed`, a `role="status"` offers
+  the update, the Reload button posts `SKIP_WAITING`, and `controllerchange` reloads onto the
+  new build with nothing left waiting. That test mutates the served build, so it runs on the
+  `chromium` project alone.
 - #195 Add a custom install prompt with correct timing  
   `priority:P3 size:S type:feat`
 - #196 Add a download-all-games action with a storage quota strategy  
   `priority:P3 size:M type:feat`
 - #2445 Make the second play of a game cost zero requests  
-  `priority:P1 size:L type:feat`
+  `priority:P1 size:L type:feat` · **shipped**  
+  Verified by `e2e/offline.spec.ts`, "the second play of a game costs no network request at
+  all", which is measured with the connection **up**: it counts responses where
+  `fromServiceWorker()` is false and requires none, exempting only the browser's own check
+  for a new copy of `sw.js`. "Still works offline" and "asks for nothing" are different
+  claims and this issue was always the second one.
 
 ### Discovery and SEO (13)
 

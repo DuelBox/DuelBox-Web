@@ -319,7 +319,55 @@ canvas {
  * `html[data-net]` follows the same pattern as `html[data-match='live']` above — one
  * attribute on the document, styling in the stylesheet, no component involved.
  */
+/*
+ * The bar never takes a press that was not aimed at it.
+ *
+ * It is `position: fixed` at the bottom of the viewport, and the match HUD is also at the
+ * bottom on a tall narrow screen. Measured on `notched-portrait`: the bar occupies y 602-648
+ * and the pause button y 590-643, so they overlap by 41px, and `elementFromPoint` at the
+ * centre of the pause button returned the bar's own text rather than the button. Every click
+ * aimed there timed out. `e2e/match-flow.spec.ts`, `tap.spec.ts`, `keyboard.spec.ts` and
+ * `bot-difficulty.spec.ts` all failed on the two notched projects and on no others, because
+ * those are the viewports short enough for the two to meet.
+ *
+ * `pointer-events: none` on the bar with `auto` on its button is the same shape the catalogue
+ * already uses for the favourite star over a card: the box is a place to draw, and only the
+ * control inside it is a place to press. It is the right rule whatever is showing — an
+ * announcement that blocks the game it is announcing about is a worse bug than the one it
+ * reports.
+ */
+/*
+ * The bar stays out of a running match, and that is a product decision before it is a fix.
+ *
+ * The worker deliberately does not `skipWaiting`: a new version installs and *waits*, so a
+ * match is never swapped out from under itself. Putting a "Reload" button over that same
+ * match invites exactly the interruption the waiting exists to prevent. And an "Offline"
+ * notice mid-match is noise by construction — once a game is running it needs nothing from
+ * the network, which is the whole claim this site makes about itself.
+ *
+ * It is also what CI found. `e2e/offline.spec.ts` manufactures a second deploy by appending
+ * a comment to the served `out/sw.js`, and its own note explains why that is safe: the
+ * revision does not move, so a worker registered in that window behaves identically. What
+ * the note did not anticipate is that *behaving* identically is not *being* identical — the
+ * bytes differ, so every other test running in parallel got a genuine `updatefound` and a
+ * Reload prompt. Playwright reported it exactly: "<button class=\"db-net-do\">Reload</button>
+ * from <div role=\"status\" class=\"db-net-bar\"> subtree intercepts pointer events", against
+ * the pause button, on the two notched projects — the viewports short enough for a bar
+ * pinned to the bottom to reach a HUD pinned to the bottom.
+ *
+ * `pointer-events: none` below stops the *bar* taking a press, but the Reload button inside
+ * it is a real control and must keep `auto`, so the container alone could never have been
+ * the whole answer. This is: while `data-match` says a match is live, there is nothing there
+ * to intercept. `PlaySurface` sets that attribute for the duration of a match and removes it
+ * after, so the prompt reappears the moment the player is back at a lobby or a result — a
+ * person is asked to reload when reloading costs them nothing, which is when they should be.
+ */
+html[data-match='live'] .db-net-bar {
+  display: none;
+}
+
 .db-net-bar {
+  pointer-events: none;
   position: fixed;
   left: max(var(--db-space-3), var(--db-safe-left));
   right: max(var(--db-space-3), var(--db-safe-right));
@@ -349,6 +397,8 @@ canvas {
 }
 
 .db-net-do {
+  /* The one part of the bar that is a control, so the one part that takes a press. */
+  pointer-events: auto;
   flex: none;
   padding: var(--db-space-2) var(--db-space-4);
   border: 0;

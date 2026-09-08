@@ -87,3 +87,40 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/*
+ * Whether this game is saved on this device (#193), which the card says in words.
+ *
+ * Both words are in the markup and both start hidden; `lib/offline-ready.ts` writes `1` or
+ * `0` into `data-offline-ready` on the link itself, and these three rules choose which one
+ * is on screen. Doing it in CSS rather than in React is what lets `GameCard` stay a server
+ * component — see the docstring at the top of `GameCard.tsx`, which is the whole reason the
+ * annotation is shaped this way.
+ *
+ * `display: none` rather than `visibility` or a clip: the hidden word must be out of the
+ * accessibility tree too, or every card would announce both "On this device" and "Not on
+ * this device" inside one link. It is also why an unannotated card — the landing page, a
+ * category hub, any browser with no worker controlling it — is silent rather than wrong:
+ * neither selector matches an empty attribute, so neither word appears.
+ *
+ * The colours are decoration on top of a distinction the words already make (rule 7): the
+ * two states are different sentences, not two shades of the same one. `--db-muted` on the
+ * absent state matches `.meta` and `.modes` above, which is the contrast this card is
+ * already held to.
+ */
+.stored,
+.missing {
+  display: none;
+  font-family: var(--db-font-mono);
+  font-size: var(--db-text-xs);
+}
+
+.card[data-offline-ready='1'] .stored {
+  display: block;
+  color: var(--db-body);
+}
+
+.card[data-offline-ready='0'] .missing {
+  display: block;
+  color: var(--db-muted);
+}

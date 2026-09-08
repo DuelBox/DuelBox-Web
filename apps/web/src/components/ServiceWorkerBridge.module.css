@@ -1,0 +1,29 @@
+/*
+ * One rule, and the reason it is not in `globals.css` with the rest of the bar.
+ *
+ * `.db-net-bar` and `.db-net-do` already live there, written for this component and landed
+ * ahead of it, and this file deliberately adds nothing that duplicates them: the panel's
+ * position, its ground, its border and the button's pill shape and brand colour all come from
+ * that stylesheet, so there is one description of how this thing looks rather than two that
+ * can drift.
+ *
+ * What `.db-net-do` does not carry is the touch target. Its padding puts it at roughly 36px
+ * tall, and `--db-touch-target` is 48 — larger than the usual 44px web guidance because, as
+ * the token's own comment says, this is a device two people hold between them at arm's
+ * length. `e2e/touch-targets.spec.ts` walks every control on every shell route at 320px wide
+ * and measures both dimensions; it does not catch this one, because the prompt is only on the
+ * page when an update is waiting and no shell route has one during that run. So this is a
+ * control the walk cannot reach, which makes writing the rule down a decision rather than a
+ * formality — the alternative is a button that is under the floor and has nothing to say so.
+ *
+ * `globals.css` is not this component's file to edit, which is the other half of why the rule
+ * is here. If the padding on `.db-net-do` ever grows to clear 48px on its own, this becomes
+ * redundant and should go; until then it is the only thing holding the target.
+ */
+.reload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--db-touch-target);
+  min-height: var(--db-touch-target);
+}

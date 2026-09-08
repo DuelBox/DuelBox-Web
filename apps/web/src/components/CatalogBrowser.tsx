@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { readFavourites, toggleFavourite } from '@/lib/favourites';
+import { annotateOfflineReady } from '@/lib/offline-ready';
 import { clearRecent, readRecent } from '@/lib/recent';
 import {
   countLabel,
@@ -51,6 +52,28 @@ import styles from './CatalogBrowser.module.css';
  * new one, so Back undoes the last chip. A `popstate` listener reads the address again
  * when that happens, which is also what makes a reload and a shared link land on the same
  * grid the sender saw.
+ *
+ * ## Why the offline annotation is done from here, of all places
+ *
+ * Because this is the only client component on this route that owns the whole grid, and the
+ * cards themselves cannot do it. `GameCard` is a server component and has to stay one — its
+ * docstring sets out what a directive at the top of that file would cost the shell, and
+ * `lib/landing.test.ts` fails the build if one appears — so it renders `data-offline-ready`
+ * empty and both possible words, and something with a browser in front of it has to supply
+ * the value. That is `lib/offline-ready.ts`, called below over this component's own subtree.
+ *
+ * It runs after **every** render rather than once on mount, and that is not caution: a
+ * keystroke in the search box or a category chip re-renders the grid with a different set of
+ * cards in it, and a card React has just brought back carries the server's empty attribute
+ * again. The measurement of what is in Cache Storage is taken once and kept, so a re-run is
+ * a set lookup per card and no trip to the cache at all.
+ *
+ * The subtree, not the document, and that is structural rather than careful. Everything
+ * above this component — the site header, the page's own heading and its Surprise me button
+ * — is outside the ref below and cannot be reached from it, which is what
+ * `e2e/offline.spec.ts` is asserting when it counts `header a[data-offline-ready]` and
+ * expects zero: navigation chrome is the same on every route, and marking a link to a *page*
+ * with whether a *game* is saved would be nonsense.
  */
 export interface CatalogBrowserProps {
   readonly entries: readonly CatalogueIndexEntry[];
@@ -83,6 +106,8 @@ export function CatalogBrowser({ entries, categories, cards }: CatalogBrowserPro
    * presses a star on a page that cannot yet respond is testing the network.
    */
   const [ready, setReady] = useState(false);
+  /** The subtree the annotation may reach: every card, and no navigation chrome. */
+  const root = useRef<HTMLDivElement>(null);
 
   // Only categories that have a game in them get a chip; a chip that can only ever show an
   // empty grid is a control that does nothing. Memoised because two effects depend on it.
@@ -132,6 +157,12 @@ export function CatalogBrowser({ entries, categories, cards }: CatalogBrowserPro
     globalThis.history[method](null, '', `${pathname}${next}${hash}`);
   }, [ready, applied, selected, offered]);
 
+  // No dependency array, on purpose: the thing that changes is the DOM, not a value this
+  // component holds. See the section on the annotation in the docstring above.
+  useEffect(() => {
+    if (root.current !== null) void annotateOfflineReady(root.current);
+  });
+
   const filtered = filterEntries(entries, { text: applied, categories: selected });
   const shown = new Set(filtered.map((entry) => entry.slug));
   const bySlug = new Map(entries.map((entry) => [entry.slug, entry]));
@@ -163,7 +194,7 @@ export function CatalogBrowser({ entries, categories, cards }: CatalogBrowserPro
   );
 
   return (
-    <div data-ready={ready ? '' : undefined}>
+    <div ref={root} data-ready={ready ? '' : undefined}>
       <div className={styles.controls}>
         <label htmlFor={SEARCH_ID} className="db-visually-hidden">
           Search games
