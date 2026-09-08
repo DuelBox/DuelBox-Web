@@ -239,8 +239,15 @@ test.describe('changing a match between rounds (#2351)', () => {
     await paused.getByRole('button', { name: 'Resume' }).click();
 
     // The match plays on to a best-of-five result, carrying round one with it — and a match
-    // whose far seat was in question goes on no record.
-    await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible({ timeout: 90_000 });
+    // whose far seat was in question goes on no record. Every round result waits for a
+    // press, so this presses on until the result is the match's.
+    const rematch = page.getByRole('button', { name: /Rematch/i });
+    for (let round = 2; round <= 5; round += 1) {
+      await expect(nextRound.or(rematch)).toBeVisible({ timeout: 30_000 });
+      if (await rematch.isVisible()) break;
+      await nextRound.click();
+    }
+    await expect(rematch).toBeVisible({ timeout: 30_000 });
     const over = page.getByRole('group', { name: 'Match over' });
     await expect(over).toContainText(/3 — \d|\d — 3/);
     await expect(over).toContainText('Not added to the record');
