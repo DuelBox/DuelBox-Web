@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
 import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
+import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
 import { PLAYER_NAMES_KEY, readPlayerNames, writePlayerName } from './player-names';
 import {
@@ -62,6 +63,10 @@ function populate(): void {
   recordResult('pool', 'p2', 'friend');
   writePlayerName('p1', 'Ada');
   writeTournament({ games: ['chess', 'darts', 'ludo'], results: ['p1'], opponent: 'bot' });
+  // A binding the defaults do not have, so the key is present in the export. `KeyC` collides
+  // with nothing either seat holds; a colliding one would be refused and write nothing, and
+  // this fixture would then be exporting six stores while claiming seven.
+  writeSeatBinding('p1', { ...readBindings().p1, action: 'KeyC' });
 }
 
 describe('the keys', () => {
@@ -74,6 +79,7 @@ describe('the keys', () => {
       HEAD_TO_HEAD_KEY,
       PLAYER_NAMES_KEY,
       TOURNAMENT_KEY,
+      KEY_BINDINGS_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -117,6 +123,20 @@ describe('exporting', () => {
           games: ['chess', 'darts', 'ludo'],
           results: ['p1'],
           opponent: 'bot',
+        },
+        // Both seats, not only the one that was changed: `writeSeatBinding` stores the pair,
+        // so a device that has rebound one key carries a complete keyboard to the next one
+        // rather than a patch the other device has to know how to apply.
+        [KEY_BINDINGS_KEY]: {
+          version: 1,
+          p1: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', action: 'KeyC' },
+          p2: {
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            action: 'Enter',
+          },
         },
       },
     });

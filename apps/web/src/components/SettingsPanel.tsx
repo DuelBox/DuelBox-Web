@@ -25,8 +25,10 @@ import {
   readPlayerNames,
   writePlayerName,
 } from '@/lib/player-names';
+import { KEY_BINDINGS_KEY } from '@/lib/key-bindings-key';
 import { clearRecent, RECENT_KEY } from '@/lib/recent';
 import { SETTINGS_KEY, type Settings } from '@/lib/settings';
+import { KeyBindings } from './KeyBindings';
 import { notifySettingsChanged, useSettings } from './SoundToggle';
 import styles from './SettingsPanel.module.css';
 
@@ -103,6 +105,7 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   [SETTINGS_KEY]: 'your settings',
   [HEAD_TO_HEAD_KEY]: 'your head-to-head record',
   [PLAYER_NAMES_KEY]: 'the names you chose for the two seats',
+  [KEY_BINDINGS_KEY]: 'the keys you chose for the two seats',
 };
 
 /** "a, b and c" — a sentence, because the status line is read aloud as one. */
@@ -411,6 +414,23 @@ export function SettingsPanel() {
           Slows every real-time game down so there is more time to react. Turn-based games are
           untouched, and a change takes effect on the next match you start.
         </p>
+      </section>
+
+      {/*
+        #129 and #2428. `lib/key-bindings.ts` — the store, the defaults, the reserved list,
+        the conflict rules and a test file — was written and imported by nothing, and
+        `GameHost` built its `InputManager` on the engine's defaults, so even a binding
+        written into storage by hand never reached a match. The section is here rather than
+        under "Display and play" because a keyboard is not a display, and because both seats
+        rebind independently and that needs room for two groups.
+      */}
+      <section className={styles.section} aria-labelledby={`${id}-keys`}>
+        <h2 id={`${id}-keys`}>Keys</h2>
+        <p className={styles.note}>
+          Which keys drive each seat, on this device. The two seats cannot share a key, and the keys
+          the page itself needs — Escape, Tab and the modifiers — cannot be taken.
+        </p>
+        <KeyBindings id={`${id}-keys`} />
       </section>
 
       <section className={styles.section} aria-labelledby={`${id}-data`}>

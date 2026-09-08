@@ -73,7 +73,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your device</h2>
         <p>
-          Seven things, all kept in your browser&apos;s own storage under keys that start with{' '}
+          Eight things, all kept in your browser&apos;s own storage under keys that start with{' '}
           <code>duelbox:</code>, and none of them ever sent anywhere:
         </p>
         <ul>
@@ -93,6 +93,10 @@ export default function PrivacyPage() {
           <li>
             The two names you type for the seats, if you type any. They are shown on this device and
             never leave it.
+          </li>
+          <li>
+            The keys you have chosen for each seat, if you change them from the defaults. The
+            settings page shows them and puts either seat back to its defaults.
           </li>
           <li>
             A tournament you have started, while it lasts: which games were drawn, in what order,

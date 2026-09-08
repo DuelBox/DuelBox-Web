@@ -24,6 +24,7 @@
 import { FAVOURITES_KEY, readFavourites } from './favourites';
 import { stripForbiddenKeys } from './hardened-json';
 import { HEAD_TO_HEAD_KEY, readRecord } from './head-to-head';
+import { KEY_BINDINGS_KEY } from './key-bindings-key';
 import { LAST_MODE_KEY, rememberedGames } from './last-mode';
 import { isRecord, readJson, readVersioned, removeJson, writeJson } from './local-store';
 import { PLAYER_NAMES_KEY } from './player-names';
@@ -58,6 +59,7 @@ export const PLAYER_DATA_KEYS: readonly string[] = [
   HEAD_TO_HEAD_KEY,
   PLAYER_NAMES_KEY,
   TOURNAMENT_KEY,
+  KEY_BINDINGS_KEY,
 ];
 
 /** The settings store's own version, checked here only to count it as present. */

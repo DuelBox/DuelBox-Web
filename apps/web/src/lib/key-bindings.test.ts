@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_BINDINGS, type KeyBinding } from '@duelbox/engine';
 import {
+  BINDING_SLOTS,
   KEY_BINDINGS_KEY,
   keyLabel,
   readBindings,
@@ -38,6 +41,29 @@ function install(storage: Storage | undefined): void {
 
 /** A left-hand binding that avoids every default and every reserved key. */
 const IJKL: KeyBinding = { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL', action: 'KeyU' };
+
+/**
+ * The order the settings panel lists the five boxes in, held against the store's own order.
+ *
+ * `components/KeyBindings.tsx` cannot read `BINDING_SLOTS` — it reaches this module through
+ * `import()` so that `@duelbox/engine` stays off the shell, and a top-level import of the
+ * order alone would undo that — so it derives its order from its own label map. Two lists,
+ * one meaning, which is the shape this repository keeps finding drifted. This is the check
+ * that stops the panel offering four boxes for a store that validates five.
+ */
+describe('the slots the settings panel lists', () => {
+  const panel = readFileSync(
+    fileURLToPath(new URL('../components/KeyBindings.tsx', import.meta.url)),
+    'utf8',
+  );
+
+  it('are exactly the slots the store validates, in the same order', () => {
+    const labels = /const SLOT_LABELS: Record<BindingSlot, string> = \{([^}]*)\}/.exec(panel)?.[1];
+    expect(labels, 'KeyBindings.tsx no longer has a SLOT_LABELS map to read').toBeDefined();
+    const listed = [...(labels ?? '').matchAll(/^\s*(\w+):/gm)].map((match) => match[1]);
+    expect(listed).toEqual([...BINDING_SLOTS]);
+  });
+});
 
 describe('reading and writing bindings', () => {
   beforeEach(() => {
