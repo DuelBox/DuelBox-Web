@@ -60,7 +60,25 @@ not aspirational. All figures are **gzipped bytes, because that is what crosses 
 | **Legacy polyfills** | `legacyPolyfillBytes` — **40.0 KB** (40,960 B) | `polyfills-*.js`, which Next references as `<script nomodule>`. No engine in tiers 1 or 2 of `docs/support-matrix.md` fetches it; only the tier-3 engines that document says are not supported. Budgeted rather than exempt, because the file is the framework's. |
 | **On demand** | `onDemandBytes` — **55.0 KB** (56,320 B) | The play route's own scripts plus anything reached by an `import()`. Nobody downloads it by arriving; it is paid when a player commits to a game. |
 | **One game chunk** | `gameChunkBytes` — **12.0 KB** (12,288 B) | The marginal cost of the one game a player actually picked. One chunk per game is the whole point of the layout. |
-| **Speculated** | `speculatedBytes` — **480.0 KB** (491,520 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. |
+| **Speculated** | `speculatedBytes` — **496.0 KB** (507,904 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. |
+| **First session** | `firstSessionBytes` — **320.0 KB** (327,680 B) | Arrive, pick a game, play it: the landing document, its stylesheets, the three base-subset faces, the shell, the worker, the play route's code and the largest game chunk. Wire bytes, derived from the lines above plus the three non-JavaScript ones nothing weighed before (#2446). |
+| **Browsing session** | `browsingSessionBytes` — **768.0 KB** (786,432 B) | Arrive at the catalogue and scroll to the end of it, pressing nothing: the catalogue document, stylesheets, faces, shell, worker and all 108 speculated payloads. The most a visitor who buys nothing can cost (#2446). |
+| **Catalogue on screen** | `catalogueBytes` — **260.0 KB** (266,240 B) | What the grid costs before any card comes near the viewport: document, stylesheets, faces, shell. There is no `<img>` in the export — every tile is inline SVG through one sprite — so this is the catalogue's whole asset budget (#2419). |
+
+**The three session lines are wire bytes, not JavaScript.** Fonts count at file size (a woff2
+is compressed internally; gzip adds 0.1%), and only the base subsets — `unicode-range` means a
+`-latin-ext` face is fetched only when a glyph in that range renders, which no English page
+does. **The first session is not held to ADR 0001's 182 KB**, and the reason is written in
+`size-budget.json` → `_set_2026_09_08_sessions`: that figure was measured on 20 August over
+eleven files, before the faces were self-hosted (86 KB of today's 313) and before the service
+worker existed, and the hosting decision it justified is unchanged by the session being larger.
+`check-zero-cost.mjs` prints a "session weight" that is a different question — the *raw* size
+of the scripts one play page's tags reference, polyfills in and game chunk out — and it is a
+ratchet on that page's tags, not a session.
+
+**What the two issues asked for and cannot be done:** field data. This site has no analytics
+by design (the privacy page promises none), so bytes per real session cannot be measured
+without breaking that promise. The lab number is what is enforced.
 
 **The shell number moved 163.0 → 129.0 without the shell shrinking.** It stopped counting the
 polyfills, which are now the row below it: the old figure billed 38.5 KB nobody supported
@@ -89,15 +107,20 @@ here so the CLS target above has an owner, but the byte limits live with those i
 
 | Budget | Enforced by | Runs |
 |---|---|---|
-| Per-route JS (shell / on-demand / game) | `check-size.mjs` inside `pnpm build` | every build, every push |
+| Per-route JS (shell / on-demand / game), speculated payloads, the three session lines | `check-size.mjs` inside `pnpm build` | every build, every push |
+| Every `<img>` carries its dimensions (CLS) | `check-images.mjs` inside `pnpm build` | every build, every push |
 | No per-frame allocation, bot step cost | `bot-cost.test.ts`, lint bans in engine/SDK/games | every push |
 | Deterministic step across frame rates | `docs/input-parity.md` mechanisms + their tests | every push |
-| **LCP / INP / CLS field targets** | **nothing yet — issue #184** | — |
+| **LCP / INP / CLS — lab proxies** | `lighthouse.yml` (`@lhci/cli` against the export, mobile-throttled, `lighthouserc.json` thresholds) | every pull request, every push to main |
+| **LCP / INP / CLS — field** | **nothing, by design** | — |
 
-**The Web Vitals targets are not enforced in CI.** That is issue #184 (Lighthouse CI against
-preview deployments, mobile-throttled, failing below threshold) and it is **explicitly out of
-scope here** — #183 is the budgets, #184 is the gate. Until #184 lands, the three CWV numbers
-above are verified by a manual Lighthouse run on a mobile profile against a preview build, and
-that manual step belongs on the pre-launch checklist (`docs/pre-launch-checklist.md`), which
-flags it as blocked-on-#184. The JS budgets *are* enforced now; the field metrics are the half
-still waiting on a gate.
+**The Web Vitals are held in the lab, not the field.** #184 runs Lighthouse against the built
+export served locally — the same artefact a host serves — on the landing page, the catalogue,
+a game page and a play route, median of three, with simulated slow-4G throttling. The
+thresholds in `lighthouserc.json` were set from a measured run rather than copied from the
+table above: performance ≥ 0.85 (measured 0.90–0.96, and the catalogue read 0.90 and 0.96 on
+consecutive runs of one build, so 0.9 would fail at random), **LCP ≤ 4.0 s** (the table's
+"poor" boundary; measured 2.9–3.5 s simulated, dominated by the faces swapping in), TBT ≤ 200 ms
+as the lab stand-in for INP (measured 0–24 ms), CLS ≤ 0.1 (measured 0). The field 2.5 s LCP
+can only be verified in the field, and this site collects no field data — the privacy page
+promises no analytics — so that row says "nothing" and means it.

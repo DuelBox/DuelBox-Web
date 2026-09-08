@@ -29,10 +29,12 @@ memory is the fourth.
 - [ ] *(human)* **Budgets defined and understood.** `docs/performance-budgets.md` records the
       LCP/INP/CLS targets on a mid-range Android over 4G and the 60fps / 30fps-floor gameplay
       targets. Confirm they are still the intended numbers.
-- [ ] *(human, blocked)* **Field/lab Web Vitals measured against the targets.** The CI
-      Lighthouse/Web-Vitals gate is **issue #184 and does not exist yet**; until it does, this
-      is a manual Lighthouse run on a throttled mobile profile at minimum. Flag it if #184 has
-      not landed — the budgets are enforced by size only, not yet by measured vitals.
+- [ ] *(auto)* **Lab Web Vitals under the thresholds.** `lighthouse.yml` runs `@lhci/cli` on
+      every pull request against the built export, mobile-throttled, and fails below
+      `lighthouserc.json` (#184). Field vitals are not collected — no analytics, by design — so
+      a launch has the lab number and a human with a phone, not a dashboard.
+- [ ] *(auto)* **Session bytes under budget.** `check-size.mjs` holds a first session, a
+      browsing session and the catalogue on screen to `size-budget.json` (#2446, #2419).
 
 ## Accessibility
 
