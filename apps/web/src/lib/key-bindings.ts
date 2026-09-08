@@ -26,9 +26,10 @@ import {
   type KeyBinding,
   type SeatId,
 } from '@duelbox/engine';
-import { KEY_PREFIX, readVersioned, removeJson, writeVersioned } from './local-store';
+import { KEY_BINDINGS_KEY } from './key-bindings-key';
+import { readVersioned, removeJson, writeVersioned } from './local-store';
 
-export const KEY_BINDINGS_KEY = `${KEY_PREFIX}key-bindings`;
+export { KEY_BINDINGS_KEY };
 
 const VERSION = 1;
 

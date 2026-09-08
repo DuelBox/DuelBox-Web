@@ -1,0 +1,60 @@
+.seat {
+  margin-top: var(--db-space-4);
+}
+
+.subhead {
+  font-size: var(--db-text-base);
+  margin: 0 0 var(--db-space-2);
+}
+
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-2);
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* `--db-touch-target` on the shortest side, which is the floor `e2e/touch-targets.spec.ts`
+     holds every control on this site to. A key box is small by nature, so it is the one most
+     likely to drift under it. */
+  min-width: 4.5rem;
+  min-height: var(--db-touch-target);
+  padding: var(--db-space-2) var(--db-space-3);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  background: var(--db-surface);
+  color: var(--db-ink);
+  cursor: pointer;
+}
+
+/* `--db-body`, not `--db-muted`: axe measured `--db-muted` on `--db-surface` below 4.5:1 at
+   this size and failed the settings page on ten nodes. The soft grey is safe on `--db-paper`,
+   which is what every other note on the page sits on; a key box has a ground of its own. */
+.slotName {
+  font-size: var(--db-text-sm);
+  color: var(--db-body);
+}
+
+.slotKey {
+  font-weight: 600;
+}
+
+.button {
+  margin-top: var(--db-space-2);
+  min-height: var(--db-touch-target);
+  padding: var(--db-space-2) var(--db-space-4);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-sm);
+  background: var(--db-surface);
+  color: var(--db-ink);
+  cursor: pointer;
+}
+
+.note {
+  margin-top: var(--db-space-3);
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
+}

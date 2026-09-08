@@ -32,6 +32,7 @@ import {
   type GameManifest,
   type MatchPhase,
 } from '@duelbox/game-sdk';
+import { readBindings } from '@/lib/key-bindings';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
 import { readSettings } from '@/lib/settings';
@@ -232,6 +233,18 @@ export function GameHost({
     const manager = new InputManager(logical, {
       split: splitFor(initialSeat),
       bottomSeat: initialSeat ?? localSeat,
+      // #129, #2428, and the reason the settings page's Keys section is not decoration.
+      // `lib/key-bindings.ts` had the store, the defaults, the reserved list and the
+      // conflict rules, with a test file beside them, and **nothing imported it** — this
+      // line is the only place a chosen binding can reach a match, and without it a player
+      // could rebind their keys and watch the old ones keep working.
+      //
+      // Read here rather than held in React state on purpose: bindings are read once when
+      // the match is built, so a change made in another tab cannot alter the controls
+      // underneath a running match. `readBindings` falls all the way back to the defaults
+      // for anything missing, malformed, reserved or conflicting, so this cannot hand the
+      // manager a keyboard a player is stuck with.
+      bindings: readBindings(),
     });
     // The recorder has the same surface as the manager, so every call site below is unchanged
     // whether or not anybody is recording — which is the only way a recording is worth having,
