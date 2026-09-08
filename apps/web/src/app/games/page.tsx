@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { CATALOGUE, CATEGORIES } from '@/data/catalogue.generated';
 import { PLAYABLE, isPlayable } from '@/data/registry';
 import { groupByCategory, type CatalogueIndexEntry } from '@/lib/catalogue-filter';
+import { AttractIdle } from '@/components/AttractIdle';
 import { CatalogBrowser } from '@/components/CatalogBrowser';
 import { GameCard } from '@/components/GameCard';
 import { QuickPlay } from '@/components/QuickPlay';
@@ -35,6 +36,13 @@ export default function GamesPage() {
   const cards: Record<string, ReactNode> = {};
   for (const game of CATALOGUE) cards[game.slug] = <GameCard game={game} />;
   const categoryCount = groupByCategory(entries, CATEGORIES).length;
+  // The games an idle catalogue may play itself (#165): real-time ones, where two bots make
+  // a match worth watching, and only those this build can open. A list of strings, like
+  // `QuickPlay`'s, because a client component that imported the registry would carry all
+  // hundred and eight loaders onto the shell.
+  const attractable = CATALOGUE.filter(
+    (game) => game.archetype.startsWith('rt-') && isPlayable(game.slug),
+  ).map((game) => game.slug);
 
   return (
     <div className="db-wrap">
@@ -56,6 +64,7 @@ export default function GamesPage() {
         </p>
       </header>
 
+      <AttractIdle slugs={attractable} />
       <CatalogBrowser entries={entries} categories={CATEGORIES} cards={cards} />
     </div>
   );
