@@ -149,7 +149,7 @@ const bytesOf = (group) => [...group].reduce((sum, file) => sum + (sizes.get(fil
 // ---------------------------------------------------------------------------------
 // Eager: what a route's HTML loads with a <script> tag, straight from the manifests.
 // ---------------------------------------------------------------------------------
-const alwaysEager = [...buildManifest.polyfillFiles, ...buildManifest.rootMainFiles];
+const alwaysEager = [...buildManifest.rootMainFiles];
 const shellEager = new Set();
 const postChoiceEager = new Set();
 for (const [route, scripts] of Object.entries(appManifest.pages)) {
@@ -159,6 +159,34 @@ for (const [route, scripts] of Object.entries(appManifest.pages)) {
   }
 }
 for (const file of shellEager) postChoiceEager.delete(file);
+
+// ---------------------------------------------------------------------------------
+// The legacy polyfills, which are a bucket of their own because nobody supported fetches
+// them.
+// ---------------------------------------------------------------------------------
+// Next emits `polyfills-*.js` and references it as `<script nomodule>`. Every engine that
+// understands `<script type=module>` — which is every engine in tiers 1 and 2 of
+// `docs/support-matrix.md`, and has been since 2018 — skips it without a request. Only an
+// engine the matrix puts in tier 3 ("Internet Explorer, legacy EdgeHTML, UC Browser …",
+// explicitly not tested and not designed for) ever downloads it.
+//
+// It was in `shellEager` until now, so **38.5 KB of the 164 KB "paid by every visitor" was
+// paid by nobody** — 23% of the number rule 11 defends, on a line whose whole claim is that
+// it describes a real download. That is the same mistake #2516 fixed for the pages-router
+// files four lines below, and it survived because `polyfillFiles` sits in the same manifest
+// array as `rootMainFiles`, which every route really does load.
+//
+// It gets a budget rather than an exemption: this file is Next's, not ours, and a framework
+// upgrade that doubles it should be seen. And the exclusion is *checked*, not assumed —
+// `nomodule` is the entire argument, so if Next ever stops writing it the bucket becomes a
+// lie and the build fails instead.
+const legacyPolyfills = new Set(
+  buildManifest.polyfillFiles.filter((script) => script.endsWith('.js')).map(onDisk),
+);
+for (const file of legacyPolyfills) {
+  shellEager.delete(file);
+  postChoiceEager.delete(file);
+}
 
 // The manifests describe the build in `.next`; the bytes measured are the ones in `out`.
 // If a build failed after writing its manifests, the two disagree, and every number below
@@ -279,7 +307,50 @@ for (const [slug, file] of [...gameChunks].sort()) {
 
 const shellBytes = bytesOf(shellEager);
 const onDemandBytes = bytesOf(onDemand);
+const legacyPolyfillBytes = bytesOf(legacyPolyfills);
 const biggestGame = Math.max(0, ...[...gameChunkFiles].map((file) => sizes.get(file) ?? 0));
+
+// The one fact the bucket above rests on, read from the export rather than believed. A
+// polyfill script that is *not* `nomodule` is fetched by everybody, and would then belong in
+// the shell — so this fails the build rather than quietly under-reporting 38 KB.
+const exportedPages = (dir) => {
+  const found = [];
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) found.push(...exportedPages(full));
+    else if (entry.endsWith('.html')) found.push(full);
+  }
+  return found;
+};
+const htmlFiles = exportedPages(OUT);
+const escapeForRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+for (const file of legacyPolyfills) {
+  const url = `/${relative(OUT, file).replaceAll('\\', '/')}`;
+  const referencing = htmlFiles.filter((page) => readFileSync(page, 'utf8').includes(url));
+  if (referencing.length === 0) {
+    failures.push(
+      `${relative(OUT, file)} is in the polyfill bucket and no exported page references it` +
+        ' — the bucket is measuring a file nothing loads',
+    );
+    continue;
+  }
+  const guarded = new RegExp(`<script[^>]*${escapeForRegExp(url)}[^>]*nomodule`, 'i');
+  const unguarded = referencing.filter((page) => !guarded.test(readFileSync(page, 'utf8')));
+  if (unguarded.length > 0) {
+    failures.push(
+      `${relative(OUT, file)} is loaded without \`nomodule\` by ${String(unguarded.length)}` +
+        ` page(s), starting with ${relative(OUT, unguarded[0])} — every browser fetches it,` +
+        ' so it is shell, and this bucket is no longer honest',
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------------
 // Speculated: the route payloads a browse of the catalogue fetches for links nobody
@@ -311,10 +382,14 @@ console.log(
   `check-size: ${String(files.length)} shipped script(s), ${kb(totalJs)} gzipped in total`,
 );
 console.log(`check-size: shell (paid by every visitor) ${kb(shellBytes)}`);
+console.log(
+  `check-size: legacy polyfills (nomodule — only a tier-3 engine fetches these)` +
+    ` ${kb(legacyPolyfillBytes)}`,
+);
 console.log(`check-size: on demand (paid on choosing a game) ${kb(onDemandBytes)}`);
 console.log(
   `check-size: worst case for one player ${kb(shellBytes + onDemandBytes + biggestGame)}` +
-    ` = shell + on demand + the largest game`,
+    ` = shell + on demand + the largest game, on an engine this site supports`,
 );
 console.log(
   `check-size: speculated (paid for browsing, pressing nothing) ${kb(speculatedBytes)}` +
@@ -371,6 +446,7 @@ console.log(`check-size: service worker (paid once, and again on every deploy) $
 const unclassified = files.filter(
   (file) =>
     !shellEager.has(file) &&
+    !legacyPolyfills.has(file) &&
     !onDemand.has(file) &&
     !gameChunkFiles.has(file) &&
     !neverFetched.has(file) &&
@@ -385,6 +461,13 @@ if (unclassified.length > 0) {
 
 if (shellBytes > BUDGET.shellBytes) {
   failures.push(`the shell is ${kb(shellBytes)}, over the ${kb(BUDGET.shellBytes)} budget`);
+}
+if (legacyPolyfillBytes > BUDGET.legacyPolyfillBytes) {
+  failures.push(
+    `the legacy polyfills are ${kb(legacyPolyfillBytes)}, over the` +
+      ` ${kb(BUDGET.legacyPolyfillBytes)} budget — nobody supported fetches them, but this` +
+      " file is the framework's and a version that doubles it should be argued about",
+  );
 }
 if (onDemandBytes > BUDGET.onDemandBytes) {
   failures.push(

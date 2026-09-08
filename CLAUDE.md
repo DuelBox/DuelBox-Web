@@ -263,6 +263,24 @@ and framing a loopback address from an `about:blank` document is refused by Priv
 Access before the server hears about it. In both the child never loaded, and what the report
 said was "element not found".
 
+The **fifteenth** is the shell budget itself, one line under the thirteenth, and it is the
+largest single number in this list: **38.5 KB of the 164 KB described as "paid by every
+visitor" was paid by nobody.** Next emits `polyfills-*.js` and references it as
+`<script nomodule>`, which every engine that understands `<script type=module>` skips without
+a request — that is every engine in tiers 1 and 2 of `docs/support-matrix.md`, and has been
+since 2018. The only engines that fetch it are the ones that document explicitly does not
+support. `check-size.mjs` counted it because `polyfillFiles` sits in the same manifest array
+as `rootMainFiles`, which every route really does load, and because #2516 — the rewrite that
+found 94.9 KB of pages-router surface in exactly this position, four lines below in the same
+file — read past it. So 23% of the number rule 11 defends described a download nobody makes,
+and it has been the number every batch for weeks has been squeezing itself against: the true
+figure is 125.5 KB, which is also the answer to #4's "under 150 KB gzipped excluding any
+game", met and unnoticed. The polyfills now have a bucket and a budget of their own, and the
+`nomodule` claim is *read out of the export on every build* rather than believed — the moment
+one of those scripts loses the attribute, everybody fetches it, it is shell again, and the
+build says so. Watched failing both ways: with the attribute stripped from all 353 pages, and
+with the file left in the manifest and unreferenced by any of them.
+
 Five of the first six were found in a single day, by looking. The habit that finds
 them is cheap: when a rule matters, **run the thing that is supposed to execute
 it and watch it fail on purpose.** A guard nobody has seen fail is a guard
