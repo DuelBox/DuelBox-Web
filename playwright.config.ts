@@ -151,6 +151,9 @@ const CHROMIUM_ONLY = [
   // stub rather than the product — and it did: the frames-per-second ratio the spec holds
   // read outside its window on a loaded runner's WebKit twice, for a path no WebKit user runs.
   '**/adaptive-quality.spec.ts',
+  // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
+  // no-op there, so a second engine would be four copies of a hidden button (#195).
+  '**/install-prompt.spec.ts',
 ];
 
 /**

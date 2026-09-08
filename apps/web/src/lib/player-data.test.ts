@@ -6,6 +6,7 @@ import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
 import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
 import { CATALOGUE_KEY, writeSortPreference } from './catalogue-filter';
 import { HINTS_SEEN_KEY, markHintsSeen } from './control-hints';
+import { INSTALL_KEY, rememberDismissed } from './install-prompt';
 import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
 import { PLAYER_NAMES_KEY, readPlayerNames, writePlayerName } from './player-names';
@@ -74,6 +75,7 @@ function populate(): void {
   writeSeatBinding('p1', { ...readBindings().p1, action: 'KeyC' });
   markHintsSeen('chess');
   writeSortPreference('name');
+  rememberDismissed(1_700_000_000_000);
 }
 
 describe('the keys', () => {
@@ -115,6 +117,7 @@ describe('the keys', () => {
       KEY_BINDINGS_KEY,
       HINTS_SEEN_KEY,
       CATALOGUE_KEY,
+      INSTALL_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -175,6 +178,7 @@ describe('exporting', () => {
         },
         [HINTS_SEEN_KEY]: { version: 1, seen: ['chess'] },
         [CATALOGUE_KEY]: { version: 1, sort: 'name' },
+        [INSTALL_KEY]: { version: 1, dismissedAt: 1_700_000_000_000, installed: false },
       },
     });
   });
