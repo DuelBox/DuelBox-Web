@@ -319,7 +319,25 @@ canvas {
  * `html[data-net]` follows the same pattern as `html[data-match='live']` above — one
  * attribute on the document, styling in the stylesheet, no component involved.
  */
+/*
+ * The bar never takes a press that was not aimed at it.
+ *
+ * It is `position: fixed` at the bottom of the viewport, and the match HUD is also at the
+ * bottom on a tall narrow screen. Measured on `notched-portrait`: the bar occupies y 602-648
+ * and the pause button y 590-643, so they overlap by 41px, and `elementFromPoint` at the
+ * centre of the pause button returned the bar's own text rather than the button. Every click
+ * aimed there timed out. `e2e/match-flow.spec.ts`, `tap.spec.ts`, `keyboard.spec.ts` and
+ * `bot-difficulty.spec.ts` all failed on the two notched projects and on no others, because
+ * those are the viewports short enough for the two to meet.
+ *
+ * `pointer-events: none` on the bar with `auto` on its button is the same shape the catalogue
+ * already uses for the favourite star over a card: the box is a place to draw, and only the
+ * control inside it is a place to press. It is the right rule whatever is showing — an
+ * announcement that blocks the game it is announcing about is a worse bug than the one it
+ * reports.
+ */
 .db-net-bar {
+  pointer-events: none;
   position: fixed;
   left: max(var(--db-space-3), var(--db-safe-left));
   right: max(var(--db-space-3), var(--db-safe-right));
@@ -349,6 +367,8 @@ canvas {
 }
 
 .db-net-do {
+  /* The one part of the bar that is a control, so the one part that takes a press. */
+  pointer-events: auto;
   flex: none;
   padding: var(--db-space-2) var(--db-space-4);
   border: 0;
