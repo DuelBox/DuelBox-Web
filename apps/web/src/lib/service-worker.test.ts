@@ -152,7 +152,41 @@ function buildExport(basePath = '', routes: readonly string[] = ROUTES): string 
 
   write('index.html', document('DuelBox'));
   for (const route of routes) write(join(route, 'index.html'), document(route));
-  write('play/chess/index.html', document('Chess'));
+  // The play document references the shell chunk like every other page, plus the play
+  // route's own eager chunk, which no shell page mentions. Its game's chunk is reached
+  // through `import()` and is mentioned by nothing in the HTML; the webpack runtime's
+  // chunk-id map is the only thing that names it, exactly as in a real export (#196).
+  write(
+    'play/chess/index.html',
+    document('Chess').replace(
+      '</head>',
+      `<script src="${basePath}/_next/static/chunks/app/play/page.77aa88.js" defer=""></script></head>`,
+    ),
+  );
+  write('_next/static/chunks/app/play/page.77aa88.js', 'console.log("play route");\n');
+  write(
+    '_next/static/chunks/webpack-0a1b2c.js',
+    '(()=>{"use strict";var e={};e.u=t=>"static/chunks/"+t+"."+({4127:"c0ffee",9911:"beef00",7788:"dead00"})[t]+".js"})();\n',
+  );
+  write(
+    '_next/static/chunks/4127.c0ffee.js',
+    '(self.webpackChunk=[]).push([{id:"chess",name:"Chess"}]);\n',
+  );
+  // A route whose slug is not its id: `/play/ball-games/` loads `ballgames-physics`, and
+  // the chunk is stamped with the id. The emitter reads `SLUG_ALIASES` out of the real
+  // registry to know that; this fixture is what proves it did.
+  write('play/ball-games/index.html', document('Ball Games'));
+  // And one whose alias key is written bare in that table — `lumberjack: 'lumber-jack'` —
+  // because the first reading of the table took only quoted keys and missed it.
+  write('play/lumberjack/index.html', document('Lumberjack'));
+  write(
+    '_next/static/chunks/7788.dead00.js',
+    '(self.webpackChunk=[]).push([{id:"lumber-jack",name:"Lumberjack"}]);\n',
+  );
+  write(
+    '_next/static/chunks/9911.beef00.js',
+    '(self.webpackChunk=[]).push([{id:"ballgames-physics",name:"Ball Games"}]);\n',
+  );
 
   write(
     '_next/static/css/shell.a1b2c3.css',
@@ -205,6 +239,19 @@ function precacheOf(text: string): readonly string[] {
   return [...(block?.[1] ?? '').matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1] ?? '');
 }
 
+/** The download list the emitted worker holds (#196). */
+interface DownloadList {
+  readonly prefix: string;
+  readonly shared: readonly string[];
+  readonly sharedBytes: number;
+  readonly games: readonly { slug: string; chunk: string; bytes: number }[];
+}
+function downloadOf(text: string): DownloadList {
+  const block = /const DOWNLOAD = (\{[\s\S]*?\n\});/.exec(text);
+  expect(block, 'the emitted worker declares a DOWNLOAD object').not.toBeNull();
+  return JSON.parse(block?.[1] ?? '{}') as DownloadList;
+}
+
 /** The revision the emitted worker names its caches for. */
 function revisionOf(text: string): string {
   const found = /const REVISION = "([^"]*)";/.exec(text);
@@ -223,9 +270,14 @@ describe('the worker source', () => {
    * because the emitter substitutes them too: it replaces `'__REVISION__'` with a JSON string,
    * so a placeholder that lost its quotes would leave an undeclared identifier behind.
    */
-  it('carries exactly one of each placeholder the emitter substitutes', () => {
+  it('carries exactly one of each of the four placeholders the emitter substitutes', () => {
     const text = readFileSync(source, 'utf8');
-    for (const placeholder of ["'__REVISION__'", "'__OFFLINE__'", "['__PRECACHE__']"]) {
+    for (const placeholder of [
+      "'__REVISION__'",
+      "'__OFFLINE__'",
+      "['__PRECACHE__']",
+      "['__GAMES__']",
+    ]) {
       expect(text.split(placeholder), `sw.js contains one ${placeholder}`).toHaveLength(2);
     }
   });
@@ -312,6 +364,71 @@ describe('the precache list', () => {
     expect(urls).toContain(`${base}/offline/`);
     // And the fallback the worker reaches for by name, which is a separate substitution.
     expect(text).toContain(`const OFFLINE_URL = "${base}/offline/";`);
+  });
+});
+
+describe('the download list (#196)', () => {
+  it('names every play route with its own chunk, and the shared route chunks once', () => {
+    const out = buildExport();
+    expect(emit(out).ok).toBe(true);
+    const list = downloadOf(worker(out));
+    expect(list.games.map((game) => game.slug)).toEqual(['ball-games', 'chess', 'lumberjack']);
+    expect(list.prefix).toBe('/_next/static/chunks/');
+    const chess = list.games.find((game) => game.slug === 'chess');
+    expect(chess?.chunk).toBe('4127.c0ffee.js');
+    // The play route's own chunk is every game's, so it is listed once here and never per
+    // game — the first version listed it 108 times and priced the catalogue at 6.2 MB.
+    expect(list.shared).toEqual(['/_next/static/chunks/app/play/page.77aa88.js']);
+    // Gzipped wire bytes, like every number in this repository.
+    expect(chess?.bytes).toBeGreaterThan(0);
+    expect(list.sharedBytes).toBeGreaterThan(0);
+  });
+
+  it('finds the chunk of a route whose slug is not its id, through the registry', () => {
+    const out = buildExport();
+    expect(emit(out).ok).toBe(true);
+    const list = downloadOf(worker(out));
+    expect(list.games.find((game) => game.slug === 'ball-games')?.chunk).toBe('9911.beef00.js');
+    expect(list.games.find((game) => game.slug === 'lumberjack')?.chunk).toBe('7788.dead00.js');
+  });
+
+  it('does not repeat what the shell already precaches', () => {
+    const out = buildExport();
+    emit(out);
+    const list = downloadOf(worker(out));
+    // The shell chunk and the stylesheet are in PRECACHE; a download that listed them again
+    // would count them twice in the total and fetch them again.
+    expect(list.shared).not.toContain('/_next/static/chunks/shell.d4e5f6.js');
+    expect(list.shared).not.toContain('/_next/static/css/shell.a1b2c3.css');
+  });
+
+  it('carries NEXT_PUBLIC_BASE_PATH onto every URL in it', () => {
+    const out = buildExport('/DuelBox-Web');
+    expect(emit(out, '/DuelBox-Web').ok).toBe(true);
+    const list = downloadOf(worker(out));
+    expect(list.prefix.startsWith('/DuelBox-Web/')).toBe(true);
+    for (const url of list.shared) expect(url.startsWith('/DuelBox-Web/')).toBe(true);
+  });
+
+  it('refuses a play route whose game chunk cannot be found', () => {
+    const out = buildExport();
+    rmSync(join(out, '_next', 'static', 'chunks', '4127.c0ffee.js'));
+    const result = emit(out);
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain('candidate chunk(s) carrying id:"chess"');
+  });
+
+  it('is not part of the revision, so a changed game does not rename the shell caches', () => {
+    const out = buildExport();
+    emit(out);
+    const before = revisionOf(worker(out));
+    writeFileSync(
+      join(out, '_next', 'static', 'chunks', '4127.c0ffee.js'),
+      '(self.webpackChunk=[]).push([{id:"chess",name:"Chess",moved:true}]);\n',
+      'utf8',
+    );
+    emit(out);
+    expect(revisionOf(worker(out))).toBe(before);
   });
 });
 

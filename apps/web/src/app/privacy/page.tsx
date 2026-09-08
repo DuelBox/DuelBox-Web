@@ -145,8 +145,11 @@ export default function PrivacyPage() {
           and of each game after you open it, so a game you have played before opens again with no
           connection at all. That cache holds this site&rsquo;s own files and nothing about you — no
           scores, no names, no identifier — it is never sent anywhere, and clearing your
-          browser&rsquo;s site data removes it. A game you have never opened is not saved, and says
-          so rather than showing an error.
+          browser&rsquo;s site data removes it. A game you have never opened is not saved unless you
+          ask for the whole collection from the settings page, and a game that is not here says so
+          rather than showing an error. So that it knows which to drop first if the browser runs
+          short of room, the cache also notes when each game was last opened — a date beside a
+          game&rsquo;s name, kept in that same cache, and never sent anywhere.
         </p>
 
         <h2>Children</h2>

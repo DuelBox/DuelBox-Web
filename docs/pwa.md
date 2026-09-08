@@ -61,9 +61,21 @@ is a rule somebody will get the wrong way round.
 
 **What is deliberately not precached: the 108 play documents and the 108 game chunks.** Installing
 already costs a first visit fifty-odd requests, on a visit nobody asked for it on. Saving the whole
-catalogue on top of that is a different feature with a different shape — it needs a quota strategy,
-a progress indication and a way for a person to say no to half a gigabyte of games they will never
-open — and it is #196, open.
+catalogue is a different feature with a different shape, and it is built (#196) — but as something a
+person asks for, from the settings page, never as part of install. The worker carries a second list,
+`GAMES`, emitted by the same script: one entry per play route with the document, the route's own
+chunks that are not shell, the game's chunk (the one reached through `import()`, which no HTML
+names), and what they weigh gzipped, so the page can say "108 games, N MB" before anything is
+fetched. On `DOWNLOAD_ALL` the worker saves each game this device does not already hold, one file at
+a time into the runtime cache, reporting progress by `postMessage`; a cancel stops it after the file
+in flight; a later press skips what is already here. Persistent storage is requested when the
+download starts, and a refusal is shown in words. Under quota pressure the worker evicts the least
+recently *opened* game — it notes a timestamp per game on every play-route navigation, in the cache
+under a key no route has — and retries; `cache.put` is atomic per entry, so a refused write leaves
+nothing behind and "quota pressure never corrupts the cache" is a property of the API rather than
+of the code. The whole download runs inside the message event's `waitUntil`, so closing the settings
+page does not stop it; the browser's own lifetime limit on an extended worker does, which is why
+resuming is not optional.
 
 The exact count and both sizes are printed by the emit step on every build, and that is where to
 read them rather than from any figure written down here, because they move with the export:
@@ -440,8 +452,9 @@ half is what survives the worker being able to intercept its own examiner.
 - **The measurement behind the catalogue annotation is taken once per page load.** A cache that
   gains an entry while the catalogue is open is not noticed until the next navigation — stale in
   the safe direction: it can say a game is not here that has just arrived, never the reverse.
-- **#196, downloading the whole catalogue, is not built** and is not a small change: it needs a
-  quota strategy and a way to decline.
+- **#196 is built, with one honest limit:** the download runs for as long as the browser keeps
+  an extended worker alive, which in Chromium is about five minutes, so a slow connection may need a
+  second press — and a second press continues rather than restarts.
 - **#195, a custom install prompt, is not built**, and WebKit does not fire `beforeinstallprompt`
   at all, so it would never be the whole answer.
 - **#191 is half done.** The manifest ships with its icons, `display: 'standalone'` and a base-path

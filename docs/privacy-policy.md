@@ -190,8 +190,11 @@ A **cold load** with no connection is the second claim, and until the service wo
 built it was not one this site could make: it depended entirely on the browser's ordinary
 HTTP cache and nothing here guaranteed it. It is guaranteed now, for a game this device has
 opened before — the same spec cuts the network at the browser, opens a game in a fresh tab
-and plays it out. It is **not** guaranteed for a game this device has never opened; that is
-not saved, and the site says so on a page of its own rather than showing a browser error.
+and plays it out. It is **not** guaranteed for a game this device has never opened unless the
+whole collection was saved from the settings page (#196); a game that is not here is not
+saved, and the site says so on a page of its own rather than showing a browser error. The
+cache also notes when each game was last opened, so that if the browser runs short of room the
+worker drops the least recently played first — a date beside a slug, in the cache, never sent.
 
 What that cache holds is the site's own files and nothing about you; see *What your browser
 keeps a copy of* above for what is in it and how to clear it.

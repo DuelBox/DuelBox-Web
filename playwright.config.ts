@@ -140,6 +140,10 @@ const CHROMIUM_ONLY = [
   // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
   // no-op there, so a second engine would be four copies of a hidden button (#195).
   '**/install-prompt.spec.ts',
+  // `download-all.spec.ts` (#196) proves a downloaded game opens with the network gone, which
+  // needs `context.setOffline` — Chromium and Firefox only, for the reason `offline.spec.ts`
+  // sets out at length: a route-abort does not reach a worker's own fetch.
+  '**/download-all.spec.ts',
 ];
 
 /**
