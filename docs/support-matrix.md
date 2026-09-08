@@ -69,7 +69,7 @@ removes something the games need. These are load-bearing:
 - **JavaScript enabled.** The catalogue, every content page and all SEO metadata are
   server-rendered static HTML, so a no-JS browser can *read* the site — but a game is a
   Canvas simulation and does not run without JS. See the notice section below.
-- **Canvas 2D.** Every game renders through `Canvas2DRenderer`. No WebGL is required.
+- **Canvas 2D.** Every game renders through `Canvas2DRenderer`. No WebGL is required. A WebGL backend exists behind `NEXT_PUBLIC_RENDERER=webgl` (ADR 0006) and is off in every published build; `scripts/check-renderer-flag.mjs` fails a build that ships it without the flag.
 - **`localStorage` (or a working stub).** Used for settings, last-mode and the head-to-head
   record. Its absence is handled — every read returns a fallback rather than throwing
   (`docs/play-configurations.md`, `apps/web/src/lib/local-store.ts`) — so private-mode and

@@ -156,7 +156,10 @@ export { InputView } from './input-view.js';
 export type { InputStateView, SeatInputView } from './input-view.js';
 
 export { Canvas2DRenderer } from './renderer.js';
-export type { Renderer, Canvas2DLike, TextAlign } from './renderer.js';
+export type { Renderer, Canvas2DLike, TextAlign, HostRenderer } from './renderer.js';
+// `WebGLRenderer` is deliberately NOT here. It is reached through `@duelbox/engine/webgl`
+// and an `import()` behind a build flag, so that with the flag off nothing WebGL is in any
+// bundle — `scripts/check-renderer-flag.mjs` reads the export to be sure (#16).
 
 export { AudioSystem, browserAudioContext, GESTURE_EVENTS } from './audio.js';
 export type {

@@ -137,6 +137,9 @@ const CHROMIUM_ONLY = [
   '**/visual.spec.ts',
   '**/game-record.spec.ts',
   '**/prefetch.spec.ts',
+  // Headless WebKit's WebGL is software-rendered when it exists at all, and the flag it
+  // exercises is off in every build a WebKit user gets (#16).
+  '**/renderer-parity.spec.ts',
 ];
 
 /**
