@@ -1,0 +1,102 @@
+/*
+ * The offline fallback, wearing the failure panel the 404 wears.
+ *
+ * `error-routes.test.ts` makes the argument for the two routes it covers and it applies to a
+ * third: two different failures must not teach a player two different visual languages for
+ * "something is not here". So the geometry below is `not-found.module.css`'s — the same column
+ * width, the same display heading over muted body text, the same brand button with its solid
+ * shadow — and a player who has met the 404 recognises this page before reading a word of it.
+ *
+ * It is a second copy of those declarations rather than an import, and that is worth saying
+ * plainly rather than leaving for somebody to find. The right home for a panel used by three
+ * routes is one class in `globals.css`, next to `.db-panel`, which is exactly the argument
+ * `loading-states.test.ts` makes about the play route's fallback: defined once, where a server
+ * component can reach it without importing anything. That file is not this batch's to edit and
+ * three agents are in this tree, so the duplication is deliberate, temporary, and written down
+ * here so the consolidation is a tidy-up rather than a discovery.
+ */
+
+.panel {
+  max-width: 34rem;
+  padding-block: var(--db-space-8) var(--db-space-8);
+}
+
+.title {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-3xl);
+}
+
+.lede {
+  margin-top: var(--db-space-3);
+  color: var(--db-muted);
+  font-size: var(--db-text-lg);
+  line-height: 1.6;
+}
+
+.body {
+  margin-top: var(--db-space-4);
+  color: var(--db-body);
+  line-height: 1.65;
+}
+
+/*
+ * The two catalogue marks, as a bordered block rather than a list of bullets: they are a
+ * legend for something the player is about to see somewhere else, so they read as a key and
+ * not as the page's argument.
+ *
+ * `--db-body` on `--db-surface`, not `--db-muted`. The same swap `how-to-play/page.module.css`
+ * records against the same background: muted is 4.38:1 there and misses AA, body is 7.6:1.
+ */
+.marks {
+  margin-top: var(--db-space-5);
+  padding: var(--db-space-4);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-surface);
+}
+
+.marks > div + div {
+  margin-top: var(--db-space-3);
+  padding-top: var(--db-space-3);
+  border-top: 1px solid var(--db-hairline);
+}
+
+.marks dt {
+  color: var(--db-ink);
+  font-weight: 700;
+}
+
+.marks dd {
+  margin: var(--db-space-1) 0 0;
+  color: var(--db-body);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--db-space-3);
+  margin-top: var(--db-space-6);
+}
+
+/*
+ * `#fff` rather than a token, matching the 404's button and the skip link. There is no token
+ * for it and there should not be: the fill is `--db-brand` in both themes, so the label has to
+ * stay white in both, and `--db-paper` — the only white in the palette — inverts to near-black
+ * under the dark theme and would put a dark label on an indigo button.
+ */
+.primary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--db-touch-target);
+  padding-inline: var(--db-space-5);
+  border-radius: var(--db-radius);
+  background: var(--db-brand);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--db-brand-deep);
+  font-weight: 700;
+}
+
+.primary:hover {
+  background: var(--db-brand-deep);
+  color: #fff;
+}

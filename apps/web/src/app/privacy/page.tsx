@@ -37,9 +37,13 @@ export const metadata: Metadata = {
  *   individual result is written down — a tally of six wins does not say which six, or
  *   when, or by how much. The sentence below says so, and it is a description of
  *   `lib/head-to-head.ts` rather than a promise about it.
- * - **"works with no connection at all"**. True of a page already open, and only that:
- *   there is no service worker, so a reload with the network down fails (#2445). A privacy
- *   page is the wrong place to promise a feature that is on the backlog.
+ * - **"works with no connection at all"**. When this was written it was true of a page
+ *   already open and only that: there was no service worker, so a reload with the network
+ *   down failed (#2445), and a privacy page is the wrong place to promise a feature that is
+ *   on the backlog. The worker was built (#192), so the claim is now available — but it is
+ *   still not the claim this page makes, because it is not true of every visitor: a game
+ *   this device has never opened needs a connection. What the page says instead is what the
+ *   cache actually holds, which is the only part of it a privacy page is really about.
  * - **"a content delivery network"**. It is GitHub Pages. Naming the host is the whole
  *   value of the paragraph — a reader deciding whether to trust it needs to know whose
  *   logs their request lands in, and "a content delivery network" names nobody.
@@ -123,8 +127,12 @@ export default function PrivacyPage() {
         </p>
         <p>
           Once a page has loaded, playing it needs nothing further from the network: the game, the
-          bot and the physics all run on your device. That is not the same as working offline. There
-          is no offline cache yet, so reloading the page or opening it fresh does need a connection.
+          bot and the physics all run on your device. Your browser also keeps a copy of the site,
+          and of each game after you open it, so a game you have played before opens again with no
+          connection at all. That cache holds this site&rsquo;s own files and nothing about you — no
+          scores, no names, no identifier — it is never sent anywhere, and clearing your
+          browser&rsquo;s site data removes it. A game you have never opened is not saved, and says
+          so rather than showing an error.
         </p>
 
         <h2>Children</h2>

@@ -102,7 +102,21 @@ test.describe('the head-to-head record', () => {
 
     await confirmPress(page, 'Clear the record');
     await expect(matches).toHaveText('0');
-    await expect(page.getByRole('status')).toContainText('cleared');
+    /*
+     * `main`-scoped, not any live region on the document.
+     *
+     * These queries were unfiltered until the service worker landed, and were unambiguous only
+     * because the site had exactly one live region at a time. It has two now: `ServiceWorkerBridge`
+     * mounts a document-level `role="status"` bar for the network and for a waiting update, outside
+     * `.db-shell` and so outside `main`. While it is showing, an unfiltered query resolves to two
+     * elements and fails Playwright's strict mode — which is how this was found, on the one project
+     * where a parallel run of `offline.spec.ts` had put an update prompt on screen.
+     *
+     * Scoping to `main` says which status is meant structurally, rather than by repeating the text
+     * being asserted: the bar is about the document, this one is about what the person just pressed
+     * on this page.
+     */
+    await expect(page.getByRole('main').getByRole('status')).toContainText('cleared');
 
     // Cleared from storage, not merely from the page.
     await page.reload();

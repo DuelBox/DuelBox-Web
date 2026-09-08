@@ -109,8 +109,10 @@ export default function HowToPlayPage() {
           <div className={styles.card}>
             <h3>A loaded game needs nothing</h3>
             <p>
-              Once a page has loaded, playing it needs no network at all. Closing the tab and coming
-              back does need one — there is no offline cache yet.
+              Once a page has loaded, playing it needs no network at all. Close the tab and come
+              back and a game you have opened before still opens — your browser kept a copy of it. A
+              game you have never opened is not on this device, and the catalogue says which is
+              which.
             </p>
           </div>
           <div className={styles.card}>
