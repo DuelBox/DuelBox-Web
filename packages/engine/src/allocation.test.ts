@@ -191,6 +191,150 @@ const SAMPLES = 9;
 /** Iterations run before measuring, so what is measured is the optimised code. */
 const WARMUP = 50_000;
 
+/**
+ * The bits of V8's `GetOptimizationStatus` that mean "this frame is running compiled code".
+ *
+ * V8 has two optimising tiers and a function promoted to either one is optimised for our
+ * purposes: Maglev does escape analysis on the boxed doubles this file is looking for, and
+ * TurboFan does more of it. There is no single "optimised" bit — `kOptimized` covers only
+ * some builds — so both tiers are named.
+ */
+const MAGLEV = 1 << 5;
+const TURBOFAN = 1 << 6;
+
+/**
+ * V8's optimisation controls, or `null` where they are not exposed.
+ *
+ * ## Why this file needs them, which is the whole of #2546
+ *
+ * Every number in this file is a measurement of *optimised* code, and until now the file
+ * asked for that and never checked it got it. `WARMUP` runs fifty thousand iterations and
+ * hopes V8 promotes the closure; promotion happens on a background thread and the request
+ * is advisory. When it has not happened, the interpreter is what gets measured — and the
+ * interpreter boxes every non-Smi double it puts in a register, so an allocation-free path
+ * measured before promotion reads as exactly one boxed double per call.
+ *
+ * That is 16 bytes, which is precisely the number this file fails on, and the failure it
+ * produces is word-for-word the failure a real regression produces.
+ *
+ * It cost a red `verify` to learn. `Impact.strike` read **16.000 B/call** and
+ * `LockstepSession.beginStep remote pair` **15.954** on a CI runner, three attempts each,
+ * while the same two cases read **0.000 B/call** on a development machine in isolation and
+ * **0.000 again under twelve spinning cores**. Neither allocates. The runner had simply not
+ * promoted them, and the retry below could not tell that from a genuine 16.
+ *
+ * The comment that used to sit on `ATTEMPTS` claimed it could: "A genuinely allocating path
+ * returns about 16 bytes on every attempt and still fails." **That sentence was wrong, and
+ * it was written here as the justification for the retry.** Unoptimised code also returns
+ * about 16 bytes on every attempt, for the same arithmetic reason, and no amount of
+ * re-measuring separates the two. Retrying a measurement cannot establish a precondition;
+ * only asserting the precondition can.
+ *
+ * So the precondition is now asserted. `%PrepareFunctionForOptimization` before the warm-up,
+ * `%OptimizeFunctionOnNextCall` after it, and `%GetOptimizationStatus` read back to confirm
+ * the closure really is running compiled code before a single byte is counted. A machine
+ * that will not promote it now fails saying *that*, which is a true statement about the
+ * environment, instead of accusing the code of an allocation it does not make.
+ *
+ * ## Why it is built with `new Function`
+ *
+ * `%Foo(x)` is not JavaScript. It is a V8-internal call form enabled by
+ * `--allow-natives-syntax`, and no parser in this toolchain will accept it in a source
+ * file — Vitest transforms every test through esbuild first, and it would fail there long
+ * before Node saw it. Constructing the callers at run time keeps the syntax out of every
+ * parser and inside the one engine that understands it.
+ *
+ * The flag is set for the test workers in `vitest.config.ts`. It is deliberately not made
+ * optional: see {@link requireNatives}.
+ */
+const natives = (() => {
+  try {
+    /* eslint-disable no-new-func, @typescript-eslint/no-implied-eval */
+    const prepare = new Function('f', '%PrepareFunctionForOptimization(f)') as (
+      f: (i: number) => void,
+    ) => void;
+    const optimize = new Function('f', '%OptimizeFunctionOnNextCall(f)') as (
+      f: (i: number) => void,
+    ) => void;
+    const status = new Function('f', 'return %GetOptimizationStatus(f)') as (
+      f: (i: number) => void,
+    ) => number;
+    /* eslint-enable no-new-func, @typescript-eslint/no-implied-eval */
+    // Built successfully is not the same as working: without the flag the bodies parse as
+    // a stray `%` and throw only when called. Prove one round trip on a throwaway function.
+    // Its own sink, not the shared `SINK` below: this runs while the module is still being
+    // evaluated, so anything declared further down is in its temporal dead zone.
+    const drain = new Float64Array(1);
+    const probe = (i: number): void => {
+      drain[0] = i * 0.5;
+    };
+    prepare(probe);
+    probe(1);
+    optimize(probe);
+    probe(2);
+    status(probe);
+    return { prepare, optimize, status };
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * How many promote-and-check rounds a case gets before the environment is blamed.
+ *
+ * More than one because `%OptimizeFunctionOnNextCall` can be answered with a deoptimisation
+ * — a closure whose callees are still collecting type feedback may be promoted and dropped
+ * again on the next call — and a second round after more warming usually settles it. Not
+ * many more, because if three rounds of fifty thousand iterations will not hold a promotion,
+ * the useful thing to report is that, not a fourth attempt.
+ */
+const OPTIMIZE_ROUNDS = 3;
+
+/**
+ * Fail loudly rather than measure something that does not mean what it says.
+ *
+ * The alternative — quietly falling back to warm-up-and-hope when the flag is missing — is
+ * exactly the behaviour that produced the red build this replaces, and it would decay in
+ * the same silent way: the guard would still be listed as running and would no longer be
+ * able to tell an allocation from an unpromoted closure. A rule 5 guard that cannot fail
+ * for the right reason is worse than no guard, because it is believed.
+ *
+ * `pnpm test` supplies the flag. Anything else has to say so.
+ */
+function requireNatives(): NonNullable<typeof natives> {
+  if (natives === null) {
+    throw new Error(
+      'allocation.test.ts measures optimised code and needs V8 natives syntax to confirm ' +
+        'the code it measures really is optimised. Run it through `pnpm test`, which sets ' +
+        '--allow-natives-syntax for the test workers in vitest.config.ts. Running vitest ' +
+        'directly without that flag cannot tell an allocation from an unpromoted closure: ' +
+        'both read as one boxed double, 16 bytes, per call.',
+    );
+  }
+  return natives;
+}
+
+/**
+ * Warm `run` and hold V8 to promoting it, returning how it was reached.
+ *
+ * The warm-up is inside the round rather than before it because the promotion is what the
+ * warm-up is for: a round that ends in a deoptimisation has to warm again, not merely ask
+ * again.
+ */
+function promote(run: (i: number) => void): number {
+  const v8 = requireNatives();
+  let last = 0;
+  for (let round = 0; round < OPTIMIZE_ROUNDS; round += 1) {
+    v8.prepare(run);
+    for (let i = 0; i < WARMUP; i += 1) run(i);
+    v8.optimize(run);
+    run(WARMUP);
+    last = v8.status(run);
+    if ((last & (MAGLEV | TURBOFAN)) !== 0) return last;
+  }
+  return last;
+}
+
 /** Bytes per call at or above which a case is allocating. See the note above. */
 const ALLOCATION_FREE = 8;
 
@@ -312,15 +456,26 @@ function windowFor(run: (i: number) => void): number {
  * so the minimum is the sample most likely to be hiding something. It is also not the
  * maximum, which is the sample most likely to have caught an unrelated hiccup.
  */
-function bytesPerCall(run: (i: number) => void): number {
-  for (let i = 0; i < WARMUP; i += 1) run(i);
+function measure(run: (i: number) => void): { bytes: number; status: number } {
+  // Promotion is part of the measurement, not a step before it. It used to be a bare
+  // warm-up loop that asked V8 for optimised code and never checked it got any; keeping the
+  // two together here is what stops a caller from measuring the interpreter by accident,
+  // and it means the controls in "the harness can see an allocation" are held to optimised
+  // code too — a boxed double that only appears unpromoted would prove nothing.
+  const status = promote(run);
   const iterations = windowFor(run);
   const samples = new Float64Array(SAMPLES);
   for (let s = 0; s < SAMPLES; s += 1) {
     samples[s] = windowTotal(iterations, run) / iterations;
   }
   samples.sort();
-  return samples[(SAMPLES - 1) >> 1]!; // invariant: SAMPLES is a positive odd number
+  // invariant: SAMPLES is a positive odd number
+  return { bytes: samples[(SAMPLES - 1) >> 1]!, status };
+}
+
+/** {@link measure}'s byte count alone, for the controls that assert an allocation is seen. */
+function bytesPerCall(run: (i: number) => void): number {
+  return measure(run).bytes;
 }
 
 /**
@@ -343,35 +498,23 @@ function retainedBytesPerCall(make: (i: number) => unknown, count: number): numb
   return (after - before) / count;
 }
 
-/**
- * How many times a case may be measured before it is believed to allocate.
- *
- * One attempt is not enough, and the reason is not noise in the arithmetic — it is that
- * this file measures *optimised* code and cannot insist on being optimised. `WARMUP` asks
- * V8 to promote the closure, and promotion happens on a background thread; when the whole
- * suite runs, nine other workers are competing for the cores that thread needs, and a case
- * can still be running its unoptimised form when the samples are taken. Unoptimised code
- * really does allocate, so the measurement is right and the *condition* is wrong.
- *
- * Measured: `sweptCircleSegment` reads 0.000 B/call in isolation on three runs out of
- * three, and 51.366 under the full parallel suite on this ten-core machine. The other
- * forty-three cases were clean in both regimes, so a single ceiling could not tell the two
- * apart.
- *
- * A real allocation is reproducible and a starved thread is not, so the case is measured
- * again — with a fresh warm-up, which is the thing that was short — and the best attempt
- * decides. A genuinely allocating path returns about 16 bytes on every attempt and still
- * fails; the deliberate-allocation control below proves that, and it is why the retry is
- * not a way of wishing a failure away.
- */
-const ATTEMPTS = 3;
-
 /** Measure one case and hold it under the ceiling, naming the number when it fails. */
 function expectAllocationFree(name: string, run: (i: number) => void): void {
-  let bytes = bytesPerCall(run);
-  for (let attempt = 1; attempt < ATTEMPTS && bytes >= ALLOCATION_FREE; attempt += 1) {
-    bytes = Math.min(bytes, bytesPerCall(run));
-  }
+  // The precondition first, and as an assertion rather than a hope. A closure the engine
+  // declined to compile allocates one boxed double per call in the interpreter, which is
+  // the same 16 bytes a real regression produces and cannot be told apart from it by
+  // measuring again — see the note on `natives`. So this fails on the environment, in
+  // words about the environment, before any byte is counted.
+  const { bytes, status } = measure(run);
+  expect(
+    (status & (MAGLEV | TURBOFAN)) !== 0,
+    `${name} could not be promoted to optimised code in ${String(OPTIMIZE_ROUNDS)} rounds of ` +
+      `${String(WARMUP)} iterations (V8 optimisation status ${String(status)}). This is a ` +
+      'statement about this machine, not about the code: an unpromoted closure boxes every ' +
+      'double it passes, so measuring it would report roughly 16 bytes per call and blame ' +
+      'the path for an allocation it does not make.',
+  ).toBe(true);
+
   if (REPORTING) {
     console.warn(`${name.padEnd(46)} ${bytes.toFixed(3).padStart(9)} B/call`);
   }

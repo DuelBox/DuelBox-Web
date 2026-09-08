@@ -85,10 +85,43 @@ const underCoverage = process.env.DUELBOX_COVERAGE === '1';
  */
 const onCi = process.env.CI === 'true' || process.env.CI === '1';
 
+/**
+ * V8's internal optimisation controls, for the one file that cannot work without them.
+ *
+ * `packages/engine/src/allocation.test.ts` is the rule 5 guard: it measures bytes allocated
+ * per call and fails a path that allocates on the step path. Every number it takes is a
+ * measurement of *optimised* code, and it used to ask for that by running fifty thousand
+ * warm-up iterations and assuming V8 had obliged. V8's promotion is advisory and happens on
+ * a background thread, so on a busy or slow machine it sometimes had not — and the
+ * interpreter boxes every non-Smi double it passes, so an allocation-free path measured
+ * before promotion reads as exactly one boxed double per call.
+ *
+ * Sixteen bytes. Which is the number that file fails on, in a message accusing the code.
+ * `verify` went red on `Impact.strike` at 16.000 B/call and
+ * `LockstepSession.beginStep remote pair` at 15.954, three attempts each, for two paths
+ * that measure 0.000 in isolation and 0.000 again under twelve spinning cores. Nothing
+ * allocated; the runner had not promoted them.
+ *
+ * With this flag the file can assert the precondition instead of hoping for it — force the
+ * promotion, read the optimisation status back, and fail on the *environment* when the
+ * engine will not compile the closure. Without it that check throws with an explanation, on
+ * purpose: a rule 5 guard that silently cannot tell an allocation from an unpromoted
+ * closure is worse than no guard, because it is believed.
+ *
+ * Applied to both pool implementations rather than only the default, so `--pool=threads`
+ * does not quietly lose it. It reaches the worker processes only; nothing this flag enables
+ * is used outside that one file, and it changes no behaviour that is not asked for by name.
+ */
+const NATIVES = ['--allow-natives-syntax'];
+
 export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.ts'],
     environment: 'node',
+    poolOptions: {
+      forks: { execArgv: NATIVES },
+      threads: { execArgv: NATIVES },
+    },
     testTimeout: underCoverage ? 600_000 : 30_000,
     dangerouslyIgnoreUnhandledErrors: underCoverage,
     ...(onCi && !underCoverage ? { maxWorkers: 2, minWorkers: 1 } : {}),
