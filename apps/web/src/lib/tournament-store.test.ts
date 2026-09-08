@@ -116,6 +116,47 @@ describe('writing and reading back', () => {
   });
 });
 
+describe('the bot’s tier (#2347)', () => {
+  beforeEach(() => {
+    install(fakeStorage());
+  });
+
+  it('round-trips with the tournament it belongs to', () => {
+    const state = reduce(initialTournament(), {
+      kind: 'start',
+      games: LINE_UP,
+      opponent: 'bot',
+      difficulty: 'hard',
+    });
+    writeTournament(state);
+    expect(stored()).toMatchObject({ opponent: 'bot', difficulty: 'hard' });
+    expect(readTournament(PLAYS)?.difficulty).toBe('hard');
+  });
+
+  it('writes no tier when there is none, so an older document shape is unchanged', () => {
+    writeTournament(started());
+    expect(stored()).not.toHaveProperty('difficulty');
+  });
+
+  it('reads a tier only against the bot, and only one this build has', () => {
+    store({ version: 1, games: LINE_UP, results: [], opponent: 'bot', difficulty: 'brutal' });
+    expect(readTournament(PLAYS)?.difficulty).toBeUndefined();
+    store({ version: 1, games: LINE_UP, results: [], opponent: 'friend', difficulty: 'hard' });
+    expect(readTournament(PLAYS)?.difficulty).toBeUndefined();
+    store({ version: 1, games: LINE_UP, results: [], opponent: 'bot', difficulty: 'easy' });
+    expect(readTournament(PLAYS)?.difficulty).toBe('easy');
+  });
+
+  it('reads a document written before there was a tier as a tournament with none', () => {
+    // The tournament then plays at whatever this game's remembered tier is, which is what
+    // it did before; the record is never invented for it.
+    store({ version: 1, games: LINE_UP, results: ['p1'], opponent: 'bot' });
+    const back = readTournament(PLAYS);
+    expect(back?.opponent).toBe('bot');
+    expect(back?.difficulty).toBeUndefined();
+  });
+});
+
 describe('reading something this build did not write', () => {
   it('treats a future version as no tournament at all', () => {
     // Not guessed at: a shape this build cannot interpret is not one to half-apply.

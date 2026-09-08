@@ -84,6 +84,16 @@ export interface GameHostProps {
   peerLogical?: LogicalSize;
   /** Which seat moves first this round. The match machine decides it; the host relays it. */
   openingSeat?: SeatId;
+  /**
+   * Which round of the match this is, 1-based. A round is a new board.
+   *
+   * The board was rebuilt only when `openingSeat` changed, which is every round until the
+   * third and then a coin (`openingSeatFor`): a third round whose opener repeated the
+   * second's resumed a game that had already reported its result, and it waited forever
+   * — every best-of-five, on half of all seeds, and a best-of-three that went the distance
+   * on the other half. Nothing played a third round until the e2e for #2351 did.
+   */
+  round?: number;
   botDifficulty?: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>;
   /**
    * One player alone (#1750): handed to the game as `GameContext.solo`, and nothing else in
@@ -196,6 +206,7 @@ export function GameHost({
   localSeat = 'p1',
   presentation = 'shared-screen',
   openingSeat = 'p1',
+  round = 1,
   peerLogical,
   botDifficulty,
   solo = false,
@@ -954,6 +965,7 @@ export function GameHost({
     localSeat,
     presentation,
     openingSeat,
+    round,
     peerLogical,
     botDifficulty,
     solo,
