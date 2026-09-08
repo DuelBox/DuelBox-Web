@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+<<<<<<< HEAD
   AdaptiveQuality,
   Canvas2DRenderer,
+=======
+>>>>>>> origin/main
   FixedLoop,
   GamepadManager,
   InputManager,
@@ -41,6 +44,11 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import { readBindings } from '@/lib/key-bindings';
+import {
+  createRendererBackend,
+  preloadRendererBackend,
+  webglRendererEnabled,
+} from '@/lib/renderer-backend';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
 import { readSettings } from '@/lib/settings';
@@ -227,11 +235,24 @@ export function GameHost({
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
 
+  /**
+   * Whether the renderer can be built yet (#16). True from the first render in every build
+   * made without `NEXT_PUBLIC_RENDERER=webgl` — `webglRendererEnabled()` is a literal after
+   * the build folds it — so the default path renders exactly when it always did. With the
+   * flag on, the WebGL module is fetched first and the match starts one tick later.
+   */
+  const [rendererReady, setRendererReady] = useState(!webglRendererEnabled());
   useEffect(() => {
+    if (rendererReady) return;
+    void preloadRendererBackend().then(() => {
+      setRendererReady(true);
+    });
+  }, [rendererReady]);
+
+  useEffect(() => {
+    if (!rendererReady) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
 
     // The one play area both players share, negotiated once before the first frame (rule 9,
     // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
@@ -243,6 +264,7 @@ export function GameHost({
     // equal for any pair the shell would actually start.
     const peerBox = peerLogical ?? manifest.logical;
     const logical = negotiateSharedLogical(manifest.logical, peerBox);
+<<<<<<< HEAD
     const renderer = new Canvas2DRenderer(context, logical);
 
     /**
@@ -283,6 +305,16 @@ export function GameHost({
     const manifestDprCap = manifest.dprCap ?? 2;
     let qualityDprCap = quality.dprCap;
     let lowPower = false;
+=======
+    // Which backend is a build-time decision made in `lib/renderer-backend.ts`; this host
+    // reads nothing off the renderer that is not on `HostRenderer` (#16).
+    const built = createRendererBackend(canvas, logical);
+    if (built === null) return;
+    // Rebound after the null check because `resize` below is a hoisted function declaration,
+    // and TypeScript does not carry a narrowing into one.
+    const backend = built;
+    const renderer = backend.renderer;
+>>>>>>> origin/main
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
     // identically on every device — only what is drawn changes — or two devices would
@@ -430,11 +462,16 @@ export function GameHost({
 
     // The element is passed in rather than closed over: TypeScript will not carry the
     // null-narrowing of a ref into a hoisted function declaration.
+<<<<<<< HEAD
     function resize(el: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
       const dpr = clampDevicePixelRatio(
         globalThis.devicePixelRatio,
         Math.min(manifestDprCap, qualityDprCap),
       );
+=======
+    function resize(el: HTMLCanvasElement): void {
+      const dpr = clampDevicePixelRatio(globalThis.devicePixelRatio);
+>>>>>>> origin/main
       const cssWidth = el.clientWidth;
       const cssHeight = el.clientHeight;
       // Reassigning canvas.width clears the backing store and forces a reallocation, so
@@ -446,15 +483,16 @@ export function GameHost({
       lastDpr = dpr;
       el.width = Math.round(cssWidth * dpr);
       el.height = Math.round(cssHeight * dpr);
-      // Draw in CSS pixels; the backing store carries the device ratio.
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Draw in CSS pixels; the backing store carries the device ratio. The 2D backend takes
+      // it as a context transform, the WebGL one as a number — the backend knows which.
+      backend.setDevicePixelRatio(dpr);
       view = negotiateSharedViewport(
         { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
         peerBox,
       ).view;
       renderer.setViewport(view);
     }
-    resize(canvas, context);
+    resize(canvas);
 
     // Coalesced into one animation frame. The observer can fire several times for a
     // single chrome transition, and reallocating the backing store on each is the layout
@@ -463,7 +501,7 @@ export function GameHost({
       if (resizeHandle !== 0) return;
       resizeHandle = globalThis.requestAnimationFrame(() => {
         resizeHandle = 0;
-        resize(canvas, context);
+        resize(canvas);
       });
     });
     observer.observe(canvas);
@@ -648,7 +686,7 @@ export function GameHost({
         // scale and letterbox offset on every frame rather than leaving them on the
         // context, so the first frame back sets them itself.
         lastWidth = -1;
-        resize(canvas, context);
+        resize(canvas);
       },
     );
 
@@ -910,7 +948,11 @@ export function GameHost({
     // the query parameter had been resolved in an effect, so the recorder was never made at all
     // and the trace stayed empty. Rebuilding costs nothing where it actually happens: recording
     // is decided on the lobby screen, before there is a match to lose.
+    //
+    // `rendererReady` is the gate at the top of the effect (#16): false only in a build made
+    // with the WebGL flag, until its module has been fetched, and then true for good.
   }, [
+    rendererReady,
     manifest,
     createGame,
     seed,
