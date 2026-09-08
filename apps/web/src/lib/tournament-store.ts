@@ -40,7 +40,8 @@ import type { LegOutcome, TournamentRecord } from './tournament';
 export const TOURNAMENT_KEY = `${KEY_PREFIX}tournament`;
 
 /**
- * The shape written today: `{ version: 1, games: string[], results: string[], opponent }`.
+ * The shape written today: `{ version: 1, games: string[], results: string[], opponent,
+ * difficulty? }` — the tier only on a tournament against the bot (#2347).
  *
  * No phase, because the phase is arithmetic over the other three — see the note at the top
  * of `tournament.ts`. A future version is not something this build can interpret, and
@@ -126,7 +127,17 @@ export function readTournament(playable: readonly string[]): TournamentRecord | 
     // exactly this question: that module is on the play route, and importing a predicate
     // from it would pull it into the shell — see the note at the top of this file.
     opponent: stored['opponent'] === 'bot' ? 'bot' : 'friend',
+    // The three tiers, spelled out for the same reason the opponent is: `isBotDifficulty`
+    // lives in `match-setup.ts`, on the play route. Anything else — including a tier on a
+    // tournament against a person — is dropped rather than trusted.
+    ...(stored['opponent'] === 'bot' && isTier(stored['difficulty'])
+      ? { difficulty: stored['difficulty'] }
+      : {}),
   };
+}
+
+function isTier(value: unknown): value is 'easy' | 'normal' | 'hard' {
+  return value === 'easy' || value === 'normal' || value === 'hard';
 }
 
 /**
@@ -144,6 +155,9 @@ export function writeTournament(record: TournamentRecord): void {
     games: record.games,
     results: record.results,
     opponent: record.opponent,
+    // Written only when there is one: a document a build before #2347 wrote has no such
+    // field, and one that reads it back should not grow a key it never had.
+    ...(record.difficulty === undefined ? {} : { difficulty: record.difficulty }),
   });
 }
 

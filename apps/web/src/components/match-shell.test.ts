@@ -79,3 +79,42 @@ describe('the game error boundary (#151)', () => {
     expect(boundary).toContain('getDerivedStateFromError');
   });
 });
+
+describe('changing a match between rounds (#2351)', () => {
+  it('the play surface asks one rule what may change and hands the overlay the answer', () => {
+    const surface = read('PlaySurface.tsx');
+    expect(surface).toContain('describeChanges({');
+    expect(surface).toContain('onHandSeat: handSeat');
+    expect(surface).toContain('onRounds: chooseRounds');
+    // A hand-over keeps the match machine out of it, so the round tally stays put — and marks
+    // the match as one that belongs on no record.
+    expect(surface).toMatch(/const handSeat = useCallback/);
+    expect(surface).toContain('setMixed(true)');
+    expect(surface).toContain('unrecorded={mixed}');
+  });
+
+  it('the overlay offers the change between rounds and gives the reason on pause', () => {
+    const overlay = read('MatchOverlay.tsx');
+    expect(overlay).toContain('Change something for the next round');
+    expect(overlay).toContain('{changing.changes.seat.reason}');
+    // Every refusal is shown, once, and the device one always: nothing is refused silently.
+    expect(overlay).toContain('{changes.device.reason}');
+    expect(overlay).toContain('Not added to the record');
+  });
+
+  it('the host rebuilds the board for every round, not only when the opener changes', () => {
+    // The third round of a best-of hung whenever its opener repeated the second's: the
+    // finished board was resumed rather than replaced. The round is now a setup dependency.
+    const host = read('GameHost.tsx');
+    expect(host).toMatch(/openingSeat,\s*round,\s*peerLogical,/);
+    expect(read('PlaySurface.tsx')).toContain('round={match.round}');
+  });
+
+  it('the tournament carries its tier into the lobby, the track and the HUD (#2347)', () => {
+    const surface = read('PlaySurface.tsx');
+    expect(surface).toContain('difficulty: setup.difficulty');
+    expect(surface).toContain('tier={tournament.difficulty}');
+    expect(read('TournamentTrack.tsx')).toContain('Bot skill: {tier}');
+    expect(read('MatchHud.tsx')).toContain('{tierLabel}');
+  });
+});

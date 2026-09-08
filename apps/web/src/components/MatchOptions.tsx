@@ -44,6 +44,14 @@ export interface MatchOptionsProps {
   onDifficulty: (difficulty: BotDifficulty) => void;
   rounds: number;
   onRounds: (rounds: number) => void;
+  /**
+   * Which lengths to offer, when not all of them still make sense.
+   *
+   * Between rounds a match can only grow (#2351): a length shorter than the rounds already
+   * played would end on the next point, and `lib/match-changes.ts` works out which are left.
+   * Absent, every length; empty, no length control at all.
+   */
+  lengths?: readonly number[] | undefined;
 }
 
 interface Choice {
@@ -79,10 +87,13 @@ export function MatchOptions({
   onDifficulty,
   rounds,
   onRounds,
+  lengths,
 }: MatchOptionsProps) {
   // Unique per instance: two radio groups on one page must not share a name, or picking a
   // tier would clear the match length.
   const id = useId();
+  const offered =
+    lengths === undefined ? LENGTHS : LENGTHS.filter((c) => lengths.includes(Number(c.value)));
   return (
     <div className={styles.options}>
       {showDifficulty ? (
@@ -96,15 +107,17 @@ export function MatchOptions({
           }}
         />
       ) : null}
-      <Group
-        name={`${id}-length`}
-        legend="Match length"
-        choices={LENGTHS}
-        chosen={String(rounds)}
-        onChoose={(value) => {
-          onRounds(Number(value));
-        }}
-      />
+      {offered.length === 0 ? null : (
+        <Group
+          name={`${id}-length`}
+          legend="Match length"
+          choices={offered}
+          chosen={String(rounds)}
+          onChoose={(value) => {
+            onRounds(Number(value));
+          }}
+        />
+      )}
     </div>
   );
 }
