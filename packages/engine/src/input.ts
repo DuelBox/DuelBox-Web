@@ -479,6 +479,14 @@ export function quantiseScalar(value: number, lattice: number): number {
   return Math.round(value / lattice) * lattice;
 }
 
+/** A finite number held to [-1, 1]; anything else reads as no intent. */
+function clampUnit(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value < -1) return -1;
+  if (value > 1) return 1;
+  return value;
+}
+
 export class InputManager {
   readonly #logical: LogicalSize;
   #split: ZoneSplit;
@@ -600,8 +608,16 @@ export class InputManager {
    */
   setSeatAnalog(seat: SeatId, moveX: number, moveY: number, action: boolean): void {
     const sources = this.#sourcesFor(seat);
-    sources.analogX = Number.isFinite(moveX) ? moveX : 0;
-    sources.analogY = Number.isFinite(moveY) ? moveY : 0;
+    // Onto the scalar envelope, for the reason `docs/input-parity.md` gives every aimed
+    // quantity one: no family may name a value finer than the coarsest supported one can.
+    // A key names a rate of exactly 0 or 1; a finger's drag names one on the position
+    // lattice; a stick left raw would name any real in between and be the finest
+    // instrument on the site by a wide margin. Rounded to `SCALAR_ENVELOPE` — one
+    // sixty-fourth of full tilt — it still throttles, which is what a stick is for, and it
+    // can name nothing a rounded drag could not. `quantiseScalar` is the same call the
+    // aimed-scalar seam uses, so the two envelopes cannot drift.
+    sources.analogX = quantiseScalar(clampUnit(moveX), SCALAR_ENVELOPE);
+    sources.analogY = quantiseScalar(clampUnit(moveY), SCALAR_ENVELOPE);
     sources.analogAction = action;
   }
 

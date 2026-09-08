@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { setActiveSeatPalette, type SeatId } from '@duelbox/engine';
+import { setActiveSeatPalette, type GamepadEvent, type SeatId } from '@duelbox/engine';
 import {
   advanceClock,
   clockExpired,
@@ -20,6 +20,7 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
+import { gamepadNotice } from '@/lib/gamepad-notice';
 import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import {
@@ -242,6 +243,13 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [gameError, setGameError] = useState<unknown>(null);
   /** The seat the device is being passed to, or null when no hand-off is in progress (#134). */
   const [handoffTo, setHandoffTo] = useState<SeatId | null>(null);
+  /**
+   * The last controller edge the host reported (#130), shown on the pause panel it caused,
+   * and the swap the host hands over once per match. The notice is cleared on resume so a
+   * later pause for some other reason does not re-read old news.
+   */
+  const [gamepadEdge, setGamepadEdge] = useState<GamepadEvent | null>(null);
+  const [swapGamepads, setSwapGamepads] = useState<(() => void) | null>(null);
   /**
    * Whether this device has been shown this game's "which half is yours" hints (#137), and
    * which seats have since played.
@@ -648,6 +656,10 @@ export function PlaySurface({ slug }: { slug: string }) {
     [slug],
   );
 
+  const handleGamepad = useCallback((event: GamepadEvent) => {
+    setGamepadEdge(event);
+  }, []);
+
   const handleActiveSeat = useCallback(
     (seat: SeatId | null) => {
       setActiveSeat(seat);
@@ -921,6 +933,12 @@ export function PlaySurface({ slug }: { slug: string }) {
               onActiveSeat={handleActiveSeat}
               onSeatInput={handleSeatInput}
               onRequestPause={handlePauseRequest}
+              onGamepad={handleGamepad}
+              onGamepadReady={(controls) => {
+                // Wrapped, for the reason `onTraceReady` is: a function handed to a state
+                // setter is an updater.
+                setSwapGamepads(() => controls.swap);
+              }}
               onError={handleGameError}
               recordTrace={recording}
               // Wrapped, not passed. React treats a function handed to a state setter as an
@@ -974,8 +992,19 @@ export function PlaySurface({ slug }: { slug: string }) {
             seatNames={seatNames}
             record={record}
             nextGame={nextGame}
+            slug={slug}
             presentation="shared-screen"
+            notice={gamepadEdge === null ? undefined : gamepadNotice(gamepadEdge, seatNames)}
+            onSwapControllers={
+              gamepadEdge === null || swapGamepads === null
+                ? undefined
+                : () => {
+                    swapGamepads();
+                    setGamepadEdge({ kind: 'reassigned', seat: null, gamepadIndex: -1, id: '' });
+                  }
+            }
             onResume={() => {
+              setGamepadEdge(null);
               send({ kind: 'resume' });
             }}
             onQuit={quit}

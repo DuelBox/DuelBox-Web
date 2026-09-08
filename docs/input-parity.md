@@ -149,8 +149,13 @@ that bought the player no game. Position remains the fair multi-finger channel �
 a sweep, a place on the board — and Money Grabber's SPEC is the worked example of choosing
 it.
 
-**Not implemented: gamepad support.** #130 covers it. The table above anticipates it so
-the decision is not made twice.
+**Implemented: gamepad support (#130).** Two pads drive two seats by connection order, a pause-panel
+button swaps them, and a hot-plug pauses the match with a sentence saying whose seat changed. The
+stick is *added* to the keyboard vector as a rate and **rounded onto `SCALAR_ENVELOPE`** before it
+becomes intent (`InputManager.setSeatAnalog`): a key names a rate of 0 or 1, a drag names a position
+on the lattice, and a raw stick would have named any real in between — the finest instrument on the
+site by a wide margin. On the envelope it still throttles, which is what a stick is for, and can name
+nothing a rounded drag could not. `rt-race` stays same-input-class-only for the reason the table gives.
 
 **Not verified: any of this across two real devices.** There is no cross-device harness
 yet, so every judgement here is reasoned from the properties of the input families rather

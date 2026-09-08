@@ -62,6 +62,15 @@
   font-size: var(--db-text-sm);
 }
 
+/* The reason the match paused itself (#130). Ink rather than body grey, because it is the
+   one line on the panel that is news. */
+.notice {
+  color: var(--db-ink);
+  font-size: var(--db-text-base);
+  font-weight: 600;
+  max-width: 28rem;
+}
+
 .winner {
   display: flex;
   align-items: center;
@@ -172,6 +181,19 @@
 /* The head-to-head, which now names the game it is the record for and so is long enough
    to wrap on a narrow phone. A pill that wraps is still a pill; one that overflows the
    panel is a line a player cannot read, hence the max-width. */
+/* The share button's report. Full width so it never squeezes the buttons beside it, and
+   an empty line reserves nothing — `:empty` keeps a paragraph with no text at zero height. */
+.shareStatus {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--db-body);
+  font-size: var(--db-text-sm);
+}
+
+.shareStatus:empty {
+  display: none;
+}
+
 .record {
   max-width: 100%;
   padding: var(--db-space-2) var(--db-space-3);

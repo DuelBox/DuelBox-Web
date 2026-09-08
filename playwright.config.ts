@@ -137,6 +137,12 @@ const CHROMIUM_ONLY = [
   '**/visual.spec.ts',
   '**/game-record.spec.ts',
   '**/prefetch.spec.ts',
+  // `share-card.spec.ts` (#164) plays a bot match to its end on every run, which is the
+  // most expensive thing a spec can do, to press one button and read back a PNG's
+  // dimensions. Dimensions and a decoded PNG do not differ between engines; the canvas
+  // rasteriser does, and that is exactly what the card does not claim to hold. Same
+  // reading as `tournament.spec.ts`.
+  '**/share-card.spec.ts',
   // Headless WebKit's WebGL is software-rendered when it exists at all, and the flag it
   // exercises is off in every build a WebKit user gets (#16).
   '**/renderer-parity.spec.ts',
