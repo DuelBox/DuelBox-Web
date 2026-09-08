@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FixedLoop, RunLoop, browserClock } from './loop.js';
+import { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
 import type { Clock, LoopCallbacks } from './loop.js';
 
 class Recorder implements LoopCallbacks {
@@ -528,5 +528,99 @@ describe('browserClock', () => {
     } finally {
       if (original !== undefined) scope.requestAnimationFrame = original;
     }
+  });
+});
+
+describe('browserGamepadSource', () => {
+  /** A stand-in for `navigator.getGamepads`, returning a fresh array each call as the real one does. */
+  function fakeNavigator(pads: () => (null | Record<string, unknown>)[]) {
+    return { getGamepads: () => pads() };
+  }
+
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  it('answers with nothing where the API is absent, rather than throwing', () => {
+    const read = withNavigator(undefined, () => browserGamepadSource());
+    expect(read()).toEqual([]);
+  });
+
+  it('presents the plain snapshot shape the manager consumes', () => {
+    const nav = fakeNavigator(() => [
+      null,
+      {
+        index: 1,
+        id: 'Pad',
+        connected: true,
+        axes: [0.5, -0.25],
+        buttons: [{ pressed: true }, { pressed: false }],
+      },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const pads = read();
+    expect(pads[0]).toBeNull();
+    expect(pads[1]).toEqual({
+      index: 1,
+      id: 'Pad',
+      connected: true,
+      axes: [0.5, -0.25],
+      buttons: [true, false],
+    });
+  });
+
+  it('reuses its snapshots and arrays across polls, so the step path allocates none of them (rule 5)', () => {
+    // The platform's own array is fresh every call and outside the rule; everything this
+    // adapter owns must not be. Identity across two polls is the whole assertion.
+    let pressed = false;
+    const nav = fakeNavigator(() => [
+      { index: 0, id: 'Pad', connected: true, axes: [0.1, 0.2], buttons: [{ pressed }] },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const first = read();
+    const firstPad = first[0];
+    const firstAxes = firstPad?.axes;
+    const firstButtons = firstPad?.buttons;
+    pressed = true;
+    const second = read();
+    expect(second).toBe(first);
+    expect(second[0]).toBe(firstPad);
+    expect(second[0]?.axes).toBe(firstAxes);
+    expect(second[0]?.buttons).toBe(firstButtons);
+    // And it is a *fresh reading*, not a stale one — reuse must not mean remembering.
+    expect(second[0]?.buttons[0]).toBe(true);
+  });
+
+  it('forgets a pad that unplugs and shrinks to the slots the browser reports', () => {
+    let pads: (null | Record<string, unknown>)[] = [
+      { index: 0, id: 'A', connected: true, axes: [0, 0], buttons: [] },
+      { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] },
+    ];
+    const read = withNavigator(
+      fakeNavigator(() => pads),
+      () => browserGamepadSource(),
+    );
+    expect(read()).toHaveLength(2);
+    pads = [null, { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] }];
+    const next = read();
+    expect(next).toHaveLength(2);
+    expect(next[0]).toBeNull();
+    expect(next[1]?.id).toBe('B');
+    pads = [];
+    expect(read()).toHaveLength(0);
   });
 });
