@@ -1,4 +1,10 @@
-node_modules/
+# No trailing slash: `node_modules/` matches a directory and nothing else, so a
+# `node_modules` that is a *symlink* — which is what `git worktree` setups and some CI
+# caches leave behind — sails past it and can be committed by `git add -A`. One did, and
+# every job on the PR died in twelve seconds with
+# `ENOTDIR: not a directory, mkdir .../node_modules` out of `pnpm install`, because pnpm
+# cannot make a directory where a symlink already is.
+node_modules
 .next/
 dist/
 build/
