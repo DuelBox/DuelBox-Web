@@ -2,11 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-<<<<<<< HEAD
   AdaptiveQuality,
-  Canvas2DRenderer,
-=======
->>>>>>> origin/main
   FixedLoop,
   GamepadManager,
   InputManager,
@@ -264,8 +260,14 @@ export function GameHost({
     // equal for any pair the shell would actually start.
     const peerBox = peerLogical ?? manifest.logical;
     const logical = negotiateSharedLogical(manifest.logical, peerBox);
-<<<<<<< HEAD
-    const renderer = new Canvas2DRenderer(context, logical);
+    // Which backend is a build-time decision made in `lib/renderer-backend.ts`; this host
+    // reads nothing off the renderer that is not on `HostRenderer` (#16).
+    const built = createRendererBackend(canvas, logical);
+    if (built === null) return;
+    // Rebound after the null check because `resize` below is a hoisted function declaration,
+    // and TypeScript does not carry a narrowing into one.
+    const backend = built;
+    const renderer = backend.renderer;
 
     /**
      * Presentation quality, decided by the device rather than declared by anybody (#31, #190).
@@ -305,16 +307,6 @@ export function GameHost({
     const manifestDprCap = manifest.dprCap ?? 2;
     let qualityDprCap = quality.dprCap;
     let lowPower = false;
-=======
-    // Which backend is a build-time decision made in `lib/renderer-backend.ts`; this host
-    // reads nothing off the renderer that is not on `HostRenderer` (#16).
-    const built = createRendererBackend(canvas, logical);
-    if (built === null) return;
-    // Rebound after the null check because `resize` below is a hoisted function declaration,
-    // and TypeScript does not carry a narrowing into one.
-    const backend = built;
-    const renderer = backend.renderer;
->>>>>>> origin/main
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
     // identically on every device — only what is drawn changes — or two devices would
@@ -462,16 +454,11 @@ export function GameHost({
 
     // The element is passed in rather than closed over: TypeScript will not carry the
     // null-narrowing of a ref into a hoisted function declaration.
-<<<<<<< HEAD
-    function resize(el: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
+    function resize(el: HTMLCanvasElement): void {
       const dpr = clampDevicePixelRatio(
         globalThis.devicePixelRatio,
         Math.min(manifestDprCap, qualityDprCap),
       );
-=======
-    function resize(el: HTMLCanvasElement): void {
-      const dpr = clampDevicePixelRatio(globalThis.devicePixelRatio);
->>>>>>> origin/main
       const cssWidth = el.clientWidth;
       const cssHeight = el.clientHeight;
       // Reassigning canvas.width clears the backing store and forces a reallocation, so
@@ -699,7 +686,7 @@ export function GameHost({
         if (quality.dprCap !== qualityDprCap) {
           qualityDprCap = quality.dprCap;
           lastDpr = -1;
-          resize(canvas, context);
+          resize(canvas);
         }
         const low = isLowPower(battery());
         if (low !== lowPower) {

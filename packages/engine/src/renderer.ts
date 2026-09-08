@@ -121,6 +121,12 @@ export interface HostRenderer extends Renderer {
   beginFrame(): void;
   endFrame(): void;
   setReducedMotion(reduced: boolean): void;
+  /**
+   * The device's side of the effects switch (#190, #31): the host sets it from the battery
+   * and the adaptive-quality rung, never a game, and it takes the reduced-motion path without
+   * touching the player's own preference. Both backends implement it the same way.
+   */
+  setEffectsEnabled(enabled: boolean): void;
   setDevicePixelRatio?(dpr: number): void;
   watchSurface(
     target: SurfaceEventTarget,
