@@ -21,6 +21,7 @@ import {
   type Presentation,
   type LogicalSize,
   type SeatId,
+  type SeatInputState,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
@@ -81,6 +82,15 @@ export interface GameHostProps {
   onTick?: (fixedDeltaSeconds: number) => void;
   onScore?: (p1: number, p2: number, winner: SeatId | 'draw' | null) => void;
   onActiveSeat?: (seat: SeatId | null) => void;
+  /**
+   * The first step on which a seat's controls read as used, once per seat per match (#137).
+   *
+   * "Successful input" rather than "an event arrived": a key press the shell swallowed, or a
+   * touch that started in the other seat's zone, is not this seat playing. What is reported is
+   * the state the *game* was handed, which is the only definition a hint that says "this half
+   * is yours" can honestly fade on.
+   */
+  onSeatInput?: (seat: SeatId) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
   /**
@@ -134,6 +144,18 @@ export function hostZoneSplit(
   return zoneSplitFor(presentation, manifest.zoneSplit, activeSeat);
 }
 
+/**
+ * Whether a seat's controls are being used, from the state the game was handed.
+ *
+ * The four channels a seat has. Movement is compared against zero rather than to a
+ * threshold: `moveX`/`moveY` are already normalised and a keyboard produces exactly 0 or
+ * ±1, so a threshold would only add a number nobody could justify. Pure, and reading five
+ * fields, so it costs the step nothing (rule 5).
+ */
+function seatIsPlaying(seat: SeatInputState): boolean {
+  return seat.moveX !== 0 || seat.moveY !== 0 || seat.actionHeld || seat.pointerActive;
+}
+
 export function GameHost({
   manifest,
   createGame,
@@ -147,6 +169,7 @@ export function GameHost({
   onTick,
   onScore,
   onActiveSeat,
+  onSeatInput,
   onRequestPause,
   onError,
   recordTrace = false,
@@ -167,6 +190,8 @@ export function GameHost({
   onScoreRef.current = onScore;
   const onActiveSeatRef = useRef(onActiveSeat);
   onActiveSeatRef.current = onActiveSeat;
+  const onSeatInputRef = useRef(onSeatInput);
+  onSeatInputRef.current = onSeatInput;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
   const onErrorRef = useRef(onError);
@@ -436,6 +461,8 @@ export function GameHost({
      */
     let lastWinner: SeatId | 'draw' | null = null;
     let lastSeat: SeatId | null | undefined;
+    /** Which seats have been seen playing, so #137's hint fades once and never comes back. */
+    const usedInput = new Uint8Array(2);
 
     /**
      * The three bindings the debug overlay of #119 needs, and the only three lines of it
@@ -539,7 +566,21 @@ export function GameHost({
         // board. Everything the step reads off the game — score, active seat — is inside the
         // guard too, so a game that throws from `getScore` is caught the same way.
         guard(() => {
-          game.update(dt, inputView.sync(input.beginStep(dt)));
+          const sampled = input.beginStep(dt);
+          game.update(dt, inputView.sync(sampled));
+          // #137, and it is in the hot path, so it reads fields and calls nothing until the
+          // one step it fires on. `usedInput` is a two-slot typed array rather than two
+          // booleans in a closure for rule 5: a boolean field on a captured object is fine,
+          // but the pair are read and written on every step of every match and a typed slot
+          // is what the rest of this file reaches for at that rate.
+          if (usedInput[0] === 0 && seatIsPlaying(sampled.seat('p1'))) {
+            usedInput[0] = 1;
+            onSeatInputRef.current?.('p1');
+          }
+          if (usedInput[1] === 0 && seatIsPlaying(sampled.seat('p2'))) {
+            usedInput[1] = 1;
+            onSeatInputRef.current?.('p2');
+          }
           const score = game.getScore();
           if (score.p1 !== lastP1 || score.p2 !== lastP2 || score.winner !== lastWinner) {
             lastP1 = score.p1;

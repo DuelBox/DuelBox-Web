@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
 import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
+import { HINTS_SEEN_KEY, markHintsSeen } from './control-hints';
 import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
 import { PLAYER_NAMES_KEY, readPlayerNames, writePlayerName } from './player-names';
@@ -67,6 +68,7 @@ function populate(): void {
   // with nothing either seat holds; a colliding one would be refused and write nothing, and
   // this fixture would then be exporting six stores while claiming seven.
   writeSeatBinding('p1', { ...readBindings().p1, action: 'KeyC' });
+  markHintsSeen('chess');
 }
 
 describe('the keys', () => {
@@ -80,6 +82,7 @@ describe('the keys', () => {
       PLAYER_NAMES_KEY,
       TOURNAMENT_KEY,
       KEY_BINDINGS_KEY,
+      HINTS_SEEN_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -138,6 +141,7 @@ describe('exporting', () => {
             action: 'Enter',
           },
         },
+        [HINTS_SEEN_KEY]: { version: 1, seen: ['chess'] },
       },
     });
   });
