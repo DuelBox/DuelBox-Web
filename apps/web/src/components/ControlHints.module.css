@@ -1,0 +1,54 @@
+/*
+ * The two "this half is yours" hints (#137).
+ *
+ * `pointer-events: none` on the layer and inherited by the hints, which is the whole of the
+ * "never obstruct an interactive area" criterion: a board that fills its box has no corner
+ * that is not interactive, so the honest answer is a layer a press goes straight through
+ * rather than a placement nobody can guarantee.
+ */
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--db-space-3);
+  pointer-events: none;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--db-space-2);
+  padding: var(--db-space-2) var(--db-space-3);
+  border-radius: var(--db-radius-pill);
+  background: var(--db-ink);
+  color: var(--db-paper);
+  font-size: var(--db-text-sm);
+  font-weight: 600;
+  /* Shape and label carry it as well as colour: the glyph beside the name is the seat's own,
+     so the pair are told apart in greyscale (rule 7). */
+  opacity: 1;
+  transition: opacity var(--db-duration-slow) var(--db-ease);
+}
+
+/* The far seat reads the device upside down, so its hint is turned to face them — the same
+   half turn the scoreboard takes. */
+.hint[data-hint-seat='p2'] {
+  transform: rotate(180deg);
+}
+
+.hint[data-gone] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No fade for a player who has asked for no motion; the hint goes when it is done. A
+     transition on opacity is motion by the letter of the query, and this one has nothing to
+     communicate by moving. */
+  .hint {
+    transition: none;
+  }
+}

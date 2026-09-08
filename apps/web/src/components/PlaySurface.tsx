@@ -20,6 +20,7 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
+import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import {
   addOutcome,
@@ -66,6 +67,7 @@ import { MatchOverlay } from './MatchOverlay';
 import { MatchOptions } from './MatchOptions';
 import { GameOptionsPanel } from './GameOptionsPanel';
 import { ExitControl } from './ExitControl';
+import { ControlHints } from './ControlHints';
 import { HandoffOverlay } from './HandoffOverlay';
 import { GameErrorBoundary } from './GameErrorBoundary';
 import { shouldHandOff } from './handoff';
@@ -153,6 +155,7 @@ export function PlaySurface({ slug }: { slug: string }) {
   // this browser already knows before anybody presses Start.
   useEffect(() => {
     setSetup(readSetup(slug));
+    setHintsDue(!hasSeenHints(slug));
     setChosenNames(readPlayerNames());
     // `PLAYABLE` rather than nothing: a line-up drawn before a game was switched off (#208)
     // would otherwise send the pair to a route this build no longer exports, and a leg can
@@ -238,6 +241,16 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [gameError, setGameError] = useState<unknown>(null);
   /** The seat the device is being passed to, or null when no hand-off is in progress (#134). */
   const [handoffTo, setHandoffTo] = useState<SeatId | null>(null);
+  /**
+   * Whether this device has been shown this game's "which half is yours" hints (#137), and
+   * which seats have since played.
+   *
+   * `null` until storage has been read, which is one frame after the first paint on a static
+   * export — and a hint that flashed up for a returning pair and vanished would be worse than
+   * one that arrives a frame late.
+   */
+  const [hintsDue, setHintsDue] = useState(false);
+  const [seatUsed, setSeatUsed] = useState<Record<SeatId, boolean>>({ p1: false, p2: false });
   /** The active seat the last hand-off check saw, so only a real change of hands blacks out. */
   const handoffFrom = useRef<SeatId | null>(null);
 
@@ -618,6 +631,22 @@ export function PlaySurface({ slug }: { slug: string }) {
    * Only for a game that opted in, and only on a real change from one seat to another — the
    * first seat of a match is nobody handing over. A game that does not opt in never blacks out.
    */
+  /**
+   * A seat's first successful input, from `GameHost` (#137).
+   *
+   * The seat's hint goes, and the *pair* is marked as shown the moment either seat plays —
+   * not when both do. A pair who have started are a pair who have understood, and a game
+   * where one player moves first is every game; waiting for the second would leave a device
+   * that has played a match still counted as never having seen the hints.
+   */
+  const handleSeatInput = useCallback(
+    (seat: SeatId) => {
+      setSeatUsed((used) => (used[seat] ? used : { ...used, [seat]: true }));
+      markHintsSeen(slug);
+    },
+    [slug],
+  );
+
   const handleActiveSeat = useCallback(
     (seat: SeatId | null) => {
       setActiveSeat(seat);
@@ -889,6 +918,7 @@ export function PlaySurface({ slug }: { slug: string }) {
               onTick={handleTick}
               onScore={handleScore}
               onActiveSeat={handleActiveSeat}
+              onSeatInput={handleSeatInput}
               onRequestPause={handlePauseRequest}
               onError={handleGameError}
               recordTrace={recording}
@@ -917,6 +947,10 @@ export function PlaySurface({ slug }: { slug: string }) {
               onQuit={quit}
             />
           ) : null}
+          {/* Which half belongs to whom, on this device's first go at this game (#137). Only
+              while the board is live: before the countdown there is nothing to play, and after
+              the match the result screen is what the pair are reading. */}
+          {hintsDue && matchLive ? <ControlHints names={seatNames} used={seatUsed} /> : null}
           {/* The pass-and-play hand-off blackout (#134), only for a game that opted in and
               only while a hand-off is in progress. It sits above the board so no frame of the
               previous seat's state shows through. */}

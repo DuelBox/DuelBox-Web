@@ -25,6 +25,7 @@ import {
   readPlayerNames,
   writePlayerName,
 } from '@/lib/player-names';
+import { HINTS_SEEN_KEY, resetHints } from '@/lib/control-hints';
 import { KEY_BINDINGS_KEY } from '@/lib/key-bindings-key';
 import { clearRecent, RECENT_KEY } from '@/lib/recent';
 import { SETTINGS_KEY, type Settings } from '@/lib/settings';
@@ -106,6 +107,7 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   [HEAD_TO_HEAD_KEY]: 'your head-to-head record',
   [PLAYER_NAMES_KEY]: 'the names you chose for the two seats',
   [KEY_BINDINGS_KEY]: 'the keys you chose for the two seats',
+  [HINTS_SEEN_KEY]: 'which games have shown you their first-play hints',
 };
 
 /** "a, b and c" — a sentence, because the status line is read aloud as one. */
@@ -127,6 +129,8 @@ export function SettingsPanel() {
   const [settings, update] = useSettings();
   const [supported, setSupported] = useState(false);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
+  /** Whether the first-play hints have been asked for again on this visit (#137). */
+  const [hintsReset, setHintsReset] = useState(false);
   const [played, setPlayed] = useState<readonly { slug: string; record: GameRecord }[]>([]);
   const [overall, setOverall] = useState<Tally | null>(null);
   const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
@@ -431,6 +435,29 @@ export function SettingsPanel() {
           the page itself needs — Escape, Tab and the modifiers — cannot be taken.
         </p>
         <KeyBindings id={`${id}-keys`} />
+
+        {/*
+          #137's "resettable from settings". The hints are shown once per game per device and
+          then never again, which is right for the pair who have played and wrong for the pair
+          who hand the device to somebody new — so there has to be a way back, and this is it.
+        */}
+        <h3 className={styles.subhead}>First-play hints</h3>
+        <p className={styles.note}>
+          The first time you open a game, each half of the screen says whose it is until that player
+          moves. Ask for them again and every game shows them once more.
+        </p>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => {
+              resetHints();
+              setHintsReset(true);
+            }}
+          >
+            {hintsReset ? 'Hints will show again' : 'Show the hints again'}
+          </button>
+        </div>
       </section>
 
       <section className={styles.section} aria-labelledby={`${id}-data`}>

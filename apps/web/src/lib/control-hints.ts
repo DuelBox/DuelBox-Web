@@ -12,16 +12,10 @@
  * migration path. It is resettable, which is the "resettable from settings" acceptance
  * criterion — a returning player can ask to be shown the hints again.
  */
-import {
-  KEY_PREFIX,
-  isRecord,
-  readJson,
-  removeJson,
-  uniqueStrings,
-  writeVersioned,
-} from './local-store';
+import { HINTS_SEEN_KEY } from './control-hints-key';
+import { isRecord, readJson, removeJson, uniqueStrings, writeVersioned } from './local-store';
 
-export const HINTS_SEEN_KEY = `${KEY_PREFIX}hints-seen`;
+export { HINTS_SEEN_KEY };
 
 const VERSION = 1;
 
