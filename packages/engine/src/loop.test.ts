@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
+import {
+  FixedLoop,
+  RunLoop,
+  browserBatterySource,
+  browserClock,
+  browserGamepadSource,
+} from './loop.js';
 import type { Clock, LoopCallbacks } from './loop.js';
 
 class Recorder implements LoopCallbacks {
@@ -528,6 +534,141 @@ describe('browserClock', () => {
     } finally {
       if (original !== undefined) scope.requestAnimationFrame = original;
     }
+  });
+});
+
+describe('the frame callback (#31)', () => {
+  it('reports the wall-clock time each frame brings, before any step runs', () => {
+    const seen: number[] = [];
+    const order: string[] = [];
+    const loop = new FixedLoop({
+      update() {
+        order.push('update');
+      },
+      render() {
+        order.push('render');
+      },
+      frame(delta) {
+        seen.push(delta);
+        order.push('frame');
+      },
+    });
+    loop.advance(1 / 30);
+    expect(seen).toEqual([1 / 30]);
+    // Once, first, however many steps the frame owed.
+    expect(order).toEqual(['frame', 'update', 'update', 'render']);
+  });
+
+  it('hands over the sanitised delta, never a negative or a NaN', () => {
+    const seen: number[] = [];
+    const loop = new FixedLoop({
+      update() {},
+      render() {},
+      frame(delta) {
+        seen.push(delta);
+      },
+    });
+    loop.advance(-1);
+    loop.advance(Number.NaN);
+    expect(seen).toEqual([0, 0]);
+  });
+
+  it('is optional, so a loop driven by hand owes nothing', () => {
+    const loop = new FixedLoop({ update() {}, render() {} });
+    expect(() => {
+      loop.advance(1 / 60);
+    }).not.toThrow();
+  });
+});
+
+describe('browserBatterySource (#190)', () => {
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  /** A stand-in for `BatteryManager`, with the two events the adapter subscribes to. */
+  function fakeBattery(level: number, charging: boolean) {
+    const listeners: Record<string, (() => void)[]> = {};
+    return {
+      level,
+      charging,
+      addEventListener(type: string, listener: () => void) {
+        (listeners[type] ??= []).push(listener);
+      },
+      fire(type: string) {
+        for (const listener of listeners[type] ?? []) listener();
+      },
+    };
+  }
+
+  it('answers null where the API is absent, which is every WebKit browser', () => {
+    const read = withNavigator({}, () => browserBatterySource());
+    expect(read()).toBeNull();
+    const none = withNavigator(undefined, () => browserBatterySource());
+    expect(none()).toBeNull();
+  });
+
+  it('answers null until the promise resolves, then the level and whether it is charging', async () => {
+    const battery = fakeBattery(0.15, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    // Asked at once, answered later: the first frames of a match see "unknown".
+    expect(read()).toBeNull();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toEqual({ level: 0.15, charging: false });
+  });
+
+  it('follows the battery through its own events without a second ask', async () => {
+    const battery = fakeBattery(0.5, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    battery.level = 0.1;
+    battery.fire('levelchange');
+    expect(read()?.level).toBe(0.1);
+    battery.charging = true;
+    battery.fire('chargingchange');
+    expect(read()?.charging).toBe(true);
+  });
+
+  it('hands back the same object on every read, so a frame that asks allocates nothing (rule 5)', async () => {
+    const battery = fakeBattery(0.5, true);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    const first = read();
+    battery.level = 0.4;
+    battery.fire('levelchange');
+    expect(read()).toBe(first);
+  });
+
+  it('stays null when the browser has the method and refuses to answer', async () => {
+    const read = withNavigator({ getBattery: () => Promise.reject(new Error('no')) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toBeNull();
   });
 });
 

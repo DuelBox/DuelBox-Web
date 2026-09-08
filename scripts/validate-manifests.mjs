@@ -146,13 +146,16 @@ async function main() {
 function describeOrientations(entries) {
   const counts = { portrait: 0, landscape: 0, any: 0 };
   let bothWays = 0;
+  let cappedDpr = 0;
   for (const { manifest } of entries) {
     counts[manifest.orientation] += 1;
     if (manifest.alternateLogical !== undefined) bothWays += 1;
+    if (manifest.dprCap !== undefined) cappedDpr += 1;
   }
   return (
     `orientation — ${String(counts.portrait)} portrait, ${String(counts.landscape)} landscape, ` +
-    `${String(counts.any)} either way up; ${String(bothWays)} with a second logical box (#1886)`
+    `${String(counts.any)} either way up; ${String(bothWays)} with a second logical box (#1886); ` +
+    `${String(cappedDpr)} with a device-pixel-ratio cap of their own (#31)`
   );
 }
 
