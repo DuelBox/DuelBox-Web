@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Canvas2DRenderer } from './renderer.js';
-import type { Canvas2DLike } from './renderer.js';
+import { Canvas2DRenderer, MAX_SURFACE_LOSSES } from './renderer.js';
+import type { Canvas2DLike, SurfaceEvent, SurfaceEventTarget } from './renderer.js';
 import { fitViewport } from './viewport.js';
 import type { Viewport } from './viewport.js';
 import type { LogicalSize } from './seat.js';
@@ -860,5 +860,230 @@ describe('reduced motion', () => {
     expect(() => {
       renderer.pushRotation(Number.NaN);
     }).toThrow(RangeError);
+  });
+});
+
+/**
+ * A hand-written stand-in for the canvas element a host watches.
+ *
+ * It keeps listeners by type and fires them on demand, and the event it fires records
+ * whether anybody cancelled it — which is the assertion that matters most in this block,
+ * because an uncancelled `contextlost` is one the browser answers by never restoring the
+ * surface at all. Same trick as `RecordingContext` one layer up: no jsdom, no canvas, no
+ * DOM of any kind, just the shape the renderer actually reaches for.
+ */
+class FakeSurface implements SurfaceEventTarget {
+  readonly #listeners = new Map<string, Set<(event: SurfaceEvent) => void>>();
+
+  addEventListener(type: string, listener: (event: SurfaceEvent) => void): void {
+    let registered = this.#listeners.get(type);
+    if (registered === undefined) {
+      registered = new Set();
+      this.#listeners.set(type, registered);
+    }
+    registered.add(listener);
+  }
+
+  removeEventListener(type: string, listener: (event: SurfaceEvent) => void): void {
+    this.#listeners.get(type)?.delete(listener);
+  }
+
+  /** Listeners still attached, across both types. Zero after a clean teardown. */
+  get listenerCount(): number {
+    let total = 0;
+    for (const registered of this.#listeners.values()) total += registered.size;
+    return total;
+  }
+
+  /** Dispatch one event as the browser would, and report whether it was cancelled. */
+  fire(type: 'contextlost' | 'contextrestored'): boolean {
+    let cancelled = false;
+    const event: SurfaceEvent = {
+      preventDefault(): void {
+        cancelled = true;
+      },
+    };
+    for (const listener of this.#listeners.get(type) ?? []) listener(event);
+    return cancelled;
+  }
+}
+
+/** The calls `beginFrame` and `endFrame` make on a live surface, with nothing drawn between. */
+const EMPTY_FRAME = ['save', 'translate', 'scale', 'beginPath', 'rect', 'clip', 'restore'];
+
+interface WatchHarness {
+  readonly fake: RecordingContext;
+  readonly renderer: Canvas2DRenderer;
+  readonly surface: FakeSurface;
+  /** Every `onLost` call, each recording whether the renderer had given up by then. */
+  readonly losses: boolean[];
+  readonly restores: number[];
+  readonly stop: () => void;
+}
+
+function watched(): WatchHarness {
+  const { fake, renderer } = setup();
+  const surface = new FakeSurface();
+  const losses: boolean[] = [];
+  const restores: number[] = [];
+  const stop = renderer.watchSurface(
+    surface,
+    (abandoned) => losses.push(abandoned),
+    () => restores.push(restores.length + 1),
+  );
+  return { fake, renderer, surface, losses, restores, stop };
+}
+
+/**
+ * Losing the drawing surface and getting it back (#101).
+ *
+ * The issue this comes from says WebGL, and there is none in this repository — every game
+ * renders through `Canvas2DRenderer` and the only `getContext` calls ask for `'2d'`. The
+ * hazard survives the correction: a 2D context is dropped under memory pressure exactly as
+ * a GL one is, fires the same two events under the names `contextlost` and
+ * `contextrestored`, and ignores every call made against it in between. Nothing in this
+ * repository listened for either until this block, so a phone that reclaimed the canvas
+ * left the blank rectangle the issue describes with a match still stepping behind it.
+ *
+ * Every test here was watched failing against the renderer as it stood the day before.
+ */
+describe('surface loss (#101)', () => {
+  it('cancels the loss, because an uncancelled one is never restored', () => {
+    const { surface } = watched();
+
+    // The browser reads the return of this dispatch as "somebody intends to redraw".
+    expect(surface.fire('contextlost')).toBe(true);
+  });
+
+  it('reports the loss and stops claiming there is anywhere to draw', () => {
+    const { renderer, surface, losses } = watched();
+    expect(renderer.surfaceLost).toBe(false);
+    expect(renderer.surfaceAbandoned).toBe(false);
+
+    surface.fire('contextlost');
+
+    expect(renderer.surfaceLost).toBe(true);
+    // Not the last loss, so the host is told to expect the surface back.
+    expect(losses).toEqual([false]);
+    expect(renderer.surfaceAbandoned).toBe(false);
+  });
+
+  it('draws nothing at all into a surface that is gone', () => {
+    const { fake, renderer, surface } = watched();
+    surface.fire('contextlost');
+    fake.calls.length = 0;
+
+    renderer.beginFrame();
+    renderer.clear('#101010');
+    renderer.endFrame();
+
+    // The frame opened and closed in the renderer's own books; the context, which would
+    // ignore all of it anyway, was never asked to save a level it could not restore.
+    expect(opsOf(fake)).not.toContain('save');
+    expect(fake.saveDepth).toBe(0);
+  });
+
+  it('hands the surface back on restore, and the next frame is an ordinary frame', () => {
+    const { fake, renderer, surface, restores } = watched();
+    surface.fire('contextlost');
+
+    surface.fire('contextrestored');
+
+    expect(renderer.surfaceLost).toBe(false);
+    expect(restores).toEqual([1]);
+    fake.calls.length = 0;
+    renderer.beginFrame();
+    renderer.endFrame();
+    expect(opsOf(fake)).toEqual(EMPTY_FRAME);
+  });
+
+  it('closes a frame the loss interrupted without reporting a leak that is not one', () => {
+    const { fake, renderer, surface } = watched();
+    renderer.beginFrame();
+    renderer.pushSeatRotation(true);
+
+    surface.fire('contextlost');
+
+    // The game did nothing wrong: its pop was still to come, and the counters were cleared
+    // underneath it. Reporting an unbalanced push here would send an author to code that
+    // balances, which is the mistake `endFrame`'s two depths were split up to avoid.
+    expect(renderer.seatRotationDepth).toBe(0);
+    expect(() => {
+      renderer.endFrame();
+    }).not.toThrow();
+    // The real context discards its save stack with the surface; this fake keeps the two
+    // levels it was given, which is why the renderer must not restore against it. What
+    // matters is that the renderer added nothing to it and takes nothing off it.
+    expect(countOp(fake, 'restore')).toBe(0);
+
+    surface.fire('contextrestored');
+    fake.calls.length = 0;
+    renderer.beginFrame();
+    renderer.endFrame();
+    expect(opsOf(fake)).toEqual(EMPTY_FRAME);
+  });
+
+  it('gives up after the second loss and never takes the surface back', () => {
+    const { renderer, surface, losses, restores } = watched();
+    surface.fire('contextlost');
+    surface.fire('contextrestored');
+
+    surface.fire('contextlost');
+
+    expect(losses).toEqual([false, true]);
+    expect(renderer.surfaceAbandoned).toBe(true);
+    // A surface that comes back after the second loss is refused. The host has already put
+    // something readable where the board was and a board flickering under it is worse.
+    expect(surface.fire('contextrestored')).toBe(false);
+    expect(restores).toEqual([1]);
+    expect(renderer.surfaceLost).toBe(true);
+  });
+
+  it('gives up on exactly the loss MAX_SURFACE_LOSSES names', () => {
+    // The negative control for the number itself: everything before the last loss leaves a
+    // renderer that still expects to draw again. Written against the constant rather than
+    // against a literal two, which on its own would make this the tautology CLAUDE.md warns
+    // about — a test that passes for any threshold, including one. So the claim the loop
+    // cannot make is stated outright: a renderer that gives up on the first loss has no
+    // recovery in it at all, and listening for `contextrestored` would be theatre.
+    expect(MAX_SURFACE_LOSSES).toBeGreaterThan(1);
+    const { renderer, surface } = watched();
+
+    for (let i = 1; i < MAX_SURFACE_LOSSES; i += 1) {
+      surface.fire('contextlost');
+      expect(renderer.surfaceAbandoned).toBe(false);
+      surface.fire('contextrestored');
+      expect(renderer.surfaceLost).toBe(false);
+    }
+
+    surface.fire('contextlost');
+    expect(renderer.surfaceAbandoned).toBe(true);
+  });
+
+  it('stops listening when the host tears down', () => {
+    const { renderer, surface, losses, stop } = watched();
+    expect(surface.listenerCount).toBe(2);
+
+    stop();
+
+    expect(surface.listenerCount).toBe(0);
+    expect(surface.fire('contextlost')).toBe(false);
+    expect(losses).toEqual([]);
+    expect(renderer.surfaceLost).toBe(false);
+  });
+
+  it('leaves an unwatched renderer exactly as it was', () => {
+    // The other negative control. Without it every assertion above would pass just as well
+    // against a renderer that reported a lost surface from the moment it was built.
+    const { fake, renderer } = setup();
+
+    expect(renderer.surfaceLost).toBe(false);
+    expect(renderer.surfaceAbandoned).toBe(false);
+    renderer.beginFrame();
+    renderer.endFrame();
+    expect(opsOf(fake)).toEqual(EMPTY_FRAME);
+    expect(() => {
+      renderer.endFrame();
+    }).toThrow(/endFrame/);
   });
 });
