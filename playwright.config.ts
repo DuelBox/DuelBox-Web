@@ -146,6 +146,11 @@ const CHROMIUM_ONLY = [
   // Headless WebKit's WebGL is software-rendered when it exists at all, and the flag it
   // exercises is off in every build a WebKit user gets (#16).
   '**/renderer-parity.spec.ts',
+  // `adaptive-quality.spec.ts` (#190) stubs `navigator.getBattery`, which only Chromium has.
+  // On WebKit the gate is never armed in production, so a second engine would be testing the
+  // stub rather than the product — and it did: the frames-per-second ratio the spec holds
+  // read outside its window on a loaded runner's WebKit twice, for a path no WebKit user runs.
+  '**/adaptive-quality.spec.ts',
   // `attract-mode.spec.ts` (#165) stubs `navigator.getBattery` and `navigator.connection`,
   // which are Chromium's alone — WebKit has neither, so the stubs would stub nothing — and a
   // bot-versus-bot match is the same simulation on every engine by rule 8. A second engine
