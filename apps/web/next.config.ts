@@ -35,6 +35,14 @@ const nextConfig: NextConfig = {
   // Trailing slashes keep directory-style hosts (GitHub Pages, plain S3) working.
   trailingSlash: true,
   poweredByHeader: false,
+  // The renderer flag (#16), given a value whether or not the environment set one. A
+  // `process.env.NEXT_PUBLIC_*` that is unset at build time is left as a runtime read of an
+  // empty object, and `undefined === 'webgl'` is then a comparison the minifier cannot fold —
+  // so the `import()` behind it would be emitted as a chunk nobody fetches. Defined here it
+  // is inlined as a literal, `'canvas2d' === 'webgl'` folds to false, and the import is
+  // deleted before it is resolved. `scripts/check-renderer-flag.mjs` reads the export to be
+  // sure that happened.
+  env: { NEXT_PUBLIC_RENDERER: process.env.NEXT_PUBLIC_RENDERER ?? 'canvas2d' },
 };
 
 export default nextConfig;

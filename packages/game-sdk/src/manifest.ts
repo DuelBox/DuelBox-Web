@@ -293,6 +293,23 @@ export const gameManifestSchema = z
      */
     alternateLogical: logicalSize.optional(),
 
+    /**
+     * The device-pixel-ratio ceiling this game's backing store is drawn at (#31).
+     *
+     * The host clamps the display's ratio to `min(this, the adaptive-quality rung's cap)`
+     * before sizing the canvas. Absent means 2 — `clampDevicePixelRatio`'s own default,
+     * and the ceiling every game has always had — so no manifest changes to keep what it
+     * has. A game whose art is all flat fills and text may declare 1 and give a 3x phone
+     * back three-quarters of its fill rate for no visible loss; a game with fine strokes
+     * may declare 3 and pay for them. Never below 1, never above 4: outside that range the
+     * number is a mistake rather than a choice.
+     *
+     * Presentation only. It sizes the pixels the frame is drawn into and nothing the
+     * simulation reads — the logical box is untouched (rule 8), so two devices with
+     * different caps still step the identical match.
+     */
+    dprCap: z.number().min(1).max(4).optional(),
+
     zoneSplit: z.enum(ZONE_SPLITS),
 
     /**
