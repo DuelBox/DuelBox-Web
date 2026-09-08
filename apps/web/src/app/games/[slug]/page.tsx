@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { categorySlug } from '@/lib/categories';
+import { offeredModes } from '@/lib/match-setup';
 import { killSwitchFor } from '@/lib/flags';
 import { formatRound } from '@/lib/format';
 import type { Opponent } from '@/lib/head-to-head';
@@ -155,14 +156,33 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
           {game.rule ? <p className={styles.rule}>{game.rule}</p> : null}
 
           {/*
-            Withheld from a switched-off game, because every one of these cards is written as
-            an offer — "Play together here", "Play against a bot" — and an offer sitting a
-            line above "switched off at the moment" is a page contradicting itself in the
-            reader's own eyeline. CLAUDE.md's eighth and ninth entries are both that shape.
+            `offeredModes`, not `game.modes`, and the difference is six live broken promises.
+
+            The manifest's vocabulary is `friend | bot | solo`; the shell's `PlayMode` is
+            `friend | bot`. Nothing in `apps/web` seats one player alone — there is no route,
+            no reducer state and no seating rule for it — so `solo` is a mode this build
+            cannot start. Six games declare it anyway (animal-stack, blocks, brainrot-stack,
+            maze-paint, solitaire, sudoku), and each of their pages was rendering a card
+            reading "Play solo — Chase your own best score, no opponent needed." one click
+            away from a lobby that offers "Play together here" and "Play against Pip" and
+            nothing else.
+
+            The declarations are not wrong and are deliberately left alone: they record what
+            the genre does, which is what `data/catalog.yaml` and the manifests were made to
+            agree about (#2531), and `packages/games/solitaire/src/manifest.ts` says as much
+            in its own comment. `scripts/validate-manifests.mjs` names all six and points at
+            #1749 so the gap is visible rather than lost. What was wrong was this page
+            treating an observation as an offer. It advertises what a player can actually
+            press, and nothing else.
+
+            Withheld entirely from a switched-off game, for the same reason one level up:
+            every one of these cards is written as an offer, and an offer sitting a line
+            above "switched off at the moment" is a page contradicting itself in the reader's
+            own eyeline. CLAUDE.md's eighth and ninth entries are both that shape.
           */}
           {switchedOff ? null : (
             <div className={styles.modes}>
-              {game.modes.map((mode) => {
+              {offeredModes(game.modes).map((mode) => {
                 const copy = MODE_COPY[mode];
                 if (!copy) return null;
                 return (

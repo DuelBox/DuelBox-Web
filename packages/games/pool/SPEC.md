@@ -58,6 +58,46 @@ go. The ball leaves along the line from the finger *through* the ball, and how f
 pulled is how hard you hit it — the thing the object itself suggests. A pull shorter than
 18 units is a rest, not a shot.
 
+**Full power is the edge of the table, not a fixed distance. [ours]** The draw used to be
+measured against a flat 260 units, and a 260-unit pull has to fit somewhere: the only
+surface a player can reliably touch is the canvas, which is exactly the logical box. A
+resting ball is at least `CUSHION + BALL_RADIUS` = **49 units** from the edge of that box,
+so playing firmly off a cushion meant dragging to a point that was not on the canvas.
+
+That failed two ways, both of them #1965's subject and neither of them visibly:
+
+- **It depended on the screen.** The host captures the pointer and converts with
+  `viewportToLogical`, which clamps nothing, so a drag that leaves the canvas keeps
+  reporting logical coordinates. On a 4K desktop the letterbox bars beside a 1.5625 box are
+  enormous and every shot was available; on a phone whose canvas meets the glass the same
+  shot was not. Measured: a ball on the side rail could be struck at **0.188** power, and
+  nothing higher, without leaving the board.
+- **It aimed the player at the system gesture area.** The edge of a phone screen is where
+  back, home and the notification shade live. The OS answers with `pointercancel`, which
+  since #2480 is correctly not a release — so the harder someone pulled, the likelier the
+  shot was to vanish.
+
+So the draw is measured against the room that is there: `min(room behind the ball, 260)`,
+floored at 40 so a potted cue ball sitting in a pocket cannot collapse the scale. A ball
+tight on a cushion is played with a short, sharp action and hits just as hard, which is what
+a real player does on the rail. The deadzone stays absolute at 18 units, so a short draw
+costs *resolution* — about ten distinguishable levels against seventy-five on open table, at
+the engine's 3.2-unit input lattice — and never costs the shot.
+
+The obvious companion change, clamping the pointer into the box before measuring it, was
+written and then removed: with the draw already no longer than the room, full power is
+reached *at* the edge and a finger beyond it is saturated, so the clamp guarded nothing —
+and a per-axis clamp of a diagonal drag is not a point on the same ray, so it bent the aim.
+It was found by putting it back and watching no test fail.
+
+The drawn cue follows the same room, because the picture has to agree with the control: a
+fixed 150-unit cue drawn back by up to 154 units put the whole thing outside the box on a
+rail shot, where the frame clip removed it — so the one thing a player reads power from
+disappeared exactly when they were pulling hardest. It now takes a little over half the
+available room for its length and travels through the rest: 21 to 135 units behind the ball
+on open table, against the old 34 to 154, and a short cue with a short action on the
+cushion.
+
 On a keyboard, steer to turn the cue, hold to build power, release to strike. The cue is
 drawn back on screen by how hard the shot will be, so power is read from the cue's position
 rather than from a number.
@@ -140,6 +180,48 @@ No wall clock, no `Math.random`, one `Rng` from the context, and the bot's error
 per shot rather than per step — a per-step error averages to zero and every tier plays the
 same. The same opening shot replays to identical ball positions to six decimal places, and
 the same throw settles within 1% at 60 Hz and 120 Hz.
+
+## Every screen size, both orientations
+
+**Most of #1965 is true here by construction, and saying so is the finding.** The logical
+box is a fixed 1000 × 640 in the manifest; the host fits it with `fitViewport` and
+letterboxes the surplus; `Canvas2DRenderer.beginFrame` clips the frame to it. There is not
+one device API under `packages/games/pool/src` — no `window`, no `devicePixelRatio`, no
+`matchMedia` — so this game *cannot* lay out from pixel values, cannot branch on a device
+(rule 10), and cannot be resized by anything: a resize reaches `renderer.setViewport` and
+stops there. Match state across resize, rotation and fold is therefore preserved by there
+being nothing to preserve it from. `apps/web/src/data/cross-viewport.test.ts` drives this
+game at five viewports including a notched phone and requires bit-identical traces;
+`e2e/resize.spec.ts` proves the host does not rebuild a game on a resize.
+
+**One layout, because there can only be one.** "Design the layout at each device class" is
+not a knob a game has: rule 8 fixes the box, and a game that reshaped itself per device
+would break cross-device play. What Pool declares instead is `orientation: 'landscape'`,
+which `shouldPromptRotate` turns into a non-blocking hint when the device is the other way
+up. A pool table is strongly landscape and that is the honest answer for it. Both
+orientations still *play*. Fitting the box to the whole of a viewport gives 320 × 205 at a
+320 × 568 phone held upright and 609 × 390 at 844 × 390 held sideways, where `PlaySurface`'s
+`short` class moves the scoreboards off the vertical axis; the board area is smaller than
+the viewport by whatever the shell's chrome takes, and that part is not measurable from a
+node test, so it is not claimed here. `layout.test.ts` fits every named class from
+`docs/responsive.md` in both orientations and asserts the box is whole, unstretched, inside
+the safe rectangle, and never overflowing.
+
+**What was not free is what the game draws.** Two things were outside the box at every
+screen size, invisibly, because the frame clip removed them:
+
+- the foul message, centred on `TABLE_HEIGHT + 80` — the bottom edge exactly — with
+  `Renderer.text` taking `y` as the *centre* of the line, so half of it was gone;
+- the cue, on any firm shot played off a cushion.
+
+Both are placed from `layout.ts` now, and `rowCentre` is a clamp rather than a corrected
+constant so the next arithmetic slip cannot repeat it. `game.test.ts` walks every draw call
+as the rectangle it actually covers — including text, and with no slack — which is the
+game-side half of "nothing outside the safe area". It has to be game-side:
+`e2e/safe-area.spec.ts` and `e2e/touch-targets.spec.ts` walk the DOM, every control and
+every word here is drawn on a canvas, and neither spec visits `/play/pool/`. The repo-wide
+`cross-viewport.test.ts` check allows `max(width, height) × 2` of overhang by design, so it
+could not see a 12-unit one.
 
 ## Not specified here
 

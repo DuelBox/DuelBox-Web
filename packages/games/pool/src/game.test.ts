@@ -4,8 +4,12 @@ import type { SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import { HOLD_FOR_FULL_POWER, PULL_DEADZONE, PULL_FOR_FULL_POWER, PoolGame } from './game.js';
+import { roomAlong } from './layout.js';
 import {
   BALLS_PER_SIDE,
+  BALL_RADIUS,
+  CUE_MAX_SPEED,
+  CUSHION,
   TABLE_HEIGHT,
   TABLE_WIDTH,
   cueBall,
@@ -177,6 +181,98 @@ class RecordingRenderer implements Renderer {
   #record(op: string, ...values: DrawArg[]): void {
     this.calls.push({ op, args: values });
   }
+}
+
+/**
+ * Every drawn primitive, as the rectangle it actually covers, against the logical box.
+ *
+ * The game-side half of #1965's "nothing outside the safe area at any size". It has to be
+ * game-side, because `e2e/safe-area.spec.ts` and `e2e/touch-targets.spec.ts` walk the DOM —
+ * `document.querySelectorAll('a, button, input, [role="button"]')` — and every control and
+ * every word this game shows is drawn on a canvas, where a DOM walker finds nothing at all.
+ * Neither spec visits `/play/pool/` either. So "passes the safe-area spec" says nothing
+ * whatever about Pool's own picture, and this is the check that does.
+ *
+ * The box is what the shell has already put inside the safe area: `PlaySurface.module.css`
+ * pads with `max(spacing, var(--db-safe-*))`, the host measures the canvas after that and
+ * passes `NO_INSETS` to `fitViewport` on purpose (docs/responsive.md), so the logical box and
+ * the safe region are the same rectangle by the time this game draws into it. Staying inside
+ * the box *is* staying clear of the notch, the home indicator and the gesture bands.
+ *
+ * What it cannot check is the *width* of a line of text: `Renderer.measureText` needs a real
+ * 2D context and this suite runs in node with no DOM. Text is checked for its vertical
+ * extent, which is where the bug was, and for an anchor inside the box.
+ *
+ * Settled orientations only. Half-way through a seat flip a board rotating about its centre
+ * sweeps its corners out by root two, which is exactly why `Canvas2DRenderer.beginFrame`
+ * clips, and is the engine's business rather than this game's.
+ */
+function outsideTheBox(renderer: RecordingRenderer): string[] {
+  const { width, height } = manifest.logical;
+  const offenders: string[] = [];
+
+  function check(op: string, minX: number, minY: number, maxX: number, maxY: number): void {
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+      offenders.push(`${op} drew at a non-finite coordinate`);
+      return;
+    }
+    if (minX < -1e-6 || minY < -1e-6 || maxX > width + 1e-6 || maxY > height + 1e-6) {
+      offenders.push(
+        `${op} covers ${minX.toFixed(1)},${minY.toFixed(1)} to ${maxX.toFixed(1)},${maxY.toFixed(1)}`,
+      );
+    }
+  }
+
+  for (const call of renderer.calls) {
+    const n = (index: number): number => {
+      const value = call.args[index];
+      return typeof value === 'number' ? value : Number.NaN;
+    };
+    switch (call.op) {
+      case 'rect':
+        check(call.op, n(0), n(1), n(0) + n(2), n(1) + n(3));
+        break;
+      case 'strokeRect': {
+        const half = n(4) / 2;
+        check(call.op, n(0) - half, n(1) - half, n(0) + n(2) + half, n(1) + n(3) + half);
+        break;
+      }
+      case 'circle':
+        check(call.op, n(0) - n(2), n(1) - n(2), n(0) + n(2), n(1) + n(2));
+        break;
+      case 'strokeCircle': {
+        const reach = n(2) + n(3) / 2;
+        check(call.op, n(0) - reach, n(1) - reach, n(0) + reach, n(1) + reach);
+        break;
+      }
+      case 'line': {
+        // The stroke's width goes along the normal, not along the line, so the corners are
+        // the ends displaced perpendicular by half the width. A bounding box that padded
+        // both axes would condemn a cue lying flat against a cushion that is genuinely
+        // inside it.
+        const dx = n(2) - n(0);
+        const dy = n(3) - n(1);
+        const length = Math.hypot(dx, dy);
+        const half = n(4) / 2;
+        const nx = length === 0 ? 0 : (-dy / length) * half;
+        const ny = length === 0 ? 0 : (dx / length) * half;
+        const xs = [n(0) + nx, n(0) - nx, n(2) + nx, n(2) - nx];
+        const ys = [n(1) + ny, n(1) - ny, n(3) + ny, n(3) - ny];
+        check(call.op, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+        break;
+      }
+      case 'text': {
+        // `Renderer.text` takes y as the centre of the line, which is the whole of the bug
+        // this catches: a 24-unit line centred on the bottom edge lost half of itself.
+        const half = n(3) / 2;
+        check(`text "${String(call.args[0])}"`, n(1), n(2) - half, n(1), n(2) + half);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return offenders;
 }
 
 describe('aiming with a finger', () => {
@@ -565,15 +661,7 @@ describe('rendering', () => {
     for (let i = 0; i < 3000; i += 1) game.update(STEP, input);
     const renderer = new RecordingRenderer();
     game.render(renderer, 0);
-    for (const call of renderer.calls) {
-      if (call.op === 'text') continue;
-      for (const value of call.args) {
-        if (typeof value !== 'number') continue;
-        expect(Number.isFinite(value)).toBe(true);
-        expect(value, `${call.op} drew at ${String(value)}`).toBeGreaterThan(-360);
-        expect(value, `${call.op} drew at ${String(value)}`).toBeLessThan(TABLE_WIDTH + 360);
-      }
-    }
+    expect(outsideTheBox(renderer)).toEqual([]);
   });
 
   it('does not mutate the position', () => {
@@ -585,6 +673,186 @@ describe('rendering', () => {
     game.render(new RecordingRenderer(), 0);
     game.render(new RecordingRenderer(), 0);
     expect(JSON.stringify(game.position)).toBe(before);
+  });
+});
+
+/**
+ * #1965, at the level of the whole game rather than of one placement function.
+ *
+ * `layout.test.ts` holds the geometry; this holds what a player actually gets when the two
+ * of them are wired together — a finger that has run out of screen, a cue ball flat against
+ * a cushion, and a foul message that used to be half missing.
+ */
+describe('correct at every screen size', () => {
+  /** The cue ball, moved somewhere legal, with the table left otherwise untouched. */
+  function placeCue(game: PoolGame, x: number, y: number): void {
+    const cue = cueBall(game.position);
+    cue.x = x;
+    cue.y = y;
+    cue.vx = 0;
+    cue.vy = 0;
+  }
+
+  /**
+   * Aim along (dx, dy) as hard as the table allows, by pulling far past the edge of the box.
+   *
+   * Deliberately *past* it: that is what the host delivers. It captures the pointer on
+   * pointer-down and converts with `viewportToLogical`, which clamps nothing, so a drag that
+   * leaves the canvas keeps arriving with logical coordinates outside the play area.
+   */
+  function pullPast(game: PoolGame, input: ScriptedInput, dx: number, dy: number): void {
+    const cue = cueBall(game.position);
+    input.point('p1', cue.x - dx * 4000, cue.y - dy * 4000);
+    game.update(STEP, input);
+  }
+
+  /**
+   * Aim along (dx, dy) with the finger on the very last point of the canvas behind the ball.
+   *
+   * The distinction from {@link pullPast} is the whole point and it is easy to lose: a pull
+   * of four thousand units saturates any power scale, so a test written that way passes just
+   * as happily with the flat 260-unit draw that could not be reached at all. This one asks
+   * the real question — what can a finger that has *stayed on the glass* achieve?
+   */
+  function pullToTheEdge(game: PoolGame, input: ScriptedInput, dx: number, dy: number): void {
+    const cue = cueBall(game.position);
+    const room = roomAlong(cue.x, cue.y, -dx, -dy, manifest.logical);
+    input.point('p1', cue.x - dx * room, cue.y - dy * room);
+    game.update(STEP, input);
+  }
+
+  it('shows the whole foul message rather than the top half of it', () => {
+    const game = new PoolGame();
+    game.init(makeContext(211));
+    game.position.fouled = true;
+    const renderer = new RecordingRenderer();
+    game.render(renderer, 0);
+
+    const foul = renderer.calls.find(
+      (call) => call.op === 'text' && call.args[0] === 'Foul — cue ball replaced',
+    );
+    expect(foul, 'the message is drawn at all').toBeDefined();
+    expect(outsideTheBox(renderer), 'the message was clipped by the frame').toEqual([]);
+  });
+
+  it('keeps the whole picture inside the box with the cue ball on any cushion', () => {
+    // Every rail and both corners, aimed all the way round, at the hardest shot the table
+    // allows. This is where a fixed-length cue drawn back by a fixed amount went off the
+    // board and the frame clip quietly removed it.
+    const rail = CUSHION + 15;
+    const places: readonly (readonly [number, number])[] = [
+      [rail, TABLE_HEIGHT / 2],
+      [TABLE_WIDTH - rail, TABLE_HEIGHT / 2],
+      [TABLE_WIDTH / 2, rail],
+      [TABLE_WIDTH / 2, TABLE_HEIGHT - rail],
+      [rail, rail],
+      [TABLE_WIDTH - rail, TABLE_HEIGHT - rail],
+    ];
+    const offenders: string[] = [];
+    for (const [x, y] of places) {
+      for (let i = 0; i < 16; i += 1) {
+        const angle = (i / 16) * Math.PI * 2;
+        const game = new PoolGame();
+        game.init(makeContext(223));
+        placeCue(game, x, y);
+        const input = new ScriptedInput();
+        pullPast(game, input, Math.cos(angle), Math.sin(angle));
+        const renderer = new RecordingRenderer();
+        game.render(renderer, 0);
+        for (const complaint of outsideTheBox(renderer)) {
+          offenders.push(`${String(x)},${String(y)} at ${angle.toFixed(2)}: ${complaint}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('reads a pull the same whether or not there is screen beside the board', () => {
+    // The fairness half of #1965. On a 4K desktop the letterbox bars either side of a
+    // 1.5625 box are enormous and a drag into them used to keep building power; on a phone
+    // where the canvas meets the glass the same shot was unavailable. Both now stop at the
+    // edge of the play area, so both get the same shot.
+    // The cue ball on the left rail, which is where the two used to differ: 49 units of
+    // canvas behind it and a draw that asked for 260.
+    const atTheEdge = new PoolGame();
+    atTheEdge.init(makeContext(227));
+    placeCue(atTheEdge, CUSHION + BALL_RADIUS, 300);
+    const edgeInput = new ScriptedInput();
+    edgeInput.point('p1', 0, 300);
+    atTheEdge.update(STEP, edgeInput);
+
+    const wayPast = new PoolGame();
+    wayPast.init(makeContext(227));
+    placeCue(wayPast, CUSHION + BALL_RADIUS, 300);
+    const pastInput = new ScriptedInput();
+    pastInput.point('p1', -2000, 300);
+    wayPast.update(STEP, pastInput);
+
+    expect(atTheEdge.power, 'the last point of the canvas is a full shot').toBe(1);
+    expect(wayPast.power, 'and beyond it buys nothing').toBe(atTheEdge.power);
+    expect(wayPast.aimAngle).toBe(atTheEdge.aimAngle);
+  });
+
+  it('lets a ball tight on the cushion be struck as hard as one in the middle', () => {
+    // The playability half. A resting ball is at least 49 units from the edge of the box and
+    // a flat 260-unit draw does not fit in 49, so playing firmly off a rail meant dragging
+    // to a point that was not on the canvas — into the band where a phone reads a system
+    // gesture and answers with `pointercancel`, which since #2480 correctly throws the shot
+    // away. Full power now lives at the edge of the play area, wherever the ball is.
+    const tight = new PoolGame();
+    tight.init(makeContext(229));
+    placeCue(tight, CUSHION + BALL_RADIUS, TABLE_HEIGHT / 2);
+    const input = new ScriptedInput();
+    // To the edge of the canvas and not one unit past it: the finger stays on the glass.
+    pullToTheEdge(tight, input, 1, 0);
+    expect(tight.power, 'a short draw off the rail is still a full shot').toBe(1);
+
+    input.lift('p1');
+    tight.update(STEP, input);
+    expect(tight.position.phase).toBe('rolling');
+    expect(Math.hypot(cueBall(tight.position).vx, cueBall(tight.position).vy)).toBeCloseTo(
+      CUE_MAX_SPEED,
+      6,
+    );
+  });
+
+  it('still refuses a tap on a ball that is tight on the cushion', () => {
+    // The deadzone is absolute and stays absolute: a short draw costs resolution, never the
+    // rule that resting a thumb on the ball is not a shot.
+    const game = new PoolGame();
+    game.init(makeContext(233));
+    placeCue(game, CUSHION + BALL_RADIUS, TABLE_HEIGHT / 2);
+    const input = new ScriptedInput();
+    const cue = cueBall(game.position);
+    input.point('p1', cue.x - PULL_DEADZONE / 2, cue.y);
+    game.update(STEP, input);
+    expect(game.power).toBe(0);
+    input.lift('p1');
+    game.update(STEP, input);
+    expect(game.position.phase).toBe('aiming');
+  });
+
+  it('is unmoved by anything a resize can do to it', () => {
+    // "Rotating or resizing mid-match preserves the simulation exactly", from this game's
+    // side of the line. A resize reaches the renderer (`renderer.setViewport`) and nothing
+    // else — `PoolGame` holds no viewport, no screen size and no pixel — so the strongest
+    // statement available here is that the match is identical whether it is drawn or not,
+    // and identical whichever renderer draws it. The end-to-end property is covered by
+    // `apps/web/src/data/cross-viewport.test.ts`, which drives this game at five viewports
+    // including a notched phone and requires bit-identical traces, and by `e2e/resize.spec.ts`.
+    function trace(render: boolean): string {
+      const game = new PoolGame();
+      game.init(makeContext(239, 'normal', 'normal'));
+      const input = new ScriptedInput();
+      const out: string[] = [];
+      for (let i = 0; i < 2400; i += 1) {
+        game.update(STEP, input);
+        if (render) game.render(new RecordingRenderer(), 0);
+        if (i % 60 === 0) out.push(JSON.stringify(game.position.balls));
+      }
+      return out.join('|');
+    }
+    expect(trace(true)).toBe(trace(false));
   });
 });
 

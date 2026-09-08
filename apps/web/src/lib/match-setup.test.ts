@@ -1,16 +1,23 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { SeatId } from '@duelbox/engine';
 import { initialMatchState, reduce, type MatchState } from '@duelbox/game-sdk';
+import { CATALOGUE } from '../data/catalogue.generated';
 import {
   BOT_DIFFICULTIES,
   DEFAULT_DIFFICULTY,
   DEFAULT_ROUNDS,
   DEFAULT_SETUP,
+  PLAY_MODES,
   ROUND_CHOICES,
   botSeatsFor,
   isBotDifficulty,
+  isPlayMode,
   isRoundChoice,
   matchRulesFor,
+  offeredModes,
 } from './match-setup';
 
 /**
@@ -142,5 +149,164 @@ describe('reaching round-over, which no player could', () => {
     expect(state.phase).toBe('match-over');
     expect(state.matchOutcome).toBe('p2');
     expect(state.roundWins).toEqual({ p1: 0, p2: 2 });
+  });
+});
+
+/**
+ * The modes a game may declare, and the smaller set the shell can actually start (#1749).
+ *
+ * These are two different lists and the gap between them is where dead buttons come from.
+ * `packages/game-sdk`'s vocabulary is `friend | bot | solo`; the shell's `PlayMode` union is
+ * `friend | bot`. Six manifests declare `solo` today and nothing in `apps/web` can seat one
+ * player alone, so a lobby that drew a button per declared mode would draw six buttons that do
+ * nothing when they are pressed.
+ *
+ * The reader below is the same technique `app/metadata-claims.test.ts` uses on the same file
+ * and for a neighbouring reason, and it is written the same way round: given a string rather
+ * than given a path, so the parser itself can be handed both a union it should understand and
+ * one it should not, and its silence is worth something.
+ */
+const MATCH_SETUP_SOURCE = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), 'match-setup.ts'),
+  'utf8',
+);
+
+/**
+ * The string-literal members of a declaration, or a readable failure.
+ *
+ * Empty is treated as unreadable rather than as an answer, and that is the part worth
+ * defending. `export type PlayMode = Mode;` matches the shape and yields nothing, and a
+ * reader that returned an empty set there would report "the shell offers no modes at all" —
+ * which passes every assertion below about what is *not* offered while having stopped
+ * reading. `metadata-claims.test.ts`'s copy of this parser has exactly that hole; ours
+ * refuses instead, so a union that stops being literals is a failure with a sentence in it.
+ */
+function members(source: string, pattern: RegExp, what: string, readers: string): Set<string> {
+  const body = pattern.exec(source)?.[1];
+  const found = new Set(
+    body === undefined ? [] : [...body.matchAll(/'([a-z-]+)'/g)].map((member) => member[1] ?? ''),
+  );
+  if (found.size === 0) {
+    throw new Error(
+      `match-setup.ts no longer declares ${what} as string literals. ${readers} read it by` +
+        ' parsing this file; point them at whatever replaced it.',
+    );
+  }
+  return found;
+}
+
+/** The members of `export type PlayMode = …`, as strings. */
+function unionMembers(source: string): Set<string> {
+  return members(
+    source,
+    /export type PlayMode =([^;]+);/,
+    '`export type PlayMode = …`',
+    'This file and app/metadata-claims.test.ts',
+  );
+}
+
+/** The members of `export const PLAY_MODES = [ … ]`, as strings. */
+function arrayMembers(source: string): Set<string> {
+  return members(
+    source,
+    /export const PLAY_MODES = \[([^\]]*)\]/,
+    '`export const PLAY_MODES = [ … ]`',
+    'This file and scripts/validate-manifests.mjs',
+  );
+}
+
+describe('the two spellings of what the shell can start', () => {
+  it('agree in both directions, so neither reader can be reading a stale one', () => {
+    // `satisfies` on PLAY_MODES already rejects a member the union does not have, and so
+    // catches this at compile time in one direction. The direction it cannot see is a member
+    // added to the union and forgotten in the array, which would leave `offeredModes` and
+    // `isPlayMode` silently dropping a mode the type system says is legal.
+    expect([...arrayMembers(MATCH_SETUP_SOURCE)].sort()).toEqual(
+      [...unionMembers(MATCH_SETUP_SOURCE)].sort(),
+    );
+  });
+
+  it('are the two the runtime actually recognises', () => {
+    expect([...PLAY_MODES].sort()).toEqual([...unionMembers(MATCH_SETUP_SOURCE)].sort());
+    for (const mode of PLAY_MODES) expect(isPlayMode(mode)).toBe(true);
+    for (const other of ['solo', 'remote', 'FRIEND', '', null, 3]) {
+      expect(isPlayMode(other), `${String(other)} is not a mode the shell can start`).toBe(false);
+    }
+  });
+
+  it('can be told apart by their readers, or this file is guarding nothing', () => {
+    // Both parsers, on strings they should and should not understand — the failure
+    // `metadata-claims.test.ts` records having shipped is a self-check that compared two
+    // hard-coded lists to each other and could never fail.
+    expect(unionMembers("export type PlayMode = 'friend' | 'bot' | 'solo';")).toEqual(
+      new Set(['friend', 'bot', 'solo']),
+    );
+    // The near miss: this matches the shape and parses to nothing, which is the state a
+    // reader must not mistake for "the shell offers no modes".
+    expect(() => unionMembers('export type PlayMode = Mode;')).toThrow(/no longer declares/);
+    expect(() => unionMembers('export const PlayMode = 2;')).toThrow(/no longer declares/);
+    expect(arrayMembers("export const PLAY_MODES = ['friend', 'solo'] as const;")).toEqual(
+      new Set(['friend', 'solo']),
+    );
+    expect(() => arrayMembers('export const PLAY_MODES = other;')).toThrow(/no longer declares/);
+    expect(() => arrayMembers('export const PLAY_MODES = [...MODES];')).toThrow(
+      /no longer declares/,
+    );
+  });
+});
+
+describe('narrowing a game’s declaration to what the lobby can offer', () => {
+  it('offers a button for every mode a game declares and the shell can start', () => {
+    expect(offeredModes(['friend', 'bot'])).toEqual(['friend', 'bot']);
+  });
+
+  it('offers exactly one where a game declares one', () => {
+    // The acceptance criterion #1749 states, in the form this build can actually meet it: a
+    // game declaring a single startable mode gets a single button, not two.
+    expect(offeredModes(['friend'])).toEqual(['friend']);
+    expect(offeredModes(['bot'])).toEqual(['bot']);
+  });
+
+  it('drops a declared mode the shell has no branch for', () => {
+    // The six real manifests: `['friend', 'bot', 'solo']`. Two buttons, never three.
+    expect(offeredModes(['friend', 'bot', 'solo'])).toEqual(['friend', 'bot']);
+    expect(offeredModes(['friend', 'solo'])).toEqual(['friend']);
+  });
+
+  it('keeps the game’s own order, so the caller owns the ordering rule', () => {
+    // `PlaySurface` sorts the remembered mode to the front afterwards. If this sorted too,
+    // there would be two ordering rules and the one nobody remembered would win.
+    expect(offeredModes(['bot', 'friend'])).toEqual(['bot', 'friend']);
+  });
+
+  it('answers with nothing rather than guessing when a game declares nothing it can run', () => {
+    expect(offeredModes([])).toEqual([]);
+    expect(offeredModes(['solo'])).toEqual([]);
+    expect(offeredModes(['remote', 'online'])).toEqual([]);
+  });
+});
+
+describe('every game in the catalogue', () => {
+  it('has at least one mode the shell can actually start', () => {
+    /*
+     * A game whose every declared mode is one the shell cannot run is a game page with a
+     * heading, a set of options and no way to begin. It is not hypothetical: `solitaire`'s own
+     * manifest comment says `friend` and `bot` are there because "a solo-only manifest would
+     * ship a game page with no way to begin", which is a fact about this repository being kept
+     * true by a comment. This is the assertion that keeps it true.
+     *
+     * Read from the catalogue rather than by loading 108 game chunks, because
+     * `catalogue-manifest.test.ts` already fails if a row's `modes` disagrees with its
+     * manifest's, and the build-time half of this check in `scripts/validate-manifests.mjs`
+     * reads the manifests themselves.
+     */
+    const dead = CATALOGUE.filter((entry) => offeredModes(entry.modes).length === 0).map(
+      (entry) => `${entry.id} (declares ${entry.modes.join(', ') || 'nothing'})`,
+    );
+    expect(
+      dead,
+      'these games declare no mode the shell can start, so their lobby draws no button:\n' +
+        dead.join('\n'),
+    ).toEqual([]);
   });
 });

@@ -29,6 +29,36 @@
   color: var(--db-body);
 }
 
+/* Which hint matches the instrument the player last used (#2424).
+
+   The whole adaptation is additive. The unmarked row keeps `--db-body` — it is not dimmed,
+   not greyed and not hidden, because both instruments still work and a legend that says
+   otherwise would be lying about the product. The marked row gains contrast rather than the
+   other losing it: `--db-ink` is the strongest text on the panel and `--db-body` is already
+   AA on `--db-paper`, so the unmarked hint is exactly as legible as it was before there was
+   a mark at all. That is what makes a stale mark harmless.
+
+   The mark is also a WORD, not a colour and not a weight (rule 7). `.mark` is rendered in
+   every row and hidden with `visibility` rather than `display` in the unmarked ones, so its
+   box is always reserved: the panel's geometry is byte-identical in all three states — before
+   any input, keys marked, touch marked — and the mark moving cannot shift a single pixel of
+   anything around it. `display: none` here would have made every switch a reflow, which is
+   the flicker this issue is about arriving by the back door. */
+.marked .text {
+  color: var(--db-ink);
+}
+
+.mark {
+  visibility: hidden;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.marked .mark {
+  visibility: visible;
+}
+
 /* The word "Controls", on the lobby and again inside the pause panel — both on white, where
    `--db-faint` is 2.6:1 and misses AA. It is the heading of the one block a player opens the
    pause menu to read. `--db-muted` is 4.65:1 and matches `.label` above. */

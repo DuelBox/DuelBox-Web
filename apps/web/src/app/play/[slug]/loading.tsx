@@ -17,9 +17,41 @@
  * every page, and it decides which game to open at the moment it is pressed: on all but
  * the catalogue, nothing on the page linked to where it goes, and on the catalogue the
  * card that did is usually far below the fold, where a viewport-driven prefetch never
- * reached it. That press is this file's reason to exist. A player on a slow connection
- * sees it on any play route; a player on a fast one who followed a link the router had
- * already prefetched sees nothing, which is correct.
+ * reached it. That press is this file's reason to exist.
+ *
+ * ## How often a player sees it: measured, and the answer is not "on a slow connection"
+ *
+ * This file used to end the paragraph above by saying a player on a slow connection sees
+ * this on any play route, and a player on a fast one who followed a prefetched link sees
+ * nothing. The second half is right. The first half was never measured and #2539 measured
+ * it: **in the exported build, no amount of slowness produces it.** Thirty-five navigations
+ * across two builds with different build ids and webpack runtime hashes, in Chromium and in
+ * real WebKit, from three starting routes, with the payload held, the chunks held, both held
+ * and neither — and this fallback painted in none of them. Holding *only* the play route's
+ * own page chunk, for four seconds, does not produce it either: the address does not change,
+ * the previous page stays on screen for the whole four seconds, and then the lobby appears.
+ *
+ * The reason is an ordering rather than a speed. The router does not commit the arriving
+ * route until that route's client modules have loaded — commit tracks the last of them to
+ * the millisecond, at 800ms of hold and at 4000ms alike — so by the moment the new tree is
+ * committed there is nothing inside this boundary left to suspend on, and no moment for a
+ * fallback to fill. Nothing is missing from the wire either: `/play/<slug>/index.txt` carries
+ * this markup as a row of its own, and the segment's `loading-*.js` — 147 bytes of webpack
+ * registration and no code — was not requested in any navigation whose requests were logged.
+ *
+ * It is kept rather than deleted, for two reasons and neither of them is inertia. #2539
+ * records builds on which it *did* paint — six failures from one build, three passes from
+ * the next — and that half was not reproduced here, so the honest reading is that the
+ * router's commit ordering is not stable across builds, not that this can never be reached.
+ * And a `loading.tsx` is what makes the segment a Suspense boundary at all: deleting it does
+ * not make the wait shorter, it only decides that a play route which does suspend shows
+ * nothing while it waits. Against that, the price of keeping it is 57 gzipped bytes a route,
+ * counted further down.
+ *
+ * What it is not is covered. `loading-states.test.ts` holds this fallback's shape and
+ * `e2e/page-transition.spec.ts` holds the arrival it belongs to, and neither of them can
+ * watch this markup do its job, because on the evidence above it never gets to. If a build
+ * ever shows it, that spec's docstring is where the news goes.
  *
  * ## Why it is a panel and not a wall of grey boxes
  *
@@ -31,11 +63,23 @@
  * definition of that geometry and `PlaySurface` draws its panels in the same class, so the
  * swap moves nothing.
  *
- * "Moves nothing" is measured rather than reasoned about. #93's one acceptance criterion is
- * that cumulative layout shift stays under 0.1 across the swap, and it went unexecuted while
- * this paragraph argued for it: `e2e/page-transition.spec.ts` now presses "Surprise me" with
- * the route un-prefetched and adds up every layout-shift entry the swap produces, counting
- * even the ones the published metric excuses for following a press.
+ * "Moves nothing" is measured rather than reasoned about, and the measurement corrected the
+ * reason. `e2e/page-transition.spec.ts` presses "Surprise me" with the route un-prefetched
+ * and reads the boxes of the header, the main landmark, the footer and this panel's own
+ * corner on both sides of the swap. They are identical — but not because the two panels are
+ * the same size. `PlaySurface`'s one-line panel is 119px tall and the lobby it becomes is
+ * 576px, and nothing moves because the panel is anchored to the top of a shell whose height
+ * `db-fill` has already fixed, so it grows downward into height that was reserved before
+ * either of them drew. The shared `db-panel` class is what keeps the corner and the width
+ * identical; `db-fill` is what makes the growth cost nothing.
+ *
+ * #93's own acceptance criterion — cumulative layout shift under 0.1 across the swap — is
+ * summed there too, counting even the entries the published metric excuses for following a
+ * press. It is kept as the criterion's own words and it is not the guard: it measures 0, and
+ * the sabotage that breaks the paragraph above (dropping `db-fill` from the arriving page,
+ * which moves the footer 154px) reads 0.0282, still under the published line. A threshold
+ * nothing has been made to cross is not a check, which is why the boxes are asserted beside
+ * it — and both were watched failing on a sabotaged build before either was believed.
  *
  * Only this route has one, and that is a decision rather than an omission. #93's actions name
  * a catalogue-grid skeleton too; it is declined for the reason above — its navigation is
@@ -59,7 +103,13 @@
  * either way, and with no imports left in it that chunk is an empty module plus webpack's
  * registration boilerplate — 132 gzipped bytes, measured, and the floor. What the move
  * bought is the 231 above it, and a fallback that is styled by a stylesheet every route
- * already has rather than by one that arrives with the page it is standing in for.
+ * already has rather than by one that arrives with the page it is standing in for. #2539
+ * adds one detail to that accounting: no navigation it measured ever requested that chunk,
+ * so the floor is a byte on the build's ledger rather than on any player's. What a player
+ * does pay for is this markup inside every play route's payload, fetched whether or not the
+ * router ever renders it: 57 gzipped bytes a route, 6.1 KB over the 108, measured by
+ * stripping the row out of each built payload and gzipping it again. That is the price of
+ * keeping it, and it is small enough that the argument above wins.
  *
  * `db-fill` is load-bearing in that same way. The shell keys the entire play-route layout
  * off that class: `:has(.db-fill)` in `globals.css` fixes the shell's height and stands the
