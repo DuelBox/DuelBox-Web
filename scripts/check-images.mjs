@@ -68,6 +68,49 @@ for (const file of files) {
   }
 }
 
+/**
+ * No loose gameplay bitmap ships (#117).
+ *
+ * The engine has a shelf packer and a typed atlas (`packages/engine/src/atlas.ts`:
+ * `packShelf`, `SpriteAtlas<Name>`), written so that a game's frames arrive as one sheet and
+ * one typed manifest rather than as a folder of PNGs and a folder of requests. No game has a
+ * bitmap yet — rule 1 means original art, and there is no art pipeline — so the packer has
+ * nothing to pack and the build step that would call it is one `packShelf` away rather than
+ * written against nothing. What can be held today is the acceptance criterion itself: the
+ * only bitmaps in the export are the app icons and the share cards, both of which are fetched
+ * by things that are not a game. A PNG anywhere else is a loose gameplay asset, and the day
+ * one appears is the day the packer gets its first input.
+ */
+const BITMAP = /\.(?:png|jpe?g|webp|avif|gif)$/i;
+const BITMAP_HOMES = ['icons', 'og'];
+async function bitmaps(dir) {
+  const found = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await bitmaps(full)));
+    else if (BITMAP.test(entry.name)) found.push(full);
+  }
+  return found;
+}
+const shipped = await bitmaps(out);
+const loose = shipped.filter((file) => {
+  const top = relative(out, file).split('/')[0];
+  return !BITMAP_HOMES.includes(top ?? '');
+});
+for (const file of loose) {
+  failures.push(
+    `${relative(out, file)} is a bitmap outside icons/ and og/ — a gameplay image ships packed` +
+      ' into an atlas (packages/engine/src/atlas.ts), never loose',
+  );
+}
+const homed = shipped.length - loose.length;
+
 if (failures.length > 0) {
   console.error(`check-images: ${String(failures.length)} problem(s)\n`);
   for (const failure of failures) console.error(`  ✗ ${failure}`);
@@ -75,6 +118,7 @@ if (failures.length > 0) {
 } else {
   console.log(
     `check-images: ${String(images)} <img> in ${String(files.length)} page(s), every one with its dimensions` +
-      (images === 0 ? ' — nothing bitmapped ships; the tiles are inline SVG' : ''),
+      (images === 0 ? ' — nothing bitmapped ships; the tiles are inline SVG' : '') +
+      `; ${String(homed)} bitmap(s) under icons/ and og/, none loose (#117)`,
   );
 }
