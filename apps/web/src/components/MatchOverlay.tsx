@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
@@ -49,12 +49,22 @@ export interface MatchOverlayProps {
   record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
+  /** This game's route slug, for the address the share card prints (#164). */
+  slug: string;
   /**
    * How the match is presented, so the count-in reads upright for whoever is looking (#142).
    * Shared-screen draws it twice, once turned; single-seat draws it once. Defaults to
    * shared-screen, the archetype default for everything the shell hosts today.
    */
   presentation?: Presentation | undefined;
+  /**
+   * Why the match paused itself, when it did (#130): a controller came or went. Shown on the
+   * pause panel and nowhere else, because the panel is the thing the pause put on screen and
+   * a second surface for one sentence is a second thing to focus-trap.
+   */
+  notice?: string | undefined;
+  /** Swaps which controller drives which seat; absent when no controller has been seen. */
+  onSwapControllers?: (() => void) | undefined;
   onResume: () => void;
   onQuit: () => void;
   onNextRound: () => void;
@@ -97,7 +107,10 @@ function Phase({
   seatNames,
   record,
   nextGame,
+  slug,
   presentation = 'shared-screen',
+  notice,
+  onSwapControllers,
   onResume,
   onQuit,
   onNextRound,
@@ -111,6 +124,9 @@ function Phase({
     case 'paused':
       return (
         <Panel heading="Paused" role="dialog">
+          {/* The controller sentence first, because when it is present it is the reason the
+              board stopped, and "exactly where you left it" is then the second thing to know. */}
+          {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
           <p className={styles.detail}>The board is exactly where you left it.</p>
           {/* On demand during a match, as the issue asks: a player who has forgotten
               which keys are theirs should not have to quit to find out. */}
@@ -126,6 +142,15 @@ function Phase({
             <button type="button" className={styles.secondary} onClick={onRestart}>
               Restart
             </button>
+            {/* The manual half of "connection order plus manual reassignment" (#130): the
+                pair who were handed the wrong pads swap without re-plugging. Only offered
+                once a controller has been seen, so a keyboard-and-touch pair never meet a
+                button about a thing they do not have. */}
+            {onSwapControllers === undefined ? null : (
+              <button type="button" className={styles.secondary} onClick={onSwapControllers}>
+                Swap controllers
+              </button>
+            )}
             <Link className={styles.secondary} href="/settings/" prefetch={false}>
               Settings
             </Link>
@@ -183,6 +208,17 @@ function Phase({
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
               Rematch
             </button>
+            {state.matchOutcome !== null ? (
+              <ShareResult
+                slug={slug}
+                game={manifest.name}
+                seatNames={seatNames}
+                outcome={state.matchOutcome}
+                // The score a person would read off the panel: the round tally for a best-of,
+                // this round's tally for a single round — the same choice the line above makes.
+                score={rounds > 1 ? state.roundWins : state.tally}
+              />
+            ) : null}
             {/* prefetch={false} on both links here: the Next router otherwise warms these
                 routes' chunks while a match is running, downloading another game's code
                 during play for a link the player may never take. A match should need
@@ -401,6 +437,68 @@ function Panel({
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * The Share button and the line it reports through (#164).
+ *
+ * The card's code arrives by `import()` on the first press and not before — the
+ * `SoundToggle` → `lib/audio` precedent — so a pair who never share never download a canvas
+ * renderer. It is the play route either way, but "on demand" is only honest if the demand
+ * actually happens.
+ *
+ * The status line is `aria-live` without `role="status"`, deliberately: the overlay already
+ * has the one status region on the page (the announcement above the panels), and
+ * `e2e/record.spec.ts` asks for "the" one.
+ */
+function ShareResult({
+  slug,
+  game,
+  seatNames,
+  outcome,
+  score,
+}: {
+  slug: string;
+  game: string;
+  seatNames: SeatNames;
+  outcome: SeatId | 'draw';
+  score: Readonly<Record<SeatId, number>>;
+}) {
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const share = () => {
+    setBusy(true);
+    setStatus(null);
+    void import('@/lib/share-card')
+      .then(async (card) => {
+        const data = { game, slug, names: seatNames, score, outcome };
+        const blob = await card.renderShareCard(data);
+        const result = await card.shareOrDownload(blob, data);
+        setStatus(
+          result === 'downloaded'
+            ? `Saved as ${card.shareCardFilename(data)}.`
+            : result === 'shared'
+              ? 'Shared.'
+              : null,
+        );
+      })
+      .catch(() => {
+        setStatus('The picture could not be made. Try again.');
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  };
+  return (
+    <>
+      <button type="button" className={styles.secondary} onClick={share} disabled={busy}>
+        Share result
+      </button>
+      <p className={styles.shareStatus} aria-live="polite">
+        {status}
+      </p>
+    </>
   );
 }
 

@@ -137,6 +137,20 @@ const CHROMIUM_ONLY = [
   '**/visual.spec.ts',
   '**/game-record.spec.ts',
   '**/prefetch.spec.ts',
+  // `share-card.spec.ts` (#164) plays a bot match to its end on every run, which is the
+  // most expensive thing a spec can do, to press one button and read back a PNG's
+  // dimensions. Dimensions and a decoded PNG do not differ between engines; the canvas
+  // rasteriser does, and that is exactly what the card does not claim to hold. Same
+  // reading as `tournament.spec.ts`.
+  '**/share-card.spec.ts',
+  // Headless WebKit's WebGL is software-rendered when it exists at all, and the flag it
+  // exercises is off in every build a WebKit user gets (#16).
+  '**/renderer-parity.spec.ts',
+  // `adaptive-quality.spec.ts` (#190) stubs `navigator.getBattery`, which only Chromium has.
+  // On WebKit the gate is never armed in production, so a second engine would be testing the
+  // stub rather than the product — and it did: the frames-per-second ratio the spec holds
+  // read outside its window on a loaded runner's WebKit twice, for a path no WebKit user runs.
+  '**/adaptive-quality.spec.ts',
   // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
   // no-op there, so a second engine would be four copies of a hidden button (#195).
   '**/install-prompt.spec.ts',

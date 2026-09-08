@@ -1,0 +1,29 @@
+# ADR 0006 — A WebGL backend behind a build flag, off in every published build
+
+**Status:** accepted, 8 September 2026. Extends [ADR 0003](0003-canvas2d-behind-renderer-interface.md), which said a WebGL backend "should be superseded when [the game that needs it] does". No such game exists; the backend exists anyway, and this record says why that is not a contradiction.
+
+## Context
+
+ADR 0003 put Canvas2D behind the `Renderer` interface so that "a WebGL backend can be added later without editing a single game", and named the ceiling: no batching, no shaders, and "a game that needs thousands of bodies or a full-screen effect will be the game that forces the WebGL backend". Issue #16 asked for that backend behind a flag, with sprite, shape, text and line-batch primitives.
+
+Two things had already been built toward it and consumed by nothing: `batch.ts` (sprite and line batches over a backend-neutral sink, with a `WebGLSpriteSink` whose own docstring said it "needs a consuming game"), and the `Renderer` interface's promise. What did not exist was a renderer a host could build, or any evidence that the interface's contract — logical units, the rotation stack, the `'centre'` spelling, reduced motion, the surface being lost — could be honoured by a second backend at all.
+
+`docs/support-matrix.md` says "No WebGL is required", and it must go on saying so: every engine in tiers 1 and 2 has WebGL, but a phone under memory pressure loses a WebGL context far more readily than a 2D one, and the 108 games in the catalogue draw a few dozen shapes a frame, for which Canvas2D is faster than a player can tell.
+
+## Decision
+
+1. **`WebGLRenderer` implements `HostRenderer`**, the interface that now names what the host needs of a renderer beyond what a game does (viewport, frames, motion preference, surface events, text measurement). `Canvas2DRenderer` implements it unchanged. `GameHost` is typed against the interface and reads nothing off either class that is not on it.
+2. **The choice is made at build time, once, in `apps/web/src/lib/renderer-backend.ts`.** `NEXT_PUBLIC_RENDERER=webgl` turns an `import('@duelbox/engine/webgl')` into a chunk; at the default (`canvas2d`, which `next.config.ts` supplies so the variable is always defined and the comparison always folds) the import is deleted before it is resolved. `WebGLRenderer` is not exported from the engine's barrel — only from the `./webgl` subpath — because the engine package declares no `sideEffects`, and a barrel export would be a static import no minifier is obliged to remove.
+3. **The absence is checked, not assumed.** `scripts/check-renderer-flag.mjs` runs in `pnpm build`: with the flag off, no emitted chunk may contain the renderer's marker string or ask a canvas for a WebGL context; with it on, exactly one chunk must. The first part of the check is that the marker is still in the source, so a search for it can never pass by finding nothing.
+4. **One vertex buffer per frame, transforms on the CPU.** Every shape becomes triangles in an interleaved buffer (position, texture coordinate, colour), flushed once per run of same-mode geometry. The seat rotation and the shake are applied to vertices as they are written through a fixed-depth transform stack, so a frame that turns the board half way through is still one buffer. The buffer grows to a game's busiest frame and stays (rule 5; `allocations` counts the growths).
+5. **Text is the browser's, rasterised once per string.** WebGL has no text. A per-glyph atlas assembled by hand loses the browser's kerning, hinting and subpixel placement, and the 2D backend is the reference this one is held to — so each distinct string at a size is drawn once by a host-supplied 2D context into a shelf-packed page texture and shown as a tinted quad. The page resets rather than evicts when full, and `resets` is counted so that "never in practice" is a number.
+6. **Colour strings are parsed once and cached forever.** Hex, `rgb()`/`rgba()` and the named colours the catalogue uses are parsed in the engine; anything else is put to the host's 2D context for the browser's own answer, and a string neither can read throws rather than draws a guess.
+7. **Context loss is the WebGL pair of events**, `webglcontextlost` and `webglcontextrestored`, with the same bookkeeping as the 2D backend (#101): cancel the loss so the context is offered back, count against `MAX_SURFACE_LOSSES`, forget the open frame, and rebuild every GL object on restore.
+8. **Parity is measured, not argued.** `e2e/renderer-parity.spec.ts` serves the engine's own `dist` on the site's origin, draws one scene with each backend, and holds the fraction of differing pixels under a tolerance set from a clean run with the sabotaged runs measured beside it.
+
+## Consequences
+
+- The published build is byte-for-byte unaffected on the shell and on-demand lines, and the guard makes that a property of every future build rather than of this one.
+- A game that needs the batching now has a backend to ask for, and the flag is the ask. Switching it on for everybody is a decision this record does not make: it needs a game that benefits, a look at what WebKit does under memory pressure with a WebGL canvas in a shared-screen match, and the support-matrix sentence rewritten with the evidence.
+- `SpriteBatch`/`LineBatch` from `batch.ts` are not wired into this renderer. The renderer's own buffer *is* a batch; the sinks were written for a game that has textures to draw, and no game has one (rule 1, `check-asset-licenses.mjs`). They stay as they were: tested primitives with no consumer, and the docstring saying so.
+- Text through a texture is 1:1 with the display at the DPR the frame was sized for; a rotation still draws it turned, as the 2D backend does, but it is sampled rather than re-rasterised at the angle. On a settled board there is no difference; through the turn, a reader with the frame paused could tell.

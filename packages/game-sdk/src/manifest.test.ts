@@ -176,6 +176,26 @@ describe('the new crossplay manifest fields are optional', () => {
   });
 });
 
+describe('dprCap (#31)', () => {
+  it('is absent when a manifest declares none, so the host falls back to the engine default', () => {
+    const parsed = parseGameManifest(baseManifest());
+    expect(parsed.dprCap).toBeUndefined();
+    expect('dprCap' in parsed).toBe(false);
+  });
+
+  it('parses a cap in range, integer or not', () => {
+    expect(parseGameManifest({ ...baseManifest(), dprCap: 1 }).dprCap).toBe(1);
+    expect(parseGameManifest({ ...baseManifest(), dprCap: 1.5 }).dprCap).toBe(1.5);
+    expect(parseGameManifest({ ...baseManifest(), dprCap: 4 }).dprCap).toBe(4);
+  });
+
+  it('refuses a cap below one, above four, or not a number', () => {
+    expect(() => parseGameManifest({ ...baseManifest(), dprCap: 0.5 })).toThrow(/dprCap/);
+    expect(() => parseGameManifest({ ...baseManifest(), dprCap: 5 })).toThrow(/dprCap/);
+    expect(() => parseGameManifest({ ...baseManifest(), dprCap: '2' })).toThrow(/dprCap/);
+  });
+});
+
 describe('minViewport', () => {
   it('parses a well-formed viewport', () => {
     const parsed = parseGameManifest({

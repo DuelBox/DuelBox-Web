@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Canvas2DRenderer,
+  AdaptiveQuality,
   FixedLoop,
+  GamepadManager,
   InputManager,
   InputRecorder,
   InputView,
@@ -11,7 +12,11 @@ import {
   exportTrace,
   RunLoop,
   browserClock,
+  browserGamepadSource,
   clampDevicePixelRatio,
+  browserBatterySource,
+  isLowPower,
+  RenderGate,
   negotiateSharedLogical,
   negotiateSharedViewport,
   NO_INSETS,
@@ -22,6 +27,7 @@ import {
   type LogicalSize,
   type SeatId,
   type SeatInputState,
+  type GamepadEvent,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
@@ -34,6 +40,11 @@ import {
   type MatchPhase,
 } from '@duelbox/game-sdk';
 import { readBindings } from '@/lib/key-bindings';
+import {
+  createRendererBackend,
+  preloadRendererBackend,
+  webglRendererEnabled,
+} from '@/lib/renderer-backend';
 import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
 import { readSettings } from '@/lib/settings';
@@ -93,6 +104,21 @@ export interface GameHostProps {
   onSeatInput?: (seat: SeatId) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
+  /**
+   * A controller was plugged in, unplugged, or moved to the other seat (#130).
+   *
+   * Fired from the fixed step on the poll that saw the edge, and always paired with
+   * {@link onRequestPause}: a seat that just gained or lost its instrument mid-rally is the
+   * one thing this host will stop a live match for on its own, because the alternative is
+   * a player whose pad went dead discovering it by losing.
+   */
+  onGamepad?: (event: GamepadEvent) => void;
+  /**
+   * Hands the shell the one manual control the acceptance asks for: swapping which pad drives
+   * which seat, for the pair who were handed the wrong ones. Given once per match, like
+   * `onTraceReady`, because the manager lives in the effect.
+   */
+  onGamepadReady?: (controls: { swap: () => void }) => void;
   /**
    * The match cannot go on, and the shell has to say so.
    *
@@ -171,6 +197,8 @@ export function GameHost({
   onActiveSeat,
   onSeatInput,
   onRequestPause,
+  onGamepad,
+  onGamepadReady,
   onError,
   recordTrace = false,
   onTraceReady,
@@ -194,16 +222,33 @@ export function GameHost({
   onSeatInputRef.current = onSeatInput;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onGamepadRef = useRef(onGamepad);
+  onGamepadRef.current = onGamepad;
+  const onGamepadReadyRef = useRef(onGamepadReady);
+  onGamepadReadyRef.current = onGamepadReady;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
 
+  /**
+   * Whether the renderer can be built yet (#16). True from the first render in every build
+   * made without `NEXT_PUBLIC_RENDERER=webgl` — `webglRendererEnabled()` is a literal after
+   * the build folds it — so the default path renders exactly when it always did. With the
+   * flag on, the WebGL module is fetched first and the match starts one tick later.
+   */
+  const [rendererReady, setRendererReady] = useState(!webglRendererEnabled());
   useEffect(() => {
+    if (rendererReady) return;
+    void preloadRendererBackend().then(() => {
+      setRendererReady(true);
+    });
+  }, [rendererReady]);
+
+  useEffect(() => {
+    if (!rendererReady) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
 
     // The one play area both players share, negotiated once before the first frame (rule 9,
     // #1862). `negotiateSharedLogical` — which had no non-test caller until now — decides the
@@ -215,7 +260,53 @@ export function GameHost({
     // equal for any pair the shell would actually start.
     const peerBox = peerLogical ?? manifest.logical;
     const logical = negotiateSharedLogical(manifest.logical, peerBox);
-    const renderer = new Canvas2DRenderer(context, logical);
+    // Which backend is a build-time decision made in `lib/renderer-backend.ts`; this host
+    // reads nothing off the renderer that is not on `HostRenderer` (#16).
+    const built = createRendererBackend(canvas, logical);
+    if (built === null) return;
+    // Rebound after the null check because `resize` below is a hoisted function declaration,
+    // and TypeScript does not carry a narrowing into one.
+    const backend = built;
+    const renderer = backend.renderer;
+
+    /**
+     * Presentation quality, decided by the device rather than declared by anybody (#31, #190).
+     *
+     * `AdaptiveQuality` had been in the engine with its tests and wired to nothing, so the
+     * "automatic downscale" half of #31 was a class rather than a behaviour. It is fed every
+     * animation frame's wall-clock length from the loop's own `frame` callback — the number
+     * the loop already measures to run the fixed step — and steps its rung down after two
+     * seconds over budget, up after four seconds comfortably under. The budget is one
+     * sixtieth of a second: `docs/performance-budgets.md` names 60 fps as the render loop's
+     * target on the reference device, and the fixed step is 60 a second, so a frame that
+     * takes longer than a step is a frame the render is losing ground on. On a display that
+     * refreshes slower than 60 Hz the loop sees long frames it is not to blame for and steps
+     * down anyway; that is a device this site does not design for and a cheaper picture is
+     * the right answer there too.
+     *
+     * Three things follow a rung, and every one of them is presentation. The backing-store
+     * ratio is capped at `min(manifest.dprCap ?? 2, rung.dprCap)` — the per-game ceiling #31
+     * asks for and the adaptive one, whichever is lower — and `resize` is re-run when the
+     * cap moves so the transform is re-applied (#2547 found a restore that skipped that and
+     * drew every frame at 1/dpr into a corner). The renderer's effects switch follows the
+     * rung's `effectsEnabled` and the battery, and takes the reduced-motion path every game
+     * already honours. The particle scale has no consumer: no game owns a `ParticlePool`
+     * today, and one that did would have to draw its randomness from something other than
+     * the match RNG before a thinned emit could be presentation rather than a diverged match.
+     *
+     * The battery (#190) is read through `browserBatterySource`, which is `null` on every
+     * WebKit browser and until Chromium's promise resolves, and `isLowPower(null)` is "no".
+     * Low means at or under 20% and off the cable — the platforms' own Low Power Mode
+     * threshold, argued in `power.ts`. Under it the render is gated to alternate frames and
+     * effects go off; the fixed step is never touched, so the match a flat phone plays is the
+     * match a charged laptop plays, byte for byte. Neither reading allocates on the frame path.
+     */
+    const quality = new AdaptiveQuality();
+    const battery = browserBatterySource();
+    const renderGate = new RenderGate();
+    const manifestDprCap = manifest.dprCap ?? 2;
+    let qualityDprCap = quality.dprCap;
+    let lowPower = false;
     // Reduced motion is a device preference, so it is read here and nowhere else: no
     // game code may branch on the device (CLAUDE.md rule 10). The flip still *steps*
     // identically on every device — only what is drawn changes — or two devices would
@@ -277,6 +368,42 @@ export function GameHost({
     const recorder = recordTrace ? new InputRecorder(manager) : null;
     const input: InputManager | InputRecorder = recorder ?? manager;
 
+    /**
+     * The pads (#130). `GamepadManager` and `browserGamepadSource` had both been in the
+     * engine, with tests, and called by nothing — the fifth library this repository was
+     * found to have written and never wired. This is the wiring: polled inside the fixed
+     * step so a pad's intent reaches the same step a key's does, and read through
+     * `setSeatAnalog`, so a game never learns which instrument a seat is holding.
+     *
+     * Rule 5: `poll()` and `setSeatAnalog` mutate in place; the one thing on this path that
+     * allocates is `navigator.getGamepads()` itself, which is the browser's and is argued in
+     * `loop.ts`. `usedGamepad` is a two-slot typed array for the same reason `usedInput` is.
+     */
+    const gamepads = new GamepadManager(browserGamepadSource());
+    onGamepadReadyRef.current?.({
+      swap: () => {
+        const p1 = gamepads.padOf('p1');
+        const p2 = gamepads.padOf('p2');
+        // Two pads: each takes the other's seat. One pad: it crosses to the empty seat.
+        // None: nothing to swap, and `reassign` is not called so no event is raised.
+        if (p1 !== null && p2 !== null) {
+          gamepads.reassign('p1', p2);
+          gamepads.reassign('p2', p1);
+        } else if (p1 !== null) {
+          gamepads.reassign('p2', p1);
+        } else if (p2 !== null) {
+          gamepads.reassign('p1', p2);
+        }
+        gamepads.clearEvents();
+      },
+    });
+    /** Feeds one seat's pad reading into the manager, or zeros when it has no pad. */
+    const feedSeat = (seat: SeatId): void => {
+      const reading = gamepads.reading(seat);
+      if (reading === null) input.setSeatAnalog(seat, 0, 0, false);
+      else input.setSeatAnalog(seat, reading.moveX, reading.moveY, reading.action);
+    };
+
     gameRef.current = game;
     // The presentation is read through a getter over this mutable, not baked in, so it can be
     // flipped live by the dev toggle below without rebuilding the match (#1863). Switching it
@@ -327,8 +454,11 @@ export function GameHost({
 
     // The element is passed in rather than closed over: TypeScript will not carry the
     // null-narrowing of a ref into a hoisted function declaration.
-    function resize(el: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
-      const dpr = clampDevicePixelRatio(globalThis.devicePixelRatio);
+    function resize(el: HTMLCanvasElement): void {
+      const dpr = clampDevicePixelRatio(
+        globalThis.devicePixelRatio,
+        Math.min(manifestDprCap, qualityDprCap),
+      );
       const cssWidth = el.clientWidth;
       const cssHeight = el.clientHeight;
       // Reassigning canvas.width clears the backing store and forces a reallocation, so
@@ -340,15 +470,16 @@ export function GameHost({
       lastDpr = dpr;
       el.width = Math.round(cssWidth * dpr);
       el.height = Math.round(cssHeight * dpr);
-      // Draw in CSS pixels; the backing store carries the device ratio.
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Draw in CSS pixels; the backing store carries the device ratio. The 2D backend takes
+      // it as a context transform, the WebGL one as a number — the backend knows which.
+      backend.setDevicePixelRatio(dpr);
       view = negotiateSharedViewport(
         { logical, screenWidth: cssWidth, screenHeight: cssHeight, insets: NO_INSETS },
         peerBox,
       ).view;
       renderer.setViewport(view);
     }
-    resize(canvas, context);
+    resize(canvas);
 
     // Coalesced into one animation frame. The observer can fire several times for a
     // single chrome transition, and reallocating the backing store on each is the layout
@@ -357,7 +488,7 @@ export function GameHost({
       if (resizeHandle !== 0) return;
       resizeHandle = globalThis.requestAnimationFrame(() => {
         resizeHandle = 0;
-        resize(canvas, context);
+        resize(canvas);
       });
     });
     observer.observe(canvas);
@@ -542,11 +673,28 @@ export function GameHost({
         // scale and letterbox offset on every frame rather than leaving them on the
         // context, so the first frame back sets them itself.
         lastWidth = -1;
-        resize(canvas, context);
+        resize(canvas);
       },
     );
 
     const loop = new FixedLoop({
+      frame(delta) {
+        if (crashed) return;
+        quality.sample(delta);
+        // A rung change is the one moment the backing store is re-sized outside a real
+        // resize; `lastDpr` is cleared so the early-return in `resize` cannot swallow it.
+        if (quality.dprCap !== qualityDprCap) {
+          qualityDprCap = quality.dprCap;
+          lastDpr = -1;
+          resize(canvas);
+        }
+        const low = isLowPower(battery());
+        if (low !== lowPower) {
+          lowPower = low;
+          renderGate.setEvery(low ? 2 : 1);
+        }
+        renderer.setEffectsEnabled(quality.effectsEnabled && !low);
+      },
       update(dt) {
         if (crashed) return;
         // Never step into a canvas nobody can see (#101). The renderer is the one answer
@@ -554,6 +702,22 @@ export function GameHost({
         // that could disagree. A getter over a boolean, so the step path allocates
         // nothing for it (rule 5).
         if (renderer.surfaceLost) return;
+        // The pads, every live step and before the input is sampled, so a stick's intent
+        // reaches the step it was read on. Polled while paused too: a pad that arrives
+        // during the pause is seated by the time the board comes back, and one that leaves
+        // during it is reported rather than discovered on the first live step.
+        gamepads.poll();
+        feedSeat('p1');
+        feedSeat('p2');
+        const edges = gamepads.events;
+        if (edges.length > 0) {
+          // A hot-plug is the one thing this host stops a live match for on its own (#130).
+          // Reported before the pause so the shell can say what happened on the panel it
+          // is about to show.
+          for (const edge of edges) onGamepadRef.current?.(edge);
+          gamepads.clearEvents();
+          if (isSimulating(phaseRef.current)) onRequestPauseRef.current?.();
+        }
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
@@ -608,11 +772,16 @@ export function GameHost({
         // The only thing the overlay adds to the hot path, and the one number it cannot get
         // by reading the loop: `FixedLoop` counts steps, and nothing counts frames.
         if (process.env.NODE_ENV !== 'production') debugFrames += 1;
-        guard(() => {
-          renderer.beginFrame();
-          game.render(renderer, alpha);
-          renderer.endFrame();
-        }, onGameError);
+        // On a low battery alternate frames are drawn (#190). The step above still ran,
+        // the sounds below still flush; only the picture is skipped, and the next frame's
+        // `alpha` interpolates it to where it should be.
+        if (renderGate.shouldRender()) {
+          guard(() => {
+            renderer.beginFrame();
+            game.render(renderer, alpha);
+            renderer.endFrame();
+          }, onGameError);
+        }
         // Queued sounds reach the graph once a frame, outside the fixed step, so playing a
         // sound from inside `update()` stays allocation-free (rule 5).
         audio().flush();
@@ -766,7 +935,11 @@ export function GameHost({
     // the query parameter had been resolved in an effect, so the recorder was never made at all
     // and the trace stayed empty. Rebuilding costs nothing where it actually happens: recording
     // is decided on the lobby screen, before there is a match to lose.
+    //
+    // `rendererReady` is the gate at the top of the effect (#16): false only in a build made
+    // with the WebGL flag, until its module has been fetched, and then true for good.
   }, [
+    rendererReady,
     manifest,
     createGame,
     seed,
