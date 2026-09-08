@@ -974,6 +974,7 @@ export function PlaySurface({ slug }: { slug: string }) {
             seatNames={seatNames}
             record={record}
             nextGame={nextGame}
+            slug={slug}
             presentation="shared-screen"
             onResume={() => {
               send({ kind: 'resume' });
