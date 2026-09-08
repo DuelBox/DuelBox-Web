@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import {
   Canvas2DRenderer,
   FixedLoop,
+  GamepadManager,
   InputManager,
   InputRecorder,
   InputView,
@@ -11,6 +12,7 @@ import {
   exportTrace,
   RunLoop,
   browserClock,
+  browserGamepadSource,
   clampDevicePixelRatio,
   negotiateSharedLogical,
   negotiateSharedViewport,
@@ -22,6 +24,7 @@ import {
   type LogicalSize,
   type SeatId,
   type SeatInputState,
+  type GamepadEvent,
   type ZoneSplit,
 } from '@duelbox/engine';
 import {
@@ -93,6 +96,21 @@ export interface GameHostProps {
   onSeatInput?: (seat: SeatId) => void;
   /** The window went away. The shell decides what that means; the host never pauses itself. */
   onRequestPause?: () => void;
+  /**
+   * A controller was plugged in, unplugged, or moved to the other seat (#130).
+   *
+   * Fired from the fixed step on the poll that saw the edge, and always paired with
+   * {@link onRequestPause}: a seat that just gained or lost its instrument mid-rally is the
+   * one thing this host will stop a live match for on its own, because the alternative is
+   * a player whose pad went dead discovering it by losing.
+   */
+  onGamepad?: (event: GamepadEvent) => void;
+  /**
+   * Hands the shell the one manual control the acceptance asks for: swapping which pad drives
+   * which seat, for the pair who were handed the wrong ones. Given once per match, like
+   * `onTraceReady`, because the manager lives in the effect.
+   */
+  onGamepadReady?: (controls: { swap: () => void }) => void;
   /**
    * The match cannot go on, and the shell has to say so.
    *
@@ -171,6 +189,8 @@ export function GameHost({
   onActiveSeat,
   onSeatInput,
   onRequestPause,
+  onGamepad,
+  onGamepadReady,
   onError,
   recordTrace = false,
   onTraceReady,
@@ -194,6 +214,10 @@ export function GameHost({
   onSeatInputRef.current = onSeatInput;
   const onRequestPauseRef = useRef(onRequestPause);
   onRequestPauseRef.current = onRequestPause;
+  const onGamepadRef = useRef(onGamepad);
+  onGamepadRef.current = onGamepad;
+  const onGamepadReadyRef = useRef(onGamepadReady);
+  onGamepadReadyRef.current = onGamepadReady;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
@@ -276,6 +300,42 @@ export function GameHost({
     // since a separate code path would not be the path the bug was on.
     const recorder = recordTrace ? new InputRecorder(manager) : null;
     const input: InputManager | InputRecorder = recorder ?? manager;
+
+    /**
+     * The pads (#130). `GamepadManager` and `browserGamepadSource` had both been in the
+     * engine, with tests, and called by nothing — the fifth library this repository was
+     * found to have written and never wired. This is the wiring: polled inside the fixed
+     * step so a pad's intent reaches the same step a key's does, and read through
+     * `setSeatAnalog`, so a game never learns which instrument a seat is holding.
+     *
+     * Rule 5: `poll()` and `setSeatAnalog` mutate in place; the one thing on this path that
+     * allocates is `navigator.getGamepads()` itself, which is the browser's and is argued in
+     * `loop.ts`. `usedGamepad` is a two-slot typed array for the same reason `usedInput` is.
+     */
+    const gamepads = new GamepadManager(browserGamepadSource());
+    onGamepadReadyRef.current?.({
+      swap: () => {
+        const p1 = gamepads.padOf('p1');
+        const p2 = gamepads.padOf('p2');
+        // Two pads: each takes the other's seat. One pad: it crosses to the empty seat.
+        // None: nothing to swap, and `reassign` is not called so no event is raised.
+        if (p1 !== null && p2 !== null) {
+          gamepads.reassign('p1', p2);
+          gamepads.reassign('p2', p1);
+        } else if (p1 !== null) {
+          gamepads.reassign('p2', p1);
+        } else if (p2 !== null) {
+          gamepads.reassign('p1', p2);
+        }
+        gamepads.clearEvents();
+      },
+    });
+    /** Feeds one seat's pad reading into the manager, or zeros when it has no pad. */
+    const feedSeat = (seat: SeatId): void => {
+      const reading = gamepads.reading(seat);
+      if (reading === null) input.setSeatAnalog(seat, 0, 0, false);
+      else input.setSeatAnalog(seat, reading.moveX, reading.moveY, reading.action);
+    };
 
     gameRef.current = game;
     // The presentation is read through a getter over this mutable, not baked in, so it can be
@@ -554,6 +614,22 @@ export function GameHost({
         // that could disagree. A getter over a boolean, so the step path allocates
         // nothing for it (rule 5).
         if (renderer.surfaceLost) return;
+        // The pads, every live step and before the input is sampled, so a stick's intent
+        // reaches the step it was read on. Polled while paused too: a pad that arrives
+        // during the pause is seated by the time the board comes back, and one that leaves
+        // during it is reported rather than discovered on the first live step.
+        gamepads.poll();
+        feedSeat('p1');
+        feedSeat('p2');
+        const edges = gamepads.events;
+        if (edges.length > 0) {
+          // A hot-plug is the one thing this host stops a live match for on its own (#130).
+          // Reported before the pause so the shell can say what happened on the panel it
+          // is about to show.
+          for (const edge of edges) onGamepadRef.current?.(edge);
+          gamepads.clearEvents();
+          if (isSimulating(phaseRef.current)) onRequestPauseRef.current?.();
+        }
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
