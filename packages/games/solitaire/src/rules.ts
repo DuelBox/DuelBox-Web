@@ -497,6 +497,14 @@ export interface MatchState extends Position {
   passes: number;
   turns: number;
   over: boolean;
+  /**
+   * One seat, never handed over (#1750). Set from `GameContext.solo`: `play` gives the turn
+   * straight back to `p1`, and letting go ends the deal at once rather than after two passes
+   * in a row — with one player, one pass is the same statement as two. `applyMove` itself is
+   * left alone, because the bot search runs it on copied positions and reads the turn
+   * changing hands; the restore happens one level up, where the real match is.
+   */
+  readonly solo: boolean;
   /** The last move played and the card it sent up, for the reveal and for the tests. */
   lastMove: number;
   lastCard: number;
@@ -533,6 +541,7 @@ export function createMatch(
   rng: Rng,
   openingSeat: SeatId = 'p1',
   reveal: number = REVEAL_COUNT,
+  solo = false,
 ): MatchState {
   const state: MatchState = {
     ...createPosition(),
@@ -542,6 +551,7 @@ export function createMatch(
     passes: 0,
     turns: 0,
     over: false,
+    solo,
     lastMove: MOVE_NONE,
     lastCard: NONE,
   };
@@ -596,7 +606,9 @@ export function createMatch(
   for (let i = 0; i < stockCount; i += 1) state.stock[stockCount - 1 - i] = at(stockScratch, i);
   state.stockLeft = stockCount;
 
-  state.active = openingSeat;
+  // Solo always opens on the one seat there is; a coin that landed on `p2` would wait
+  // forever for a player who is not there.
+  state.active = solo ? 'p1' : openingSeat;
   return state;
 }
 
@@ -606,6 +618,7 @@ export function play(state: MatchState, move: number): boolean {
   if (!isLegal(state, move)) return false;
   const mover = state.active;
   const sent = applyMove(state, move, state.reveal);
+  if (state.solo) state.active = mover;
   if (sent !== NONE) state.owner[sent] = mover === 'p1' ? 1 : 2;
   state.lastMove = move;
   state.lastCard = sent;
@@ -630,7 +643,7 @@ export function letGo(state: MatchState): void {
   state.lastCard = NONE;
   state.passes += 1;
   state.turns += 1;
-  if (state.passes >= 2) {
+  if (state.solo || state.passes >= 2) {
     state.over = true;
     return;
   }

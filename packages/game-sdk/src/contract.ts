@@ -71,6 +71,26 @@ export interface GameContext {
   readonly reducedMotion?: boolean;
   /** Difficulty of the bot occupying a seat, or null when a human holds it. */
   botDifficulty(seat: SeatId): 'easy' | 'normal' | 'hard' | null;
+  /**
+   * One person, one seat, nobody opposite (#1750).
+   *
+   * `true` for a solo score-attack: `p1` is the only seat that ever moves, and the far seat is
+   * neither a human nor a bot — `botDifficulty('p2')` is null and no input ever arrives for
+   * it. A game that declares `solo` in its manifest owes three things when this is set:
+   *
+   * 1. **The turn never passes.** A turn-board game keeps `active` on `p1` after every move;
+   *    a split game leaves the other half idle and never deals to it.
+   * 2. **The run still ends.** On the game's own terminal condition — the grid full, the
+   *    tower down, no move left — `getScore().winner` becomes non-null. The shell reads that
+   *    as "the run is over" and nothing more: `p1` is the score, and which seat the value
+   *    names is not a result anybody is shown.
+   * 3. **Nothing else changes.** Same rules, same scoring for `p1`, same box, same rng use.
+   *
+   * Optional, like `reducedMotion`, and for the same reason: game tests build this context
+   * by hand. Read it as `context.solo === true`. `scripts/validate-manifests.mjs` runs every
+   * solo-declaring game with it set and fails the build if the far seat is ever asked to move.
+   */
+  readonly solo?: boolean;
 }
 
 export interface Game {
