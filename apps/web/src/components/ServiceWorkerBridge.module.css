@@ -27,3 +27,12 @@
   min-width: var(--db-touch-target);
   min-height: var(--db-touch-target);
 }
+
+/* The "Not now" beside "Add it" (#195): the same target, the quieter of the two, because a
+   refusal must be exactly as easy to press as an acceptance and must not look like the
+   default. */
+.quiet {
+  background: var(--db-surface);
+  color: var(--db-ink);
+  border: 1px solid var(--db-border);
+}

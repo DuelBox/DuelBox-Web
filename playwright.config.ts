@@ -137,6 +137,9 @@ const CHROMIUM_ONLY = [
   '**/visual.spec.ts',
   '**/game-record.spec.ts',
   '**/prefetch.spec.ts',
+  // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
+  // no-op there, so a second engine would be four copies of a hidden button (#195).
+  '**/install-prompt.spec.ts',
 ];
 
 /**
