@@ -23,7 +23,7 @@ const HALF_TURN = Math.PI;
  * One family for the whole engine. Games choose a size, never a face, so that text
  * metrics stay predictable and the font string cache only has to key on size.
  */
-const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+export const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 /** British spelling at the API edge; the canvas spelling never leaks into a game. */
 export type TextAlign = 'left' | 'centre' | 'right';
@@ -101,6 +101,37 @@ export interface Renderer {
    * straight to `Tween.valueFor`, `Flash.levelFor` and `HitStop.holdingFor`.
    */
   readonly reducedMotion?: boolean;
+}
+
+/**
+ * What the host needs of a renderer beyond what a game does (#16).
+ *
+ * A game sees {@link Renderer}. The host also sizes the viewport, opens and closes frames,
+ * relays the motion preference, follows the surface's lifetime and lays out its HUD — and
+ * until a second backend existed those were methods on `Canvas2DRenderer` alone, so the
+ * host was typed against the class. This is the seam the WebGL backend is chosen through:
+ * both implement it, and `GameHost` reads nothing off either that is not here.
+ *
+ * `setDevicePixelRatio` is the one member the 2D backend does not need — the host applies
+ * the ratio to the 2D context itself with `setTransform`, and there is no context transform
+ * in WebGL to carry it — so it is optional, and the host calls it when it is there.
+ */
+export interface HostRenderer extends Renderer {
+  setViewport(view: Viewport): void;
+  beginFrame(): void;
+  endFrame(): void;
+  setReducedMotion(reduced: boolean): void;
+  setDevicePixelRatio?(dpr: number): void;
+  watchSurface(
+    target: SurfaceEventTarget,
+    onLost: (abandoned: boolean) => void,
+    onRestored: () => void,
+  ): () => void;
+  readonly surfaceLost: boolean;
+  readonly surfaceAbandoned: boolean;
+  readonly seatRotationDepth: number;
+  readonly shakeDepth: number;
+  measureText(value: string, sizePx: number): number;
 }
 
 /**
