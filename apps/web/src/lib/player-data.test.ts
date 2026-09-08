@@ -1,6 +1,10 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
 import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
+import { CATALOGUE_KEY, writeSortPreference } from './catalogue-filter';
 import { HINTS_SEEN_KEY, markHintsSeen } from './control-hints';
 import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
@@ -69,9 +73,36 @@ function populate(): void {
   // this fixture would then be exporting six stores while claiming seven.
   writeSeatBinding('p1', { ...readBindings().p1, action: 'KeyC' });
   markHintsSeen('chess');
+  writeSortPreference('name');
 }
 
 describe('the keys', () => {
+  /**
+   * Every key any module under `lib/` defines is in the list, read from the source rather than
+   * from memory.
+   *
+   * The hand-written list below could not notice a store that nobody added to it — which is
+   * what happened: `CATALOGUE_KEY` (`duelbox:catalogue`, the sort the player last chose) was
+   * written by `catalogue-filter.ts` for a month, exported by nobody, and not on the privacy
+   * page's list of what this site keeps, while this test said "cover every store, and nothing
+   * else" and passed. That is the tenth tally entry's shape, one file over from where it was
+   * found. Definitions are matched on the `${KEY_PREFIX}` template every store uses, so a
+   * store that spells its key any other way is a separate defect `local-store.ts` should catch.
+   */
+  it('cover every key a module under lib/ defines', () => {
+    const lib = fileURLToPath(new URL('.', import.meta.url));
+    const defined = new Set<string>();
+    for (const file of readdirSync(lib)) {
+      if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
+      const source = readFileSync(join(lib, file), 'utf8');
+      for (const match of source.matchAll(/`\$\{KEY_PREFIX\}([a-z-]+)`/g)) {
+        defined.add(`duelbox:${match[1] ?? ''}`);
+      }
+    }
+    expect(defined.size, 'the scan found no key definitions at all').toBeGreaterThan(5);
+    expect([...defined].sort()).toEqual([...PLAYER_DATA_KEYS].sort());
+  });
+
   it('cover every store, and nothing else', () => {
     expect(PLAYER_DATA_KEYS).toEqual([
       LAST_MODE_KEY,
@@ -83,6 +114,7 @@ describe('the keys', () => {
       TOURNAMENT_KEY,
       KEY_BINDINGS_KEY,
       HINTS_SEEN_KEY,
+      CATALOGUE_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -142,6 +174,7 @@ describe('exporting', () => {
           },
         },
         [HINTS_SEEN_KEY]: { version: 1, seen: ['chess'] },
+        [CATALOGUE_KEY]: { version: 1, sort: 'name' },
       },
     });
   });
