@@ -146,7 +146,7 @@ export class WobbleStackGame implements Game {
       resetGrip(this.#grips[seat]);
       clearIntent(this.#intents[seat]);
     }
-    resetMatch(this.#match);
+    resetMatch(this.#match, context.solo === true);
     // `openingSeat` is deliberately not read. This is a real-time game: both rails are
     // live from the first step and there is no opener for the shell to alternate.
   }

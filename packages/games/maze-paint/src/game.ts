@@ -156,7 +156,7 @@ export class MazePaintGame implements Game {
     this.#presentation = context.presentation;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
-    startMatch(this.#match, context.rng, context.openingSeat);
+    startMatch(this.#match, context.rng, context.openingSeat, undefined, context.solo === true);
 
     /*
      * A generator each, assigned by **role rather than by seat**: whoever opens gets the

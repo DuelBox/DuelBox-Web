@@ -371,6 +371,14 @@ export interface Match {
   readonly dealKind: number[];
   readonly dealSlot: number[];
   dealtUpTo: number;
+  /**
+   * One yard, not two (#1750). Set from `GameContext.solo` by `resetMatch`: the far yard is
+   * never stepped, so nothing is ever dealt to it and it can neither stand nor fall, and the
+   * run ends when the near yard is finished — out of pieces or toppled — or the clock runs
+   * out. `winnerOf` then names a seat because `resolve` has no other vocabulary; the shell
+   * reads the name as "the run is over" and the count as the score.
+   */
+  solo: boolean;
 }
 
 /** What one seat is asking for this step. Rewritten in place; never allocated per step. */
@@ -471,10 +479,11 @@ export function createMatch(): Match {
     dealKind,
     dealSlot,
     dealtUpTo: 0,
+    solo: false,
   };
 }
 
-export function resetMatch(match: Match): void {
+export function resetMatch(match: Match, solo = false): void {
   resetYard(match.p1);
   resetYard(match.p2);
   match.elapsed = 0;
@@ -483,6 +492,7 @@ export function resetMatch(match: Match): void {
     match.dealSlot[i] = 0;
   }
   match.dealtUpTo = 0;
+  match.solo = solo;
 }
 
 export function yardOf(match: Match, seat: SeatId): Yard {
@@ -990,7 +1000,9 @@ export function step(
   stepResult.fell = null;
   match.elapsed += fixedDeltaSeconds;
   const fellP1 = stepYard(match, match.p1, p1, fixedDeltaSeconds, rng);
-  const fellP2 = stepYard(match, match.p2, p2, fixedDeltaSeconds, rng);
+  // The far yard of a solo run is never stepped: nothing is dealt to it, so it never stands
+  // and never falls, and the run is decided on the near yard alone.
+  const fellP2 = match.solo ? false : stepYard(match, match.p2, p2, fixedDeltaSeconds, rng);
   // Both can go on the same step. `winnerOf` hands that to the shared helper, which calls
   // it a draw; naming one here would be this game picking a seat.
   if (fellP1 && !fellP2) stepResult.fell = 'p1';
@@ -1039,7 +1051,9 @@ export function winnerOf(match: Readonly<Match>): SeatId | 'draw' | null {
   if (match.p1.out) eliminated.push('p1');
   if (match.p2.out) eliminated.push('p2');
   const outcome = resolve(CONDITION, tallyOf(match), {
-    timeExpired: (finished(match.p1) && finished(match.p2)) || match.elapsed >= ROUND_SECONDS,
+    timeExpired:
+      (match.solo ? finished(match.p1) : finished(match.p1) && finished(match.p2)) ||
+      match.elapsed >= ROUND_SECONDS,
     eliminated,
   });
   if (outcome !== 'draw') return outcome;

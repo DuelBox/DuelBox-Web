@@ -12,6 +12,7 @@ import { AMERICAN, NEVER } from './house-voice';
 import { LAST_MODE_KEY } from './last-mode';
 import { BOT_DIFFICULTIES } from './match-setup';
 import { PLAYER_DATA_KEYS } from './player-data';
+import { BEST_SCORES_KEY } from './best-scores-key';
 import { CATALOGUE_KEY } from './catalogue-filter-key';
 import { HINTS_SEEN_KEY } from './control-hints-key';
 import { INSTALL_KEY } from './install-prompt-key';
@@ -287,6 +288,7 @@ describe('the numbers the landing copy states', () => {
     [HINTS_SEEN_KEY]: /first-play hints|hints you have seen/i,
     [CATALOGUE_KEY]: /sorted the catalogue|catalogue order|sort order/i,
     [INSTALL_KEY]: /home screen|install/i,
+    [BEST_SCORES_KEY]: /best score/i,
   };
 
   /**
