@@ -1063,6 +1063,7 @@ export function PlaySurface({ slug }: { slug: string }) {
               presentation={solo ? 'single-seat' : 'shared-screen'}
               localSeat="p1"
               openingSeat={solo ? 'p1' : match.openingSeat}
+              round={match.round}
               solo={solo}
               {...(botSeats ? { botDifficulty: botSeats } : {})}
               onTick={handleTick}

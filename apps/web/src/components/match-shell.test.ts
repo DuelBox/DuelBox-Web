@@ -102,6 +102,14 @@ describe('changing a match between rounds (#2351)', () => {
     expect(overlay).toContain('Not added to the record');
   });
 
+  it('the host rebuilds the board for every round, not only when the opener changes', () => {
+    // The third round of a best-of hung whenever its opener repeated the second's: the
+    // finished board was resumed rather than replaced. The round is now a setup dependency.
+    const host = read('GameHost.tsx');
+    expect(host).toMatch(/openingSeat,\s*round,\s*peerLogical,/);
+    expect(read('PlaySurface.tsx')).toContain('round={match.round}');
+  });
+
   it('the tournament carries its tier into the lobby, the track and the HUD (#2347)', () => {
     const surface = read('PlaySurface.tsx');
     expect(surface).toContain('difficulty: setup.difficulty');
