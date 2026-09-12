@@ -2,7 +2,13 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { colour, seatColour } from './tokens.js';
+import {
+  MOTION,
+  REDUCED_MOTION_SECONDS,
+  motionDuration,
+  standardEase,
+} from '@duelbox/engine/motion';
+import { colour, motion, seatColour } from './tokens.js';
 
 /**
  * The CSS and TS token files are two copies of one palette: components read the CSS,
@@ -62,6 +68,138 @@ describe('design tokens', () => {
     const reduced = css.slice(css.indexOf('prefers-reduced-motion'));
     expect(reduced).toContain('--db-duration: 1ms');
     expect(reduced).toContain('--db-duration-slow: 1ms');
+  });
+});
+
+/**
+ * The motion signature is one set of numbers, and this is what holds it to one (#72).
+ *
+ * There are two motion layers in this product and they cannot share a mechanism. The shell
+ * moves in CSS, timed by `--db-duration*` and eased by `--db-ease`, with the cascade as the
+ * reduced-motion lever. Games move through `Tween` on the fixed timestep, in an engine that
+ * has no DOM — lint forbids `window` and `document` in that package — so it can neither read
+ * a custom property nor be handed one, and its durations are seconds rather than
+ * milliseconds because that is what the timestep counts in.
+ *
+ * What they can share is the table. `MOTION` is authored in `@duelbox/engine`, because the
+ * dependency only points one way: the engine cannot import this app and this app already
+ * imports the engine. `tokens.ts` restates it in the spellings CSS wants, and this parses
+ * `tokens.css` and fails when a value there has drifted from the table. Three copies, one
+ * decision, and a failing test the moment that stops being true.
+ *
+ * Written as a function over a source string rather than as assertions over `css`, so the
+ * check can be run against a stylesheet with a value planted in it — see the control below.
+ * The twelfth entry in CLAUDE.md is about a guard whose greedy comment stripper made it pass
+ * with the plant still in place, and the only reason that was caught is that it had a control
+ * on real input.
+ */
+function motionDrift(source: string): string[] {
+  const drift: string[] = [];
+  const declared = (name: string): string | undefined =>
+    new RegExp(`${name}:\\s*([^;]+);`).exec(source)?.[1]?.trim();
+
+  const durations: readonly (readonly [string, number])[] = [
+    ['--db-duration-fast', MOTION.durationFastSeconds],
+    ['--db-duration', MOTION.durationSeconds],
+    ['--db-duration-slow', MOTION.durationSlowSeconds],
+  ];
+  for (const [name, seconds] of durations) {
+    const want = `${String(Math.round(seconds * 1000))}ms`;
+    const got = declared(name);
+    if (got !== want) {
+      drift.push(
+        `${name} is ${got ?? 'undeclared'} in tokens.css and ${want} (${String(seconds)}s) in the engine MOTION table`,
+      );
+    }
+  }
+
+  const ease = declared('--db-ease');
+  const wantEase = `cubic-bezier(${MOTION.ease.join(', ')})`;
+  if (ease !== wantEase) {
+    drift.push(
+      `--db-ease is ${ease ?? 'undeclared'} in tokens.css and ${wantEase} in the engine MOTION table`,
+    );
+  }
+
+  // The reduced-motion collapse is the same lever stated once more, and the JS layer's
+  // `motionDuration` answers with the same number in seconds. A stylesheet that collapsed to
+  // something else would leave the two halves disagreeing about what "instant" is.
+  const reduced = source.slice(source.indexOf('prefers-reduced-motion'));
+  const instant = `${String(Math.round(REDUCED_MOTION_SECONDS * 1000))}ms`;
+  for (const [name] of durations) {
+    if (!reduced.includes(`${name}: ${instant}`)) {
+      drift.push(`${name} does not collapse to ${instant} under prefers-reduced-motion`);
+    }
+  }
+
+  return drift;
+}
+
+describe('the motion signature is shared with the JS tween layer', () => {
+  it('gives the stylesheet and the engine the same durations and curve', () => {
+    expect(motionDrift(css)).toEqual([]);
+  });
+
+  it('reports a stylesheet that has drifted from the table', () => {
+    // The control. `motionDrift` returning nothing is only evidence if it can return
+    // something, and a duration changed by ten milliseconds is exactly the drift this is
+    // here to catch: valid CSS, plausible, and invisible to every other check in this file.
+    const planted = css.replace('--db-duration: 200ms', '--db-duration: 210ms');
+    expect(planted, 'the plant did not apply — tokens.css has been rewritten').not.toBe(css);
+    expect(motionDrift(planted)).toEqual([
+      '--db-duration is 210ms in tokens.css and 200ms (0.2s) in the engine MOTION table',
+    ]);
+
+    const bent = css.replace('cubic-bezier(0.2, 0.8, 0.2, 1)', 'cubic-bezier(0.2, 0.8, 0.4, 1)');
+    expect(bent).not.toBe(css);
+    expect(motionDrift(bent)).toEqual([
+      '--db-ease is cubic-bezier(0.2, 0.8, 0.4, 1) in tokens.css and cubic-bezier(0.2, 0.8, 0.2, 1) in the engine MOTION table',
+    ]);
+
+    const uncollapsed = css.replace('--db-duration-fast: 1ms', '--db-duration-fast: 120ms');
+    expect(uncollapsed).not.toBe(css);
+    expect(motionDrift(uncollapsed)).toEqual([
+      '--db-duration-fast does not collapse to 1ms under prefers-reduced-motion',
+    ]);
+  });
+
+  it('spells the table for CSS without rounding it away', () => {
+    // `tokens.ts` multiplies by a thousand, and in IEEE 754 `0.12 * 1000` is
+    // 120.00000000000001 — a token of `120.00000000000001ms` is valid CSS, and nothing else
+    // in this file would have looked at it.
+    expect(motion.durationFast).toBe(cssVar('duration-fast'));
+    expect(motion.duration).toBe(cssVar('duration'));
+    expect(motion.durationSlow).toBe(cssVar('duration-slow'));
+    expect(motion.ease).toBe(cssVar('ease'));
+    for (const value of [motion.durationFast, motion.duration, motion.durationSlow]) {
+      expect(value).toMatch(/^\d+ms$/);
+    }
+  });
+
+  it('eases exactly as the curve the stylesheet names', () => {
+    // `standardEase` is the same four control points CSS is given, solved. Endpoints first,
+    // because a tween that does not land exactly on its destination is the defect
+    // `easeOutBack`'s docstring records; then the midpoint, which is where a bezier
+    // implementation that solved `y(t)` directly instead of inverting `x` would differ.
+    expect(standardEase(0)).toBe(0);
+    expect(standardEase(1)).toBe(1);
+    // 0.946 at the midpoint: `cubic-bezier(0.2, 0.8, 0.2, 1)` is a hard decelerate, and the
+    // number is worth stating because it is the one a reader would guess wrong. Solved by
+    // hand from `X(u) = u³ - 0.6u² + 0.6u = 0.5`, u = 0.7235, `Y(u) = 0.9456`.
+    expect(standardEase(0.5)).toBeCloseTo(0.9461, 4);
+    expect(standardEase(0.25)).toBeGreaterThan(0.25);
+    for (let t = 0; t <= 1; t += 1 / 64) {
+      expect(standardEase(t), `standardEase(${String(t)})`).toBeGreaterThanOrEqual(
+        standardEase(Math.max(0, t - 1 / 64)),
+      );
+    }
+  });
+
+  it('collapses a JS duration the way the cascade collapses a CSS one', () => {
+    expect(motionDuration(MOTION.durationSeconds, false)).toBe(MOTION.durationSeconds);
+    expect(motionDuration(MOTION.durationSeconds, undefined)).toBe(MOTION.durationSeconds);
+    expect(motionDuration(MOTION.durationSeconds, true)).toBe(REDUCED_MOTION_SECONDS);
+    expect(Math.round(REDUCED_MOTION_SECONDS * 1000)).toBe(1);
   });
 });
 
