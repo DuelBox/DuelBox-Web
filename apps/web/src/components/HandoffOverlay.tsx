@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import type { SeatId } from '@duelbox/engine';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { SeatGlyph } from './SeatGlyph';
 import { handoffPrompt } from './handoff';
 import styles from './HandoffOverlay.module.css';
@@ -26,6 +28,7 @@ export interface HandoffOverlayProps {
 }
 
 export function HandoffOverlay({ toSeat, toName, onContinue }: HandoffOverlayProps) {
+  const messages = useMessages();
   const buttonRef = useRef<HTMLButtonElement>(null);
   // Focus the Continue button so the incoming player can take the device with the keyboard
   // as well as a tap, and so nothing behind the opaque cover holds focus.
@@ -34,13 +37,20 @@ export function HandoffOverlay({ toSeat, toName, onContinue }: HandoffOverlayPro
   }, []);
 
   return (
-    <div className={styles.blackout} role="dialog" aria-modal="true" aria-label="Pass the device">
+    <div
+      className={styles.blackout}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t(messages, 'Pass the device')}
+    >
       <div className={styles.panel}>
         <SeatGlyph seat={toSeat} size={40} />
-        <p className={styles.prompt}>{handoffPrompt(toName)}</p>
-        <p className={styles.detail}>Hand the device over, then continue when you have it.</p>
+        <p className={styles.prompt}>{handoffPrompt(messages, toName)}</p>
+        <p className={styles.detail}>
+          {t(messages, 'Hand the device over, then continue when you have it.')}
+        </p>
         <button ref={buttonRef} type="button" className={styles.continue} onClick={onContinue}>
-          I have it — continue
+          {t(messages, 'I have it — continue')}
         </button>
       </div>
     </div>

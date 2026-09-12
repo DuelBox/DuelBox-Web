@@ -21,6 +21,9 @@ import {
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
 import { recordRunScore, type RunResult } from '@/lib/best-scores';
+import { T } from '@/lib/i18n/T';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { gamepadNotice } from '@/lib/gamepad-notice';
 import { MATCH_FINISHED } from '@/lib/install-prompt-key';
 import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
@@ -109,6 +112,7 @@ type Mode = PlayMode;
  * attribute and the stylesheet to each other. docs/rtl.md has the whole of it.
  */
 export function PlaySurface({ slug }: { slug: string }) {
+  const messages = useMessages();
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [manifest, setManifest] = useState<GameManifest | null>(null);
   const [create, setCreate] = useState<(() => Game) | null>(null);
@@ -727,9 +731,15 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [seed]);
 
   /** A game threw; the host stopped the loop, and this raises the recovery screen (#151). */
-  const handleGameError = useCallback((error: unknown) => {
-    setGameError(error ?? new Error('The game stopped unexpectedly.'));
-  }, []);
+  const handleGameError = useCallback(
+    (error: unknown) => {
+      // The sentence `GameErrorBoundary` shows when a game threw something that carried no
+      // message of its own, translated here where the catalogue is in hand (#220): the
+      // boundary is a class component and looks its id up without knowing where it came from.
+      setGameError(error ?? new Error(t(messages, 'The game stopped unexpectedly.')));
+    },
+    [messages],
+  );
 
   /**
    * The active seat changed. Track it for the turn indicator, and raise the pass-and-play
@@ -831,8 +841,13 @@ export function PlaySurface({ slug }: { slug: string }) {
   if (loadState === 'error') {
     return (
       <div className="db-panel" role="alert">
-        <h2>This game is not playable yet</h2>
-        <p>Its rules and controls are settled, but the build has not landed. Try another game.</p>
+        <h2>{t(messages, 'This game is not playable yet')}</h2>
+        <p>
+          {t(
+            messages,
+            'Its rules and controls are settled, but the build has not landed. Try another game.',
+          )}
+        </p>
       </div>
     );
   }
@@ -840,7 +855,18 @@ export function PlaySurface({ slug }: { slug: string }) {
   if (loadState === 'loading' || !manifest || !create) {
     return (
       <div className="db-panel">
-        <p>Loading {slug.replace(/-/g, ' ')}…</p>
+        {/*
+          `<T>` rather than `t()` for this one line, and the reason is the exported bytes. It is
+          the only copy in this component that a build machine renders — every other phase is
+          reached after a press — so it is in the HTML of all 108 play routes and all 108 embed
+          routes. React writes `Loading <!-- -->air hockey<!-- -->…` for three children and
+          `Loading air hockey…` for one string, and `t()` here would merge them: the same words,
+          eight bytes different, on 216 exported pages. `<T>` renders the parts separately, so
+          the English export is byte-for-byte what it was before the string was converted.
+        */}
+        <p>
+          <T id="Loading {name}…" values={{ name: slug.replace(/-/g, ' ') }} />
+        </p>
       </div>
     );
   }
@@ -865,6 +891,7 @@ export function PlaySurface({ slug }: { slug: string }) {
     const trackNames = seatNamesFor(
       botSeatsFor(tournament.opponent, setup.difficulty),
       chosenNames,
+      messages,
     );
     return (
       <div className="db-panel">
@@ -915,11 +942,9 @@ export function PlaySurface({ slug }: { slug: string }) {
                     start(offer);
                   }}
                 >
-                  {offer === 'friend'
-                    ? 'Play together here'
-                    : offer === 'bot'
-                      ? `Play against ${SEAT_CHARACTERS.p2}`
-                      : 'Play solo'}
+                  {offer === 'bot'
+                    ? t(messages, 'Play against {name}', { name: SEAT_CHARACTERS.p2 })
+                    : t(messages, offer === 'friend' ? 'Play together here' : 'Play solo')}
                 </button>
               ))}
             </div>
@@ -936,8 +961,15 @@ export function PlaySurface({ slug }: { slug: string }) {
             {tournament.phase === 'playing' ? null : (
               <>
                 <p className={styles.tournamentLede}>
-                  Or play a tournament: {TOURNAMENT_LENGTH} games drawn at random, starting with
-                  this one. First to {legsToWin(TOURNAMENT_LENGTH)} takes it.
+                  {/* One sentence with both numbers in it rather than three fragments: a
+                      translator needs the whole line to put "first to four" where their
+                      grammar wants it. Not `plural()` — `TOURNAMENT_LENGTH` is a constant
+                      seven, so there is no other count this line can ever be about. */}
+                  {t(
+                    messages,
+                    'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.',
+                    { games: TOURNAMENT_LENGTH, wins: legsToWin(TOURNAMENT_LENGTH) },
+                  )}
                 </p>
                 {/*
                   `ordered`, not a hardcoded pair. These two buttons used to be written out as
@@ -966,8 +998,10 @@ export function PlaySurface({ slug }: { slug: string }) {
                         }}
                       >
                         {against === 'friend'
-                          ? 'Tournament together'
-                          : `Tournament against ${SEAT_CHARACTERS.p2}`}
+                          ? t(messages, 'Tournament together')
+                          : t(messages, 'Tournament against {name}', {
+                              name: SEAT_CHARACTERS.p2,
+                            })}
                       </button>
                     ))}
                 </div>
@@ -993,7 +1027,7 @@ export function PlaySurface({ slug }: { slug: string }) {
    * marks the seat if a bot is in it — so naming the far seat and then playing the bot
    * shows the bot marked rather than the player's name on it.
    */
-  const seatNames = seatNamesFor(botSeats, chosenNames);
+  const seatNames = seatNamesFor(botSeats, chosenNames, messages);
 
   /**
    * The record the result screen shows: what the store held when this match began, plus
@@ -1166,7 +1200,9 @@ export function PlaySurface({ slug }: { slug: string }) {
             slug={slug}
             presentation={solo ? 'single-seat' : 'shared-screen'}
             solo={solo && run !== null ? run : undefined}
-            notice={gamepadEdge === null ? undefined : gamepadNotice(gamepadEdge, seatNames)}
+            notice={
+              gamepadEdge === null ? undefined : gamepadNotice(messages, gamepadEdge, seatNames)
+            }
             onSwapControllers={
               gamepadEdge === null || swapGamepads === null
                 ? undefined

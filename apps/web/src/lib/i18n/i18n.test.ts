@@ -432,7 +432,7 @@ describe('the pseudo-locale transforms', () => {
     expect(pseudoMirror('Mute sound')).toBe(pseudoMirror('Mute sound'));
   });
 
-  it('accents every letter, pads by about a third, and brackets the result', () => {
+  it('accents every letter, pads to half again the length, and brackets the result', () => {
     const out = pseudoAccent('Mute sound');
     expect(out.startsWith('⟦')).toBe(true);
     expect(out.endsWith('⟧')).toBe(true);
@@ -440,8 +440,38 @@ describe('the pseudo-locale transforms', () => {
     // screen is one this never saw.
     expect(out).not.toMatch(/[A-Za-z]/);
     expect(out).toContain('Ṁûŧé šöûñð');
-    // Ten characters in, at least thirteen and a half out before the brackets.
-    expect(out.length - 2).toBeGreaterThanOrEqual(Math.ceil(10 * 1.35));
+    // Ten characters in, at least fifteen out before the brackets are even counted.
+    expect(out.length - 2).toBeGreaterThanOrEqual(Math.ceil(10 * 1.5));
+  });
+
+  it('is at least 150% of the source length for every string, which is what #223 asks', () => {
+    // The acceptance criterion of #223 is a ratio, so it is asserted as one — over short
+    // strings, long ones, a single word, punctuation and a string that is mostly
+    // placeholder, because the padding is scaled from a length the placeholders count
+    // towards and a string can be nearly all placeholder.
+    const strings = [
+      'OK',
+      'Go',
+      'Mute',
+      'Play together here',
+      'Press again to reset everything',
+      '{count} games',
+      'Round {n} of {total}',
+      '{name} wins',
+      'Best of 3 — first to 2 takes it.',
+      'Every game on this site is playable by two people on one device, right now.',
+    ];
+    for (const source of strings) {
+      expect(pseudoAccent(source).length, source).toBeGreaterThanOrEqual(source.length * 1.5);
+    }
+  });
+
+  it('pads after the words rather than inside one, so every word can still break', () => {
+    // A padded word is a word no engine can break, which would be a different failure from
+    // the long line #223 is looking for.
+    const out = pseudoAccent('Mute sound');
+    expect(out).toMatch(/^⟦\S+ \S+ ·+⟧$/u);
+    expect(out).not.toMatch(/[^ ·]·/u);
   });
 
   it('mirrors each word with a bidi override and closes every override it opens', () => {

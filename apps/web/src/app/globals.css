@@ -21,6 +21,19 @@ body {
   font-size: var(--db-text-base);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* A word longer than its column breaks rather than running out of the page (#223).
+     Inherited, so it is the site's default answer to a word no engine can break — a German
+     compound, an address, a file name, the padding run `en-XA` ends every string with — and
+     `e2e/text-expansion.spec.ts` found the prose pages overflowing by up to 890px without it,
+     which took the document sideways on every one of them.
+
+     `break-word` and deliberately not `anywhere`: the two break the same lines, and differ
+     only in whether the break counts towards the box's min-content width. `anywhere` would
+     let a flex or grid item shrink below the longest word it holds, which is a change to how
+     every English column is sized; `break-word` leaves intrinsic sizing exactly as it was,
+     so nothing that fits today moves. Where a box really does have to shrink past its longest
+     word, that box asks for `anywhere` itself. */
+  overflow-wrap: break-word;
 }
 
 h1,

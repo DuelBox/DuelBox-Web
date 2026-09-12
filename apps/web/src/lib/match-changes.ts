@@ -53,9 +53,29 @@ const LEG =
 const SOLO_SEAT = 'A solo run has one seat, so there is nobody to hand the other to.';
 const SOLO_ROUNDS = 'A solo run is one round.';
 const NO_BOT = 'There is no bot in this match to make harder or easier.';
+const DECIDED = 'Every longer length is already decided by the score so far.';
 export const DEVICE_REASON =
   'Playing on two devices at once is not built. To carry a tournament to another device, ' +
   'export your data from Settings on this one and import it there.';
+
+/**
+ * Every sentence this module can hand the panel, for the extractor (#220).
+ *
+ * The reasons are data: the panel renders `t(messages, verdict.reason)`, and a string that
+ * reaches a lookup through a variable has no shape the extractor can read at the call site.
+ * `lib/i18n/sources.ts` registers this list so each one is a message id a locale translates,
+ * and `i18n.test.ts` fails on a member here the panel cannot render — which is why it is the
+ * constants themselves rather than a second spelling of them.
+ */
+export const CHANGE_REASONS: readonly string[] = [
+  MID_ROUND,
+  LEG,
+  SOLO_SEAT,
+  SOLO_ROUNDS,
+  NO_BOT,
+  DECIDED,
+  DEVICE_REASON,
+];
 
 /** The rounds a seat needs to take a best-of — the SDK's own rule, restated for the check. */
 export function roundsToWin(rounds: number): number {
@@ -111,10 +131,7 @@ export function describeChanges(situation: MatchSituation): MatchChanges {
   return {
     seat: allow,
     difficulty: mode === 'bot' ? allow : refuse(NO_BOT),
-    rounds:
-      choices.length === 0
-        ? { ...refuse('Every longer length is already decided by the score so far.'), choices }
-        : { ...allow, choices },
+    rounds: choices.length === 0 ? { ...refuse(DECIDED), choices } : { ...allow, choices },
     device,
   };
 }

@@ -49,11 +49,19 @@ const spec = readFileSync(join(root, 'e2e', 'offline.spec.ts'), 'utf8');
  * Only literal text: a heading assembled from an expression is not something this can compare
  * against a string in a spec, so one would be reported as no heading at all rather than
  * silently passing.
+ *
+ * `<T id="…" />` counts as literal, because it is (#219, #220). With no values that component
+ * renders its id and nothing else, so the exported HTML and the accessible name are the
+ * English string exactly as written here — which is what lets this page be translated without
+ * changing a byte of what `e2e/offline.spec.ts` waits for. `lib/nav-labels.test.ts` reads
+ * headings the same way and for the same reason. Anything else inside the heading — an
+ * expression, a second element, a `<T>` with values — still reads as no heading at all.
  */
 function headings(source: string): string[] {
-  return [...source.matchAll(/<h1\b[^>]*>([^<]*)<\/h1>/g)]
-    .map((match) => (match[1] ?? '').trim().replace(/\s+/g, ' '))
-    .filter((text) => text.length > 0 && !text.includes('{'));
+  return [...source.replace(/\s+/g, ' ').matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)]
+    .map((match) => (match[1] ?? '').trim())
+    .map((inner) => (/^<T id="([^"{}]*)" \/>$/.exec(inner)?.[1] ?? inner).trim())
+    .filter((text) => text.length > 0 && !text.includes('{') && !text.includes('<'));
 }
 
 /** Every accessible name `e2e/offline.spec.ts` asks a heading for. */
@@ -109,8 +117,14 @@ describe('the heading the e2e spec waits for', () => {
     expect(headings('<h1 className={styles.title}>Not saved to this device</h1>')).toEqual([
       'Not saved to this device',
     ]);
+    // The same heading through the lookup, which is what this page renders today.
+    expect(
+      headings('<h1 className={styles.title}>\n  <T id="Not saved to this device" />\n</h1>'),
+    ).toEqual(['Not saved to this device']);
     // An interpolated heading is not a string anything can compare, and must not be read as one.
     expect(headings('<h1>{title}</h1>')).toEqual([]);
+    expect(headings('<h1><T id={hub.title} /></h1>')).toEqual([]);
+    expect(headings('<h1><T id="Round {n}" values={{ n }} /></h1>')).toEqual([]);
     expect(headingNamesAssertedBy("getByRole('heading', { name: 'Score' })")).toEqual(['Score']);
     expect(headingNamesAssertedBy("getByRole('button', { name: 'Reload' })")).toEqual([]);
   });
@@ -127,11 +141,15 @@ describe('the two marks this page quotes from the catalogue', () => {
   });
 
   it('are quoted here word for word, both of them', () => {
+    // Either as the literal it was or through the i18n lookup, which renders the identical
+    // string into the identical markup (#220). Whitespace collapsed, because prettier puts
+    // a `<T>` on a line of its own inside the `<dt>`.
+    const flat = page.replace(/\s+/g, ' ').replace(/> </g, '><');
     for (const [ready, words] of Object.entries(marks)) {
       expect(
-        page,
+        flat.includes(`<dt>${words}</dt>`) || flat.includes(`<dt><T id="${words}" /></dt>`),
         `the catalogue says "${words}" for data-offline-ready="${ready}" and this page does not`,
-      ).toContain(`<dt>${words}</dt>`);
+      ).toBe(true);
     }
   });
 
@@ -151,10 +169,18 @@ describe('the offline page ships no behaviour', () => {
    * import here is a download for every visitor to any page — on a route that exists for the
    * moment a fetch fails, which is the worst possible time to need one. The three below are
    * the floor: a type, the link component the whole shell already carries, and this route's
-   * own stylesheet. A fourth needs the on-disk numbers before and after it, the way
+   * own stylesheet. A fifth needs the on-disk numbers before and after it, the way
    * `loading-states.test.ts` says: the word "server" is not a measurement.
+   *
+   * The fourth is `@/lib/i18n/T`, and it is on the list for exactly that reason rather than
+   * for a good story: it is a client component, and it costs this route nothing, because
+   * `LocaleProvider` is mounted in the root layout and the i18n modules are in the shell on
+   * every route already — the build's shell line is what says so, and the pull request that
+   * added it carries the before and after. Without it this page would be the one page in the
+   * product that answers a player in a language they did not choose, on the day their
+   * connection fails.
    */
-  const ALLOWED = ['next', 'next/link', './page.module.css'];
+  const ALLOWED = ['next', 'next/link', '@/lib/i18n/T', './page.module.css'];
 
   it('is a server component', () => {
     expect(page, 'a client component here is paid for by every visitor').not.toContain(

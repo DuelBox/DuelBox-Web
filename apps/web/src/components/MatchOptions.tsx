@@ -1,8 +1,16 @@
 'use client';
 
 import { useId } from 'react';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { SEAT_CHARACTERS } from '@/lib/seats';
-import { BOT_DIFFICULTIES, ROUND_CHOICES, type BotDifficulty } from '@/lib/match-setup';
+import {
+  BOT_DIFFICULTIES,
+  DIFFICULTY_LABELS,
+  ROUND_CHOICES,
+  ROUND_LABELS,
+  type BotDifficulty,
+} from '@/lib/match-setup';
 import styles from './MatchOptions.module.css';
 
 /**
@@ -57,6 +65,7 @@ export interface MatchOptionsProps {
 interface Choice {
   /** Also the radio's value, which is what lets both groups be one component. */
   readonly value: string;
+  /** The English label, which is also its message id — {@link Group} looks it up (#220). */
   readonly label: string;
   /** The tier counted out, for a ladder that has to read without colour. */
   readonly pips?: string;
@@ -66,19 +75,14 @@ const PIPS = ['●○○', '●●○', '●●●'];
 
 const TIERS: readonly Choice[] = BOT_DIFFICULTIES.map((tier, index) => ({
   value: tier,
-  label: `${tier[0]?.toUpperCase() ?? ''}${tier.slice(1)}`,
+  label: DIFFICULTY_LABELS[tier],
   pips: PIPS[index] ?? '',
 }));
 
-/**
- * The lengths, said the way a player would say them out loud.
- *
- * "1 round" rather than "one round" only because on a 412px phone the spelled-out version
- * wraps onto a second line and its neighbours do not, which reads as a broken column.
- */
+/** The lengths, said the way a player would say them out loud — see `ROUND_LABELS`. */
 const LENGTHS: readonly Choice[] = ROUND_CHOICES.map((rounds) => ({
   value: String(rounds),
-  label: rounds === 1 ? '1 round' : `Best of ${String(rounds)}`,
+  label: ROUND_LABELS[rounds],
 }));
 
 export function MatchOptions({
@@ -92,6 +96,7 @@ export function MatchOptions({
   // Unique per instance: two radio groups on one page must not share a name, or picking a
   // tier would clear the match length.
   const id = useId();
+  const messages = useMessages();
   const offered =
     lengths === undefined ? LENGTHS : LENGTHS.filter((c) => lengths.includes(Number(c.value)));
   return (
@@ -99,7 +104,7 @@ export function MatchOptions({
       {showDifficulty ? (
         <Group
           name={`${id}-tier`}
-          legend={`${SEAT_CHARACTERS.p2}’s skill`}
+          legend={t(messages, '{name}’s skill', { name: SEAT_CHARACTERS.p2 })}
           choices={TIERS}
           chosen={difficulty}
           onChoose={(value) => {
@@ -110,7 +115,7 @@ export function MatchOptions({
       {offered.length === 0 ? null : (
         <Group
           name={`${id}-length`}
-          legend="Match length"
+          legend={t(messages, 'Match length')}
           choices={offered}
           chosen={String(rounds)}
           onChoose={(value) => {
@@ -136,6 +141,7 @@ function Group({
   chosen: string;
   onChoose: (value: string) => void;
 }) {
+  const messages = useMessages();
   return (
     <fieldset className={styles.group}>
       <legend className={styles.legend}>{legend}</legend>
@@ -155,7 +161,7 @@ function Group({
                 onChoose(choice.value);
               }}
             />
-            <span className={styles.name}>{choice.label}</span>
+            <span className={styles.name}>{t(messages, choice.label)}</span>
             {choice.pips === undefined ? null : (
               <span className={styles.pips} aria-hidden="true">
                 {choice.pips}

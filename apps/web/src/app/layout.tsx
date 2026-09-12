@@ -189,6 +189,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         */}
         <LocaleProvider>
           <a className="db-skip" href="#main">
+            {/* eslint-disable-line duelbox/no-untranslated-text -- the text node opens on this line; a <T> in the root layout is serialised into all 108 play payloads (docs/i18n.md, "deliberately not translated") */}
             Skip to content
           </a>
           <div className="db-shell">
