@@ -107,7 +107,7 @@
 
 .keys th,
 .keys td {
-  text-align: left;
+  text-align: start;
   padding: var(--db-space-2) var(--db-space-3);
   border-bottom: 1px solid var(--db-hairline);
 }
@@ -126,7 +126,7 @@
 /* Rendered from `SEAT_KEYS`, so the gap between keys is the stylesheet's job rather than
    a literal space between two elements in the markup. */
 .keys kbd + kbd {
-  margin-left: var(--db-space-1);
+  margin-inline-start: var(--db-space-1);
 }
 
 .keys kbd {

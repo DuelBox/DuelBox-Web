@@ -182,7 +182,7 @@
    the heading's baseline — which is what `align-items: baseline` above is for — while the
    box a thumb has to find grows to the size everything else on the page uses. */
 .sectionHead a {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: inline-flex;
   flex: none;
   align-items: center;

@@ -5,11 +5,17 @@
  * and where the pause button already sits, so the exit goes to the opposite corner and clears
  * both the cutout and that band. `max()` so an inset can only widen the offset, never narrow
  * it, and it stays clear of a notched top edge and a rounded right corner.
+ *
+ * `right`, physically, and not `inset-inline-end` (#222): this sits inside the play surface,
+ * which pins `direction: ltr` because the seats and the board are sides of the device and
+ * never mirror (rule 9), so the logical spelling would resolve to the same corner and only
+ * claim to follow a reading direction it cannot see. The pause button holds the opposite
+ * corner by the same rule, and the two stay diagonal in every locale.
  */
 .exit {
   position: absolute;
   top: max(var(--db-space-2), var(--db-safe-top));
-  right: max(var(--db-space-2), var(--db-safe-right));
+  right: max(var(--db-space-2), var(--db-safe-right)); /* physical: corner of the ltr surface */
   z-index: 3;
   display: inline-flex;
   align-items: center;
@@ -40,9 +46,9 @@
   display: grid;
   place-items: center;
   padding-top: max(var(--db-space-4), var(--db-safe-top));
-  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
-  padding-left: max(var(--db-space-4), var(--db-safe-left));
+  padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
   text-align: center;
   background: color-mix(in srgb, var(--db-ink) 62%, transparent);
   backdrop-filter: blur(2px);

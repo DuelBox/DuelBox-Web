@@ -161,7 +161,7 @@ html[data-framed] #db-framed {
 
 .db-skip {
   position: absolute;
-  left: max(var(--db-space-4), var(--db-safe-left));
+  inset-inline-start: max(var(--db-space-4), var(--db-safe-inline-start));
   top: calc(var(--db-space-4) * -4);
   z-index: 100;
   padding: var(--db-space-3) var(--db-space-4);
@@ -315,14 +315,14 @@ html[data-framed] #db-framed {
   margin-inline: auto;
   /* max(), so the notch only ever widens the gutter and never narrows it. In landscape
      on a notched phone the cutout is on one side, and content there is unreadable. */
-  padding-left: max(var(--db-space-5), var(--db-safe-left));
-  padding-right: max(var(--db-space-5), var(--db-safe-right));
+  padding-left: max(var(--db-space-5), var(--db-safe-left)); /* physical: side of the device */
+  padding-right: max(var(--db-space-5), var(--db-safe-right)); /* physical: side of the device */
 }
 
 @media (max-width: 40rem) {
   .db-wrap {
-    padding-left: max(var(--db-space-4), var(--db-safe-left));
-    padding-right: max(var(--db-space-4), var(--db-safe-right));
+    padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
+    padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   }
 }
 
@@ -399,8 +399,8 @@ html[data-match='live'] .db-net-bar {
 .db-net-bar {
   pointer-events: none;
   position: fixed;
-  left: max(var(--db-space-3), var(--db-safe-left));
-  right: max(var(--db-space-3), var(--db-safe-right));
+  left: max(var(--db-space-3), var(--db-safe-left)); /* physical: side of the device */
+  right: max(var(--db-space-3), var(--db-safe-right)); /* physical: side of the device */
   bottom: max(var(--db-space-3), var(--db-safe-bottom));
   z-index: 40;
   display: flex;
