@@ -46,24 +46,42 @@ That is measured on every build and every push, not believed:
   `5 range-gated face(s) fetched only for a glyph outside basic Latin (fredoka-latin-ext,
   jetbrains-mono-latin-ext, noto-sans-arabic-arabic, noto-sans-devanagari-devanagari,
   plus-jakarta-sans-latin-ext), 317.6 KB not counted`.
+- `scripts/check-size.mjs` also scans the text of every exported document and every route
+  payload for a code point that lies inside a range-gated face's range and outside every base
+  face's, and fails the build on one. Neither script range is disjoint from the Latin ones,
+  and five of the code points inside them are outside every primary `latin` range — U+20A8,
+  U+20B9, U+20F0 and U+25CC in the Devanagari block, U+2E41 in the Arabic one — so a single
+  rupee sign or dotted circle in an English page's markup is an unconditional fetch of a
+  range-gated file.
+  None today, across 353 documents and 108 payloads. Watched failing with a ₹ planted in one
+  built page; the header comment in `fonts.css` carries the ranges and the half of the
+  question a declared range cannot settle.
 - `e2e/fonts.spec.ts` opens `/` in a real browser with request logging and fails if either
   script file is requested; then appends one word of Hindi and one of Arabic, lays them out,
   and fails if each face is *not* then requested from this origin and drawn — width in the
   stack against width in the stack without the face, the same measurement that caught #2469.
+  It is one document of the 353, which is why the scan above exists.
 - `apps/web/src/styles/font-coverage.test.ts` holds the declared ranges of every stack against
   the launch locales' text; see the limitation below.
 
-What the English visitor paid for this, measured on the build that added the faces against
-the build before it: the fonts line is unchanged at 86.2 KB, the shell is unchanged at
-128.2 KB, and the stylesheet every page links grew by 341 bytes gzipped — 326 for the two
-`@font-face` blocks, 198 of which is the tail of Google's Arabic range (the Arabic
-Mathematical Alphabetic Symbols, listed as some forty single code points), and 15 for the
-longer stacks. That is the whole of the move on the `css` term of the session lines, 11.4 KB
-to 11.8 KB, which took the first-session line from 317.0 KB to 317.4 KB; it is the cost of
-declaring the faces in the one stylesheet every page links rather than in a per-locale one,
-and there is no per-locale stylesheet to put them in until there is a per-locale page. The
-range was kept verbatim rather than trimmed to save 198 bytes, for the reason in the section
-after next.
+What the English visitor paid for this: the fonts line is unchanged at 86.2 KB — the same
+three base faces as before, because neither script file is on it — the shell is unchanged at
+128.2 KB, and **one built stylesheet grew from 3,266 to 3,619 bytes gzipped, +353 bytes at
+level 9.** One, not two: both the two `@font-face` blocks and the three `--db-font-*` stacks
+compile into the same global sheet, so the whole cost of the change lands in a single file.
+Measured by stripping it back out of that built file rather than by differencing two builds —
+drop the two blocks and it gzips to 3,293; drop the extra families from the three stacks as
+well and it gzips to 3,266 — which puts 326 bytes on the blocks, 198 of those being the tail
+of Google's Arabic range (the Arabic Mathematical Alphabetic Symbols, listed as some forty
+single code points), and 27 bytes on the stacks. An earlier version of this paragraph said
+341 bytes and attributed 15 of them to the stacks; that 15 was an unrelated CSS-module rule
+reorder in the same build, which a rebuild does not reproduce, and the stacks are in the file
+the blocks are in rather than in one of their own. That is the whole of the move on the `css`
+term of the session lines, 11.4 KB to 11.7 KB, which took the first-session line from
+317.0 KB to 317.4 KB; it is the cost of declaring the faces in the one stylesheet every page
+links rather than in a per-locale one, and there is no per-locale stylesheet to put them in
+until there is a per-locale page. The range was kept verbatim rather than trimmed to save 198
+bytes, for the reason in the section after next.
 
 ## What the precache does with them, and the limitation that implies
 

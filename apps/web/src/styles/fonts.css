@@ -120,11 +120,28 @@
  * The `unicode-range` is Google's, unchanged, because it is the range the browser trusts:
  * a browser never opens a woff2 to find out what it covers, it believes the range in the
  * stylesheet, so a range edited by hand would either fetch the file for a glyph it does not
- * have or fail to fetch it for one it does. Both ranges include a few General Punctuation
- * code points (U+200C–200D, U+2010–2011, U+204F, U+25CC) that the primary faces' `latin`
- * ranges also claim; a page using one of those that Fredoka lacks a glyph for would fetch a
- * script face for it. No exported page contains any of them today — measured across all
- * 353 documents — and the e2e assertion above is what notices the day one does.
+ * have or fail to fetch it for one it does.
+ *
+ * ### Where these two ranges meet the Latin ones
+ *
+ * The three primary `latin` faces claim U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC,
+ * U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+ * U+2193, U+2212, U+2215, U+FEFF and U+FFFD, and nothing else. So of the code points the two
+ * blocks below share with the rest of this file, U+200C–200D, U+2010–2011 and U+204F fall
+ * inside U+2000-206F and are drawn by a primary face — unless that face has no glyph for
+ * one, in which case the run falls through to a script face, which no range can settle and
+ * this repository has no font parser to settle either.
+ *
+ * Five are outside every primary `latin` range: U+20A8, U+20B9, U+20F0 and U+25CC in the
+ * Devanagari block, and U+2E41 in the Arabic one. One of those in an exported document is
+ * an unconditional fetch of a range-gated file — the family's own `latin-ext` file for the
+ * two currency signs, whose range claims them as well, and for U+20F0, U+25CC and U+2E41 one
+ * of the two 118–166 KB script faces — on a page written in English. That is a build
+ * failure rather than a sentence: `scripts/check-size.mjs` walks every exported document and
+ * every route payload and fails the build on a code point that lies inside a range-gated
+ * face's range and outside every base face's. None today, across 353 documents and 108 route
+ * payloads. `e2e/fonts.spec.ts` opens `/` and only `/`, so it is the build check, not the
+ * e2e, that covers the other 352.
  */
 
 /* Fredoka — display. Weight axis clipped to 500–700, the range the headings use. */

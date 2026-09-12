@@ -532,57 +532,91 @@ function parseUnicodeRange(descriptor) {
  */
 const coversBasicLatin = (ranges) => ranges.some(([first, last]) => first <= 0x7e && last >= 0x20);
 
+/** What a `@font-face` with no `unicode-range` covers, which is what a browser assumes for one. */
+const EVERY_CODE_POINT = [[0x0, 0x10ffff]];
+
 /**
- * The font files a set of stylesheets declares, split into the base faces an English page
- * fetches and the range-gated ones it never does — by each `@font-face`'s `unicode-range`,
- * read from the built stylesheet, which is what the browser reads. A face with no
- * `unicode-range` at all is base: nothing gates it. Each entry carries the URL as the
- * stylesheet wrote it, because that is the string the service worker's precache list has
- * to be compared against.
+ * Every `@font-face` in one stylesheet, classified once and remembered.
+ *
+ * A face carries the URL as the stylesheet wrote it — that is the string the service
+ * worker's precache list has to be compared against — the file on disk, the ranges the
+ * browser will apply, and whether those ranges gate it away from an English page. A face
+ * with no `unicode-range` claims everything and is therefore base: nothing gates it, and
+ * nothing can be outside it.
+ *
+ * Memoised by path, and that is a correctness fix rather than a speed. The landing and the
+ * catalogue documents link overlapping sets of stylesheets — the global sheet, where every
+ * face in this export is declared, is in both — and this was called once per set, so a
+ * single unreadable `unicode-range` was pushed onto `failures` twice and a reader had no
+ * way to tell one broken face from two. Classify a sheet once; report its faults once.
  */
-function fontsOf(stylesheets) {
-  const base = new Map();
-  const conditional = new Map();
-  let declared = 0;
-  for (const sheet of stylesheets) {
-    let css;
-    try {
-      css = readFileSync(sheet, 'utf8');
-    } catch {
-      continue;
-    }
-    declared += [...css.matchAll(/url\(([^)]+?\.woff2)\)/g)].length;
-    for (const [, block] of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
-      const descriptor = /unicode-range\s*:\s*([^;}]+)/i.exec(block);
-      const ranges = descriptor === null ? [] : parseUnicodeRange(descriptor[1]);
-      for (const match of block.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
-        const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
-        const file = join(OUT, url.replace(/^\//, ''));
-        if (ranges === null) {
-          failures.push(
-            `${relative(OUT, file)} has a unicode-range this script cannot read` +
-              ` (${(descriptor?.[1] ?? '').trim().slice(0, 60)}), so it cannot say whether an` +
-              ' English page fetches it',
-          );
-          base.set(file, url);
-        } else {
-          (descriptor === null || coversBasicLatin(ranges) ? base : conditional).set(file, url);
-        }
+const classifiedSheets = new Map();
+
+function facesIn(sheet) {
+  const cached = classifiedSheets.get(sheet);
+  if (cached !== undefined) return cached;
+  const faces = [];
+  classifiedSheets.set(sheet, faces);
+  let css;
+  try {
+    css = readFileSync(sheet, 'utf8');
+  } catch {
+    return faces;
+  }
+  for (const [, block] of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+    const descriptor = /unicode-range\s*:\s*([^;}]+)/i.exec(block);
+    const ranges = descriptor === null ? EVERY_CODE_POINT : parseUnicodeRange(descriptor[1]);
+    for (const match of block.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
+      const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
+      const file = join(OUT, url.replace(/^\//, ''));
+      if (ranges === null) {
+        failures.push(
+          `${relative(OUT, file)} has a unicode-range this script cannot read` +
+            ` (${(descriptor?.[1] ?? '').trim().slice(0, 60)}), so it cannot say whether an` +
+            ' English page fetches it',
+        );
+        // Base, and claiming everything: the build is failing already, and a range this
+        // cannot read must not also decide which code points the scan below calls gated.
+        faces.push({ file, url, ranges: EVERY_CODE_POINT, gated: false, unreadable: true });
+      } else {
+        faces.push({ file, url, ranges, gated: !coversBasicLatin(ranges), unreadable: false });
       }
     }
   }
   // Every woff2 the stylesheet mentions must have been seen inside an `@font-face`, or the
   // block parse has stopped matching and a face is being neither counted nor reported.
-  if (declared !== base.size + conditional.size) {
+  const declared = [...css.matchAll(/url\(([^)]+?\.woff2)\)/g)].length;
+  if (declared !== faces.length) {
     failures.push(
-      `${String(declared)} woff2 url(s) in the stylesheets and ${String(base.size + conditional.size)}` +
+      `${String(declared)} woff2 url(s) in ${relative(OUT, sheet)} and ${String(faces.length)}` +
         ' inside @font-face blocks — the font-face parse has stopped matching',
     );
+  }
+  return faces;
+}
+
+/**
+ * The font files a set of stylesheets declares, split into the base faces an English page
+ * fetches and the range-gated ones it never does — by each `@font-face`'s `unicode-range`,
+ * read from the built stylesheet, which is what the browser reads. The classified faces
+ * come back beside the split, because the scan below needs the ranges and not just the
+ * verdict.
+ */
+function fontsOf(stylesheets) {
+  const base = new Map();
+  const conditional = new Map();
+  const faces = [];
+  for (const sheet of stylesheets) {
+    for (const face of facesIn(sheet)) {
+      (face.gated ? conditional : base).set(face.file, face.url);
+      faces.push(face);
+    }
   }
   return {
     base: [...base.keys()],
     conditional: [...conditional.keys()],
     urls: new Map([...base, ...conditional]),
+    faces,
   };
 }
 
@@ -664,6 +698,86 @@ console.log(
     ` outside basic Latin (${landingFonts.conditional.map(faceName).sort().join(', ')}),` +
     ` ${kb(sum(landingFonts.conditional, fileBytes))} not counted`,
 );
+
+// ---------------------------------------------------------------------------------
+// No exported document may contain a code point only a range-gated face claims.
+// ---------------------------------------------------------------------------------
+// The line above says an English page never fetches one of those faces, and until now the
+// only thing that watched a browser act on it was `e2e/fonts.spec.ts`, which opens `/`. One
+// document out of the 353 this build exports, plus 108 route payloads nothing looked at at
+// all. The claim is decidable from the export, because the gate is a range: take every code
+// point inside a range-gated face's `unicode-range` that no base face's range claims, and
+// look for one in the text of every document the build wrote. A browser laying out such a
+// character has no base face to draw it with and fetches the gated file — 118 KB of
+// Devanagari or 166 KB of Arabic — onto a page written in English, and nothing else here
+// would notice.
+//
+// It lives in this script rather than in a unit test because the documents do not exist
+// until the export does and `emit-host-config.mjs` rewrites them afterwards; `pnpm build`
+// runs `emit:host-config` before `size`, so this is the first step that reads the HTML a
+// visitor is actually served.
+//
+// The half it cannot settle is written beside the ranges in `fonts.css`: a code point a base
+// face's range *does* claim — U+200C–200D, U+2010–2011 and U+204F are inside the three
+// `latin` faces' U+2000-206F — still falls through to a script face if the base face has no
+// glyph for it. That is a question about the bytes inside a woff2 and there is no font parser
+// in this repository. This guard holds the half that is decidable, which is also the half
+// where the fetch is unconditional.
+const allFaces = [...landingFonts.faces, ...catalogueFonts.faces];
+const baseRanges = allFaces.filter((face) => !face.gated).flatMap((face) => face.ranges);
+const claimedByABaseFace = (code) =>
+  baseRanges.some(([first, last]) => code >= first && code <= last);
+
+/** Code point → the range-gated faces that claim it, for the code points no base face does. */
+const gatedOnly = new Map();
+for (const face of allFaces) {
+  if (!face.gated) continue;
+  for (const [first, last] of face.ranges) {
+    for (let code = first; code <= last; code += 1) {
+      if (claimedByABaseFace(code)) continue;
+      const claimants = gatedOnly.get(code);
+      if (claimants === undefined) gatedOnly.set(code, new Set([face.file]));
+      else claimants.add(face.file);
+    }
+  }
+}
+
+// The first document each offending code point appears in, which is the one a reader opens.
+const offending = new Map();
+for (const file of [...htmlFiles, ...payloads]) {
+  const text = readFileSync(file, 'utf8');
+  for (let index = 0; index < text.length; index += 1) {
+    // ASCII is every base face's, and it is all but a handful of the bytes here: check the
+    // cheap thing first and only decode a code point when there is something to decode.
+    if (text.charCodeAt(index) < 0x80) continue;
+    const code = text.codePointAt(index);
+    if (code > 0xffff) index += 1;
+    if (gatedOnly.has(code) && !offending.has(code)) offending.set(code, file);
+  }
+}
+for (const [code, file] of [...offending].sort(([a], [b]) => a - b)) {
+  const claimants = [...(gatedOnly.get(code) ?? [])];
+  failures.push(
+    `${relative(OUT, file)} contains U+${code.toString(16).toUpperCase().padStart(4, '0')}` +
+      ` (${String.fromCodePoint(code)}), a code point no base face's unicode-range claims — so` +
+      ` drawing it fetches one of the range-gated faces that do` +
+      ` (${claimants.map(faceName).sort().join(', ')}, up to` +
+      ` ${kb(Math.max(...claimants.map(fileBytes)))}) on a page this site exports in English.` +
+      ' See docs/fonts.md.',
+  );
+}
+// The control, because a scan with nothing to look for reads exactly like a clean one. An
+// unreadable range is excluded from it: that face already claims everything and reports
+// itself two failures up, and one defect that prints two lines is the thing this pass was
+// reviewing.
+const unreadableRange = allFaces.some((face) => face.unreadable);
+if (!unreadableRange && gatedOnly.size === 0 && landingFonts.conditional.length > 0) {
+  failures.push(
+    'every code point the range-gated faces claim is claimed by a base face as well, which' +
+      ' cannot be true of a Devanagari or an Arabic subset — the range parse has stopped' +
+      ' matching and the scan of the exported documents is checking nothing',
+  );
+}
 
 // ---------------------------------------------------------------------------------
 // The precache and the fonts line must describe the same first visit.
