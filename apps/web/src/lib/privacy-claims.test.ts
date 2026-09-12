@@ -76,9 +76,14 @@ const COUNT_WORDS: Readonly<Record<string, number>> = {
  * a count over all of them would be a number nobody could act on. Throws rather than falls
  * back to the whole file: a slice that quietly stopped finding its section would count every
  * bullet on the page and pass.
+ *
+ * The heading is the msgid rather than the markup since #220 converted the page: the words a
+ * reader sees are now `<T id="…" />` and the `<h2>` around them carries no text. That is a
+ * change of shape and not of claim — the sentence, the number in it and the twelve bullets are
+ * the same strings in the same order — and this file reads the same words out of the same file.
  */
 function storageSection(): string {
-  const heading = '<h2>What stays on your device</h2>';
+  const heading = '<T id="What stays on your device" />';
   const start = prose.indexOf(heading);
   if (start === -1) {
     throw new Error(
@@ -145,8 +150,9 @@ describe('what the privacy page says about storage', () => {
     expect(COUNT_WORDS['seven']).toBe(7);
     expect(COUNT_WORDS['plenty']).toBeUndefined();
     // And the slice: a section that fell back to the whole file would count the bullets in
-    // the doc comment above it and pass on a page listing nothing at all.
-    expect(storageSection()).not.toContain('<h2>Cookies</h2>');
+    // the doc comment above it and pass on a page listing nothing at all. The next heading
+    // is the cookies one, by its msgid, for the reason `storageSection` gives.
+    expect(storageSection()).not.toContain('id="Cookies"');
     expect(storageSection()).toContain('favourites');
   });
 });

@@ -5,14 +5,823 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
+    'A and D change lane on the left road, arrow keys on the right':
+      '⟦Å åñð Ð çĥåñĝé łåñé öñ ŧĥé łéƒŧ ŕöåð, åŕŕöŵ ķéýš öñ ŧĥé ŕïĝĥŧ ······················⟧',
+    'A and D lean for the near seat, left and right arrows for the far seat; Space and Enter leap':
+      '⟦Å åñð Ð łéåñ ƒöŕ ŧĥé ñéåŕ šéåŧ, łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš ƒöŕ ŧĥé ƒåŕ šéåŧ; Šþåçé åñð Éñŧéŕ łéåþ ·································⟧',
+    'A and D lift the near seat flippers, the arrows the far pair, left key to left hand':
+      '⟦Å åñð Ð łïƒŧ ŧĥé ñéåŕ šéåŧ ƒłïþþéŕš, ŧĥé åŕŕöŵš ŧĥé ƒåŕ þåïŕ, łéƒŧ ķéý ŧö łéƒŧ ĥåñð ······························⟧',
+    "A and D slide player one's hand, Space drops it; the arrow keys and Enter do player two":
+      "⟦Å åñð Ð šłïðé þłåýéŕ öñé'š ĥåñð, Šþåçé ðŕöþš ïŧ; ŧĥé åŕŕöŵ ķéýš åñð Éñŧéŕ ðö þłåýéŕ ŧŵö ·······························⟧",
+    'A and D slide the near paddle, the left and right arrows the far one':
+      '⟦Å åñð Ð šłïðé ŧĥé ñéåŕ þåððłé, ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš ŧĥé ƒåŕ öñé ························⟧',
+    'A and D slide the near racket, arrow keys the far one — sweep to add spin':
+      '⟦Å åñð Ð šłïðé ŧĥé ñéåŕ ŕåçķéŧ, åŕŕöŵ ķéýš ŧĥé ƒåŕ öñé — šŵééþ ŧö åðð šþïñ ··························⟧',
+    'A and D steer player one, the left and right arrows steer player two':
+      '⟦Å åñð Ð šŧééŕ þłåýéŕ öñé, ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš šŧééŕ þłåýéŕ ŧŵö ························⟧',
+    'A and D steer seat one, the red ringed roller; arrow keys seat two, the blue barred one':
+      '⟦Å åñð Ð šŧééŕ šéåŧ öñé, ŧĥé ŕéð ŕïñĝéð ŕöłłéŕ; åŕŕöŵ ķéýš šéåŧ ŧŵö, ŧĥé ƀłûé ƀåŕŕéð öñé ·······························⟧',
+    "A and D steer the near seat's ringed red snake; arrow keys the far seat's barred blue one — you cannot stop":
+      "⟦Å åñð Ð šŧééŕ ŧĥé ñéåŕ šéåŧ'š ŕïñĝéð ŕéð šñåķé; åŕŕöŵ ķéýš ŧĥé ƒåŕ šéåŧ'š ƀåŕŕéð ƀłûé öñé — ýöû çåññöŧ šŧöþ ······································⟧",
+    'A and D swing at the near tree, the left and right arrows at the far one':
+      '⟦Å åñð Ð šŵïñĝ åŧ ŧĥé ñéåŕ ŧŕéé, ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš åŧ ŧĥé ƒåŕ öñé ··························⟧',
+    'A and D then Space for the near seat, the left and right arrows then Enter for the far seat':
+      '⟦Å åñð Ð ŧĥéñ Šþåçé ƒöŕ ŧĥé ñéåŕ šéåŧ, ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš ŧĥéñ Éñŧéŕ ƒöŕ ŧĥé ƒåŕ šéåŧ ································⟧',
+    'A and D walk the left crab and Space jumps; arrow keys and Enter for the right crab':
+      '⟦Å åñð Ð ŵåłķ ŧĥé łéƒŧ çŕåƀ åñð Šþåçé ĵûɱþš; åŕŕöŵ ķéýš åñð Éñŧéŕ ƒöŕ ŧĥé ŕïĝĥŧ çŕåƀ ······························⟧',
+    'A and D walk the near hippo, Space snaps it; the arrow keys and Enter do the far seat':
+      '⟦Å åñð Ð ŵåłķ ŧĥé ñéåŕ ĥïþþö, Šþåçé šñåþš ïŧ; ŧĥé åŕŕöŵ ķéýš åñð Éñŧéŕ ðö ŧĥé ƒåŕ šéåŧ ······························⟧',
+    'A and D walk the near thrower; the arrow keys walk the far one. Space and Enter throw.':
+      '⟦Å åñð Ð ŵåłķ ŧĥé ñéåŕ ŧĥŕöŵéŕ; ŧĥé åŕŕöŵ ķéýš ŵåłķ ŧĥé ƒåŕ öñé. Šþåçé åñð Éñŧéŕ ŧĥŕöŵ. ·······························⟧',
+    "A ball over a net on sand, one player a side. Get under it and send it back, because whoever's sand it lands on concedes. First to three.":
+      "⟦Å ƀåłł öṽéŕ å ñéŧ öñ šåñð, öñé þłåýéŕ å šïðé. Ĝéŧ ûñðéŕ ïŧ åñð šéñð ïŧ ƀåçķ, ƀéçåûšé ŵĥöéṽéŕ'š šåñð ïŧ łåñðš öñ çöñçéðéš. Ƒïŕšŧ ŧö ŧĥŕéé. ················································⟧",
+    'A block swings on a rope above your perch, and one action does two things at once, hopping your chicken and cutting the block loose to slide on and stop somewhere. Land on it and it stacks, dead centre pays double. First to thirteen.':
+      '⟦Å ƀłöçķ šŵïñĝš öñ å ŕöþé åƀöṽé ýöûŕ þéŕçĥ, åñð öñé åçŧïöñ ðöéš ŧŵö ŧĥïñĝš åŧ öñçé, ĥöþþïñĝ ýöûŕ çĥïçķéñ åñð çûŧŧïñĝ ŧĥé ƀłöçķ łööšé ŧö šłïðé öñ åñð šŧöþ šöɱéŵĥéŕé. Łåñð öñ ïŧ åñð ïŧ šŧåçķš, ðéåð çéñŧŕé þåýš ðöûƀłé. Ƒïŕšŧ ŧö ŧĥïŕŧééñ. ··················································································⟧',
+    'A conveyor carries plates past both counters. Close your chopsticks on what is passing, where a slice of sashimi is worth one and a rice ball three, and closing on bare belt costs you. First to fifteen.':
+      '⟦Å çöñṽéýöŕ çåŕŕïéš þłåŧéš þåšŧ ƀöŧĥ çöûñŧéŕš. Çłöšé ýöûŕ çĥöþšŧïçķš öñ ŵĥåŧ ïš þåššïñĝ, ŵĥéŕé å šłïçé öƒ šåšĥïɱï ïš ŵöŕŧĥ öñé åñð å ŕïçé ƀåłł ŧĥŕéé, åñð çłöšïñĝ öñ ƀåŕé ƀéłŧ çöšŧš ýöû. Ƒïŕšŧ ŧö ƒïƒŧééñ. ·······································································⟧',
+    'A crane swings an animal in over your platform. Walk it along, turn it round if it is facing the wrong way, and let it drop onto the tower. If anything comes off the platform, you have lost.':
+      '⟦Å çŕåñé šŵïñĝš åñ åñïɱåł ïñ öṽéŕ ýöûŕ þłåŧƒöŕɱ. Ŵåłķ ïŧ åłöñĝ, ŧûŕñ ïŧ ŕöûñð ïƒ ïŧ ïš ƒåçïñĝ ŧĥé ŵŕöñĝ ŵåý, åñð łéŧ ïŧ ðŕöþ öñŧö ŧĥé ŧöŵéŕ. Ïƒ åñýŧĥïñĝ çöɱéš öƒƒ ŧĥé þłåŧƒöŕɱ, ýöû ĥåṽé łöšŧ. ···································································⟧',
+    'A cue ball, seven balls each and a black. Pot one of your own and you shoot again; clear your seven and then the black to win, but sink the black early and you lose.':
+      '⟦Å çûé ƀåłł, šéṽéñ ƀåłłš éåçĥ åñð å ƀłåçķ. Þöŧ öñé öƒ ýöûŕ öŵñ åñð ýöû šĥööŧ åĝåïñ; çłéåŕ ýöûŕ šéṽéñ åñð ŧĥéñ ŧĥé ƀłåçķ ŧö ŵïñ, ƀûŧ šïñķ ŧĥé ƀłåçķ éåŕłý åñð ýöû łöšé. ··························································⟧',
+    'A cup sits in a goal mouth and each player owns a ball. Keep a line, hold for power, and let go to kick. Holing out pays three from range and one from close in, over nine kicks each.':
+      '⟦Å çûþ šïŧš ïñ å ĝöåł ɱöûŧĥ åñð éåçĥ þłåýéŕ öŵñš å ƀåłł. Ķééþ å łïñé, ĥöłð ƒöŕ þöŵéŕ, åñð łéŧ ĝö ŧö ķïçķ. Ĥöłïñĝ öûŧ þåýš ŧĥŕéé ƒŕöɱ ŕåñĝé åñð öñé ƒŕöɱ çłöšé ïñ, öṽéŕ ñïñé ķïçķš éåçĥ. ································································⟧',
+    'A fairground striker each. Swing as the needle crosses the mark and the puck goes up the tower; let it turn round instead and the hammer winds harder, but the needle comes back faster. Four rounds, higher total wins.':
+      '⟦Å ƒåïŕĝŕöûñð šŧŕïķéŕ éåçĥ. Šŵïñĝ åš ŧĥé ñééðłé çŕöššéš ŧĥé ɱåŕķ åñð ŧĥé þûçķ ĝöéš ûþ ŧĥé ŧöŵéŕ; łéŧ ïŧ ŧûŕñ ŕöûñð ïñšŧéåð åñð ŧĥé ĥåɱɱéŕ ŵïñðš ĥåŕðéŕ, ƀûŧ ŧĥé ñééðłé çöɱéš ƀåçķ ƒåšŧéŕ. Ƒöûŕ ŕöûñðš, ĥïĝĥéŕ ŧöŧåł ŵïñš. ············································································⟧',
+    "A floor of ice each, seven by seven. Standing wears through the tile under you and stepping off costs it as well. Go through, or run out of ice to step onto, and the round is your opponent's. First to three.":
+      "⟦Å ƒłööŕ öƒ ïçé éåçĥ, šéṽéñ ƀý šéṽéñ. Šŧåñðïñĝ ŵéåŕš ŧĥŕöûĝĥ ŧĥé ŧïłé ûñðéŕ ýöû åñð šŧéþþïñĝ öƒƒ çöšŧš ïŧ åš ŵéłł. Ĝö ŧĥŕöûĝĥ, öŕ ŕûñ öûŧ öƒ ïçé ŧö šŧéþ öñŧö, åñð ŧĥé ŕöûñð ïš ýöûŕ öþþöñéñŧ'š. Ƒïŕšŧ ŧö ŧĥŕéé. ·········································································⟧",
+    'A gallery of drifting targets at the far end of the field. Swing the bow, set the draw and let go, because one arrow can skewer several targets if you find the line. First archer to seventy wins.':
+      '⟦Å ĝåłłéŕý öƒ ðŕïƒŧïñĝ ŧåŕĝéŧš åŧ ŧĥé ƒåŕ éñð öƒ ŧĥé ƒïéłð. Šŵïñĝ ŧĥé ƀöŵ, šéŧ ŧĥé ðŕåŵ åñð łéŧ ĝö, ƀéçåûšé öñé åŕŕöŵ çåñ šķéŵéŕ šéṽéŕåł ŧåŕĝéŧš ïƒ ýöû ƒïñð ŧĥé łïñé. Ƒïŕšŧ åŕçĥéŕ ŧö šéṽéñŧý ŵïñš. ·····································································⟧',
+    "A grove of bamboo stands between two players, six canes each. Point the blade, put spin on it and let go, and it flies a curve that cuts every cane it passes through, including your own. Cut all six of your opponent's to win.":
+      "⟦Å ĝŕöṽé öƒ ƀåɱƀöö šŧåñðš ƀéŧŵééñ ŧŵö þłåýéŕš, šïẋ çåñéš éåçĥ. Þöïñŧ ŧĥé ƀłåðé, þûŧ šþïñ öñ ïŧ åñð łéŧ ĝö, åñð ïŧ ƒłïéš å çûŕṽé ŧĥåŧ çûŧš éṽéŕý çåñé ïŧ þåššéš ŧĥŕöûĝĥ, ïñçłûðïñĝ ýöûŕ öŵñ. Çûŧ åłł šïẋ öƒ ýöûŕ öþþöñéñŧ'š ŧö ŵïñ. ···············································································⟧",
+    'A lane each, with hoops drifting towards you. Beat a wing to rise, hold to glide down slowly, let go and fall. Thread the hoop as it passes and that is a basket, and the first to ten wins.':
+      '⟦Å łåñé éåçĥ, ŵïŧĥ ĥööþš ðŕïƒŧïñĝ ŧöŵåŕðš ýöû. Ɓéåŧ å ŵïñĝ ŧö ŕïšé, ĥöłð ŧö ĝłïðé ðöŵñ šłöŵłý, łéŧ ĝö åñð ƒåłł. Ŧĥŕéåð ŧĥé ĥööþ åš ïŧ þåššéš åñð ŧĥåŧ ïš å ƀåšķéŧ, åñð ŧĥé ƒïŕšŧ ŧö ŧéñ ŵïñš. ··································································⟧',
+    'A loaded game needs nothing': '⟦Å łöåðéð ĝåɱé ñééðš ñöŧĥïñĝ ··········⟧',
+    'A log turns between the two players. A knife that finds bare wood sticks and scores; one that meets a knife already standing splinters and costs you a point. First to twenty.':
+      '⟦Å łöĝ ŧûŕñš ƀéŧŵééñ ŧĥé ŧŵö þłåýéŕš. Å ķñïƒé ŧĥåŧ ƒïñðš ƀåŕé ŵööð šŧïçķš åñð šçöŕéš; öñé ŧĥåŧ ɱééŧš å ķñïƒé åłŕéåðý šŧåñðïñĝ šþłïñŧéŕš åñð çöšŧš ýöû å þöïñŧ. Ƒïŕšŧ ŧö ŧŵéñŧý. ·····························································⟧',
+    'A nine-by-nine board and a shared tray of three shapes. Fill a row, a column or a box and it clears, and every cleared square pays whoever placed it. The tray refills only when it is bare, so the last pick is whatever you were left.':
+      '⟦Å ñïñé-ƀý-ñïñé ƀöåŕð åñð å šĥåŕéð ŧŕåý öƒ ŧĥŕéé šĥåþéš. Ƒïłł å ŕöŵ, å çöłûɱñ öŕ å ƀöẋ åñð ïŧ çłéåŕš, åñð éṽéŕý çłéåŕéð šɋûåŕé þåýš ŵĥöéṽéŕ þłåçéð ïŧ. Ŧĥé ŧŕåý ŕéƒïłłš öñłý ŵĥéñ ïŧ ïš ƀåŕé, šö ŧĥé łåšŧ þïçķ ïš ŵĥåŧéṽéŕ ýöû ŵéŕé łéƒŧ. ··················································································⟧',
+    'A paddle each along your own baseline, two balls in play, and a wall of bricks between you. Miss a ball and the point goes to the other side, and hitting off centre angles the return. First to five.':
+      '⟦Å þåððłé éåçĥ åłöñĝ ýöûŕ öŵñ ƀåšéłïñé, ŧŵö ƀåłłš ïñ þłåý, åñð å ŵåłł öƒ ƀŕïçķš ƀéŧŵééñ ýöû. Ṁïšš å ƀåłł åñð ŧĥé þöïñŧ ĝöéš ŧö ŧĥé öŧĥéŕ šïðé, åñð ĥïŧŧïñĝ öƒƒ çéñŧŕé åñĝłéš ŧĥé ŕéŧûŕñ. Ƒïŕšŧ ŧö ƒïṽé. ······································································⟧',
+    'A plinth each, with the next piece hanging over it on a rail of notches. Shunt it sideways and let it go onto whatever is already there. The tower leans as it grows, and the first player to put a piece off the plinth loses.':
+      '⟦Å þłïñŧĥ éåçĥ, ŵïŧĥ ŧĥé ñéẋŧ þïéçé ĥåñĝïñĝ öṽéŕ ïŧ öñ å ŕåïł öƒ ñöŧçĥéš. Šĥûñŧ ïŧ šïðéŵåýš åñð łéŧ ïŧ ĝö öñŧö ŵĥåŧéṽéŕ ïš åłŕéåðý ŧĥéŕé. Ŧĥé ŧöŵéŕ łéåñš åš ïŧ ĝŕöŵš, åñð ŧĥé ƒïŕšŧ þłåýéŕ ŧö þûŧ å þïéçé öƒƒ ŧĥé þłïñŧĥ łöšéš. ···············································································⟧',
+    'A potato on a burning fuse goes back and forth. Send it away as the marker crosses your band, and whoever is holding it when the fuse runs out loses the round.':
+      '⟦Å þöŧåŧö öñ å ƀûŕñïñĝ ƒûšé ĝöéš ƀåçķ åñð ƒöŕŧĥ. Šéñð ïŧ åŵåý åš ŧĥé ɱåŕķéŕ çŕöššéš ýöûŕ ƀåñð, åñð ŵĥöéṽéŕ ïš ĥöłðïñĝ ïŧ ŵĥéñ ŧĥé ƒûšé ŕûñš öûŧ łöšéš ŧĥé ŕöûñð. ························································⟧',
+    'A puck on a frictionless table and a mallet each, confined to your own half. Send the puck through the mouth at the far end, and the first to seven goals wins.':
+      '⟦Å þûçķ öñ å ƒŕïçŧïöñłéšš ŧåƀłé åñð å ɱåłłéŧ éåçĥ, çöñƒïñéð ŧö ýöûŕ öŵñ ĥåłƒ. Šéñð ŧĥé þûçķ ŧĥŕöûĝĥ ŧĥé ɱöûŧĥ åŧ ŧĥé ƒåŕ éñð, åñð ŧĥé ƒïŕšŧ ŧö šéṽéñ ĝöåłš ŵïñš. ························································⟧',
+    "A roller each on one floor. Pick a direction and you slide until you meet a block, the edge, or your opponent's paint, laying colour on every bare square you cross. Your own paint you roll straight over, and the most squares wins.":
+      "⟦Å ŕöłłéŕ éåçĥ öñ öñé ƒłööŕ. Þïçķ å ðïŕéçŧïöñ åñð ýöû šłïðé ûñŧïł ýöû ɱééŧ å ƀłöçķ, ŧĥé éðĝé, öŕ ýöûŕ öþþöñéñŧ'š þåïñŧ, łåýïñĝ çöłöûŕ öñ éṽéŕý ƀåŕé šɋûåŕé ýöû çŕöšš. Ýöûŕ öŵñ þåïñŧ ýöû ŕöłł šŧŕåïĝĥŧ öṽéŕ, åñð ŧĥé ɱöšŧ šɋûåŕéš ŵïñš. ·················································································⟧",
+    'A rope, a flag, and two people pulling. The faster you work your own side, the further the flag comes across, and ten marks over the line takes the match.':
+      '⟦Å ŕöþé, å ƒłåĝ, åñð ŧŵö þéöþłé þûłłïñĝ. Ŧĥé ƒåšŧéŕ ýöû ŵöŕķ ýöûŕ öŵñ šïðé, ŧĥé ƒûŕŧĥéŕ ŧĥé ƒłåĝ çöɱéš åçŕöšš, åñð ŧéñ ɱåŕķš öṽéŕ ŧĥé łïñé ŧåķéš ŧĥé ɱåŧçĥ. ······················································⟧',
+    'A row of nine standing stones and a volley of spikes down the row. Each stone shelters the ground behind it and cracks as it takes the blow, so cover runs out. Two hits end your round, and three rounds take the match.':
+      '⟦Å ŕöŵ öƒ ñïñé šŧåñðïñĝ šŧöñéš åñð å ṽöłłéý öƒ šþïķéš ðöŵñ ŧĥé ŕöŵ. Éåçĥ šŧöñé šĥéłŧéŕš ŧĥé ĝŕöûñð ƀéĥïñð ïŧ åñð çŕåçķš åš ïŧ ŧåķéš ŧĥé ƀłöŵ, šö çöṽéŕ ŕûñš öûŧ. Ŧŵö ĥïŧš éñð ýöûŕ ŕöûñð, åñð ŧĥŕéé ŕöûñðš ŧåķé ŧĥé ɱåŧçĥ. ············································································⟧',
+    'A row of paper lanterns in each half of the ground, and a firework cart rolling along your own edge. Stop the cart to keep a column, then let go to keep a distance and fire. A burst puts out any lantern it covers, including your own.':
+      '⟦Å ŕöŵ öƒ þåþéŕ łåñŧéŕñš ïñ éåçĥ ĥåłƒ öƒ ŧĥé ĝŕöûñð, åñð å ƒïŕéŵöŕķ çåŕŧ ŕöłłïñĝ åłöñĝ ýöûŕ öŵñ éðĝé. Šŧöþ ŧĥé çåŕŧ ŧö ķééþ å çöłûɱñ, ŧĥéñ łéŧ ĝö ŧö ķééþ å ðïšŧåñçé åñð ƒïŕé. Å ƀûŕšŧ þûŧš öûŧ åñý łåñŧéŕñ ïŧ çöṽéŕš, ïñçłûðïñĝ ýöûŕ öŵñ. ··················································································⟧',
+    'A snowball packs itself in your hands and grows through three sizes, and you throw the one you have, hooked by whichever way you were walking. Two ice walls take the throws that miss and break as they do. Knock the other health bar to nothing to win.':
+      '⟦Å šñöŵƀåłł þåçķš ïŧšéłƒ ïñ ýöûŕ ĥåñðš åñð ĝŕöŵš ŧĥŕöûĝĥ ŧĥŕéé šïžéš, åñð ýöû ŧĥŕöŵ ŧĥé öñé ýöû ĥåṽé, ĥööķéð ƀý ŵĥïçĥéṽéŕ ŵåý ýöû ŵéŕé ŵåłķïñĝ. Ŧŵö ïçé ŵåłłš ŧåķé ŧĥé ŧĥŕöŵš ŧĥåŧ ɱïšš åñð ƀŕéåķ åš ŧĥéý ðö. Ķñöçķ ŧĥé öŧĥéŕ ĥéåłŧĥ ƀåŕ ŧö ñöŧĥïñĝ ŧö ŵïñ. ························································································⟧',
+    'A statement that you believe in good faith the use is not authorised.':
+      '⟦Å šŧåŧéɱéñŧ ŧĥåŧ ýöû ƀéłïéṽé ïñ ĝööð ƒåïŧĥ ŧĥé ûšé ïš ñöŧ åûŧĥöŕïšéð. ·························⟧',
+    'A statement, under penalty of perjury, that your notice is accurate and that you are the rights holder or authorised to act for them.':
+      '⟦Å šŧåŧéɱéñŧ, ûñðéŕ þéñåłŧý öƒ þéŕĵûŕý, ŧĥåŧ ýöûŕ ñöŧïçé ïš åççûŕåŧé åñð ŧĥåŧ ýöû åŕé ŧĥé ŕïĝĥŧš ĥöłðéŕ öŕ åûŧĥöŕïšéð ŧö åçŧ ƒöŕ ŧĥéɱ. ···············································⟧',
+    'A strip of sky each and walls of spikes coming across it. Beat a wing to rise, let go to fall, hold to tuck into a dive. The gap is the only way through, and outlasting your opponent three times takes the match.':
+      '⟦Å šŧŕïþ öƒ šķý éåçĥ åñð ŵåłłš öƒ šþïķéš çöɱïñĝ åçŕöšš ïŧ. Ɓéåŧ å ŵïñĝ ŧö ŕïšé, łéŧ ĝö ŧö ƒåłł, ĥöłð ŧö ŧûçķ ïñŧö å ðïṽé. Ŧĥé ĝåþ ïš ŧĥé öñłý ŵåý ŧĥŕöûĝĥ, åñð öûŧłåšŧïñĝ ýöûŕ öþþöñéñŧ ŧĥŕéé ŧïɱéš ŧåķéš ŧĥé ɱåŧçĥ. ··········································································⟧',
+    'A table seen from above, a racket at each end, and a ball that never stops. Slide along your own baseline to meet it, and sweep as it strikes to put spin on the return. First to seven points.':
+      '⟦Å ŧåƀłé šééñ ƒŕöɱ åƀöṽé, å ŕåçķéŧ åŧ éåçĥ éñð, åñð å ƀåłł ŧĥåŧ ñéṽéŕ šŧöþš. Šłïðé åłöñĝ ýöûŕ öŵñ ƀåšéłïñé ŧö ɱééŧ ïŧ, åñð šŵééþ åš ïŧ šŧŕïķéš ŧö þûŧ šþïñ öñ ŧĥé ŕéŧûŕñ. Ƒïŕšŧ ŧö šéṽéñ þöïñŧš. ···································································⟧',
+    'A tournament you have started, while it lasts: which games were drawn, in what order, which side took each one that has been played, and whether you are playing each other or a bot. It is written down so that a tournament survives closing the tab — every leg is a different page — and it is erased the moment you finish or leave it.':
+      '⟦Å ŧöûŕñåɱéñŧ ýöû ĥåṽé šŧåŕŧéð, ŵĥïłé ïŧ łåšŧš: ŵĥïçĥ ĝåɱéš ŵéŕé ðŕåŵñ, ïñ ŵĥåŧ öŕðéŕ, ŵĥïçĥ šïðé ŧööķ éåçĥ öñé ŧĥåŧ ĥåš ƀééñ þłåýéð, åñð ŵĥéŧĥéŕ ýöû åŕé þłåýïñĝ éåçĥ öŧĥéŕ öŕ å ƀöŧ. Ïŧ ïš ŵŕïŧŧéñ ðöŵñ šö ŧĥåŧ å ŧöûŕñåɱéñŧ šûŕṽïṽéš çłöšïñĝ ŧĥé ŧåƀ — éṽéŕý łéĝ ïš å ðïƒƒéŕéñŧ þåĝé — åñð ïŧ ïš éŕåšéð ŧĥé ɱöɱéñŧ ýöû ƒïñïšĥ öŕ łéåṽé ïŧ. ·····················································································································⟧',
+    'A tree each and an axe apiece. Every swing takes a log off the trunk and drops the whole tree one notch onto you, so what lands at your shoulder is what you must not be standing under. First to sixty logs.':
+      '⟦Å ŧŕéé éåçĥ åñð åñ åẋé åþïéçé. Éṽéŕý šŵïñĝ ŧåķéš å łöĝ öƒƒ ŧĥé ŧŕûñķ åñð ðŕöþš ŧĥé ŵĥöłé ŧŕéé öñé ñöŧçĥ öñŧö ýöû, šö ŵĥåŧ łåñðš åŧ ýöûŕ šĥöûłðéŕ ïš ŵĥåŧ ýöû ɱûšŧ ñöŧ ƀé šŧåñðïñĝ ûñðéŕ. Ƒïŕšŧ ŧö šïẋŧý łöĝš. ········································································⟧',
+    'A wall with one gap in it divides the board, and each side starts with eight pucks to be rid of. Keep a line, then a strength, and send one at the gap. Seven shots each, and most pucks through wins.':
+      '⟦Å ŵåłł ŵïŧĥ öñé ĝåþ ïñ ïŧ ðïṽïðéš ŧĥé ƀöåŕð, åñð éåçĥ šïðé šŧåŕŧš ŵïŧĥ éïĝĥŧ þûçķš ŧö ƀé ŕïð öƒ. Ķééþ å łïñé, ŧĥéñ å šŧŕéñĝŧĥ, åñð šéñð öñé åŧ ŧĥé ĝåþ. Šéṽéñ šĥöŧš éåçĥ, åñð ɱöšŧ þûçķš ŧĥŕöûĝĥ ŵïñš. ······································································⟧',
+    'A {vulnerability} is not this — please report it privately through our {process} instead.':
+      '⟦Å {vulnerability} ïš ñöŧ ŧĥïš — þłéåšé ŕéþöŕŧ ïŧ þŕïṽåŧéłý ŧĥŕöûĝĥ öûŕ {process} ïñšŧéåð. ································⟧',
+    Action: '⟦Åçŧïöñ ···⟧',
+    'Add a dot to an empty cell or one of your own. A cell holding as many dots as it has neighbours bursts into all of them and turns them your colour, which can set off a chain. Hold every cell to win.':
+      '⟦Åðð å ðöŧ ŧö åñ éɱþŧý çéłł öŕ öñé öƒ ýöûŕ öŵñ. Å çéłł ĥöłðïñĝ åš ɱåñý ðöŧš åš ïŧ ĥåš ñéïĝĥƀöûŕš ƀûŕšŧš ïñŧö åłł öƒ ŧĥéɱ åñð ŧûŕñš ŧĥéɱ ýöûŕ çöłöûŕ, ŵĥïçĥ çåñ šéŧ öƒƒ å çĥåïñ. Ĥöłð éṽéŕý çéłł ŧö ŵïñ. ······································································⟧',
+    'Against the bot': '⟦Åĝåïñšŧ ŧĥé ƀöŧ ······⟧',
+    'All games': '⟦Åłł ĝåɱéš ····⟧',
+    "All of it is yours to move or remove. The settings page lets you export the lot as a file, import one you exported before, or erase everything in one press; clearing your browser's site data removes it too, and nothing else remembers it.":
+      "⟦Åłł öƒ ïŧ ïš ýöûŕš ŧö ɱöṽé öŕ ŕéɱöṽé. Ŧĥé šéŧŧïñĝš þåĝé łéŧš ýöû éẋþöŕŧ ŧĥé łöŧ åš å ƒïłé, ïɱþöŕŧ öñé ýöû éẋþöŕŧéð ƀéƒöŕé, öŕ éŕåšé éṽéŕýŧĥïñĝ ïñ öñé þŕéšš; çłéåŕïñĝ ýöûŕ ƀŕöŵšéŕ'š šïŧé ðåŧå ŕéɱöṽéš ïŧ ŧöö, åñð ñöŧĥïñĝ éłšé ŕéɱéɱƀéŕš ïŧ. ···················································································⟧",
+    'All {category} games': '⟦Åłł {category} ĝåɱéš ·······⟧',
+    'An order is dealt onto your pizza, held for a moment, and taken away. Rebuild it from the rail in front of you and ring the bell to send it out, because wrong or unfinished is spoiled. Most orders served wins.':
+      '⟦Åñ öŕðéŕ ïš ðéåłŧ öñŧö ýöûŕ þïžžå, ĥéłð ƒöŕ å ɱöɱéñŧ, åñð ŧåķéñ åŵåý. Ŕéƀûïłð ïŧ ƒŕöɱ ŧĥé ŕåïł ïñ ƒŕöñŧ öƒ ýöû åñð ŕïñĝ ŧĥé ƀéłł ŧö šéñð ïŧ öûŧ, ƀéçåûšé ŵŕöñĝ öŕ ûñƒïñïšĥéð ïš šþöïłéð. Ṁöšŧ öŕðéŕš šéŕṽéð ŵïñš. ··········································································⟧',
+    'Any screen': '⟦Åñý šçŕééñ ····⟧',
+    Attribution: '⟦Åŧŧŕïƀûŧïöñ ····⟧',
+    'Banknotes drift across one table with a safe let into each end. A hand grips every note under its palm at once, but a full hand moves at less than half the speed of an empty one. Most money banked wins.':
+      '⟦Ɓåñķñöŧéš ðŕïƒŧ åçŕöšš öñé ŧåƀłé ŵïŧĥ å šåƒé łéŧ ïñŧö éåçĥ éñð. Å ĥåñð ĝŕïþš éṽéŕý ñöŧé ûñðéŕ ïŧš þåłɱ åŧ öñçé, ƀûŧ å ƒûłł ĥåñð ɱöṽéš åŧ łéšš ŧĥåñ ĥåłƒ ŧĥé šþééð öƒ åñ éɱþŧý öñé. Ṁöšŧ ɱöñéý ƀåñķéð ŵïñš. ·······································································⟧',
+    'Beasts charge across your lane from either side while your runner stands in the middle of it. A jump puts you over whatever is coming, and a beast that reaches you on the ground bowls you over. Twenty waves, and the fuller herd wins.':
+      '⟦Ɓéåšŧš çĥåŕĝé åçŕöšš ýöûŕ łåñé ƒŕöɱ éïŧĥéŕ šïðé ŵĥïłé ýöûŕ ŕûññéŕ šŧåñðš ïñ ŧĥé ɱïððłé öƒ ïŧ. Å ĵûɱþ þûŧš ýöû öṽéŕ ŵĥåŧéṽéŕ ïš çöɱïñĝ, åñð å ƀéåšŧ ŧĥåŧ ŕéåçĥéš ýöû öñ ŧĥé ĝŕöûñð ƀöŵłš ýöû öṽéŕ. Ŧŵéñŧý ŵåṽéš, åñð ŧĥé ƒûłłéŕ ĥéŕð ŵïñš. ··················································································⟧',
+    'Between the two of you': '⟦Ɓéŧŵééñ ŧĥé ŧŵö öƒ ýöû ········⟧',
+    "Both cars share one pit, and the only thing that scores is touching the other driver's head, which sits on a roof. Drive, jump and flip to get above your opponent while nothing touches your own. First to five.":
+      "⟦Ɓöŧĥ çåŕš šĥåŕé öñé þïŧ, åñð ŧĥé öñłý ŧĥïñĝ ŧĥåŧ šçöŕéš ïš ŧöûçĥïñĝ ŧĥé öŧĥéŕ ðŕïṽéŕ'š ĥéåð, ŵĥïçĥ šïŧš öñ å ŕööƒ. Ðŕïṽé, ĵûɱþ åñð ƒłïþ ŧö ĝéŧ åƀöṽé ýöûŕ öþþöñéñŧ ŵĥïłé ñöŧĥïñĝ ŧöûçĥéš ýöûŕ öŵñ. Ƒïŕšŧ ŧö ƒïṽé. ··········································································⟧",
+    "Both players roll across one board leaving colour behind them, and rolling over your opponent's paint makes it yours. Most of the board after forty-five seconds wins.":
+      "⟦Ɓöŧĥ þłåýéŕš ŕöłł åçŕöšš öñé ƀöåŕð łéåṽïñĝ çöłöûŕ ƀéĥïñð ŧĥéɱ, åñð ŕöłłïñĝ öṽéŕ ýöûŕ öþþöñéñŧ'š þåïñŧ ɱåķéš ïŧ ýöûŕš. Ṁöšŧ öƒ ŧĥé ƀöåŕð åƒŧéŕ ƒöŕŧý-ƒïṽé šéçöñðš ŵïñš. ···························································⟧",
+    'Both players share one screen from opposite sides. The device does not need to be handed back and forth: each half belongs to the person nearest it, and a touch belongs to the seat it started in even if your finger crosses the middle.':
+      '⟦Ɓöŧĥ þłåýéŕš šĥåŕé öñé šçŕééñ ƒŕöɱ öþþöšïŧé šïðéš. Ŧĥé ðéṽïçé ðöéš ñöŧ ñééð ŧö ƀé ĥåñðéð ƀåçķ åñð ƒöŕŧĥ: éåçĥ ĥåłƒ ƀéłöñĝš ŧö ŧĥé þéŕšöñ ñéåŕéšŧ ïŧ, åñð å ŧöûçĥ ƀéłöñĝš ŧö ŧĥé šéåŧ ïŧ šŧåŕŧéð ïñ éṽéñ ïƒ ýöûŕ ƒïñĝéŕ çŕöššéš ŧĥé ɱïððłé. ··················································································⟧',
+    "Both players' moles surface in the same twelve holes. Hitting one of yours scores and hitting your opponent's costs you a point, so the game is telling them apart at speed rather than swinging fast. First to thirty.":
+      "⟦Ɓöŧĥ þłåýéŕš' ɱöłéš šûŕƒåçé ïñ ŧĥé šåɱé ŧŵéłṽé ĥöłéš. Ĥïŧŧïñĝ öñé öƒ ýöûŕš šçöŕéš åñð ĥïŧŧïñĝ ýöûŕ öþþöñéñŧ'š çöšŧš ýöû å þöïñŧ, šö ŧĥé ĝåɱé ïš ŧéłłïñĝ ŧĥéɱ åþåŕŧ åŧ šþééð ŕåŧĥéŕ ŧĥåñ šŵïñĝïñĝ ƒåšŧ. Ƒïŕšŧ ŧö ŧĥïŕŧý. ············································································⟧",
+    'Bowling: W A S D for line and length, hold Space for pace. Batting: A D to move, Space to swing':
+      '⟦Ɓöŵłïñĝ: Ŵ Å Š Ð ƒöŕ łïñé åñð łéñĝŧĥ, ĥöłð Šþåçé ƒöŕ þåçé. Ɓåŧŧïñĝ: Å Ð ŧö ɱöṽé, Šþåçé ŧö šŵïñĝ ··································⟧',
+    'Bowling: drag to the pitch spot, release to bowl. Batting: tap where to meet the ball':
+      '⟦Ɓöŵłïñĝ: ðŕåĝ ŧö ŧĥé þïŧçĥ šþöŧ, ŕéłéåšé ŧö ƀöŵł. Ɓåŧŧïñĝ: ŧåþ ŵĥéŕé ŧö ɱééŧ ŧĥé ƀåłł ······························⟧',
+    'Browse all games': '⟦Ɓŕöŵšé åłł ĝåɱéš ······⟧',
+    'By touch': '⟦Ɓý ŧöûçĥ ···⟧',
+    Changes: '⟦Çĥåñĝéš ···⟧',
+    'Chase your own best score, no opponent needed.':
+      '⟦Çĥåšé ýöûŕ öŵñ ƀéšŧ šçöŕé, ñö öþþöñéñŧ ñééðéð. ·················⟧',
+    'Chess for two on a board that turns to face whoever is to move, with castling, en passant, promotion and the standard draws all played out. Mate the other king to win.':
+      '⟦Çĥéšš ƒöŕ ŧŵö öñ å ƀöåŕð ŧĥåŧ ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé, ŵïŧĥ çåšŧłïñĝ, éñ þåššåñŧ, þŕöɱöŧïöñ åñð ŧĥé šŧåñðåŕð ðŕåŵš åłł þłåýéð öûŧ. Ṁåŧé ŧĥé öŧĥéŕ ķïñĝ ŧö ŵïñ. ···························································⟧',
+    Children: '⟦Çĥïłðŕéñ ···⟧',
+    'Colour is never the only signal': '⟦Çöłöûŕ ïš ñéṽéŕ ŧĥé öñłý šïĝñåł ···········⟧',
+    Cookies: '⟦Çööķïéš ···⟧',
+    'Copyright claims and abuse reports.': '⟦Çöþýŕïĝĥŧ çłåïɱš åñð åƀûšé ŕéþöŕŧš. ·············⟧',
+    'Count down from 301, three darts a turn. The dart that reaches zero must be a double, and going below zero voids the whole turn rather than the offending dart.':
+      '⟦Çöûñŧ ðöŵñ ƒŕöɱ 301, ŧĥŕéé ðåŕŧš å ŧûŕñ. Ŧĥé ðåŕŧ ŧĥåŧ ŕéåçĥéš žéŕö ɱûšŧ ƀé å ðöûƀłé, åñð ĝöïñĝ ƀéłöŵ žéŕö ṽöïðš ŧĥé ŵĥöłé ŧûŕñ ŕåŧĥéŕ ŧĥåñ ŧĥé öƒƒéñðïñĝ ðåŕŧ. ························································⟧',
+    'Counted on this device only, kept in this browser and sent nowhere. The settings page clears it.':
+      '⟦Çöûñŧéð öñ ŧĥïš ðéṽïçé öñłý, ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ åñð šéñŧ ñöŵĥéŕé. Ŧĥé šéŧŧïñĝš þåĝé çłéåŕš ïŧ. ··································⟧',
+    'DMCA & abuse': '⟦ÐṀÇÅ & åƀûšé ·····⟧',
+    'Diagonal moves and compulsory captures on an eight-by-eight board. Chain your jumps, crown a man on the far row, and win by taking every piece or by leaving your opponent no move.':
+      '⟦Ðïåĝöñåł ɱöṽéš åñð çöɱþûłšöŕý çåþŧûŕéš öñ åñ éïĝĥŧ-ƀý-éïĝĥŧ ƀöåŕð. Çĥåïñ ýöûŕ ĵûɱþš, çŕöŵñ å ɱåñ öñ ŧĥé ƒåŕ ŕöŵ, åñð ŵïñ ƀý ŧåķïñĝ éṽéŕý þïéçé öŕ ƀý łéåṽïñĝ ýöûŕ öþþöñéñŧ ñö ɱöṽé. ·······························································⟧',
+    'Discs fall down a column and settle on whatever is already there. Line up four in any direction to take the round, and two rounds take the match.':
+      '⟦Ðïšçš ƒåłł ðöŵñ å çöłûɱñ åñð šéŧŧłé öñ ŵĥåŧéṽéŕ ïš åłŕéåðý ŧĥéŕé. Łïñé ûþ ƒöûŕ ïñ åñý ðïŕéçŧïöñ ŧö ŧåķé ŧĥé ŕöûñð, åñð ŧŵö ŕöûñðš ŧåķé ŧĥé ɱåŧçĥ. ···················································⟧',
+    'Drag across the bubbles you want to press':
+      '⟦Ðŕåĝ åçŕöšš ŧĥé ƀûƀƀłéš ýöû ŵåñŧ ŧö þŕéšš ···············⟧',
+    'Drag anywhere in your own half; your net follows your finger and cannot outrun it':
+      '⟦Ðŕåĝ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ; ýöûŕ ñéŧ ƒöłłöŵš ýöûŕ ƒïñĝéŕ åñð çåññöŧ öûŧŕûñ ïŧ ·····························⟧',
+    'Drag anywhere on the field to aim, hold to draw the bow, lift your finger to loose':
+      '⟦Ðŕåĝ åñýŵĥéŕé öñ ŧĥé ƒïéłð ŧö åïɱ, ĥöłð ŧö ðŕåŵ ŧĥé ƀöŵ, łïƒŧ ýöûŕ ƒïñĝéŕ ŧö łööšé ·····························⟧',
+    'Drag anywhere to run that way': '⟦Ðŕåĝ åñýŵĥéŕé ŧö ŕûñ ŧĥåŧ ŵåý ···········⟧',
+    'Drag from your wrestler in the direction you want to push':
+      '⟦Ðŕåĝ ƒŕöɱ ýöûŕ ŵŕéšŧłéŕ ïñ ŧĥé ðïŕéçŧïöñ ýöû ŵåñŧ ŧö þûšĥ ····················⟧',
+    'Drag in your own half to shunt to the notch under your finger; tap to drop.':
+      '⟦Ðŕåĝ ïñ ýöûŕ öŵñ ĥåłƒ ŧö šĥûñŧ ŧö ŧĥé ñöŧçĥ ûñðéŕ ýöûŕ ƒïñĝéŕ; ŧåþ ŧö ðŕöþ. ···························⟧',
+    'Drag in your own half to slide your paddle; hit off centre to angle the ball':
+      '⟦Ðŕåĝ ïñ ýöûŕ öŵñ ĥåłƒ ŧö šłïðé ýöûŕ þåððłé; ĥïŧ öƒƒ çéñŧŕé ŧö åñĝłé ŧĥé ƀåłł ···························⟧',
+    'Drag in your own half to walk the animal and lift to drop it; a quick tap turns it round':
+      '⟦Ðŕåĝ ïñ ýöûŕ öŵñ ĥåłƒ ŧö ŵåłķ ŧĥé åñïɱåł åñð łïƒŧ ŧö ðŕöþ ïŧ; å ɋûïçķ ŧåþ ŧûŕñš ïŧ ŕöûñð ·······························⟧',
+    'Drag in your own half; your player runs to your finger and returns what it reaches':
+      '⟦Ðŕåĝ ïñ ýöûŕ öŵñ ĥåłƒ; ýöûŕ þłåýéŕ ŕûñš ŧö ýöûŕ ƒïñĝéŕ åñð ŕéŧûŕñš ŵĥåŧ ïŧ ŕéåçĥéš ·····························⟧',
+    'Drag on your half to move, tap to jump':
+      '⟦Ðŕåĝ öñ ýöûŕ ĥåłƒ ŧö ɱöṽé, ŧåþ ŧö ĵûɱþ ··············⟧',
+    'Drag on your half to slide your racket; sweep as it hits to put spin on':
+      '⟦Ðŕåĝ öñ ýöûŕ ĥåłƒ ŧö šłïðé ýöûŕ ŕåçķéŧ; šŵééþ åš ïŧ ĥïŧš ŧö þûŧ šþïñ öñ ·························⟧',
+    'Drag sideways to aim and back down the lane for power, then let go':
+      '⟦Ðŕåĝ šïðéŵåýš ŧö åïɱ åñð ƀåçķ ðöŵñ ŧĥé łåñé ƒöŕ þöŵéŕ, ŧĥéñ łéŧ ĝö ························⟧',
+    'Drag the circle at the bottom to aim, release to throw':
+      '⟦Ðŕåĝ ŧĥé çïŕçłé åŧ ŧĥé ƀöŧŧöɱ ŧö åïɱ, ŕéłéåšé ŧö ŧĥŕöŵ ···················⟧',
+    'Drag the way you want to go; your roller turns toward it':
+      '⟦Ðŕåĝ ŧĥé ŵåý ýöû ŵåñŧ ŧö ĝö; ýöûŕ ŕöłłéŕ ŧûŕñš ŧöŵåŕð ïŧ ····················⟧',
+    'Drag to aim and pull back for power, release to throw':
+      '⟦Ðŕåĝ ŧö åïɱ åñð þûłł ƀåçķ ƒöŕ þöŵéŕ, ŕéłéåšé ŧö ŧĥŕöŵ ···················⟧',
+    'Drag to aim, lift to fire — then drag to slide your armour plate in front of the shell':
+      '⟦Ðŕåĝ ŧö åïɱ, łïƒŧ ŧö ƒïŕé — ŧĥéñ ðŕåĝ ŧö šłïðé ýöûŕ åŕɱöûŕ þłåŧé ïñ ƒŕöñŧ öƒ ŧĥé šĥéłł ·······························⟧',
+    'Drag to point your sword, lift to throw. Slide your finger to parry theirs':
+      '⟦Ðŕåĝ ŧö þöïñŧ ýöûŕ šŵöŕð, łïƒŧ ŧö ŧĥŕöŵ. Šłïðé ýöûŕ ƒïñĝéŕ ŧö þåŕŕý ŧĥéïŕš ··························⟧',
+    'Drag your mallet anywhere in your half':
+      '⟦Ðŕåĝ ýöûŕ ɱåłłéŧ åñýŵĥéŕé ïñ ýöûŕ ĥåłƒ ··············⟧',
+    'DuelBox collects nothing about you. There is no account to create, no analytics, no advertising and no tracking of any kind.':
+      '⟦ÐûéłƁöẋ çöłłéçŧš ñöŧĥïñĝ åƀöûŧ ýöû. Ŧĥéŕé ïš ñö åççöûñŧ ŧö çŕéåŧé, ñö åñåłýŧïçš, ñö åðṽéŕŧïšïñĝ åñð ñö ŧŕåçķïñĝ öƒ åñý ķïñð. ············································⟧',
+    'DuelBox is built with a small number of open-source libraries and fonts. This page lists them and the licences they are used under. It is generated, not written by hand, so it cannot drift from what actually ships.':
+      '⟦ÐûéłƁöẋ ïš ƀûïłŧ ŵïŧĥ å šɱåłł ñûɱƀéŕ öƒ öþéñ-šöûŕçé łïƀŕåŕïéš åñð ƒöñŧš. Ŧĥïš þåĝé łïšŧš ŧĥéɱ åñð ŧĥé łïçéñçéš ŧĥéý åŕé ûšéð ûñðéŕ. Ïŧ ïš ĝéñéŕåŧéð, ñöŧ ŵŕïŧŧéñ ƀý ĥåñð, šö ïŧ çåññöŧ ðŕïƒŧ ƒŕöɱ ŵĥåŧ åçŧûåłłý šĥïþš. ···········································································⟧',
+    'DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art, sounds and names. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.':
+      '⟦ÐûéłƁöẋ ŕéïɱþłéɱéñŧš ŧĥé ŕûłéš öƒ þûƀłïç-ðöɱåïñ åñð éṽéŕýðåý ĝåɱéš — ŵĥïçĥ åŕé ñöŧ þŕöŧéçŧéð — åñð ŵŕïŧéš ïŧš öŵñ çöðé, åŕŧ, šöûñðš åñð ñåɱéš. Ŵé ķééþ å ŵŕïŧŧéñ ŕéçöŕð öƒ ŧĥé ñåɱïñĝ åñð łïçéñšïñĝ ðéçïšïöñ ƒöŕ éṽéŕý ĝåɱé, šö å çöñçéŕñ åƀöûŧ å ñåɱé öŕ åñ åššéŧ ïš ûšûåłłý åñšŵéŕéð ŵïŧĥ å ðöçûɱéñŧ ŵé åłŕéåðý ĥöłð. Šéé {terms} åñð {attribution}. ························································································································⟧',
+    "Each player's pieces differ in shape as well as colour, so every game is playable in greyscale and to a colour-blind player.":
+      "⟦Éåçĥ þłåýéŕ'š þïéçéš ðïƒƒéŕ ïñ šĥåþé åš ŵéłł åš çöłöûŕ, šö éṽéŕý ĝåɱé ïš þłåýåƀłé ïñ ĝŕéýšçåłé åñð ŧö å çöłöûŕ-ƀłïñð þłåýéŕ. ············································⟧",
+    'Email {address}. For something already public you may also open a GitHub issue, but a claim asserting infringement is better sent by email so it is assessed before it is amplified.':
+      '⟦Éɱåïł {address}. Ƒöŕ šöɱéŧĥïñĝ åłŕéåðý þûƀłïç ýöû ɱåý åłšö öþéñ å ĜïŧĤûƀ ïššûé, ƀûŧ å çłåïɱ åššéŕŧïñĝ ïñƒŕïñĝéɱéñŧ ïš ƀéŧŧéŕ šéñŧ ƀý éɱåïł šö ïŧ ïš åššéššéð ƀéƒöŕé ïŧ ïš åɱþłïƒïéð. ·······························································⟧',
+    'Every game offers a bot in three strengths. A bot never sees anything you cannot see and never moves faster than a person could — the difference between the strengths is how far it thinks ahead and how often it makes a mistake, never what it knows.':
+      '⟦Éṽéŕý ĝåɱé öƒƒéŕš å ƀöŧ ïñ ŧĥŕéé šŧŕéñĝŧĥš. Å ƀöŧ ñéṽéŕ šééš åñýŧĥïñĝ ýöû çåññöŧ šéé åñð ñéṽéŕ ɱöṽéš ƒåšŧéŕ ŧĥåñ å þéŕšöñ çöûłð — ŧĥé ðïƒƒéŕéñçé ƀéŧŵééñ ŧĥé šŧŕéñĝŧĥš ïš ĥöŵ ƒåŕ ïŧ ŧĥïñķš åĥéåð åñð ĥöŵ öƒŧéñ ïŧ ɱåķéš å ɱïšŧåķé, ñéṽéŕ ŵĥåŧ ïŧ ķñöŵš. ·······················································································⟧',
+    "Everything else — the game code, the artwork, the sounds and the names — is original to DuelBox and covered by this repository's licence. See {terms} for what that means for you.":
+      "⟦Éṽéŕýŧĥïñĝ éłšé — ŧĥé ĝåɱé çöðé, ŧĥé åŕŧŵöŕķ, ŧĥé šöûñðš åñð ŧĥé ñåɱéš — ïš öŕïĝïñåł ŧö ÐûéłƁöẋ åñð çöṽéŕéð ƀý ŧĥïš ŕéþöšïŧöŕý'š łïçéñçé. Šéé {terms} ƒöŕ ŵĥåŧ ŧĥåŧ ɱéåñš ƒöŕ ýöû. ·······························································⟧",
+    'Five dice and three rolls a turn, keeping whichever you like between them. Every hand must be spent on one of thirteen scoring boxes, each usable once, and the higher total after thirteen turns wins.':
+      '⟦Ƒïṽé ðïçé åñð ŧĥŕéé ŕöłłš å ŧûŕñ, ķééþïñĝ ŵĥïçĥéṽéŕ ýöû łïķé ƀéŧŵééñ ŧĥéɱ. Éṽéŕý ĥåñð ɱûšŧ ƀé šþéñŧ öñ öñé öƒ ŧĥïŕŧééñ šçöŕïñĝ ƀöẋéš, éåçĥ ûšåƀłé öñçé, åñð ŧĥé ĥïĝĥéŕ ŧöŧåł åƒŧéŕ ŧĥïŕŧééñ ŧûŕñš ŵïñš. ······································································⟧',
+    'Five pedestals under one case. The lights come up with the diamond on exactly one of them, and both thieves reach at once. Close on the wrong pedestal and the alarm freezes your hand. First to five.':
+      '⟦Ƒïṽé þéðéšŧåłš ûñðéŕ öñé çåšé. Ŧĥé łïĝĥŧš çöɱé ûþ ŵïŧĥ ŧĥé ðïåɱöñð öñ éẋåçŧłý öñé öƒ ŧĥéɱ, åñð ƀöŧĥ ŧĥïéṽéš ŕéåçĥ åŧ öñçé. Çłöšé öñ ŧĥé ŵŕöñĝ þéðéšŧåł åñð ŧĥé åłåŕɱ ƒŕééžéš ýöûŕ ĥåñð. Ƒïŕšŧ ŧö ƒïṽé. ······································································⟧',
+    'Flick a striker across the board to send your six pucks into the corner pockets. The queen may go down at any point before your last puck, but must be covered in the same turn. First to clear six wins.':
+      '⟦Ƒłïçķ å šŧŕïķéŕ åçŕöšš ŧĥé ƀöåŕð ŧö šéñð ýöûŕ šïẋ þûçķš ïñŧö ŧĥé çöŕñéŕ þöçķéŧš. Ŧĥé ɋûééñ ɱåý ĝö ðöŵñ åŧ åñý þöïñŧ ƀéƒöŕé ýöûŕ łåšŧ þûçķ, ƀûŧ ɱûšŧ ƀé çöṽéŕéð ïñ ŧĥé šåɱé ŧûŕñ. Ƒïŕšŧ ŧö çłéåŕ šïẋ ŵïñš. ·······································································⟧',
+    Fonts: '⟦Ƒöñŧš ··⟧',
+    'Four bags each at a board with a hole near the top. In the hole is three, on the board is one, and a bag landing on another shoves it. Only the difference between the two rounds counts.':
+      '⟦Ƒöûŕ ƀåĝš éåçĥ åŧ å ƀöåŕð ŵïŧĥ å ĥöłé ñéåŕ ŧĥé ŧöþ. Ïñ ŧĥé ĥöłé ïš ŧĥŕéé, öñ ŧĥé ƀöåŕð ïš öñé, åñð å ƀåĝ łåñðïñĝ öñ åñöŧĥéŕ šĥöṽéš ïŧ. Öñłý ŧĥé ðïƒƒéŕéñçé ƀéŧŵééñ ŧĥé ŧŵö ŕöûñðš çöûñŧš. ·································································⟧',
+    'Four frames each, two balls a frame at ten pins and a third in the last frame if you earn it. Strikes and spares are paid by the balls that follow them, and the higher total wins.':
+      '⟦Ƒöûŕ ƒŕåɱéš éåçĥ, ŧŵö ƀåłłš å ƒŕåɱé åŧ ŧéñ þïñš åñð å ŧĥïŕð ïñ ŧĥé łåšŧ ƒŕåɱé ïƒ ýöû éåŕñ ïŧ. Šŧŕïķéš åñð šþåŕéš åŕé þåïð ƀý ŧĥé ƀåłłš ŧĥåŧ ƒöłłöŵ ŧĥéɱ, åñð ŧĥé ĥïĝĥéŕ ŧöŧåł ŵïñš. ·······························································⟧',
+    'Frogs on opposite banks of one marsh, with dragonflies drifting between them. A tongue goes straight out and brings back whatever it touched, and a flick that catches nothing counts against you. First to thirty-five.':
+      '⟦Ƒŕöĝš öñ öþþöšïŧé ƀåñķš öƒ öñé ɱåŕšĥ, ŵïŧĥ ðŕåĝöñƒłïéš ðŕïƒŧïñĝ ƀéŧŵééñ ŧĥéɱ. Å ŧöñĝûé ĝöéš šŧŕåïĝĥŧ öûŧ åñð ƀŕïñĝš ƀåçķ ŵĥåŧéṽéŕ ïŧ ŧöûçĥéð, åñð å ƒłïçķ ŧĥåŧ çåŧçĥéš ñöŧĥïñĝ çöûñŧš åĝåïñšŧ ýöû. Ƒïŕšŧ ŧö ŧĥïŕŧý-ƒïṽé. ············································································⟧',
+    'Generated from the shipped dependencies and font licences.':
+      '⟦Ĝéñéŕåŧéð ƒŕöɱ ŧĥé šĥïþþéð ðéþéñðéñçïéš åñð ƒöñŧ łïçéñçéš. ·····················⟧',
+    'Getting in touch': '⟦Ĝéŧŧïñĝ ïñ ŧöûçĥ ······⟧',
+    'Hold Space for player one, Enter for player two — let go before the bends':
+      '⟦Ĥöłð Šþåçé ƒöŕ þłåýéŕ öñé, Éñŧéŕ ƒöŕ þłåýéŕ ŧŵö — łéŧ ĝö ƀéƒöŕé ŧĥé ƀéñðš ··························⟧',
+    'Hold a finger in your own half and your thrower walks to it; lift to throw, leaning as you walk.':
+      '⟦Ĥöłð å ƒïñĝéŕ ïñ ýöûŕ öŵñ ĥåłƒ åñð ýöûŕ ŧĥŕöŵéŕ ŵåłķš ŧö ïŧ; łïƒŧ ŧö ŧĥŕöŵ, łéåñïñĝ åš ýöû ŵåłķ. ··································⟧',
+    'Hold a finger in your own half to run, and slide it across to pick a rail':
+      '⟦Ĥöłð å ƒïñĝéŕ ïñ ýöûŕ öŵñ ĥåłƒ ŧö ŕûñ, åñð šłïðé ïŧ åçŕöšš ŧö þïçķ å ŕåïł ··························⟧',
+    'Hold a finger on your own floe and your bird walks to it; lift it to slide.':
+      '⟦Ĥöłð å ƒïñĝéŕ öñ ýöûŕ öŵñ ƒłöé åñð ýöûŕ ƀïŕð ŵåłķš ŧö ïŧ; łïƒŧ ïŧ ŧö šłïðé. ···························⟧',
+    'Hold a finger on your own half and slide — your hand follows it and grabs what it covers':
+      '⟦Ĥöłð å ƒïñĝéŕ öñ ýöûŕ öŵñ ĥåłƒ åñð šłïðé — ýöûŕ ĥåñð ƒöłłöŵš ïŧ åñð ĝŕåƀš ŵĥåŧ ïŧ çöṽéŕš ·······························⟧',
+    'Hold and drag inside your own half to hop; a quick tap flicks your tongue.':
+      '⟦Ĥöłð åñð ðŕåĝ ïñšïðé ýöûŕ öŵñ ĥåłƒ ŧö ĥöþ; å ɋûïçķ ŧåþ ƒłïçķš ýöûŕ ŧöñĝûé. ··························⟧',
+    'Hold anywhere in your own half and pull the way you want to run':
+      '⟦Ĥöłð åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ åñð þûłł ŧĥé ŵåý ýöû ŵåñŧ ŧö ŕûñ ·······················⟧',
+    'Hold anywhere in your own half for power. Let go to slow down for a corner':
+      '⟦Ĥöłð åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ ƒöŕ þöŵéŕ. Łéŧ ĝö ŧö šłöŵ ðöŵñ ƒöŕ å çöŕñéŕ ··························⟧',
+    'Hold in your own half and pull the way you want to skate. Standing still costs ice':
+      '⟦Ĥöłð ïñ ýöûŕ öŵñ ĥåłƒ åñð þûłł ŧĥé ŵåý ýöû ŵåñŧ ŧö šķåŧé. Šŧåñðïñĝ šŧïłł çöšŧš ïçé ·····························⟧',
+    'Hold in your own half and pull: sideways swings the gun, away rolls. Let go and it fires':
+      '⟦Ĥöłð ïñ ýöûŕ öŵñ ĥåłƒ åñð þûłł: šïðéŵåýš šŵïñĝš ŧĥé ĝûñ, åŵåý ŕöłłš. Łéŧ ĝö åñð ïŧ ƒïŕéš ·······························⟧',
+    'Hold in your own half where you want your car: it drives to your finger, and a flick towards the middle jumps.':
+      '⟦Ĥöłð ïñ ýöûŕ öŵñ ĥåłƒ ŵĥéŕé ýöû ŵåñŧ ýöûŕ çåŕ: ïŧ ðŕïṽéš ŧö ýöûŕ ƒïñĝéŕ, åñð å ƒłïçķ ŧöŵåŕðš ŧĥé ɱïððłé ĵûɱþš. ·······································⟧',
+    'Hold the throttle and the car winds up, but carry too much speed into a bend and it leaves the slot and costs you the best part of two seconds. Three laps, and the first car home wins.':
+      '⟦Ĥöłð ŧĥé ŧĥŕöŧŧłé åñð ŧĥé çåŕ ŵïñðš ûþ, ƀûŧ çåŕŕý ŧöö ɱûçĥ šþééð ïñŧö å ƀéñð åñð ïŧ łéåṽéš ŧĥé šłöŧ åñð çöšŧš ýöû ŧĥé ƀéšŧ þåŕŧ öƒ ŧŵö šéçöñðš. Ŧĥŕéé łåþš, åñð ŧĥé ƒïŕšŧ çåŕ ĥöɱé ŵïñš. ·································································⟧',
+    'Hold your own half and slide to walk your hand along the rail; lift to drop':
+      '⟦Ĥöłð ýöûŕ öŵñ ĥåłƒ åñð šłïðé ŧö ŵåłķ ýöûŕ ĥåñð åłöñĝ ŧĥé ŕåïł; łïƒŧ ŧö ðŕöþ ···························⟧',
+    'Hold your thumb high in your own half to lean back, low to put the wheel down':
+      '⟦Ĥöłð ýöûŕ ŧĥûɱƀ ĥïĝĥ ïñ ýöûŕ öŵñ ĥåłƒ ŧö łéåñ ƀåçķ, łöŵ ŧö þûŧ ŧĥé ŵĥééł ðöŵñ ···························⟧',
+    'How the site is delivered': '⟦Ĥöŵ ŧĥé šïŧé ïš ðéłïṽéŕéð ·········⟧',
+    'How to play': '⟦Ĥöŵ ŧö þłåý ····⟧',
+    'How to reach us': '⟦Ĥöŵ ŧö ŕéåçĥ ûš ······⟧',
+    'Identification of the material on DuelBox you are reporting — a URL, a game name, or the specific screen — with enough detail for us to find it.':
+      '⟦Ïðéñŧïƒïçåŧïöñ öƒ ŧĥé ɱåŧéŕïåł öñ ÐûéłƁöẋ ýöû åŕé ŕéþöŕŧïñĝ — å ÛŔŁ, å ĝåɱé ñåɱé, öŕ ŧĥé šþéçïƒïç šçŕééñ — ŵïŧĥ éñöûĝĥ ðéŧåïł ƒöŕ ûš ŧö ƒïñð ïŧ. ···················································⟧',
+    'Identification of the work you say is being infringed.':
+      '⟦Ïðéñŧïƒïçåŧïöñ öƒ ŧĥé ŵöŕķ ýöû šåý ïš ƀéïñĝ ïñƒŕïñĝéð. ···················⟧',
+    'If this ever changes it will change here first, with the date above updated. It will not change quietly.':
+      '⟦Ïƒ ŧĥïš éṽéŕ çĥåñĝéš ïŧ ŵïłł çĥåñĝé ĥéŕé ƒïŕšŧ, ŵïŧĥ ŧĥé ðåŧé åƀöṽé ûþðåŧéð. Ïŧ ŵïłł ñöŧ çĥåñĝé ɋûïéŧłý. ·····································⟧',
+    'If you believe something on DuelBox infringes your copyright or trademark, or is otherwise abusive, tell us directly. A claim that reaches us is one we can answer; DuelBox builds its games from scratch, and we would rather resolve a concern than have it escalate to our host.':
+      '⟦Ïƒ ýöû ƀéłïéṽé šöɱéŧĥïñĝ öñ ÐûéłƁöẋ ïñƒŕïñĝéš ýöûŕ çöþýŕïĝĥŧ öŕ ŧŕåðéɱåŕķ, öŕ ïš öŧĥéŕŵïšé åƀûšïṽé, ŧéłł ûš ðïŕéçŧłý. Å çłåïɱ ŧĥåŧ ŕéåçĥéš ûš ïš öñé ŵé çåñ åñšŵéŕ; ÐûéłƁöẋ ƀûïłðš ïŧš ĝåɱéš ƒŕöɱ šçŕåŧçĥ, åñð ŵé ŵöûłð ŕåŧĥéŕ ŕéšöłṽé å çöñçéŕñ ŧĥåñ ĥåṽé ïŧ éšçåłåŧé ŧö öûŕ ĥöšŧ. ·································································································⟧',
+    'In games played turn by turn the board turns to face whoever is to move, so you always read it the right way up — and while it is your turn the whole screen is yours to reach. In games played at the same time, the screen stays put and each of you has your own half.':
+      '⟦Ïñ ĝåɱéš þłåýéð ŧûŕñ ƀý ŧûŕñ ŧĥé ƀöåŕð ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé, šö ýöû åłŵåýš ŕéåð ïŧ ŧĥé ŕïĝĥŧ ŵåý ûþ — åñð ŵĥïłé ïŧ ïš ýöûŕ ŧûŕñ ŧĥé ŵĥöłé šçŕééñ ïš ýöûŕš ŧö ŕéåçĥ. Ïñ ĝåɱéš þłåýéð åŧ ŧĥé šåɱé ŧïɱé, ŧĥé šçŕééñ šŧåýš þûŧ åñð éåçĥ öƒ ýöû ĥåš ýöûŕ öŵñ ĥåłƒ. ·····························································································⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
+    'Last updated 20 August 2026': '⟦Łåšŧ ûþðåŧéð 20 Åûĝûšŧ 2026 ··········⟧',
+    'Last updated 6 September 2026': '⟦Łåšŧ ûþðåŧéð 6 Šéþŧéɱƀéŕ 2026 ···········⟧',
+    "Lay out a fleet on your own ten-by-ten grid, then take turns calling shots at your opponent's water. A hit buys another shot, and sinking the whole fleet wins.":
+      "⟦Łåý öûŧ å ƒłééŧ öñ ýöûŕ öŵñ ŧéñ-ƀý-ŧéñ ĝŕïð, ŧĥéñ ŧåķé ŧûŕñš çåłłïñĝ šĥöŧš åŧ ýöûŕ öþþöñéñŧ'š ŵåŧéŕ. Å ĥïŧ ƀûýš åñöŧĥéŕ šĥöŧ, åñð šïñķïñĝ ŧĥé ŵĥöłé ƒłééŧ ŵïñš. ························································⟧",
+    'Lean back and the front wheel comes up, and the higher it rides the faster the bike goes. Lean too far and you go over backwards, and the bumps down the lane kick the nose up whether you wanted it or not. First to the end of the course.':
+      '⟦Łéåñ ƀåçķ åñð ŧĥé ƒŕöñŧ ŵĥééł çöɱéš ûþ, åñð ŧĥé ĥïĝĥéŕ ïŧ ŕïðéš ŧĥé ƒåšŧéŕ ŧĥé ƀïķé ĝöéš. Łéåñ ŧöö ƒåŕ åñð ýöû ĝö öṽéŕ ƀåçķŵåŕðš, åñð ŧĥé ƀûɱþš ðöŵñ ŧĥé łåñé ķïçķ ŧĥé ñöšé ûþ ŵĥéŧĥéŕ ýöû ŵåñŧéð ïŧ öŕ ñöŧ. Ƒïŕšŧ ŧö ŧĥé éñð öƒ ŧĥé çöûŕšé. ···················································································⟧',
+    Libraries: '⟦Łïƀŕåŕïéš ····⟧',
+    Library: '⟦Łïƀŕåŕý ···⟧',
+    Licence: '⟦Łïçéñçé ···⟧',
+    'Lift a pit of stones and sow them one at a time around the board. Finishing in your own store buys another turn, and finishing in an empty pit of yours captures the pit opposite. Most stones banked wins.':
+      '⟦Łïƒŧ å þïŧ öƒ šŧöñéš åñð šöŵ ŧĥéɱ öñé åŧ å ŧïɱé åŕöûñð ŧĥé ƀöåŕð. Ƒïñïšĥïñĝ ïñ ýöûŕ öŵñ šŧöŕé ƀûýš åñöŧĥéŕ ŧûŕñ, åñð ƒïñïšĥïñĝ ïñ åñ éɱþŧý þïŧ öƒ ýöûŕš çåþŧûŕéš ŧĥé þïŧ öþþöšïŧé. Ṁöšŧ šŧöñéš ƀåñķéð ŵïñš. ········································································⟧',
+    'More {category} games': '⟦Ṁöŕé {category} ĝåɱéš ········⟧',
+    Move: '⟦Ṁöṽé ··⟧',
+    'Move fifteen checkers round the board on the roll of two dice. A lone checker can be hit and sent back to the bar to start its lap again; bear all fifteen off your home board to win.':
+      '⟦Ṁöṽé ƒïƒŧééñ çĥéçķéŕš ŕöûñð ŧĥé ƀöåŕð öñ ŧĥé ŕöłł öƒ ŧŵö ðïçé. Å łöñé çĥéçķéŕ çåñ ƀé ĥïŧ åñð šéñŧ ƀåçķ ŧö ŧĥé ƀåŕ ŧö šŧåŕŧ ïŧš łåþ åĝåïñ; ƀéåŕ åłł ƒïƒŧééñ öƒƒ ýöûŕ ĥöɱé ƀöåŕð ŧö ŵïñ. ································································⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
+    'Nine numbered tiles stand open. Roll two dice and shut any set of tiles adding up to the roll, until nothing adds up. What you failed to shut is your score, and the lower score wins.':
+      '⟦Ñïñé ñûɱƀéŕéð ŧïłéš šŧåñð öþéñ. Ŕöłł ŧŵö ðïçé åñð šĥûŧ åñý šéŧ öƒ ŧïłéš åððïñĝ ûþ ŧö ŧĥé ŕöłł, ûñŧïł ñöŧĥïñĝ åððš ûþ. Ŵĥåŧ ýöû ƒåïłéð ŧö šĥûŧ ïš ýöûŕ šçöŕé, åñð ŧĥé łöŵéŕ šçöŕé ŵïñš. ································································⟧',
+    'Nine small grids make up one large board, and where you play sends your opponent to the matching grid. Win small grids, then three of them in a line to take the match.':
+      '⟦Ñïñé šɱåłł ĝŕïðš ɱåķé ûþ öñé łåŕĝé ƀöåŕð, åñð ŵĥéŕé ýöû þłåý šéñðš ýöûŕ öþþöñéñŧ ŧö ŧĥé ɱåŧçĥïñĝ ĝŕïð. Ŵïñ šɱåłł ĝŕïðš, ŧĥéñ ŧĥŕéé öƒ ŧĥéɱ ïñ å łïñé ŧö ŧåķé ŧĥé ɱåŧçĥ. ···························································⟧',
+    'No accounts, no data': '⟦Ñö åççöûñŧš, ñö ðåŧå ·······⟧',
+    'Note:': '⟦Ñöŧé: ··⟧',
+    'Nothing. We have no server that receives anything from you while you play, so there is no data for us to hold, lose or be asked for.':
+      '⟦Ñöŧĥïñĝ. Ŵé ĥåṽé ñö šéŕṽéŕ ŧĥåŧ ŕéçéïṽéš åñýŧĥïñĝ ƒŕöɱ ýöû ŵĥïłé ýöû þłåý, šö ŧĥéŕé ïš ñö ðåŧå ƒöŕ ûš ŧö ĥöłð, łöšé öŕ ƀé åšķéð ƒöŕ. ···············································⟧',
+    'Obstacles come down a three-lane road in pairs, leaving exactly one lane open. Change lane before they arrive, because your score is how far you got and whoever is still driving wins.':
+      '⟦Öƀšŧåçłéš çöɱé ðöŵñ å ŧĥŕéé-łåñé ŕöåð ïñ þåïŕš, łéåṽïñĝ éẋåçŧłý öñé łåñé öþéñ. Çĥåñĝé łåñé ƀéƒöŕé ŧĥéý åŕŕïṽé, ƀéçåûšé ýöûŕ šçöŕé ïš ĥöŵ ƒåŕ ýöû ĝöŧ åñð ŵĥöéṽéŕ ïš šŧïłł ðŕïṽïñĝ ŵïñš. ·································································⟧',
+    'On a keyboard': '⟦Öñ å ķéýƀöåŕð ·····⟧',
+    'On your turn, tap the face-up card of any pile to take it':
+      '⟦Öñ ýöûŕ ŧûŕñ, ŧåþ ŧĥé ƒåçé-ûþ çåŕð öƒ åñý þïłé ŧö ŧåķé ïŧ ····················⟧',
+    'Once a page has loaded, playing it needs no network at all. Close the tab and come back and a game you have opened before still opens — your browser kept a copy of it. A game you have never opened is not on this device, and the catalogue says which is which.':
+      '⟦Öñçé å þåĝé ĥåš łöåðéð, þłåýïñĝ ïŧ ñééðš ñö ñéŧŵöŕķ åŧ åłł. Çłöšé ŧĥé ŧåƀ åñð çöɱé ƀåçķ åñð å ĝåɱé ýöû ĥåṽé öþéñéð ƀéƒöŕé šŧïłł öþéñš — ýöûŕ ƀŕöŵšéŕ ķéþŧ å çöþý öƒ ïŧ. Å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ öñ ŧĥïš ðéṽïçé, åñð ŧĥé çåŧåłöĝûé šåýš ŵĥïçĥ ïš ŵĥïçĥ. ···························································································⟧',
+    'Once a page has loaded, playing it needs nothing further from the network: the game, the bot and the physics all run on your device. Your browser also keeps a copy of the site, and of each game after you open it, so a game you have played before opens again with no connection at all. That cache holds this site’s own files and nothing about you — no scores, no names, no identifier — it is never sent anywhere, and clearing your browser’s site data removes it. A game you have never opened is not saved, and says so rather than showing an error.':
+      '⟦Öñçé å þåĝé ĥåš łöåðéð, þłåýïñĝ ïŧ ñééðš ñöŧĥïñĝ ƒûŕŧĥéŕ ƒŕöɱ ŧĥé ñéŧŵöŕķ: ŧĥé ĝåɱé, ŧĥé ƀöŧ åñð ŧĥé þĥýšïçš åłł ŕûñ öñ ýöûŕ ðéṽïçé. Ýöûŕ ƀŕöŵšéŕ åłšö ķééþš å çöþý öƒ ŧĥé šïŧé, åñð öƒ éåçĥ ĝåɱé åƒŧéŕ ýöû öþéñ ïŧ, šö å ĝåɱé ýöû ĥåṽé þłåýéð ƀéƒöŕé öþéñš åĝåïñ ŵïŧĥ ñö çöññéçŧïöñ åŧ åłł. Ŧĥåŧ çåçĥé ĥöłðš ŧĥïš šïŧé’š öŵñ ƒïłéš åñð ñöŧĥïñĝ åƀöûŧ ýöû — ñö šçöŕéš, ñö ñåɱéš, ñö ïðéñŧïƒïéŕ — ïŧ ïš ñéṽéŕ šéñŧ åñýŵĥéŕé, åñð çłéåŕïñĝ ýöûŕ ƀŕöŵšéŕ’š šïŧé ðåŧå ŕéɱöṽéš ïŧ. Å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ šåṽéð, åñð šåýš šö ŕåŧĥéŕ ŧĥåñ šĥöŵïñĝ åñ éŕŕöŕ. ································································································································································································⟧',
+    'One ball, two beetles and a base at each end. A beetle shoves the ball directly away from itself, so where you arrive decides where it goes, and walking across it rolls it out of a squeeze. Keep clear of the ladybirds and deliver three.':
+      '⟦Öñé ƀåłł, ŧŵö ƀééŧłéš åñð å ƀåšé åŧ éåçĥ éñð. Å ƀééŧłé šĥöṽéš ŧĥé ƀåłł ðïŕéçŧłý åŵåý ƒŕöɱ ïŧšéłƒ, šö ŵĥéŕé ýöû åŕŕïṽé ðéçïðéš ŵĥéŕé ïŧ ĝöéš, åñð ŵåłķïñĝ åçŕöšš ïŧ ŕöłłš ïŧ öûŧ öƒ å šɋûééžé. Ķééþ çłéåŕ öƒ ŧĥé łåðýƀïŕðš åñð ðéłïṽéŕ ŧĥŕéé. ···················································································⟧',
+    "One board of numbered tiles with a single gap, and two players solving it from opposite sides of the table. You want the tiles in order as you read them, and so does your opponent, so every helpful slide gets in the other's way.":
+      "⟦Öñé ƀöåŕð öƒ ñûɱƀéŕéð ŧïłéš ŵïŧĥ å šïñĝłé ĝåþ, åñð ŧŵö þłåýéŕš šöłṽïñĝ ïŧ ƒŕöɱ öþþöšïŧé šïðéš öƒ ŧĥé ŧåƀłé. Ýöû ŵåñŧ ŧĥé ŧïłéš ïñ öŕðéŕ åš ýöû ŕéåð ŧĥéɱ, åñð šö ðöéš ýöûŕ öþþöñéñŧ, šö éṽéŕý ĥéłþƒûł šłïðé ĝéŧš ïñ ŧĥé öŧĥéŕ'š ŵåý. ················································································⟧",
+    'One crown in an open yard. Whoever is wearing it banks time, and touching the wearer takes it, so the same touch that wins you the crown makes you the one being chased. First to twenty banked seconds.':
+      '⟦Öñé çŕöŵñ ïñ åñ öþéñ ýåŕð. Ŵĥöéṽéŕ ïš ŵéåŕïñĝ ïŧ ƀåñķš ŧïɱé, åñð ŧöûçĥïñĝ ŧĥé ŵéåŕéŕ ŧåķéš ïŧ, šö ŧĥé šåɱé ŧöûçĥ ŧĥåŧ ŵïñš ýöû ŧĥé çŕöŵñ ɱåķéš ýöû ŧĥé öñé ƀéïñĝ çĥåšéð. Ƒïŕšŧ ŧö ŧŵéñŧý ƀåñķéð šéçöñðš. ······································································⟧',
+    "One hoop on the halfway line and one ball. Whoever's half it is lying in shoots, keeping a line and then a range. A clean shot pays three and one off the ring pays two, over fourteen possessions.":
+      "⟦Öñé ĥööþ öñ ŧĥé ĥåłƒŵåý łïñé åñð öñé ƀåłł. Ŵĥöéṽéŕ'š ĥåłƒ ïŧ ïš łýïñĝ ïñ šĥööŧš, ķééþïñĝ å łïñé åñð ŧĥéñ å ŕåñĝé. Å çłéåñ šĥöŧ þåýš ŧĥŕéé åñð öñé öƒƒ ŧĥé ŕïñĝ þåýš ŧŵö, öṽéŕ ƒöûŕŧééñ þöššéššïöñš. ·····································································⟧",
+    'One island, two cars, and water all round it. Steer, and shoulder your opponent towards the edge, because a car that goes in scores for the other player whatever put it there. First to three splashes.':
+      '⟦Öñé ïšłåñð, ŧŵö çåŕš, åñð ŵåŧéŕ åłł ŕöûñð ïŧ. Šŧééŕ, åñð šĥöûłðéŕ ýöûŕ öþþöñéñŧ ŧöŵåŕðš ŧĥé éðĝé, ƀéçåûšé å çåŕ ŧĥåŧ ĝöéš ïñ šçöŕéš ƒöŕ ŧĥé öŧĥéŕ þłåýéŕ ŵĥåŧéṽéŕ þûŧ ïŧ ŧĥéŕé. Ƒïŕšŧ ŧö ŧĥŕéé šþłåšĥéš. ······································································⟧',
+    "One nine-by-nine grid, filled a square at a time. Answer correctly and the square is yours; answer wrongly and the right digit goes in anyway and the square is your opponent's. Whoever holds more of the twenty-seven lines wins.":
+      "⟦Öñé ñïñé-ƀý-ñïñé ĝŕïð, ƒïłłéð å šɋûåŕé åŧ å ŧïɱé. Åñšŵéŕ çöŕŕéçŧłý åñð ŧĥé šɋûåŕé ïš ýöûŕš; åñšŵéŕ ŵŕöñĝłý åñð ŧĥé ŕïĝĥŧ ðïĝïŧ ĝöéš ïñ åñýŵåý åñð ŧĥé šɋûåŕé ïš ýöûŕ öþþöñéñŧ'š. Ŵĥöéṽéŕ ĥöłðš ɱöŕé öƒ ŧĥé ŧŵéñŧý-šéṽéñ łïñéš ŵïñš. ················································································⟧",
+    'One outfield player each, one ball, and a goal at either end. Run into the ball to push it and run into it hard to strike it. Most goals after ninety seconds wins, and a draw is a real result.':
+      '⟦Öñé öûŧƒïéłð þłåýéŕ éåçĥ, öñé ƀåłł, åñð å ĝöåł åŧ éïŧĥéŕ éñð. Ŕûñ ïñŧö ŧĥé ƀåłł ŧö þûšĥ ïŧ åñð ŕûñ ïñŧö ïŧ ĥåŕð ŧö šŧŕïķé ïŧ. Ṁöšŧ ĝöåłš åƒŧéŕ ñïñéŧý šéçöñðš ŵïñš, åñð å ðŕåŵ ïš å ŕéåł ŕéšûłŧ. ····································································⟧',
+    'One pitch, one ball with a height to it, and a goal each. How high the ball is when you reach it decides which part of you meets it, and the three parts do three different things. Ninety seconds, or first to five.':
+      '⟦Öñé þïŧçĥ, öñé ƀåłł ŵïŧĥ å ĥéïĝĥŧ ŧö ïŧ, åñð å ĝöåł éåçĥ. Ĥöŵ ĥïĝĥ ŧĥé ƀåłł ïš ŵĥéñ ýöû ŕéåçĥ ïŧ ðéçïðéš ŵĥïçĥ þåŕŧ öƒ ýöû ɱééŧš ïŧ, åñð ŧĥé ŧĥŕéé þåŕŧš ðö ŧĥŕéé ðïƒƒéŕéñŧ ŧĥïñĝš. Ñïñéŧý šéçöñðš, öŕ ƒïŕšŧ ŧö ƒïṽé. ···········································································⟧',
+    'One player holds their hands out and the other tries to slap them before they are pulled away. Pull away with no slap in the air and the point goes to the attacker. First to five.':
+      '⟦Öñé þłåýéŕ ĥöłðš ŧĥéïŕ ĥåñðš öûŧ åñð ŧĥé öŧĥéŕ ŧŕïéš ŧö šłåþ ŧĥéɱ ƀéƒöŕé ŧĥéý åŕé þûłłéð åŵåý. Þûłł åŵåý ŵïŧĥ ñö šłåþ ïñ ŧĥé åïŕ åñð ŧĥé þöïñŧ ĝöéš ŧö ŧĥé åŧŧåçķéŕ. Ƒïŕšŧ ŧö ƒïṽé. ·······························································⟧',
+    "One player takes the kick and the other keeps goal, both committing at the same moment and neither seeing the other's choice. Then the roles swap. First to five, with both players taking the same number of kicks.":
+      "⟦Öñé þłåýéŕ ŧåķéš ŧĥé ķïçķ åñð ŧĥé öŧĥéŕ ķééþš ĝöåł, ƀöŧĥ çöɱɱïŧŧïñĝ åŧ ŧĥé šåɱé ɱöɱéñŧ åñð ñéïŧĥéŕ šééïñĝ ŧĥé öŧĥéŕ'š çĥöïçé. Ŧĥéñ ŧĥé ŕöłéš šŵåþ. Ƒïŕšŧ ŧö ƒïṽé, ŵïŧĥ ƀöŧĥ þłåýéŕš ŧåķïñĝ ŧĥé šåɱé ñûɱƀéŕ öƒ ķïçķš. ···········································································⟧",
+    "One pond, a hippo on each bank, and twelve balls drifting in it. Lunge, and your hippo takes back whatever its mouth touched, where your own kind is worth two and your opponent's costs you one. First to fifty.":
+      "⟦Öñé þöñð, å ĥïþþö öñ éåçĥ ƀåñķ, åñð ŧŵéłṽé ƀåłłš ðŕïƒŧïñĝ ïñ ïŧ. Łûñĝé, åñð ýöûŕ ĥïþþö ŧåķéš ƀåçķ ŵĥåŧéṽéŕ ïŧš ɱöûŧĥ ŧöûçĥéð, ŵĥéŕé ýöûŕ öŵñ ķïñð ïš ŵöŕŧĥ ŧŵö åñð ýöûŕ öþþöñéñŧ'š çöšŧš ýöû öñé. Ƒïŕšŧ ŧö ƒïƒŧý. ··········································································⟧",
+    'One seat bowls and the other bats, two overs each before they swap. Find the boundary for four along the ground or six in the air, and a ball that beats the bat and hits the stumps is out. The bigger total wins.':
+      '⟦Öñé šéåŧ ƀöŵłš åñð ŧĥé öŧĥéŕ ƀåŧš, ŧŵö öṽéŕš éåçĥ ƀéƒöŕé ŧĥéý šŵåþ. Ƒïñð ŧĥé ƀöûñðåŕý ƒöŕ ƒöûŕ åłöñĝ ŧĥé ĝŕöûñð öŕ šïẋ ïñ ŧĥé åïŕ, åñð å ƀåłł ŧĥåŧ ƀéåŧš ŧĥé ƀåŧ åñð ĥïŧš ŧĥé šŧûɱþš ïš öûŧ. Ŧĥé ƀïĝĝéŕ ŧöŧåł ŵïñš. ··········································································⟧',
+    'One solitaire deal and two players taking turns on it, one move each. A card you send up to a foundation scores its face value to you and is gone for your opponent, and when nobody can move the higher score wins.':
+      '⟦Öñé šöłïŧåïŕé ðéåł åñð ŧŵö þłåýéŕš ŧåķïñĝ ŧûŕñš öñ ïŧ, öñé ɱöṽé éåçĥ. Å çåŕð ýöû šéñð ûþ ŧö å ƒöûñðåŧïöñ šçöŕéš ïŧš ƒåçé ṽåłûé ŧö ýöû åñð ïš ĝöñé ƒöŕ ýöûŕ öþþöñéñŧ, åñð ŵĥéñ ñöƀöðý çåñ ɱöṽé ŧĥé ĥïĝĥéŕ šçöŕé ŵïñš. ···········································································⟧',
+    'One sum, shown to both players at the same instant, with four answers to choose between. Be first with the right one and you score; a wrong one scores for your opponent. Fifteen questions, most points wins.':
+      '⟦Öñé šûɱ, šĥöŵñ ŧö ƀöŧĥ þłåýéŕš åŧ ŧĥé šåɱé ïñšŧåñŧ, ŵïŧĥ ƒöûŕ åñšŵéŕš ŧö çĥööšé ƀéŧŵééñ. Ɓé ƒïŕšŧ ŵïŧĥ ŧĥé ŕïĝĥŧ öñé åñð ýöû šçöŕé; å ŵŕöñĝ öñé šçöŕéš ƒöŕ ýöûŕ öþþöñéñŧ. Ƒïƒŧééñ ɋûéšŧïöñš, ɱöšŧ þöïñŧš ŵïñš. ·········································································⟧',
+    "One table, two flippers each, and a goal at either end. Work the flippers to send the ball past your opponent's baseline, and the first to five goals wins.":
+      "⟦Öñé ŧåƀłé, ŧŵö ƒłïþþéŕš éåçĥ, åñð å ĝöåł åŧ éïŧĥéŕ éñð. Ŵöŕķ ŧĥé ƒłïþþéŕš ŧö šéñð ŧĥé ƀåłł þåšŧ ýöûŕ öþþöñéñŧ'š ƀåšéłïñé, åñð ŧĥé ƒïŕšŧ ŧö ƒïṽé ĝöåłš ŵïñš. ·······················································⟧",
+    'One thing appears between the two players. If it is fruit, cut it first and the point is yours; if it is not, keep still, because cutting anything else scores for your opponent. First to ten.':
+      '⟦Öñé ŧĥïñĝ åþþéåŕš ƀéŧŵééñ ŧĥé ŧŵö þłåýéŕš. Ïƒ ïŧ ïš ƒŕûïŧ, çûŧ ïŧ ƒïŕšŧ åñð ŧĥé þöïñŧ ïš ýöûŕš; ïƒ ïŧ ïš ñöŧ, ķééþ šŧïłł, ƀéçåûšé çûŧŧïñĝ åñýŧĥïñĝ éłšé šçöŕéš ƒöŕ ýöûŕ öþþöñéñŧ. Ƒïŕšŧ ŧö ŧéñ. ···································································⟧',
+    'One track of notes runs at both players at once, each note landing on your own platform. Meet it dead centre for three and near enough for one, while a note you let go, or an answer to nothing, costs you. Higher score at the end of the song wins.':
+      '⟦Öñé ŧŕåçķ öƒ ñöŧéš ŕûñš åŧ ƀöŧĥ þłåýéŕš åŧ öñçé, éåçĥ ñöŧé łåñðïñĝ öñ ýöûŕ öŵñ þłåŧƒöŕɱ. Ṁééŧ ïŧ ðéåð çéñŧŕé ƒöŕ ŧĥŕéé åñð ñéåŕ éñöûĝĥ ƒöŕ öñé, ŵĥïłé å ñöŧé ýöû łéŧ ĝö, öŕ åñ åñšŵéŕ ŧö ñöŧĥïñĝ, çöšŧš ýöû. Ĥïĝĥéŕ šçöŕé åŧ ŧĥé éñð öƒ ŧĥé šöñĝ ŵïñš. ·······················································································⟧',
+    'One yard, two tanks and a stack of crates. The gun is bolted to the hull, so aiming and driving are the same act, and holding the controls swings the gun and loads it while letting go fires. Take three lives to win.':
+      '⟦Öñé ýåŕð, ŧŵö ŧåñķš åñð å šŧåçķ öƒ çŕåŧéš. Ŧĥé ĝûñ ïš ƀöłŧéð ŧö ŧĥé ĥûłł, šö åïɱïñĝ åñð ðŕïṽïñĝ åŕé ŧĥé šåɱé åçŧ, åñð ĥöłðïñĝ ŧĥé çöñŧŕöłš šŵïñĝš ŧĥé ĝûñ åñð łöåðš ïŧ ŵĥïłé łéŧŧïñĝ ĝö ƒïŕéš. Ŧåķé ŧĥŕéé łïṽéš ŧö ŵïñ. ············································································⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
+    'Our games are our own': '⟦Öûŕ ĝåɱéš åŕé öûŕ öŵñ ········⟧',
+    'Our own work': '⟦Öûŕ öŵñ ŵöŕķ ·····⟧',
+    "Place a piece so it traps a line of your opponent's between two of yours, and that whole line changes hands. The game ends when neither side can move, and the larger army wins.":
+      "⟦Þłåçé å þïéçé šö ïŧ ŧŕåþš å łïñé öƒ ýöûŕ öþþöñéñŧ'š ƀéŧŵééñ ŧŵö öƒ ýöûŕš, åñð ŧĥåŧ ŵĥöłé łïñé çĥåñĝéš ĥåñðš. Ŧĥé ĝåɱé éñðš ŵĥéñ ñéïŧĥéŕ šïðé çåñ ɱöṽé, åñð ŧĥé łåŕĝéŕ åŕɱý ŵïñš. ······························································⟧",
+    'Play against a bot': '⟦Þłåý åĝåïñšŧ å ƀöŧ ·······⟧',
+    'Play solo': '⟦Þłåý šöłö ····⟧',
+    'Play the games. There is no account, no payment and nothing to agree to beyond the obvious.':
+      '⟦Þłåý ŧĥé ĝåɱéš. Ŧĥéŕé ïš ñö åççöûñŧ, ñö þåýɱéñŧ åñð ñöŧĥïñĝ ŧö åĝŕéé ŧö ƀéýöñð ŧĥé öƀṽïöûš. ································⟧',
+    'Play together here': '⟦Þłåý ŧöĝéŧĥéŕ ĥéŕé ·······⟧',
+    'Play {game}': '⟦Þłåý {game} ····⟧',
+    'Player one A and D slide, W and S swing the aim, hold Space and let go to flick; player two arrows and Enter':
+      '⟦Þłåýéŕ öñé Å åñð Ð šłïðé, Ŵ åñð Š šŵïñĝ ŧĥé åïɱ, ĥöłð Šþåçé åñð łéŧ ĝö ŧö ƒłïçķ; þłåýéŕ ŧŵö åŕŕöŵš åñð Éñŧéŕ ······································⟧',
+    'Player one A and D then Space, player two arrows then Enter: pick a pit and sow it':
+      '⟦Þłåýéŕ öñé Å åñð Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å þïŧ åñð šöŵ ïŧ ·····························⟧',
+    'Player one A and D then Space, player two arrows then Enter: slide across and drop':
+      '⟦Þłåýéŕ öñé Å åñð Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: šłïðé åçŕöšš åñð ðŕöþ ·····························⟧',
+    'Player one A and D then Space, player two the arrows then Enter: a bolt, then where the nut goes':
+      '⟦Þłåýéŕ öñé Å åñð Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö ŧĥé åŕŕöŵš ŧĥéñ Éñŧéŕ: å ƀöłŧ, ŧĥéñ ŵĥéŕé ŧĥé ñûŧ ĝöéš ··································⟧',
+    'Player one A and D then hold Space, player two arrows then hold Enter: aim, build power, release':
+      '⟦Þłåýéŕ öñé Å åñð Ð ŧĥéñ ĥöłð Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ ĥöłð Éñŧéŕ: åïɱ, ƀûïłð þöŵéŕ, ŕéłéåšé ··································⟧',
+    'Player one W A S D and Space, player two arrows and Enter: aim and fire, then slide your armour plate':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð åñð Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš åñð Éñŧéŕ: åïɱ åñð ƒïŕé, ŧĥéñ šłïðé ýöûŕ åŕɱöûŕ þłåŧé ····································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: keep dice, roll, pick a box':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ķééþ ðïçé, ŕöłł, þïçķ å ƀöẋ ·······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: move between cards and turn one':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ɱöṽé ƀéŧŵééñ çåŕðš åñð ŧûŕñ öñé ·································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: move between lines and draw one':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ɱöṽé ƀéŧŵééñ łïñéš åñð ðŕåŵ öñé ·································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: move between squares and place':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ɱöṽé ƀéŧŵééñ šɋûåŕéš åñð þłåçé ································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: move the sight and fire':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ɱöṽé ŧĥé šïĝĥŧ åñð ƒïŕé ······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: move the sight and throw':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ɱöṽé ŧĥé šïĝĥŧ åñð ŧĥŕöŵ ······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a bubble, start and end a run':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å ƀûƀƀłé, šŧåŕŧ åñð éñð å ŕûñ ··································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a cell and add a dot':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å çéłł åñð åðð å ðöŧ ·······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a pile, put it down':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å þïłé, þûŧ ïŧ ðöŵñ ······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a shape, then a square':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å šĥåþé, ŧĥéñ å šɋûåŕé ·······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a square and place your mark':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å šɋûåŕé åñð þłåçé ýöûŕ ɱåŕķ ·································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a square, lift and place':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å šɋûåŕé, łïƒŧ åñð þłåçé ································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a square, then a digit':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å šɋûåŕé, ŧĥéñ å ðïĝïŧ ·······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: pick a tile and shut it':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å ŧïłé åñð šĥûŧ ïŧ ······························⟧',
+    'Player one W A S D then Space, player two arrows then Enter: press to roll, steer to pick a move, press to play':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: þŕéšš ŧö ŕöłł, šŧééŕ ŧö þïçķ å ɱöṽé, þŕéšš ŧö þłåý ·······································⟧',
+    'Player one W A S D then Space, player two arrows then Enter: roll, pick a token, move it':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö åŕŕöŵš ŧĥéñ Éñŧéŕ: ŕöłł, þïçķ å ŧöķéñ, ɱöṽé ïŧ ·······························⟧',
+    'Player one W A S D then Space, player two the arrows then Enter: pick a slot':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð ŧĥéñ Šþåçé, þłåýéŕ ŧŵö ŧĥé åŕŕöŵš ŧĥéñ Éñŧéŕ: þïçķ å šłöŧ ···························⟧',
+    'Player one W A S D, player two the arrow keys: one press rolls you that way':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð, þłåýéŕ ŧŵö ŧĥé åŕŕöŵ ķéýš: öñé þŕéšš ŕöłłš ýöû ŧĥåŧ ŵåý ···························⟧',
+    'Player one W A S D, player two the arrow keys: slide the tile on that side of the gap':
+      '⟦Þłåýéŕ öñé Ŵ Å Š Ð, þłåýéŕ ŧŵö ŧĥé åŕŕöŵ ķéýš: šłïðé ŧĥé ŧïłé öñ ŧĥåŧ šïðé öƒ ŧĥé ĝåþ ······························⟧',
+    'Player one aims with A and D, player two with arrows; hold Space or Enter for power, release to shoot':
+      '⟦Þłåýéŕ öñé åïɱš ŵïŧĥ Å åñð Ð, þłåýéŕ ŧŵö ŵïŧĥ åŕŕöŵš; ĥöłð Šþåçé öŕ Éñŧéŕ ƒöŕ þöŵéŕ, ŕéłéåšé ŧö šĥööŧ ····································⟧',
+    'Player one drives with A and D, jumping with W or Space. Player two, on the arrow keys, jumps with Up or Enter.':
+      '⟦Þłåýéŕ öñé ðŕïṽéš ŵïŧĥ Å åñð Ð, ĵûɱþïñĝ ŵïŧĥ Ŵ öŕ Šþåçé. Þłåýéŕ ŧŵö, öñ ŧĥé åŕŕöŵ ķéýš, ĵûɱþš ŵïŧĥ Ûþ öŕ Éñŧéŕ. ·······································⟧',
+    'Player one holds Space to run and taps A and D to change rail; player two holds Enter and the left and right arrows':
+      '⟦Þłåýéŕ öñé ĥöłðš Šþåçé ŧö ŕûñ åñð ŧåþš Å åñð Ð ŧö çĥåñĝé ŕåïł; þłåýéŕ ŧŵö ĥöłðš Éñŧéŕ åñð ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš ·········································⟧',
+    'Player one moves with A and D and takes with Space, player two the arrows and Enter':
+      '⟦Þłåýéŕ öñé ɱöṽéš ŵïŧĥ Å åñð Ð åñð ŧåķéš ŵïŧĥ Šþåçé, þłåýéŕ ŧŵö ŧĥé åŕŕöŵš åñð Éñŧéŕ ······························⟧',
+    'Player one presses Space, player two Enter — one press closes the chopsticks':
+      '⟦Þłåýéŕ öñé þŕéššéš Šþåçé, þłåýéŕ ŧŵö Éñŧéŕ — öñé þŕéšš çłöšéš ŧĥé çĥöþšŧïçķš ···························⟧',
+    'Player one presses Space, player two Enter: first sets the line, second shoots':
+      '⟦Þłåýéŕ öñé þŕéššéš Šþåçé, þłåýéŕ ŧŵö Éñŧéŕ: ƒïŕšŧ šéŧš ŧĥé łïñé, šéçöñð šĥööŧš ····························⟧',
+    'Player one presses Space, player two Enter: once to keep the distance, again to shoot':
+      '⟦Þłåýéŕ öñé þŕéššéš Šþåçé, þłåýéŕ ŧŵö Éñŧéŕ: öñçé ŧö ķééþ ŧĥé ðïšŧåñçé, åĝåïñ ŧö šĥööŧ ······························⟧',
+    'Player one steers with A and D and hops with W; player two with the left, right and up arrows':
+      '⟦Þłåýéŕ öñé šŧééŕš ŵïŧĥ Å åñð Ð åñð ĥöþš ŵïŧĥ Ŵ; þłåýéŕ ŧŵö ŵïŧĥ ŧĥé łéƒŧ, ŕïĝĥŧ åñð ûþ åŕŕöŵš ·································⟧',
+    'Player one uses Space, player two Enter: press to keep the line, hold for power, release to kick.':
+      '⟦Þłåýéŕ öñé ûšéš Šþåçé, þłåýéŕ ŧŵö Éñŧéŕ: þŕéšš ŧö ķééþ ŧĥé łïñé, ĥöłð ƒöŕ þöŵéŕ, ŕéłéåšé ŧö ķïçķ. ··································⟧',
+    'Player one: A and D pick a die, Space rolls and moves. Player two: arrow keys and Enter':
+      '⟦Þłåýéŕ öñé: Å åñð Ð þïçķ å ðïé, Šþåçé ŕöłłš åñð ɱöṽéš. Þłåýéŕ ŧŵö: åŕŕöŵ ķéýš åñð Éñŧéŕ ·······························⟧',
+    'Player one: A and D shunt a notch, Space drops. Player two: the arrow keys shunt, Enter drops.':
+      '⟦Þłåýéŕ öñé: Å åñð Ð šĥûñŧ å ñöŧçĥ, Šþåçé ðŕöþš. Þłåýéŕ ŧŵö: ŧĥé åŕŕöŵ ķéýš šĥûñŧ, Éñŧéŕ ðŕöþš. ·································⟧',
+    'Player one: A and D swing the bow, W and S set the draw, hold Space and let go to shoot. Player two: arrows and Enter':
+      '⟦Þłåýéŕ öñé: Å åñð Ð šŵïñĝ ŧĥé ƀöŵ, Ŵ åñð Š šéŧ ŧĥé ðŕåŵ, ĥöłð Šþåçé åñð łéŧ ĝö ŧö šĥööŧ. Þłåýéŕ ŧŵö: åŕŕöŵš åñð Éñŧéŕ ·········································⟧',
+    'Player one: A and D to slide, Space to grab. Player two: arrow keys to slide, Enter to grab.':
+      '⟦Þłåýéŕ öñé: Å åñð Ð ŧö šłïðé, Šþåçé ŧö ĝŕåƀ. Þłåýéŕ ŧŵö: åŕŕöŵ ķéýš ŧö šłïðé, Éñŧéŕ ŧö ĝŕåƀ. ·································⟧',
+    'Player one: A and D, Space throws. Player two: left and right arrows, Enter throws':
+      '⟦Þłåýéŕ öñé: Å åñð Ð, Šþåçé ŧĥŕöŵš. Þłåýéŕ ŧŵö: łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš, Éñŧéŕ ŧĥŕöŵš ·····························⟧',
+    'Player one: W A S D to aim, hold Space to draw, let go to loose. Player two: arrows, Enter':
+      '⟦Þłåýéŕ öñé: Ŵ Å Š Ð ŧö åïɱ, ĥöłð Šþåçé ŧö ðŕåŵ, łéŧ ĝö ŧö łööšé. Þłåýéŕ ŧŵö: åŕŕöŵš, Éñŧéŕ ································⟧',
+    'Playing on your own': '⟦Þłåýïñĝ öñ ýöûŕ öŵñ ·······⟧',
+    'Point the bow, bring it to full draw and loose. A crosswind carries the arrow while it flies, and the bow arm wanders if you dither. Three rounds of four arrows, and the higher card wins.':
+      '⟦Þöïñŧ ŧĥé ƀöŵ, ƀŕïñĝ ïŧ ŧö ƒûłł ðŕåŵ åñð łööšé. Å çŕöššŵïñð çåŕŕïéš ŧĥé åŕŕöŵ ŵĥïłé ïŧ ƒłïéš, åñð ŧĥé ƀöŵ åŕɱ ŵåñðéŕš ïƒ ýöû ðïŧĥéŕ. Ŧĥŕéé ŕöûñðš öƒ ƒöûŕ åŕŕöŵš, åñð ŧĥé ĥïĝĥéŕ çåŕð ŵïñš. ··································································⟧',
+    'Point where you want to go; your snake turns toward your finger':
+      '⟦Þöïñŧ ŵĥéŕé ýöû ŵåñŧ ŧö ĝö; ýöûŕ šñåķé ŧûŕñš ŧöŵåŕð ýöûŕ ƒïñĝéŕ ·······················⟧',
+    'Press anywhere in your own half and pull the way you want to hop':
+      '⟦Þŕéšš åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ åñð þûłł ŧĥé ŵåý ýöû ŵåñŧ ŧö ĥöþ ·······················⟧',
+    'Press anywhere on your own half and drag the way you want to run.':
+      '⟦Þŕéšš åñýŵĥéŕé öñ ýöûŕ öŵñ ĥåłƒ åñð ðŕåĝ ŧĥé ŵåý ýöû ŵåñŧ ŧö ŕûñ. ·······················⟧',
+    'Press anywhere on your turn to keep the line, hold for power, release to kick.':
+      '⟦Þŕéšš åñýŵĥéŕé öñ ýöûŕ ŧûŕñ ŧö ķééþ ŧĥé łïñé, ĥöłð ƒöŕ þöŵéŕ, ŕéłéåšé ŧö ķïçķ. ····························⟧',
+    'Press in your own half to stop your cart, let go to fire. A fuse fires by itself':
+      '⟦Þŕéšš ïñ ýöûŕ öŵñ ĥåłƒ ŧö šŧöþ ýöûŕ çåŕŧ, łéŧ ĝö ŧö ƒïŕé. Å ƒûšé ƒïŕéš ƀý ïŧšéłƒ ····························⟧',
+    'Press in your own half to stop your gun, keep holding to shoot farther, let go to fire':
+      '⟦Þŕéšš ïñ ýöûŕ öŵñ ĥåłƒ ŧö šŧöþ ýöûŕ ĝûñ, ķééþ ĥöłðïñĝ ŧö šĥööŧ ƒåŕŧĥéŕ, łéŧ ĝö ŧö ƒïŕé ·······························⟧',
+    'Press to grab the blade, drag to point it, sweep sideways for spin, lift to throw':
+      '⟦Þŕéšš ŧö ĝŕåƀ ŧĥé ƀłåðé, ðŕåĝ ŧö þöïñŧ ïŧ, šŵééþ šïðéŵåýš ƒöŕ šþïñ, łïƒŧ ŧö ŧĥŕöŵ ·····························⟧',
+    'Press your own half of the screen and drag — the car turns the way you drag':
+      '⟦Þŕéšš ýöûŕ öŵñ ĥåłƒ öƒ ŧĥé šçŕééñ åñð ðŕåĝ — ŧĥé çåŕ ŧûŕñš ŧĥé ŵåý ýöû ðŕåĝ ···························⟧',
+    Privacy: '⟦Þŕïṽåçý ···⟧',
+    "Problems and suggestions are welcome through the project's issue tracker, which is where all of the work on DuelBox happens in the open.":
+      "⟦Þŕöƀłéɱš åñð šûĝĝéšŧïöñš åŕé ŵéłçöɱé ŧĥŕöûĝĥ ŧĥé þŕöĵéçŧ'š ïššûé ŧŕåçķéŕ, ŵĥïçĥ ïš ŵĥéŕé åłł öƒ ŧĥé ŵöŕķ öñ ÐûéłƁöẋ ĥåþþéñš ïñ ŧĥé öþéñ. ················································⟧",
+    'Pull back from the ball and let go — further back is a harder shot':
+      '⟦Þûłł ƀåçķ ƒŕöɱ ŧĥé ƀåłł åñð łéŧ ĝö — ƒûŕŧĥéŕ ƀåçķ ïš å ĥåŕðéŕ šĥöŧ ························⟧',
+    'Pull back from the cue ball and let go — further back is harder, and the table edge is as hard as it goes':
+      '⟦Þûłł ƀåçķ ƒŕöɱ ŧĥé çûé ƀåłł åñð łéŧ ĝö — ƒûŕŧĥéŕ ƀåçķ ïš ĥåŕðéŕ, åñð ŧĥé ŧåƀłé éðĝé ïš åš ĥåŕð åš ïŧ ĝöéš ·····································⟧',
+    'Pull back from your ball and let go — a longer pull is a harder putt':
+      '⟦Þûłł ƀåçķ ƒŕöɱ ýöûŕ ƀåłł åñð łéŧ ĝö — å łöñĝéŕ þûłł ïš å ĥåŕðéŕ þûŧŧ ························⟧',
+    'Putt across a green towards the hole, choosing a line and how hard to strike. Holing out scores a point, and the match goes to the first player two points clear.':
+      '⟦Þûŧŧ åçŕöšš å ĝŕééñ ŧöŵåŕðš ŧĥé ĥöłé, çĥööšïñĝ å łïñé åñð ĥöŵ ĥåŕð ŧö šŧŕïķé. Ĥöłïñĝ öûŧ šçöŕéš å þöïñŧ, åñð ŧĥé ɱåŧçĥ ĝöéš ŧö ŧĥé ƒïŕšŧ þłåýéŕ ŧŵö þöïñŧš çłéåŕ. ·························································⟧',
+    'Ready?': '⟦Ŕéåðý? ···⟧',
+    "Rock, paper and scissors, with both players committing inside the same window and neither seeing the other's choice. Choosing nothing loses to anything. First to three rounds.":
+      "⟦Ŕöçķ, þåþéŕ åñð šçïššöŕš, ŵïŧĥ ƀöŧĥ þłåýéŕš çöɱɱïŧŧïñĝ ïñšïðé ŧĥé šåɱé ŵïñðöŵ åñð ñéïŧĥéŕ šééïñĝ ŧĥé öŧĥéŕ'š çĥöïçé. Çĥööšïñĝ ñöŧĥïñĝ łöšéš ŧö åñýŧĥïñĝ. Ƒïŕšŧ ŧö ŧĥŕéé ŕöûñðš. ······························································⟧",
+    'Roll and move up a numbered track, climbing the ladders and falling down the snakes. A snake swallows a given player only once, and reaching or passing the last field wins.':
+      '⟦Ŕöłł åñð ɱöṽé ûþ å ñûɱƀéŕéð ŧŕåçķ, çłïɱƀïñĝ ŧĥé łåððéŕš åñð ƒåłłïñĝ ðöŵñ ŧĥé šñåķéš. Å šñåķé šŵåłłöŵš å ĝïṽéñ þłåýéŕ öñłý öñçé, åñð ŕéåçĥïñĝ öŕ þåššïñĝ ŧĥé łåšŧ ƒïéłð ŵïñš. ·····························································⟧',
+    'Roll to bring a token out, then walk it round a shared loop and up your own home column. Landing on an opponent sends them back to the start, and the first token home takes the match.':
+      '⟦Ŕöłł ŧö ƀŕïñĝ å ŧöķéñ öûŧ, ŧĥéñ ŵåłķ ïŧ ŕöûñð å šĥåŕéð łööþ åñð ûþ ýöûŕ öŵñ ĥöɱé çöłûɱñ. Łåñðïñĝ öñ åñ öþþöñéñŧ šéñðš ŧĥéɱ ƀåçķ ŧö ŧĥé šŧåŕŧ, åñð ŧĥé ƒïŕšŧ ŧöķéñ ĥöɱé ŧåķéš ŧĥé ɱåŧçĥ. ·································································⟧',
+    'Rows of bubbles between two players. On your turn you press any run of neighbouring bubbles in a single row, and whoever presses the last bubble on the board loses.':
+      '⟦Ŕöŵš öƒ ƀûƀƀłéš ƀéŧŵééñ ŧŵö þłåýéŕš. Öñ ýöûŕ ŧûŕñ ýöû þŕéšš åñý ŕûñ öƒ ñéïĝĥƀöûŕïñĝ ƀûƀƀłéš ïñ å šïñĝłé ŕöŵ, åñð ŵĥöéṽéŕ þŕéššéš ŧĥé łåšŧ ƀûƀƀłé öñ ŧĥé ƀöåŕð łöšéš. ··························································⟧',
+    'Run along your own half and jump to meet the ball, because jumping moves your reach rather than extending it. Catch it with the middle of the strings and it goes back fast. First to four points.':
+      '⟦Ŕûñ åłöñĝ ýöûŕ öŵñ ĥåłƒ åñð ĵûɱþ ŧö ɱééŧ ŧĥé ƀåłł, ƀéçåûšé ĵûɱþïñĝ ɱöṽéš ýöûŕ ŕéåçĥ ŕåŧĥéŕ ŧĥåñ éẋŧéñðïñĝ ïŧ. Çåŧçĥ ïŧ ŵïŧĥ ŧĥé ɱïððłé öƒ ŧĥé šŧŕïñĝš åñð ïŧ ĝöéš ƀåçķ ƒåšŧ. Ƒïŕšŧ ŧö ƒöûŕ þöïñŧš. ····································································⟧',
+    "Run down a burrow, changing rails to keep clear of the cats' paws and to reach the cheese. Every piece is there for both rats, so this is a race rather than a scramble. First to carry sixteen home wins.":
+      "⟦Ŕûñ ðöŵñ å ƀûŕŕöŵ, çĥåñĝïñĝ ŕåïłš ŧö ķééþ çłéåŕ öƒ ŧĥé çåŧš' þåŵš åñð ŧö ŕéåçĥ ŧĥé çĥééšé. Éṽéŕý þïéçé ïš ŧĥéŕé ƒöŕ ƀöŧĥ ŕåŧš, šö ŧĥïš ïš å ŕåçé ŕåŧĥéŕ ŧĥåñ å šçŕåɱƀłé. Ƒïŕšŧ ŧö çåŕŕý šïẋŧééñ ĥöɱé ŵïñš. ·······································································⟧",
+    "Scores are not part of it. No match's score is written down anywhere, on your device or ours — a running tally is held in memory while you play and is gone when you close the tab. The head-to-head above is a count of matches, not a record of any of them: it knows you have won six and not which six, when, or by how much. A tournament in progress is the one thing here that remembers who won a particular game, because a line-up nobody can score is not a tournament, and it goes when the tournament does.":
+      "⟦Šçöŕéš åŕé ñöŧ þåŕŧ öƒ ïŧ. Ñö ɱåŧçĥ'š šçöŕé ïš ŵŕïŧŧéñ ðöŵñ åñýŵĥéŕé, öñ ýöûŕ ðéṽïçé öŕ öûŕš — å ŕûññïñĝ ŧåłłý ïš ĥéłð ïñ ɱéɱöŕý ŵĥïłé ýöû þłåý åñð ïš ĝöñé ŵĥéñ ýöû çłöšé ŧĥé ŧåƀ. Ŧĥé ĥéåð-ŧö-ĥéåð åƀöṽé ïš å çöûñŧ öƒ ɱåŧçĥéš, ñöŧ å ŕéçöŕð öƒ åñý öƒ ŧĥéɱ: ïŧ ķñöŵš ýöû ĥåṽé ŵöñ šïẋ åñð ñöŧ ŵĥïçĥ šïẋ, ŵĥéñ, öŕ ƀý ĥöŵ ɱûçĥ. Å ŧöûŕñåɱéñŧ ïñ þŕöĝŕéšš ïš ŧĥé öñé ŧĥïñĝ ĥéŕé ŧĥåŧ ŕéɱéɱƀéŕš ŵĥö ŵöñ å þåŕŧïçûłåŕ ĝåɱé, ƀéçåûšé å łïñé-ûþ ñöƀöðý çåñ šçöŕé ïš ñöŧ å ŧöûŕñåɱéñŧ, åñð ïŧ ĝöéš ŵĥéñ ŧĥé ŧöûŕñåɱéñŧ ðöéš. ·················································································································································································⟧",
+    Seat: '⟦Šéåŧ ··⟧',
+    'Seat one flaps with Space or W, seat two with Enter or Up — hold Space or Enter to dive':
+      '⟦Šéåŧ öñé ƒłåþš ŵïŧĥ Šþåçé öŕ Ŵ, šéåŧ ŧŵö ŵïŧĥ Éñŧéŕ öŕ Ûþ — ĥöłð Šþåçé öŕ Éñŧéŕ ŧö ðïṽé ·······························⟧',
+    'Seat one flaps with W or Space, seat two with Up or Enter — hold to glide':
+      '⟦Šéåŧ öñé ƒłåþš ŵïŧĥ Ŵ öŕ Šþåçé, šéåŧ ŧŵö ŵïŧĥ Ûþ öŕ Éñŧéŕ — ĥöłð ŧö ĝłïðé ··························⟧',
+    'Seat one flips gravity with W A S D or Space, seat two with the arrow keys or Enter':
+      '⟦Šéåŧ öñé ƒłïþš ĝŕåṽïŧý ŵïŧĥ Ŵ Å Š Ð öŕ Šþåçé, šéåŧ ŧŵö ŵïŧĥ ŧĥé åŕŕöŵ ķéýš öŕ Éñŧéŕ ······························⟧',
+    'Seat one hops with Space, seat two with Enter — one press cuts the block loose':
+      '⟦Šéåŧ öñé ĥöþš ŵïŧĥ Šþåçé, šéåŧ ŧŵö ŵïŧĥ Éñŧéŕ — öñé þŕéšš çûŧš ŧĥé ƀłöçķ łööšé ····························⟧',
+    'Seat one swims with W A S D, seat two with the arrow keys. Eight directions.':
+      '⟦Šéåŧ öñé šŵïɱš ŵïŧĥ Ŵ Å Š Ð, šéåŧ ŧŵö ŵïŧĥ ŧĥé åŕŕöŵ ķéýš. Éïĝĥŧ ðïŕéçŧïöñš. ···························⟧',
+    'Seat one walks with A and D, seat two the left and right arrows; tap to turn, hold and let go to drop':
+      '⟦Šéåŧ öñé ŵåłķš ŵïŧĥ Å åñð Ð, šéåŧ ŧŵö ŧĥé łéƒŧ åñð ŕïĝĥŧ åŕŕöŵš; ŧåþ ŧö ŧûŕñ, ĥöłð åñð łéŧ ĝö ŧö ðŕöþ ····································⟧',
+    'Seat one: A and D aim, W and S spin, Space throws. Seat two: arrows and Enter. Your turn only':
+      '⟦Šéåŧ öñé: Å åñð Ð åïɱ, Ŵ åñð Š šþïñ, Šþåçé ŧĥŕöŵš. Šéåŧ ŧŵö: åŕŕöŵš åñð Éñŧéŕ. Ýöûŕ ŧûŕñ öñłý ·································⟧',
+    'Send the bait out over the water, then wind it back in with whatever it hooked. A fish counts when it is landed rather than when it is hooked, and the first rod to twenty-five wins.':
+      '⟦Šéñð ŧĥé ƀåïŧ öûŧ öṽéŕ ŧĥé ŵåŧéŕ, ŧĥéñ ŵïñð ïŧ ƀåçķ ïñ ŵïŧĥ ŵĥåŧéṽéŕ ïŧ ĥööķéð. Å ƒïšĥ çöûñŧš ŵĥéñ ïŧ ïš łåñðéð ŕåŧĥéŕ ŧĥåñ ŵĥéñ ïŧ ïš ĥööķéð, åñð ŧĥé ƒïŕšŧ ŕöð ŧö ŧŵéñŧý-ƒïṽé ŵïñš. ································································⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
+    'Sit opposite each other': '⟦Šïŧ öþþöšïŧé éåçĥ öŧĥéŕ ·········⟧',
+    'Six cups stand at each end of the table. Keep a line, then a distance along it, and the ball goes; land in a cup and it comes off the table. Nine throws each, and most cups taken wins.':
+      '⟦Šïẋ çûþš šŧåñð åŧ éåçĥ éñð öƒ ŧĥé ŧåƀłé. Ķééþ å łïñé, ŧĥéñ å ðïšŧåñçé åłöñĝ ïŧ, åñð ŧĥé ƀåłł ĝöéš; łåñð ïñ å çûþ åñð ïŧ çöɱéš öƒƒ ŧĥé ŧåƀłé. Ñïñé ŧĥŕöŵš éåçĥ, åñð ɱöšŧ çûþš ŧåķéñ ŵïñš. ·································································⟧',
+    'Six piles between two players, one card of each turned up. Take a card into your rack, where three alike clear and score. The rack holds seven and there is no eighth slot, so a card that completes nothing when you are full puts you out.':
+      '⟦Šïẋ þïłéš ƀéŧŵééñ ŧŵö þłåýéŕš, öñé çåŕð öƒ éåçĥ ŧûŕñéð ûþ. Ŧåķé å çåŕð ïñŧö ýöûŕ ŕåçķ, ŵĥéŕé ŧĥŕéé åłïķé çłéåŕ åñð šçöŕé. Ŧĥé ŕåçķ ĥöłðš šéṽéñ åñð ŧĥéŕé ïš ñö éïĝĥŧĥ šłöŧ, šö å çåŕð ŧĥåŧ çöɱþłéŧéš ñöŧĥïñĝ ŵĥéñ ýöû åŕé ƒûłł þûŧš ýöû öûŧ. ···················································································⟧',
+    'Sixteen cards face down in eight pairs. Turn two over, and a pair is yours and keeps the turn, so a player who remembers can clear the table in one visit. Most pairs wins.':
+      '⟦Šïẋŧééñ çåŕðš ƒåçé ðöŵñ ïñ éïĝĥŧ þåïŕš. Ŧûŕñ ŧŵö öṽéŕ, åñð å þåïŕ ïš ýöûŕš åñð ķééþš ŧĥé ŧûŕñ, šö å þłåýéŕ ŵĥö ŕéɱéɱƀéŕš çåñ çłéåŕ ŧĥé ŧåƀłé ïñ öñé ṽïšïŧ. Ṁöšŧ þåïŕš ŵïñš. ····························································⟧',
+    'Slide a finger across your own half to pick a lane, and flick it up to hop':
+      '⟦Šłïðé å ƒïñĝéŕ åçŕöšš ýöûŕ öŵñ ĥåłƒ ŧö þïçķ å łåñé, åñð ƒłïçķ ïŧ ûþ ŧö ĥöþ ··························⟧',
+    'Slide your finger across the pad to aim, further down to draw deeper, lift to shoot':
+      '⟦Šłïðé ýöûŕ ƒïñĝéŕ åçŕöšš ŧĥé þåð ŧö åïɱ, ƒûŕŧĥéŕ ðöŵñ ŧö ðŕåŵ ðééþéŕ, łïƒŧ ŧö šĥööŧ ······························⟧',
+    'Slide your finger across your own half and the car drives to it':
+      '⟦Šłïðé ýöûŕ ƒïñĝéŕ åçŕöšš ýöûŕ öŵñ ĥåłƒ åñð ŧĥé çåŕ ðŕïṽéš ŧö ïŧ ·······················⟧',
+    'So we can act on a takedown notice without a round-trip, please include:':
+      '⟦Šö ŵé çåñ åçŧ öñ å ŧåķéðöŵñ ñöŧïçé ŵïŧĥöûŧ å ŕöûñð-ŧŕïþ, þłéåšé ïñçłûðé: ··························⟧',
+    'Soldiers march up five roads towards your wall and never stop. Keep a road, hold to charge the shot further out, then fire. A soldier smashed deep is worth three and one close in is worth one, while anything reaching the gate is worth nothing.':
+      '⟦Šöłðïéŕš ɱåŕçĥ ûþ ƒïṽé ŕöåðš ŧöŵåŕðš ýöûŕ ŵåłł åñð ñéṽéŕ šŧöþ. Ķééþ å ŕöåð, ĥöłð ŧö çĥåŕĝé ŧĥé šĥöŧ ƒûŕŧĥéŕ öûŧ, ŧĥéñ ƒïŕé. Å šöłðïéŕ šɱåšĥéð ðééþ ïš ŵöŕŧĥ ŧĥŕéé åñð öñé çłöšé ïñ ïš ŵöŕŧĥ öñé, ŵĥïłé åñýŧĥïñĝ ŕéåçĥïñĝ ŧĥé ĝåŧé ïš ŵöŕŧĥ ñöŧĥïñĝ. ······················································································⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
+    'Space is player one and Enter is player two — hold to keep a column, let go to fire':
+      '⟦Šþåçé ïš þłåýéŕ öñé åñð Éñŧéŕ ïš þłåýéŕ ŧŵö — ĥöłð ŧö ķééþ å çöłûɱñ, łéŧ ĝö ŧö ƒïŕé ······························⟧',
+    'Space is player one and Enter is player two — press to keep a road, hold to shoot farther':
+      '⟦Šþåçé ïš þłåýéŕ öñé åñð Éñŧéŕ ïš þłåýéŕ ŧŵö — þŕéšš ŧö ķééþ å ŕöåð, ĥöłð ŧö šĥööŧ ƒåŕŧĥéŕ ································⟧',
+    'Space is player one, Enter is player two — cut fruit, leave everything else':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö — çûŧ ƒŕûïŧ, łéåṽé éṽéŕýŧĥïñĝ éłšé ···························⟧',
+    'Space is player one, Enter is player two — one press swings the hammer':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö — öñé þŕéšš šŵïñĝš ŧĥé ĥåɱɱéŕ ·························⟧',
+    'Space is player one, Enter is player two — press once for angle, once for power':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö — þŕéšš öñçé ƒöŕ åñĝłé, öñçé ƒöŕ þöŵéŕ ····························⟧',
+    'Space is player one, Enter is player two — press once for the line, once for the strength':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö — þŕéšš öñçé ƒöŕ ŧĥé łïñé, öñçé ƒöŕ ŧĥé šŧŕéñĝŧĥ ································⟧',
+    'Space is player one, Enter is player two — press once for the line, once for the throw':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö — þŕéšš öñçé ƒöŕ ŧĥé łïñé, öñçé ƒöŕ ŧĥé ŧĥŕöŵ ·······························⟧',
+    'Space is player one, Enter is player two. One press as the note lands.':
+      '⟦Šþåçé ïš þłåýéŕ öñé, Éñŧéŕ ïš þłåýéŕ ŧŵö. Öñé þŕéšš åš ŧĥé ñöŧé łåñðš. ·························⟧',
+    'Space jumps the near runner and Enter jumps the far one. One press, no holding.':
+      '⟦Šþåçé ĵûɱþš ŧĥé ñéåŕ ŕûññéŕ åñð Éñŧéŕ ĵûɱþš ŧĥé ƒåŕ öñé. Öñé þŕéšš, ñö ĥöłðïñĝ. ····························⟧',
+    'Space or Enter to swing when attacking, or to pull away when defending':
+      '⟦Šþåçé öŕ Éñŧéŕ ŧö šŵïñĝ ŵĥéñ åŧŧåçķïñĝ, öŕ ŧö þûłł åŵåý ŵĥéñ ðéƒéñðïñĝ ·························⟧',
+    'Space or Enter to throw when the marker crosses the band':
+      '⟦Šþåçé öŕ Éñŧéŕ ŧö ŧĥŕöŵ ŵĥéñ ŧĥé ɱåŕķéŕ çŕöššéš ŧĥé ƀåñð ····················⟧',
+    'Space shoves the near seat’s ball and Enter shoves the far one. Timing is all.':
+      '⟦Šþåçé šĥöṽéš ŧĥé ñéåŕ šéåŧ’š ƀåłł åñð Éñŧéŕ šĥöṽéš ŧĥé ƒåŕ öñé. Ŧïɱïñĝ ïš åłł. ····························⟧',
+    'Space throws and then rewinds the near seat’s rod; Enter works the far seat’s.':
+      '⟦Šþåçé ŧĥŕöŵš åñð ŧĥéñ ŕéŵïñðš ŧĥé ñéåŕ šéåŧ’š ŕöð; Éñŧéŕ ŵöŕķš ŧĥé ƒåŕ šéåŧ’š. ····························⟧',
+    'Space throws for player one, Enter for player two — on your turn only':
+      '⟦Šþåçé ŧĥŕöŵš ƒöŕ þłåýéŕ öñé, Éñŧéŕ ƒöŕ þłåýéŕ ŧŵö — öñ ýöûŕ ŧûŕñ öñłý ·························⟧',
+    'Start a drag on your own side; your beetle runs at your finger wherever you take it':
+      '⟦Šŧåŕŧ å ðŕåĝ öñ ýöûŕ öŵñ šïðé; ýöûŕ ƀééŧłé ŕûñš åŧ ýöûŕ ƒïñĝéŕ ŵĥéŕéṽéŕ ýöû ŧåķé ïŧ ······························⟧',
+    'Start on your own side of the bowl and your top drives at your finger, wherever you take it':
+      '⟦Šŧåŕŧ öñ ýöûŕ öŵñ šïðé öƒ ŧĥé ƀöŵł åñð ýöûŕ ŧöþ ðŕïṽéš åŧ ýöûŕ ƒïñĝéŕ, ŵĥéŕéṽéŕ ýöû ŧåķé ïŧ ································⟧',
+    'Strike the ball at the goal at the far end, choosing a line and then how hard. Whoever concedes restarts from the centre spot, and the first to three goals wins.':
+      '⟦Šŧŕïķé ŧĥé ƀåłł åŧ ŧĥé ĝöåł åŧ ŧĥé ƒåŕ éñð, çĥööšïñĝ å łïñé åñð ŧĥéñ ĥöŵ ĥåŕð. Ŵĥöéṽéŕ çöñçéðéš ŕéšŧåŕŧš ƒŕöɱ ŧĥé çéñŧŕé šþöŧ, åñð ŧĥé ƒïŕšŧ ŧö ŧĥŕéé ĝöåłš ŵïñš. ·························································⟧',
+    'Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.':
+      '⟦Ŧåķé ŧûŕñš ðŕåŵïñĝ öñé éðĝé ƀéŧŵééñ ŧŵö ðöŧš. Çöɱþłéŧïñĝ å ƀöẋ šçöŕéš ïŧ åñð ƀûýš åñöŧĥéŕ ŧûŕñ, šö ŧĥé šķïłł ïš ïñ çĥööšïñĝ ŵĥïçĥ éðĝé ŧö ĝïṽé åŵåý. Ṁöšŧ ƀöẋéš ŵïñš. ··························································⟧',
+    'Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.':
+      '⟦Ŧåķé ŧûŕñš šĥéłłïñĝ ŧĥé öŧĥéŕ ĥûłł ŵĥïłé šłïðïñĝ ýöûŕ öŵñ åŕɱöûŕ þłåŧé ŧö ɱééŧ ŧĥé šĥéłł çöɱïñĝ ƀåçķ. Å þłåŧé çåñ öñłý ƀłöçķ šö öƒŧéñ ƀéƒöŕé ïŧ ñééðš ŕéçĥåŕĝïñĝ, åñð ŧŵéłṽé ƀŕéåçĥéš šïñķ å šĥïþ. ····································································⟧',
+    'Tap Space for the near seat, Enter for the far seat, as fast as you can':
+      '⟦Ŧåþ Šþåçé ƒöŕ ŧĥé ñéåŕ šéåŧ, Éñŧéŕ ƒöŕ ŧĥé ƒåŕ šéåŧ, åš ƒåšŧ åš ýöû çåñ ·························⟧',
+    'Tap a bolt to lift its end nut, then tap the bolt you want it on':
+      '⟦Ŧåþ å ƀöłŧ ŧö łïƒŧ ïŧš éñð ñûŧ, ŧĥéñ ŧåþ ŧĥé ƀöłŧ ýöû ŵåñŧ ïŧ öñ ·······················⟧',
+    'Tap a bright square, then tap a digit on the pad below the grid':
+      '⟦Ŧåþ å ƀŕïĝĥŧ šɋûåŕé, ŧĥéñ ŧåþ å ðïĝïŧ öñ ŧĥé þåð ƀéłöŵ ŧĥé ĝŕïð ·······················⟧',
+    'Tap a card to turn it over': '⟦Ŧåþ å çåŕð ŧö ŧûŕñ ïŧ öṽéŕ ··········⟧',
+    'Tap a die to keep it, tap Roll, then tap the box to spend the hand in':
+      '⟦Ŧåþ å ðïé ŧö ķééþ ïŧ, ŧåþ Ŕöłł, ŧĥéñ ŧåþ ŧĥé ƀöẋ ŧö šþéñð ŧĥé ĥåñð ïñ ·························⟧',
+    'Tap a mole the moment it appears': '⟦Ŧåþ å ɱöłé ŧĥé ɱöɱéñŧ ïŧ åþþéåŕš ············⟧',
+    'Tap a piece to lift it, then tap a dot to move there':
+      '⟦Ŧåþ å þïéçé ŧö łïƒŧ ïŧ, ŧĥéñ ŧåþ å ðöŧ ŧö ɱöṽé ŧĥéŕé ···················⟧',
+    'Tap a piece, then tap where it goes': '⟦Ŧåþ å þïéçé, ŧĥéñ ŧåþ ŵĥéŕé ïŧ ĝöéš ·············⟧',
+    'Tap a pile to pick it up, then tap where it goes. Tap the stock to turn a card':
+      '⟦Ŧåþ å þïłé ŧö þïçķ ïŧ ûþ, ŧĥéñ ŧåþ ŵĥéŕé ïŧ ĝöéš. Ŧåþ ŧĥé šŧöçķ ŧö ŧûŕñ å çåŕð ····························⟧',
+    'Tap a question along the foot of the board, or tap a character to name it':
+      '⟦Ŧåþ å ɋûéšŧïöñ åłöñĝ ŧĥé ƒööŧ öƒ ŧĥé ƀöåŕð, öŕ ŧåþ å çĥåŕåçŧéŕ ŧö ñåɱé ïŧ ··························⟧',
+    'Tap a shape in the tray, then tap any square with a dot on it':
+      '⟦Ŧåþ å šĥåþé ïñ ŧĥé ŧŕåý, ŧĥéñ ŧåþ åñý šɋûåŕé ŵïŧĥ å ðöŧ öñ ïŧ ······················⟧',
+    'Tap a square in the highlighted board':
+      '⟦Ŧåþ å šɋûåŕé ïñ ŧĥé ĥïĝĥłïĝĥŧéð ƀöåŕð ·············⟧',
+    'Tap a square to place a ship or call a shot; tap it again to turn the ship':
+      '⟦Ŧåþ å šɋûåŕé ŧö þłåçé å šĥïþ öŕ çåłł å šĥöŧ; ŧåþ ïŧ åĝåïñ ŧö ŧûŕñ ŧĥé šĥïþ ··························⟧',
+    'Tap a tile beside the gap to slide it in':
+      '⟦Ŧåþ å ŧïłé ƀéšïðé ŧĥé ĝåþ ŧö šłïðé ïŧ ïñ ··············⟧',
+    'Tap an empty cell or one of your own': '⟦Ŧåþ åñ éɱþŧý çéłł öŕ öñé öƒ ýöûŕ öŵñ ·············⟧',
+    'Tap any square marked with a dot': '⟦Ŧåþ åñý šɋûåŕé ɱåŕķéð ŵïŧĥ å ðöŧ ············⟧',
+    'Tap anywhere along one of the four lit lanes to roll to the end of it':
+      '⟦Ŧåþ åñýŵĥéŕé åłöñĝ öñé öƒ ŧĥé ƒöûŕ łïŧ łåñéš ŧö ŕöłł ŧö ŧĥé éñð öƒ ïŧ ·························⟧',
+    'Tap anywhere in your own half as the note lands on your platform.':
+      '⟦Ŧåþ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ åš ŧĥé ñöŧé łåñðš öñ ýöûŕ þłåŧƒöŕɱ. ·······················⟧',
+    'Tap anywhere in your own half to cut. Nothing to aim; only when to move':
+      '⟦Ŧåþ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ ŧö çûŧ. Ñöŧĥïñĝ ŧö åïɱ; öñłý ŵĥéñ ŧö ɱöṽé ·························⟧',
+    'Tap anywhere in your own half to jump. A tap is the whole game.':
+      '⟦Ŧåþ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ ŧö ĵûɱþ. Å ŧåþ ïš ŧĥé ŵĥöłé ĝåɱé. ·······················⟧',
+    'Tap anywhere in your own half. Where you tap makes no difference — only when.':
+      '⟦Ŧåþ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ. Ŵĥéŕé ýöû ŧåþ ɱåķéš ñö ðïƒƒéŕéñçé — öñłý ŵĥéñ. ···························⟧',
+    'Tap anywhere on your own half of the screen to hop and cut the block loose':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ öŵñ ĥåłƒ öƒ ŧĥé šçŕééñ ŧö ĥöþ åñð çûŧ ŧĥé ƀłöçķ łööšé ··························⟧',
+    'Tap anywhere on your turn to close the chopsticks on whatever is passing':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ ŧûŕñ ŧö çłöšé ŧĥé çĥöþšŧïçķš öñ ŵĥåŧéṽéŕ ïš þåššïñĝ ··························⟧',
+    'Tap anywhere on your turn to swing. Wait for a later pass to hit harder':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ ŧûŕñ ŧö šŵïñĝ. Ŵåïŧ ƒöŕ å łåŧéŕ þåšš ŧö ĥïŧ ĥåŕðéŕ ·························⟧',
+    'Tap anywhere on your turn to throw. There is nothing to aim; pick the moment':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ ŧûŕñ ŧö ŧĥŕöŵ. Ŧĥéŕé ïš ñöŧĥïñĝ ŧö åïɱ; þïçķ ŧĥé ɱöɱéñŧ ···························⟧',
+    'Tap anywhere on your turn — first tap sets the line, second shoots. Nothing to drag':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ ŧûŕñ — ƒïŕšŧ ŧåþ šéŧš ŧĥé łïñé, šéçöñð šĥööŧš. Ñöŧĥïñĝ ŧö ðŕåĝ ······························⟧',
+    'Tap anywhere on your turn: once to keep the distance, again to shoot':
+      '⟦Ŧåþ åñýŵĥéŕé öñ ýöûŕ ŧûŕñ: öñçé ŧö ķééþ ŧĥé ðïšŧåñçé, åĝåïñ ŧö šĥööŧ ························⟧',
+    'Tap on your turn to stop the marker. Twice: once for the line, once for the throw':
+      '⟦Ŧåþ öñ ýöûŕ ŧûŕñ ŧö šŧöþ ŧĥé ɱåŕķéŕ. Ŧŵïçé: öñçé ƒöŕ ŧĥé łïñé, öñçé ƒöŕ ŧĥé ŧĥŕöŵ ·····························⟧',
+    'Tap on your turn to stop the needle. Twice: once for angle, once for power':
+      '⟦Ŧåþ öñ ýöûŕ ŧûŕñ ŧö šŧöþ ŧĥé ñééðłé. Ŧŵïçé: öñçé ƒöŕ åñĝłé, öñçé ƒöŕ þöŵéŕ ··························⟧',
+    'Tap on your turn: once to set the line, once to set the strength':
+      '⟦Ŧåþ öñ ýöûŕ ŧûŕñ: öñçé ŧö šéŧ ŧĥé łïñé, öñçé ŧö šéŧ ŧĥé šŧŕéñĝŧĥ ·······················⟧',
+    'Tap one of your own pits to sow it': '⟦Ŧåþ öñé öƒ ýöûŕ öŵñ þïŧš ŧö šöŵ ïŧ ············⟧',
+    'Tap one of your three buttons before the bar runs out':
+      '⟦Ŧåþ öñé öƒ ýöûŕ ŧĥŕéé ƀûŧŧöñš ƀéƒöŕé ŧĥé ƀåŕ ŕûñš öûŧ ···················⟧',
+    'Tap or drag over a column, release to drop':
+      '⟦Ŧåþ öŕ ðŕåĝ öṽéŕ å çöłûɱñ, ŕéłéåšé ŧö ðŕöþ ···············⟧',
+    'Tap or drag the left or right half of your road':
+      '⟦Ŧåþ öŕ ðŕåĝ ŧĥé łéƒŧ öŕ ŕïĝĥŧ ĥåłƒ öƒ ýöûŕ ŕöåð ·················⟧',
+    'Tap or hold the left or right of your own half to chop from that side':
+      '⟦Ŧåþ öŕ ĥöłð ŧĥé łéƒŧ öŕ ŕïĝĥŧ öƒ ýöûŕ öŵñ ĥåłƒ ŧö çĥöþ ƒŕöɱ ŧĥåŧ šïðé ·························⟧',
+    'Tap the answer you want in your own half. A wrong one scores for the other player':
+      '⟦Ŧåþ ŧĥé åñšŵéŕ ýöû ŵåñŧ ïñ ýöûŕ öŵñ ĥåłƒ. Å ŵŕöñĝ öñé šçöŕéš ƒöŕ ŧĥé öŧĥéŕ þłåýéŕ ·····························⟧',
+    'Tap the line you want to draw': '⟦Ŧåþ ŧĥé łïñé ýöû ŵåñŧ ŧö ðŕåŵ ···········⟧',
+    'Tap the roll button, then tap tiles adding up to your roll':
+      '⟦Ŧåþ ŧĥé ŕöłł ƀûŧŧöñ, ŧĥéñ ŧåþ ŧïłéš åððïñĝ ûþ ŧö ýöûŕ ŕöłł ·····················⟧',
+    'Tap the square you want': '⟦Ŧåþ ŧĥé šɋûåŕé ýöû ŵåñŧ ·········⟧',
+    'Tap the square you want — the kicker aims there, the keeper dives there':
+      '⟦Ŧåþ ŧĥé šɋûåŕé ýöû ŵåñŧ — ŧĥé ķïçķéŕ åïɱš ŧĥéŕé, ŧĥé ķééþéŕ ðïṽéš ŧĥéŕé ·························⟧',
+    'Tap to roll, then tap the point you want to move from; tap nearer the landing point to pick a die':
+      '⟦Ŧåþ ŧö ŕöłł, ŧĥéñ ŧåþ ŧĥé þöïñŧ ýöû ŵåñŧ ŧö ɱöṽé ƒŕöɱ; ŧåþ ñéåŕéŕ ŧĥé łåñðïñĝ þöïñŧ ŧö þïçķ å ðïé ··································⟧',
+    'Tap to roll, then tap the square you want to move to, or its die':
+      '⟦Ŧåþ ŧö ŕöłł, ŧĥéñ ŧåþ ŧĥé šɋûåŕé ýöû ŵåñŧ ŧö ɱöṽé ŧö, öŕ ïŧš ðïé ·······················⟧',
+    'Tap to roll, then tap the token you want to move':
+      '⟦Ŧåþ ŧö ŕöłł, ŧĥéñ ŧåþ ŧĥé ŧöķéñ ýöû ŵåñŧ ŧö ɱöṽé ·················⟧',
+    'Tap your half of the screen as fast as you can':
+      '⟦Ŧåþ ýöûŕ ĥåłƒ öƒ ŧĥé šçŕééñ åš ƒåšŧ åš ýöû çåñ ·················⟧',
+    'Tap your half to swing, or to pull your hands away':
+      '⟦Ŧåþ ýöûŕ ĥåłƒ ŧö šŵïñĝ, öŕ ŧö þûłł ýöûŕ ĥåñðš åŵåý ··················⟧',
+    'Tap your half when the marker crosses the band':
+      '⟦Ŧåþ ýöûŕ ĥåłƒ ŵĥéñ ŧĥé ɱåŕķéŕ çŕöššéš ŧĥé ƀåñð ·················⟧',
+    'Tap your own half of the screen to flap; keep the finger down to tuck and dive':
+      '⟦Ŧåþ ýöûŕ öŵñ ĥåłƒ öƒ ŧĥé šçŕééñ ŧö ƒłåþ; ķééþ ŧĥé ƒïñĝéŕ ðöŵñ ŧö ŧûçķ åñð ðïṽé ····························⟧',
+    'Tap your own half to flap; hold a finger down to glide slowly back down':
+      '⟦Ŧåþ ýöûŕ öŵñ ĥåłƒ ŧö ƒłåþ; ĥöłð å ƒïñĝéŕ ðöŵñ ŧö ĝłïðé šłöŵłý ƀåçķ ðöŵñ ·························⟧',
+    'Tap your own half to snap; keep your finger down and slide to walk your hippo':
+      '⟦Ŧåþ ýöûŕ öŵñ ĥåłƒ ŧö šñåþ; ķééþ ýöûŕ ƒïñĝéŕ ðöŵñ åñð šłïðé ŧö ŵåłķ ýöûŕ ĥïþþö ···························⟧',
+    'Tap your own half to throw the bait, and tap again to rewind the reel.':
+      '⟦Ŧåþ ýöûŕ öŵñ ĥåłƒ ŧö ŧĥŕöŵ ŧĥé ƀåïŧ, åñð ŧåþ åĝåïñ ŧö ŕéŵïñð ŧĥé ŕééł. ·························⟧',
+    'Targets ride two belts across the range. Keep a distance, then shoot; the shot takes a moment to arrive, so you are leading the target rather than pointing at it. Small targets pay double, first to ten.':
+      '⟦Ŧåŕĝéŧš ŕïðé ŧŵö ƀéłŧš åçŕöšš ŧĥé ŕåñĝé. Ķééþ å ðïšŧåñçé, ŧĥéñ šĥööŧ; ŧĥé šĥöŧ ŧåķéš å ɱöɱéñŧ ŧö åŕŕïṽé, šö ýöû åŕé łéåðïñĝ ŧĥé ŧåŕĝéŧ ŕåŧĥéŕ ŧĥåñ þöïñŧïñĝ åŧ ïŧ. Šɱåłł ŧåŕĝéŧš þåý ðöûƀłé, ƒïŕšŧ ŧö ŧéñ. ·······································································⟧',
+    'Terms of use': '⟦Ŧéŕɱš öƒ ûšé ·····⟧',
+    "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
+      "⟦Ŧĥé çöïñš ýöû çåñ šþéñð åŕé ïñ ŧĥé öŧĥéŕ þłåýéŕ'š ṽåûłŧ, šö ŧĥé öñłý ŵåý ŧö šçöŕé ïš ŧö łéåṽé ýöûŕ öŵñ ƒłööŕ, åñð ŧĥé ɱöɱéñŧ ýöû ðö ýöû åŕé ŧĥé ŧĥïéƒ åñð ŧĥéý åŕé ŧĥé ĝûåŕð. Çöɱé ĥöɱé ŧö ƀåñķ ŵĥåŧ ýöû çåŕŕïéð. Ṁöšŧ çöïñš åƒŧéŕ å ɱïñûŧé ŵïñš. ·····················································································⟧",
+    'The games are suitable for all ages. Since we collect no personal information from anyone, we collect none from children either.':
+      '⟦Ŧĥé ĝåɱéš åŕé šûïŧåƀłé ƒöŕ åłł åĝéš. Šïñçé ŵé çöłłéçŧ ñö þéŕšöñåł ïñƒöŕɱåŧïöñ ƒŕöɱ åñýöñé, ŵé çöłłéçŧ ñöñé ƒŕöɱ çĥïłðŕéñ éïŧĥéŕ. ·············································⟧',
+    'The games you have marked as favourites.':
+      '⟦Ŧĥé ĝåɱéš ýöû ĥåṽé ɱåŕķéð åš ƒåṽöûŕïŧéš. ··············⟧',
+    'The head-to-head between the two seats, game by game: how many matches each seat has won and how many ended level, counted only when a match is played to the end. The settings page shows it and clears it.':
+      '⟦Ŧĥé ĥéåð-ŧö-ĥéåð ƀéŧŵééñ ŧĥé ŧŵö šéåŧš, ĝåɱé ƀý ĝåɱé: ĥöŵ ɱåñý ɱåŧçĥéš éåçĥ šéåŧ ĥåš ŵöñ åñð ĥöŵ ɱåñý éñðéð łéṽéł, çöûñŧéð öñłý ŵĥéñ å ɱåŧçĥ ïš þłåýéð ŧö ŧĥé éñð. Ŧĥé šéŧŧïñĝš þåĝé šĥöŵš ïŧ åñð çłéåŕš ïŧ. ········································································⟧',
+    'The keys you have chosen for each seat, if you change them from the defaults. The settings page shows them and puts either seat back to its defaults.':
+      '⟦Ŧĥé ķéýš ýöû ĥåṽé çĥöšéñ ƒöŕ éåçĥ šéåŧ, ïƒ ýöû çĥåñĝé ŧĥéɱ ƒŕöɱ ŧĥé ðéƒåûłŧš. Ŧĥé šéŧŧïñĝš þåĝé šĥöŵš ŧĥéɱ åñð þûŧš éïŧĥéŕ šéåŧ ƀåçķ ŧö ïŧš ðéƒåûłŧš. ·····················································⟧',
+    'The last eight games you played.': '⟦Ŧĥé łåšŧ éïĝĥŧ ĝåɱéš ýöû þłåýéð. ············⟧',
+    'The order you last sorted the catalogue in, so it opens the same way next time.':
+      '⟦Ŧĥé öŕðéŕ ýöû łåšŧ šöŕŧéð ŧĥé çåŧåłöĝûé ïñ, šö ïŧ öþéñš ŧĥé šåɱé ŵåý ñéẋŧ ŧïɱé. ····························⟧',
+    'The pages and games are static files, hosted on GitHub Pages. Your browser downloads them from GitHub the same way it downloads any web page, and GitHub keeps its own ordinary server logs — the sort every web host keeps — which are outside our control and are not used by us to identify or profile anyone.':
+      '⟦Ŧĥé þåĝéš åñð ĝåɱéš åŕé šŧåŧïç ƒïłéš, ĥöšŧéð öñ ĜïŧĤûƀ Þåĝéš. Ýöûŕ ƀŕöŵšéŕ ðöŵñłöåðš ŧĥéɱ ƒŕöɱ ĜïŧĤûƀ ŧĥé šåɱé ŵåý ïŧ ðöŵñłöåðš åñý ŵéƀ þåĝé, åñð ĜïŧĤûƀ ķééþš ïŧš öŵñ öŕðïñåŕý šéŕṽéŕ łöĝš — ŧĥé šöŕŧ éṽéŕý ŵéƀ ĥöšŧ ķééþš — ŵĥïçĥ åŕé öûŧšïðé öûŕ çöñŧŕöł åñð åŕé ñöŧ ûšéð ƀý ûš ŧö ïðéñŧïƒý öŕ þŕöƒïłé åñýöñé. ···········································································································⟧',
+    'The rules of Checkers, Reversi and Tic Tac Toe belong to nobody, and that is exactly why we can build them. Game {mechanics} are not protected and never have been. The code, artwork, names and layouts here are ours, written from scratch, and are not copied from any other product.':
+      '⟦Ŧĥé ŕûłéš öƒ Çĥéçķéŕš, Ŕéṽéŕšï åñð Ŧïç Ŧåç Ŧöé ƀéłöñĝ ŧö ñöƀöðý, åñð ŧĥåŧ ïš éẋåçŧłý ŵĥý ŵé çåñ ƀûïłð ŧĥéɱ. Ĝåɱé {mechanics} åŕé ñöŧ þŕöŧéçŧéð åñð ñéṽéŕ ĥåṽé ƀééñ. Ŧĥé çöðé, åŕŧŵöŕķ, ñåɱéš åñð łåýöûŧš ĥéŕé åŕé öûŕš, ŵŕïŧŧéñ ƒŕöɱ šçŕåŧçĥ, åñð åŕé ñöŧ çöþïéð ƒŕöɱ åñý öŧĥéŕ þŕöðûçŧ. ··································································································⟧',
+    'The runtime dependencies bundled into the site, with the resolved version and licence of each.':
+      '⟦Ŧĥé ŕûñŧïɱé ðéþéñðéñçïéš ƀûñðłéð ïñŧö ŧĥé šïŧé, ŵïŧĥ ŧĥé ŕéšöłṽéð ṽéŕšïöñ åñð łïçéñçé öƒ éåçĥ. ·································⟧',
+    'The same game runs on a phone, a tablet and a laptop, and neither player ever sees more of the play area than the other.':
+      '⟦Ŧĥé šåɱé ĝåɱé ŕûñš öñ å þĥöñé, å ŧåƀłéŧ åñð å łåþŧöþ, åñð ñéïŧĥéŕ þłåýéŕ éṽéŕ šééš ɱöŕé öƒ ŧĥé þłåý åŕéå ŧĥåñ ŧĥé öŧĥéŕ. ··········································⟧',
+    'The two names you type for the seats, if you type any. They are shown on this device and never leave it.':
+      '⟦Ŧĥé ŧŵö ñåɱéš ýöû ŧýþé ƒöŕ ŧĥé šéåŧš, ïƒ ýöû ŧýþé åñý. Ŧĥéý åŕé šĥöŵñ öñ ŧĥïš ðéṽïçé åñð ñéṽéŕ łéåṽé ïŧ. ·····································⟧',
+    'The two seats are {p1} and {p2}. Whoever sits in a seat plays under its name and its mark — a disc for {p1}, a rounded square for {p2} — so the scoreboard, the keys below and the pieces on the board all mean the same person. A bot takes a seat under the same name.':
+      '⟦Ŧĥé ŧŵö šéåŧš åŕé {p1} åñð {p2}. Ŵĥöéṽéŕ šïŧš ïñ å šéåŧ þłåýš ûñðéŕ ïŧš ñåɱé åñð ïŧš ɱåŕķ — å ðïšç ƒöŕ {p1}, å ŕöûñðéð šɋûåŕé ƒöŕ {p2} — šö ŧĥé šçöŕéƀöåŕð, ŧĥé ķéýš ƀéłöŵ åñð ŧĥé þïéçéš öñ ŧĥé ƀöåŕð åłł ɱéåñ ŧĥé šåɱé þéŕšöñ. Å ƀöŧ ŧåķéš å šéåŧ ûñðéŕ ŧĥé šåɱé ñåɱé. ·····························································································⟧',
+    'There is nothing to sign up for and nothing to log in to. What is kept on your device is what you last chose for a game, your favourites, your recent games and your settings — and none of it leaves the device. Scores are not saved anywhere.':
+      '⟦Ŧĥéŕé ïš ñöŧĥïñĝ ŧö šïĝñ ûþ ƒöŕ åñð ñöŧĥïñĝ ŧö łöĝ ïñ ŧö. Ŵĥåŧ ïš ķéþŧ öñ ýöûŕ ðéṽïçé ïš ŵĥåŧ ýöû łåšŧ çĥöšé ƒöŕ å ĝåɱé, ýöûŕ ƒåṽöûŕïŧéš, ýöûŕ ŕéçéñŧ ĝåɱéš åñð ýöûŕ šéŧŧïñĝš — åñð ñöñé öƒ ïŧ łéåṽéš ŧĥé ðéṽïçé. Šçöŕéš åŕé ñöŧ šåṽéð åñýŵĥéŕé. ····················································································⟧',
+    'Things worth knowing': '⟦Ŧĥïñĝš ŵöŕŧĥ ķñöŵïñĝ ·······⟧',
+    'Thirty characters, and each player is hunting a different one. Spend your turn on a question that splits the field, or on naming a character outright. Name yours first to take the deal; best of three.':
+      '⟦Ŧĥïŕŧý çĥåŕåçŧéŕš, åñð éåçĥ þłåýéŕ ïš ĥûñŧïñĝ å ðïƒƒéŕéñŧ öñé. Šþéñð ýöûŕ ŧûŕñ öñ å ɋûéšŧïöñ ŧĥåŧ šþłïŧš ŧĥé ƒïéłð, öŕ öñ ñåɱïñĝ å çĥåŕåçŧéŕ öûŧŕïĝĥŧ. Ñåɱé ýöûŕš ƒïŕšŧ ŧö ŧåķé ŧĥé ðéåł; ƀéšŧ öƒ ŧĥŕéé. ······································································⟧',
+    'This game is still being built. Its rules and controls are settled; the playable build lands with its milestone.':
+      '⟦Ŧĥïš ĝåɱé ïš šŧïłł ƀéïñĝ ƀûïłŧ. Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð; ŧĥé þłåýåƀłé ƀûïłð łåñðš ŵïŧĥ ïŧš ɱïłéšŧöñé. ········································⟧',
+    'Three typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
+      '⟦Ŧĥŕéé ŧýþéƒåçéš, åłł ṽåŕïåƀłé ƒöñŧš šéŕṽéð ƒŕöɱ ŧĥïš öŕïĝïñ ûñðéŕ ŧĥé ŠÏŁ Öþéñ Ƒöñŧ Łïçéñçé. Ŧĥé ƒûłł łïçéñçé ŧéẋŧ šĥïþš ŵïŧĥ ŧĥé šïŧé ïñ {file}. ···················································⟧',
+    'Touch anywhere in your own half and your swimmer heads for your finger.':
+      '⟦Ŧöûçĥ åñýŵĥéŕé ïñ ýöûŕ öŵñ ĥåłƒ åñð ýöûŕ šŵïɱɱéŕ ĥéåðš ƒöŕ ýöûŕ ƒïñĝéŕ. ·························⟧',
+    'Touch behind your line to slide, drag into the board and let go — further is harder':
+      '⟦Ŧöûçĥ ƀéĥïñð ýöûŕ łïñé ŧö šłïðé, ðŕåĝ ïñŧö ŧĥé ƀöåŕð åñð łéŧ ĝö — ƒûŕŧĥéŕ ïš ĥåŕðéŕ ······························⟧',
+    'Touch down in your own half and drag: your player runs towards your finger':
+      '⟦Ŧöûçĥ ðöŵñ ïñ ýöûŕ öŵñ ĥåłƒ åñð ðŕåĝ: ýöûŕ þłåýéŕ ŕûñš ŧöŵåŕðš ýöûŕ ƒïñĝéŕ ··························⟧',
+    'Touch the symbol in your own half that also appears in theirs. A wrong one costs you':
+      '⟦Ŧöûçĥ ŧĥé šýɱƀöł ïñ ýöûŕ öŵñ ĥåłƒ ŧĥåŧ åłšö åþþéåŕš ïñ ŧĥéïŕš. Å ŵŕöñĝ öñé çöšŧš ýöû ······························⟧',
+    'Touch your end: the half on your left lifts your left flipper, the other your right':
+      '⟦Ŧöûçĥ ýöûŕ éñð: ŧĥé ĥåłƒ öñ ýöûŕ łéƒŧ łïƒŧš ýöûŕ łéƒŧ ƒłïþþéŕ, ŧĥé öŧĥéŕ ýöûŕ ŕïĝĥŧ ······························⟧',
+    'Touch your half to send your hand to that pedestal; it grabs when it arrives.':
+      '⟦Ŧöûçĥ ýöûŕ ĥåłƒ ŧö šéñð ýöûŕ ĥåñð ŧö ŧĥåŧ þéðéšŧåł; ïŧ ĝŕåƀš ŵĥéñ ïŧ åŕŕïṽéš. ···························⟧',
+    'Touch your half: left or right of your wrestler leans, and each fresh press is a leap':
+      '⟦Ŧöûçĥ ýöûŕ ĥåłƒ: łéƒŧ öŕ ŕïĝĥŧ öƒ ýöûŕ ŵŕéšŧłéŕ łéåñš, åñð éåçĥ ƒŕéšĥ þŕéšš ïš å łéåþ ······························⟧',
+    'Touch your own half and you walk towards your finger. Hold it where you want to be':
+      '⟦Ŧöûçĥ ýöûŕ öŵñ ĥåłƒ åñð ýöû ŵåłķ ŧöŵåŕðš ýöûŕ ƒïñĝéŕ. Ĥöłð ïŧ ŵĥéŕé ýöû ŵåñŧ ŧö ƀé ·····························⟧',
+    'Touch your own half to run there, and every fresh press is a jump for a high ball':
+      '⟦Ŧöûçĥ ýöûŕ öŵñ ĥåłƒ ŧö ŕûñ ŧĥéŕé, åñð éṽéŕý ƒŕéšĥ þŕéšš ïš å ĵûɱþ ƒöŕ å ĥïĝĥ ƀåłł ·····························⟧',
+    'Touch your own lane — the half nearest you is the floor, the far half the ceiling':
+      '⟦Ŧöûçĥ ýöûŕ öŵñ łåñé — ŧĥé ĥåłƒ ñéåŕéšŧ ýöû ïš ŧĥé ƒłööŕ, ŧĥé ƒåŕ ĥåłƒ ŧĥé çéïłïñĝ ·····························⟧',
+    'Traffic fills the road ahead, and some of it can be driven round while some of it cannot. Pick your lane, and hop the rest. First taxi across the city wins.':
+      '⟦Ŧŕåƒƒïç ƒïłłš ŧĥé ŕöåð åĥéåð, åñð šöɱé öƒ ïŧ çåñ ƀé ðŕïṽéñ ŕöûñð ŵĥïłé šöɱé öƒ ïŧ çåññöŧ. Þïçķ ýöûŕ łåñé, åñð ĥöþ ŧĥé ŕéšŧ. Ƒïŕšŧ ŧåẋï åçŕöšš ŧĥé çïŧý ŵïñš. ·······················································⟧',
+    "Twelve things, all kept in your browser's own storage under keys that start with {prefix}, and none of them ever sent anywhere:":
+      "⟦Ŧŵéłṽé ŧĥïñĝš, åłł ķéþŧ ïñ ýöûŕ ƀŕöŵšéŕ'š öŵñ šŧöŕåĝé ûñðéŕ ķéýš ŧĥåŧ šŧåŕŧ ŵïŧĥ {prefix}, åñð ñöñé öƒ ŧĥéɱ éṽéŕ šéñŧ åñýŵĥéŕé: ·············································⟧",
+    'Twenty nuts on a rack of seven bolts, half of them marked as yours from the deal. Only the outermost nut comes off a bolt, and it only goes onto a bare bolt or onto its own kind. A bolt of one kind pays whoever owns the nuts standing in it.':
+      '⟦Ŧŵéñŧý ñûŧš öñ å ŕåçķ öƒ šéṽéñ ƀöłŧš, ĥåłƒ öƒ ŧĥéɱ ɱåŕķéð åš ýöûŕš ƒŕöɱ ŧĥé ðéåł. Öñłý ŧĥé öûŧéŕɱöšŧ ñûŧ çöɱéš öƒƒ å ƀöłŧ, åñð ïŧ öñłý ĝöéš öñŧö å ƀåŕé ƀöłŧ öŕ öñŧö ïŧš öŵñ ķïñð. Å ƀöłŧ öƒ öñé ķïñð þåýš ŵĥöéṽéŕ öŵñš ŧĥé ñûŧš šŧåñðïñĝ ïñ ïŧ. ····················································································⟧',
+    'Two balls float in one tank, each with a pointer turning steadily on it. A shove sends your ball whichever way the pointer happens to be facing, and the water bleeds the speed off again. Send it out through the basket at your end; first to fifteen.':
+      '⟦Ŧŵö ƀåłłš ƒłöåŧ ïñ öñé ŧåñķ, éåçĥ ŵïŧĥ å þöïñŧéŕ ŧûŕñïñĝ šŧéåðïłý öñ ïŧ. Å šĥöṽé šéñðš ýöûŕ ƀåłł ŵĥïçĥéṽéŕ ŵåý ŧĥé þöïñŧéŕ ĥåþþéñš ŧö ƀé ƒåçïñĝ, åñð ŧĥé ŵåŧéŕ ƀłééðš ŧĥé šþééð öƒƒ åĝåïñ. Šéñð ïŧ öûŧ ŧĥŕöûĝĥ ŧĥé ƀåšķéŧ åŧ ýöûŕ éñð; ƒïŕšŧ ŧö ƒïƒŧééñ. ·······················································································⟧',
+    'Two cannons face each other down the board in a crosswind. Keep an angle, then a power, and the shot goes. Both players fire under the same wind, and three hits takes the match.':
+      '⟦Ŧŵö çåññöñš ƒåçé éåçĥ öŧĥéŕ ðöŵñ ŧĥé ƀöåŕð ïñ å çŕöššŵïñð. Ķééþ åñ åñĝłé, ŧĥéñ å þöŵéŕ, åñð ŧĥé šĥöŧ ĝöéš. Ɓöŧĥ þłåýéŕš ƒïŕé ûñðéŕ ŧĥé šåɱé ŵïñð, åñð ŧĥŕéé ĥïŧš ŧåķéš ŧĥé ɱåŧçĥ. ······························································⟧',
+    'Two cars, a road each, and a finish line. Steer across the lanes, keep off what is coming the other way, and whoever reaches the line first wins.':
+      '⟦Ŧŵö çåŕš, å ŕöåð éåçĥ, åñð å ƒïñïšĥ łïñé. Šŧééŕ åçŕöšš ŧĥé łåñéš, ķééþ öƒƒ ŵĥåŧ ïš çöɱïñĝ ŧĥé öŧĥéŕ ŵåý, åñð ŵĥöéṽéŕ ŕéåçĥéš ŧĥé łïñé ƒïŕšŧ ŵïñš. ···················································⟧',
+    'Two crabs, a net between them, and a ball that bounces off whatever it touches. Move along your own half and jump to keep it up; let it land on your side and your opponent scores. First to five.':
+      '⟦Ŧŵö çŕåƀš, å ñéŧ ƀéŧŵééñ ŧĥéɱ, åñð å ƀåłł ŧĥåŧ ƀöûñçéš öƒƒ ŵĥåŧéṽéŕ ïŧ ŧöûçĥéš. Ṁöṽé åłöñĝ ýöûŕ öŵñ ĥåłƒ åñð ĵûɱþ ŧö ķééþ ïŧ ûþ; łéŧ ïŧ łåñð öñ ýöûŕ šïðé åñð ýöûŕ öþþöñéñŧ šçöŕéš. Ƒïŕšŧ ŧö ƒïṽé. ····································································⟧',
+    'Two fighters, with a rack of five targets behind each. Send your sword the length of the arena while your opponent runs theirs along a guard line to meet it. First to land five wins.':
+      '⟦Ŧŵö ƒïĝĥŧéŕš, ŵïŧĥ å ŕåçķ öƒ ƒïṽé ŧåŕĝéŧš ƀéĥïñð éåçĥ. Šéñð ýöûŕ šŵöŕð ŧĥé łéñĝŧĥ öƒ ŧĥé åŕéñå ŵĥïłé ýöûŕ öþþöñéñŧ ŕûñš ŧĥéïŕš åłöñĝ å ĝûåŕð łïñé ŧö ɱééŧ ïŧ. Ƒïŕšŧ ŧö łåñð ƒïṽé ŵïñš. ································································⟧',
+    'Two frogs share one pond of twenty-five lily pads. Land on the pad a bug is sitting on to take it, where a fly is worth one and a dragonfly five. The first frog to ten wins.':
+      '⟦Ŧŵö ƒŕöĝš šĥåŕé öñé þöñð öƒ ŧŵéñŧý-ƒïṽé łïłý þåðš. Łåñð öñ ŧĥé þåð å ƀûĝ ïš šïŧŧïñĝ öñ ŧö ŧåķé ïŧ, ŵĥéŕé å ƒłý ïš ŵöŕŧĥ öñé åñð å ðŕåĝöñƒłý ƒïṽé. Ŧĥé ƒïŕšŧ ƒŕöĝ ŧö ŧéñ ŵïñš. ·····························································⟧',
+    'Two ice floes, a bird on each. Walking is slow but you can steer, and stopping launches the bird into a slide it cannot steer at all. Thirty fish wins, and the holes swallow anything that crosses a rim.':
+      '⟦Ŧŵö ïçé ƒłöéš, å ƀïŕð öñ éåçĥ. Ŵåłķïñĝ ïš šłöŵ ƀûŧ ýöû çåñ šŧééŕ, åñð šŧöþþïñĝ łåûñçĥéš ŧĥé ƀïŕð ïñŧö å šłïðé ïŧ çåññöŧ šŧééŕ åŧ åłł. Ŧĥïŕŧý ƒïšĥ ŵïñš, åñð ŧĥé ĥöłéš šŵåłłöŵ åñýŧĥïñĝ ŧĥåŧ çŕöššéš å ŕïɱ. ·······································································⟧',
+    'Two lagoons, a swimmer in each, and four piranhas that get faster every second. Coral heads stop you dead for half a second while the shoal does not wait. You score the water you cover, and the longer swim wins.':
+      '⟦Ŧŵö łåĝööñš, å šŵïɱɱéŕ ïñ éåçĥ, åñð ƒöûŕ þïŕåñĥåš ŧĥåŧ ĝéŧ ƒåšŧéŕ éṽéŕý šéçöñð. Çöŕåł ĥéåðš šŧöþ ýöû ðéåð ƒöŕ ĥåłƒ å šéçöñð ŵĥïłé ŧĥé šĥöåł ðöéš ñöŧ ŵåïŧ. Ýöû šçöŕé ŧĥé ŵåŧéŕ ýöû çöṽéŕ, åñð ŧĥé łöñĝéŕ šŵïɱ ŵïñš. ··········································································⟧',
+    'Two of you on this device, sharing the screen.':
+      '⟦Ŧŵö öƒ ýöû öñ ŧĥïš ðéṽïçé, šĥåŕïñĝ ŧĥé šçŕééñ. ·················⟧',
+    'Two people sharing a laptop have one keyboard between them, so the keys are split rather than shared. Every game lists its own controls on its page; these are the defaults.':
+      '⟦Ŧŵö þéöþłé šĥåŕïñĝ å łåþŧöþ ĥåṽé öñé ķéýƀöåŕð ƀéŧŵééñ ŧĥéɱ, šö ŧĥé ķéýš åŕé šþłïŧ ŕåŧĥéŕ ŧĥåñ šĥåŕéð. Éṽéŕý ĝåɱé łïšŧš ïŧš öŵñ çöñŧŕöłš öñ ïŧš þåĝé; ŧĥéšé åŕé ŧĥé ðéƒåûłŧš. ·····························································⟧',
+    'Two people, one device, no accounts and nothing to install. Put the phone or laptop between you, pick a game, and start. {playable} of the {total} games in the catalogue are playable today.':
+      '⟦Ŧŵö þéöþłé, öñé ðéṽïçé, ñö åççöûñŧš åñð ñöŧĥïñĝ ŧö ïñšŧåłł. Þûŧ ŧĥé þĥöñé öŕ łåþŧöþ ƀéŧŵééñ ýöû, þïçķ å ĝåɱé, åñð šŧåŕŧ. {playable} öƒ ŧĥé {total} ĝåɱéš ïñ ŧĥé çåŧåłöĝûé åŕé þłåýåƀłé ŧöðåý. ···································································⟧',
+    'Two players share one three-by-three grid, placing marks in turn, and the board turns to face whoever is to move. Three in a row takes a round, and three rounds take the match.':
+      '⟦Ŧŵö þłåýéŕš šĥåŕé öñé ŧĥŕéé-ƀý-ŧĥŕéé ĝŕïð, þłåçïñĝ ɱåŕķš ïñ ŧûŕñ, åñð ŧĥé ƀöåŕð ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé. Ŧĥŕéé ïñ å ŕöŵ ŧåķéš å ŕöûñð, åñð ŧĥŕéé ŕöûñðš ŧåķé ŧĥé ɱåŧçĥ. ······························································⟧',
+    'Two robots on one round floor that is trying to kill both of them. Dodge the sweeping blade, the lasers and the cannonballs, because the last one still moving takes the round. First to three rounds.':
+      '⟦Ŧŵö ŕöƀöŧš öñ öñé ŕöûñð ƒłööŕ ŧĥåŧ ïš ŧŕýïñĝ ŧö ķïłł ƀöŧĥ öƒ ŧĥéɱ. Ðöðĝé ŧĥé šŵééþïñĝ ƀłåðé, ŧĥé łåšéŕš åñð ŧĥé çåññöñƀåłłš, ƀéçåûšé ŧĥé łåšŧ öñé šŧïłł ɱöṽïñĝ ŧåķéš ŧĥé ŕöûñð. Ƒïŕšŧ ŧö ŧĥŕéé ŕöûñðš. ······································································⟧',
+    'Two sets of five symbols share exactly one symbol between them. Find it in your own set before your opponent finds it in theirs, because a wrong pick costs you. First to ten.':
+      '⟦Ŧŵö šéŧš öƒ ƒïṽé šýɱƀöłš šĥåŕé éẋåçŧłý öñé šýɱƀöł ƀéŧŵééñ ŧĥéɱ. Ƒïñð ïŧ ïñ ýöûŕ öŵñ šéŧ ƀéƒöŕé ýöûŕ öþþöñéñŧ ƒïñðš ïŧ ïñ ŧĥéïŕš, ƀéçåûšé å ŵŕöñĝ þïçķ çöšŧš ýöû. Ƒïŕšŧ ŧö ŧéñ. ·····························································⟧',
+    'Two skies holding the same objects, raced side by side. Fly your net into a star to take it and into a black hole to lose two. First to ten stars, or the higher count when the sky runs dry.':
+      '⟦Ŧŵö šķïéš ĥöłðïñĝ ŧĥé šåɱé öƀĵéçŧš, ŕåçéð šïðé ƀý šïðé. Ƒłý ýöûŕ ñéŧ ïñŧö å šŧåŕ ŧö ŧåķé ïŧ åñð ïñŧö å ƀłåçķ ĥöłé ŧö łöšé ŧŵö. Ƒïŕšŧ ŧö ŧéñ šŧåŕš, öŕ ŧĥé ĥïĝĥéŕ çöûñŧ ŵĥéñ ŧĥé šķý ŕûñš ðŕý. ···································································⟧',
+    'Two snakes share one arena. You can steer but you cannot stop and you cannot reverse, and running into a wall, into yourself, or into the other snake ends you. Eat ten pellets to win.':
+      '⟦Ŧŵö šñåķéš šĥåŕé öñé åŕéñå. Ýöû çåñ šŧééŕ ƀûŧ ýöû çåññöŧ šŧöþ åñð ýöû çåññöŧ ŕéṽéŕšé, åñð ŕûññïñĝ ïñŧö å ŵåłł, ïñŧö ýöûŕšéłƒ, öŕ ïñŧö ŧĥé öŧĥéŕ šñåķé éñðš ýöû. Éåŧ ŧéñ þéłłéŧš ŧö ŵïñ. ·································································⟧',
+    'Two spinning tops in a shallow dish, both driven at once with no turns in it. Push your opponent over the lip for two points, while a top whose spin runs out topples where it stands and pays one. First to four.':
+      '⟦Ŧŵö šþïññïñĝ ŧöþš ïñ å šĥåłłöŵ ðïšĥ, ƀöŧĥ ðŕïṽéñ åŧ öñçé ŵïŧĥ ñö ŧûŕñš ïñ ïŧ. Þûšĥ ýöûŕ öþþöñéñŧ öṽéŕ ŧĥé łïþ ƒöŕ ŧŵö þöïñŧš, ŵĥïłé å ŧöþ ŵĥöšé šþïñ ŕûñš öûŧ ŧöþþłéš ŵĥéŕé ïŧ šŧåñðš åñð þåýš öñé. Ƒïŕšŧ ŧö ƒöûŕ. ··········································································⟧',
+    'Two stiff-bodied wrestlers on one mat in a crosswind. Lean, leap and shove, because whoever puts their head on the floor first loses the round. First to three rounds.':
+      '⟦Ŧŵö šŧïƒƒ-ƀöðïéð ŵŕéšŧłéŕš öñ öñé ɱåŧ ïñ å çŕöššŵïñð. Łéåñ, łéåþ åñð šĥöṽé, ƀéçåûšé ŵĥöéṽéŕ þûŧš ŧĥéïŕ ĥéåð öñ ŧĥé ƒłööŕ ƒïŕšŧ łöšéš ŧĥé ŕöûñð. Ƒïŕšŧ ŧö ŧĥŕéé ŕöûñðš. ···························································⟧',
+    'Two wrestlers, one ring, and nothing to do but shove. A wrestler whose centre passes the ring edge is out, and both out in the same instant is a draw.':
+      '⟦Ŧŵö ŵŕéšŧłéŕš, öñé ŕïñĝ, åñð ñöŧĥïñĝ ŧö ðö ƀûŧ šĥöṽé. Å ŵŕéšŧłéŕ ŵĥöšé çéñŧŕé þåššéš ŧĥé ŕïñĝ éðĝé ïš öûŧ, åñð ƀöŧĥ öûŧ ïñ ŧĥé šåɱé ïñšŧåñŧ ïš å ðŕåŵ. ·····················································⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
+    'Using DuelBox': '⟦Ûšïñĝ ÐûéłƁöẋ ·····⟧',
+    Version: '⟦Ṽéŕšïöñ ···⟧',
+    'Very little, honestly. The site is provided as it is, without warranty. Games may have bugs, may change, and may occasionally be taken away and rewritten. Nothing here is fit for any particular purpose beyond passing ten minutes with somebody.':
+      '⟦Ṽéŕý łïŧŧłé, ĥöñéšŧłý. Ŧĥé šïŧé ïš þŕöṽïðéð åš ïŧ ïš, ŵïŧĥöûŧ ŵåŕŕåñŧý. Ĝåɱéš ɱåý ĥåṽé ƀûĝš, ɱåý çĥåñĝé, åñð ɱåý öççåšïöñåłłý ƀé ŧåķéñ åŵåý åñð ŕéŵŕïŧŧéñ. Ñöŧĥïñĝ ĥéŕé ïš ƒïŧ ƒöŕ åñý þåŕŧïçûłåŕ þûŕþöšé ƀéýöñð þåššïñĝ ŧéñ ɱïñûŧéš ŵïŧĥ šöɱéƀöðý. ······················································································⟧',
+    'W A S D and Space pick from the near fan, the arrow keys and Enter the far one':
+      '⟦Ŵ Å Š Ð åñð Šþåçé þïçķ ƒŕöɱ ŧĥé ñéåŕ ƒåñ, ŧĥé åŕŕöŵ ķéýš åñð Éñŧéŕ ŧĥé ƒåŕ öñé ····························⟧',
+    'W A S D belong to player one and the arrow keys to player two — A and D walk you':
+      '⟦Ŵ Å Š Ð ƀéłöñĝ ŧö þłåýéŕ öñé åñð ŧĥé åŕŕöŵ ķéýš ŧö þłåýéŕ ŧŵö — Å åñð Ð ŵåłķ ýöû ····························⟧',
+    'W A S D drives player one — A D swing, W S roll — and the arrow keys player two; let go to fire':
+      '⟦Ŵ Å Š Ð ðŕïṽéš þłåýéŕ öñé — Å Ð šŵïñĝ, Ŵ Š ŕöłł — åñð ŧĥé åŕŕöŵ ķéýš þłåýéŕ ŧŵö; łéŧ ĝö ŧö ƒïŕé ··································⟧',
+    'W A S D for the left seat, arrow keys for the right seat, to run':
+      '⟦Ŵ Å Š Ð ƒöŕ ŧĥé łéƒŧ šéåŧ, åŕŕöŵ ķéýš ƒöŕ ŧĥé ŕïĝĥŧ šéåŧ, ŧö ŕûñ ·······················⟧',
+    'W A S D for the near seat, arrow keys for the far seat, to move your mallet':
+      '⟦Ŵ Å Š Ð ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵ ķéýš ƒöŕ ŧĥé ƒåŕ šéåŧ, ŧö ɱöṽé ýöûŕ ɱåłłéŧ ···························⟧',
+    'W A S D for the near seat, arrow keys for the far seat, to push':
+      '⟦Ŵ Å Š Ð ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵ ķéýš ƒöŕ ŧĥé ƒåŕ šéåŧ, ŧö þûšĥ ·······················⟧',
+    'W A S D for the near seat, arrow keys for the far seat, to run':
+      '⟦Ŵ Å Š Ð ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵ ķéýš ƒöŕ ŧĥé ƒåŕ šéåŧ, ŧö ŕûñ ······················⟧',
+    'W A S D for the near seat, arrow keys for the far seat, to run at the ball':
+      '⟦Ŵ Å Š Ð ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵ ķéýš ƒöŕ ŧĥé ƒåŕ šéåŧ, ŧö ŕûñ åŧ ŧĥé ƀåłł ··························⟧',
+    'W A S D hop the near frog and Space flicks its tongue; the arrow keys and Enter do the same for the far seat.':
+      '⟦Ŵ Å Š Ð ĥöþ ŧĥé ñéåŕ ƒŕöĝ åñð Šþåçé ƒłïçķš ïŧš ŧöñĝûé; ŧĥé åŕŕöŵ ķéýš åñð Éñŧéŕ ðö ŧĥé šåɱé ƒöŕ ŧĥé ƒåŕ šéåŧ. ·······································⟧',
+    'W A S D hops player one, the arrow keys player two — hold to keep hopping':
+      '⟦Ŵ Å Š Ð ĥöþš þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš þłåýéŕ ŧŵö — ĥöłð ŧö ķééþ ĥöþþïñĝ ··························⟧',
+    'W A S D leans player one, the arrow keys player two — up lifts the front wheel':
+      '⟦Ŵ Å Š Ð łéåñš þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš þłåýéŕ ŧŵö — ûþ łïƒŧš ŧĥé ƒŕöñŧ ŵĥééł ····························⟧',
+    'W A S D move the near player’s hand; the arrow keys move the far player’s hand':
+      '⟦Ŵ Å Š Ð ɱöṽé ŧĥé ñéåŕ þłåýéŕ’š ĥåñð; ŧĥé åŕŕöŵ ķéýš ɱöṽé ŧĥé ƒåŕ þłåýéŕ’š ĥåñð ····························⟧',
+    'W A S D pick the four answers for player one, the arrow keys for player two':
+      '⟦Ŵ Å Š Ð þïçķ ŧĥé ƒöûŕ åñšŵéŕš ƒöŕ þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš ƒöŕ þłåýéŕ ŧŵö ···························⟧',
+    "W A S D run the near seat's runner and the arrow keys run the far seat's.":
+      "⟦Ŵ Å Š Ð ŕûñ ŧĥé ñéåŕ šéåŧ'š ŕûññéŕ åñð ŧĥé åŕŕöŵ ķéýš ŕûñ ŧĥé ƒåŕ šéåŧ'š. ··························⟧",
+    'W A S D runs player one, the arrow keys player two — there is nothing to fire':
+      '⟦Ŵ Å Š Ð ŕûñš þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš þłåýéŕ ŧŵö — ŧĥéŕé ïš ñöŧĥïñĝ ŧö ƒïŕé ···························⟧',
+    'W A S D runs the near beetle, arrow keys the far one — shove the ball into your base':
+      '⟦Ŵ Å Š Ð ŕûñš ŧĥé ñéåŕ ƀééŧłé, åŕŕöŵ ķéýš ŧĥé ƒåŕ öñé — šĥöṽé ŧĥé ƀåłł ïñŧö ýöûŕ ƀåšé ······························⟧',
+    'W A S D runs the near player and Space jumps; arrow keys and Enter for the far one':
+      '⟦Ŵ Å Š Ð ŕûñš ŧĥé ñéåŕ þłåýéŕ åñð Šþåçé ĵûɱþš; åŕŕöŵ ķéýš åñð Éñŧéŕ ƒöŕ ŧĥé ƒåŕ öñé ·····························⟧',
+    'W A S D runs the near player, the arrow keys the far one — get under the ball':
+      '⟦Ŵ Å Š Ð ŕûñš ŧĥé ñéåŕ þłåýéŕ, ŧĥé åŕŕöŵ ķéýš ŧĥé ƒåŕ öñé — ĝéŧ ûñðéŕ ŧĥé ƀåłł ···························⟧',
+    'W A S D skates the near player, the arrow keys the far one — keep moving':
+      '⟦Ŵ Å Š Ð šķåŧéš ŧĥé ñéåŕ þłåýéŕ, ŧĥé åŕŕöŵ ķéýš ŧĥé ƒåŕ öñé — ķééþ ɱöṽïñĝ ··························⟧',
+    'W A S D steers player one, the arrow keys player two — there is no other key':
+      '⟦Ŵ Å Š Ð šŧééŕš þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš þłåýéŕ ŧŵö — ŧĥéŕé ïš ñö öŧĥéŕ ķéý ···························⟧',
+    'W A S D steers player one, the arrow keys steer player two':
+      '⟦Ŵ Å Š Ð šŧééŕš þłåýéŕ öñé, ŧĥé åŕŕöŵ ķéýš šŧééŕ þłåýéŕ ŧŵö ·····················⟧',
+    'W A S D steers the near net, the arrow keys the far one — mind the black holes':
+      '⟦Ŵ Å Š Ð šŧééŕš ŧĥé ñéåŕ ñéŧ, ŧĥé åŕŕöŵ ķéýš ŧĥé ƒåŕ öñé — ɱïñð ŧĥé ƀłåçķ ĥöłéš ····························⟧',
+    'W A S D then Space for the near seat, arrow keys then Enter for the far':
+      '⟦Ŵ Å Š Ð ŧĥéñ Šþåçé ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵ ķéýš ŧĥéñ Éñŧéŕ ƒöŕ ŧĥé ƒåŕ ·························⟧',
+    'W A S D then Space for the near seat, arrows then Enter for the far seat: move over your own three-by-three':
+      '⟦Ŵ Å Š Ð ŧĥéñ Šþåçé ƒöŕ ŧĥé ñéåŕ šéåŧ, åŕŕöŵš ŧĥéñ Éñŧéŕ ƒöŕ ŧĥé ƒåŕ šéåŧ: ɱöṽé öṽéŕ ýöûŕ öŵñ ŧĥŕéé-ƀý-ŧĥŕéé ······································⟧',
+    'W A S D walk the near bird and the arrow keys walk the far one; let go to slide.':
+      '⟦Ŵ Å Š Ð ŵåłķ ŧĥé ñéåŕ ƀïŕð åñð ŧĥé åŕŕöŵ ķéýš ŵåłķ ŧĥé ƒåŕ öñé; łéŧ ĝö ŧö šłïðé. ····························⟧',
+    'We aim to acknowledge a report within three working days, give a first assessment within ten, and either act on it or send a dated plan within fourteen working days of that assessment. If material is removed on a valid notice and you believe that was a mistake, a counter-notice process applies before it is restored.':
+      '⟦Ŵé åïɱ ŧö åçķñöŵłéðĝé å ŕéþöŕŧ ŵïŧĥïñ ŧĥŕéé ŵöŕķïñĝ ðåýš, ĝïṽé å ƒïŕšŧ åššéššɱéñŧ ŵïŧĥïñ ŧéñ, åñð éïŧĥéŕ åçŧ öñ ïŧ öŕ šéñð å ðåŧéð þłåñ ŵïŧĥïñ ƒöûŕŧééñ ŵöŕķïñĝ ðåýš öƒ ŧĥåŧ åššéššɱéñŧ. Ïƒ ɱåŧéŕïåł ïš ŕéɱöṽéð öñ å ṽåłïð ñöŧïçé åñð ýöû ƀéłïéṽé ŧĥåŧ ŵåš å ɱïšŧåķé, å çöûñŧéŕ-ñöŧïçé þŕöçéšš åþþłïéš ƀéƒöŕé ïŧ ïš ŕéšŧöŕéð. ···············································································································⟧',
+    'We do not have any. See {privacy}, which is short for the same reason.':
+      '⟦Ŵé ðö ñöŧ ĥåṽé åñý. Šéé {privacy}, ŵĥïçĥ ïš šĥöŕŧ ƒöŕ ŧĥé šåɱé ŕéåšöñ. ·························⟧',
+    'We do not set any cookies.': '⟦Ŵé ðö ñöŧ šéŧ åñý çööķïéš. ··········⟧',
+    'What a copyright notice should include':
+      '⟦Ŵĥåŧ å çöþýŕïĝĥŧ ñöŧïçé šĥöûłð ïñçłûðé ··············⟧',
+    'What stays on your device': '⟦Ŵĥåŧ šŧåýš öñ ýöûŕ ðéṽïçé ·········⟧',
+    'What to expect': '⟦Ŵĥåŧ ŧö éẋþéçŧ ·····⟧',
+    'What we collect': '⟦Ŵĥåŧ ŵé çöłłéçŧ ······⟧',
+    'What we promise': '⟦Ŵĥåŧ ŵé þŕöɱïšé ······⟧',
+    'What you last chose for each game — whether you played a friend or a bot, how hard the bot tries, and how many rounds make a match — so that reopening a game offers you the same setup rather than starting from the defaults every time.':
+      '⟦Ŵĥåŧ ýöû łåšŧ çĥöšé ƒöŕ éåçĥ ĝåɱé — ŵĥéŧĥéŕ ýöû þłåýéð å ƒŕïéñð öŕ å ƀöŧ, ĥöŵ ĥåŕð ŧĥé ƀöŧ ŧŕïéš, åñð ĥöŵ ɱåñý ŕöûñðš ɱåķé å ɱåŧçĥ — šö ŧĥåŧ ŕéöþéñïñĝ å ĝåɱé öƒƒéŕš ýöû ŧĥé šåɱé šéŧûþ ŕåŧĥéŕ ŧĥåñ šŧåŕŧïñĝ ƒŕöɱ ŧĥé ðéƒåûłŧš éṽéŕý ŧïɱé. ··················································································⟧',
+    'Whether you said “not now” to adding DuelBox to your home screen, and when, so you are not asked again for a month; and whether you added it.':
+      '⟦Ŵĥéŧĥéŕ ýöû šåïð “ñöŧ ñöŵ” ŧö åððïñĝ ÐûéłƁöẋ ŧö ýöûŕ ĥöɱé šçŕééñ, åñð ŵĥéñ, šö ýöû åŕé ñöŧ åšķéð åĝåïñ ƒöŕ å ɱöñŧĥ; åñð ŵĥéŧĥéŕ ýöû åððéð ïŧ. ··················································⟧',
+    'Which games have already shown you their first-play hints, so the note saying which half of the screen is whose appears once per game and not every time. The settings page asks for them again.':
+      '⟦Ŵĥïçĥ ĝåɱéš ĥåṽé åłŕéåðý šĥöŵñ ýöû ŧĥéïŕ ƒïŕšŧ-þłåý ĥïñŧš, šö ŧĥé ñöŧé šåýïñĝ ŵĥïçĥ ĥåłƒ öƒ ŧĥé šçŕééñ ïš ŵĥöšé åþþéåŕš öñçé þéŕ ĝåɱé åñð ñöŧ éṽéŕý ŧïɱé. Ŧĥé šéŧŧïñĝš þåĝé åšķš ƒöŕ ŧĥéɱ åĝåïñ. ····································································⟧',
+    'Why most claims are quick to resolve': '⟦Ŵĥý ɱöšŧ çłåïɱš åŕé ɋûïçķ ŧö ŕéšöłṽé ·············⟧',
+    'You may play the games here for free, for as long as you like, on any device. You may not misrepresent the site as your own, or redistribute its code or artwork as if it were.':
+      '⟦Ýöû ɱåý þłåý ŧĥé ĝåɱéš ĥéŕé ƒöŕ ƒŕéé, ƒöŕ åš łöñĝ åš ýöû łïķé, öñ åñý ðéṽïçé. Ýöû ɱåý ñöŧ ɱïšŕéþŕéšéñŧ ŧĥé šïŧé åš ýöûŕ öŵñ, öŕ ŕéðïšŧŕïƀûŧé ïŧš çöðé öŕ åŕŧŵöŕķ åš ïƒ ïŧ ŵéŕé. ······························································⟧',
+    'Your best score in each game you have played solo, so a score-attack has a number to beat. Only the best, never the run: how many tries it took is not written down.':
+      '⟦Ýöûŕ ƀéšŧ šçöŕé ïñ éåçĥ ĝåɱé ýöû ĥåṽé þłåýéð šöłö, šö å šçöŕé-åŧŧåçķ ĥåš å ñûɱƀéŕ ŧö ƀéåŧ. Öñłý ŧĥé ƀéšŧ, ñéṽéŕ ŧĥé ŕûñ: ĥöŵ ɱåñý ŧŕïéš ïŧ ŧööķ ïš ñöŧ ŵŕïŧŧéñ ðöŵñ. ··························································⟧',
+    'Your contact details.': '⟦Ýöûŕ çöñŧåçŧ ðéŧåïłš. ········⟧',
+    'Your data': '⟦Ýöûŕ ðåŧå ····⟧',
+    'Your physical or electronic signature.':
+      '⟦Ýöûŕ þĥýšïçåł öŕ éłéçŧŕöñïç šïĝñåŧûŕé. ··············⟧',
+    'Your record here': '⟦Ýöûŕ ŕéçöŕð ĥéŕé ······⟧',
+    'Your runner goes forward on its own and gets faster the longer it runs clean. Blocks stand on the floor and hang from the ceiling, and the only way past one is to say which way is down before it arrives. First over the line wins.':
+      '⟦Ýöûŕ ŕûññéŕ ĝöéš ƒöŕŵåŕð öñ ïŧš öŵñ åñð ĝéŧš ƒåšŧéŕ ŧĥé łöñĝéŕ ïŧ ŕûñš çłéåñ. Ɓłöçķš šŧåñð öñ ŧĥé ƒłööŕ åñð ĥåñĝ ƒŕöɱ ŧĥé çéïłïñĝ, åñð ŧĥé öñłý ŵåý þåšŧ öñé ïš ŧö šåý ŵĥïçĥ ŵåý ïš ðöŵñ ƀéƒöŕé ïŧ åŕŕïṽéš. Ƒïŕšŧ öṽéŕ ŧĥé łïñé ŵïñš. ·················································································⟧',
+    'Your settings: whether sound is muted, the volume, and whether vibration is on.':
+      '⟦Ýöûŕ šéŧŧïñĝš: ŵĥéŧĥéŕ šöûñð ïš ɱûŧéð, ŧĥé ṽöłûɱé, åñð ŵĥéŧĥéŕ ṽïƀŕåŧïöñ ïš öñ. ····························⟧',
+    mechanics: '⟦ɱéçĥåñïçš ····⟧',
+    'security advisory process': '⟦šéçûŕïŧý åðṽïšöŕý þŕöçéšš ·········⟧',
+    'security vulnerability': '⟦šéçûŕïŧý ṽûłñéŕåƀïłïŧý ········⟧',
+    '{games} and pick one.': '⟦{games} åñð þïçķ öñé. ········⟧',
+    '{game} is switched off at the moment. {reason} It comes back on here as soon as that is put right, and nothing else in the catalogue is affected.':
+      '⟦{game} ïš šŵïŧçĥéð öƒƒ åŧ ŧĥé ɱöɱéñŧ. {reason} Ïŧ çöɱéš ƀåçķ öñ ĥéŕé åš šööñ åš ŧĥåŧ ïš þûŧ ŕïĝĥŧ, åñð ñöŧĥïñĝ éłšé ïñ ŧĥé çåŧåłöĝûé ïš åƒƒéçŧéð. ···················································⟧',
+    '{key} pauses at any time, for either player.':
+      '⟦{key} þåûšéš åŧ åñý ŧïɱé, ƒöŕ éïŧĥéŕ þłåýéŕ. ················⟧',
+    '{note} the contact address below is a placeholder ({address}) and is not yet a monitored inbox. It must be replaced with the real address before launch.':
+      '⟦{note} ŧĥé çöñŧåçŧ åððŕéšš ƀéłöŵ ïš å þłåçéĥöłðéŕ ({address}) åñð ïš ñöŧ ýéŧ å ɱöñïŧöŕéð ïñƀöẋ. Ïŧ ɱûšŧ ƀé ŕéþłåçéð ŵïŧĥ ŧĥé ŕéåł åððŕéšš ƀéƒöŕé łåûñçĥ. ······················································⟧',
+    '{seat} takes the other seat, at three levels.':
+      '⟦{seat} ŧåķéš ŧĥé öŧĥéŕ šéåŧ, åŧ ŧĥŕéé łéṽéłš. ················⟧',
   },
 } as const;
 
