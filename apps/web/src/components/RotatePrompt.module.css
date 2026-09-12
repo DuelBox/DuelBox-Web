@@ -8,7 +8,7 @@
 .layer {
   position: absolute;
   inset: auto 0 0;
-  z-index: 4;
+  z-index: var(--db-z-hint);
   display: flex;
   justify-content: center;
   padding: var(--db-space-3);

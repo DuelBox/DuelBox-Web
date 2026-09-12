@@ -153,7 +153,7 @@ html[data-framed] #db-framed {
   visibility: visible !important;
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--db-z-frame-notice);
   padding: var(--db-space-6);
   background: var(--db-paper);
   color: var(--db-ink);
@@ -163,7 +163,7 @@ html[data-framed] #db-framed {
   position: absolute;
   inset-inline-start: max(var(--db-space-4), var(--db-safe-inline-start));
   top: calc(var(--db-space-4) * -4);
-  z-index: 100;
+  z-index: var(--db-z-escape);
   padding: var(--db-space-3) var(--db-space-4);
   background: var(--db-brand);
   color: var(--db-paper);
@@ -370,7 +370,7 @@ html[data-framed] #db-framed {
   position: absolute;
   width: 1px;
   height: 1px;
-  margin: -1px;
+  margin: -1px; /* off-scale: the 1px clip rectangle, not spacing */
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);
@@ -440,7 +440,7 @@ html[data-match='live'] .db-net-bar {
   left: max(var(--db-space-3), var(--db-safe-left)); /* physical: side of the device */
   right: max(var(--db-space-3), var(--db-safe-right)); /* physical: side of the device */
   bottom: max(var(--db-space-3), var(--db-safe-bottom));
-  z-index: 40;
+  z-index: var(--db-z-bar);
   display: flex;
   gap: var(--db-space-3);
   align-items: center;

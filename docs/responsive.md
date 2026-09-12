@@ -126,6 +126,22 @@ a very long game name — scrolls inside its own container, never by moving the 
 is asserted in the browser suite on four device profiles, and it is the one responsive
 property that is a bug rather than a preference when it breaks.
 
+### The layer ladder
+
+The third dimension of the shell grid is named in `styles/tokens.css` too, as
+`--db-z-overlay`, `--db-z-control`, `--db-z-hint`, `--db-z-cover`, `--db-z-confirm`,
+`--db-z-recovery`, `--db-z-bar`, `--db-z-escape` and `--db-z-frame-notice` — ten apart, in
+that order, from the pause panel over the board up to the framed-page notice. One ladder
+rather than one per component, because there is only one stacking context to be a ladder
+in: `PlaySurface` is `position: relative` with no `z-index`, no `isolation` and no
+transform, so an overlay inside the board and a bar fixed to the viewport are painted
+against each other rather than each within its own world. Layer zero has no token, since
+everything in flow is ordered by the document. `tokens.test.ts` fails any `z-index` in the
+shell that is not one of these, and any raw-pixel `padding` or `margin` that is not zero
+and does not carry an `/* off-scale: why */` marker on its own line — a key cap's 6px and a
+badge's 2px sit between two rungs of the 4px spacing grid and say so where they are
+written.
+
 ## Verifying it
 
 Two commands, and neither of them is a second screenshot-comparison system. The matrix is

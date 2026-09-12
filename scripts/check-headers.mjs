@@ -26,6 +26,19 @@
  * the frame guard that partly stands in for the `X-Frame-Options` nobody serves. Then the
  * served-versus-discarded table is printed, on every build, in plain words.
  *
+ * ## Section 6 asks a different question of the same files
+ *
+ * Caching (#188) cannot be checked by name and value the way a security header can, because
+ * what matters is not that `_headers` contains the word `immutable` but *which files get it*
+ * — and the answer to that is a question about the export, not about the config. So section 6
+ * resolves rather than greps: every exported file is matched against the rules the emit
+ * actually wrote, in `_headers` and in `vercel.json`, and three things have to hold. Every
+ * file the immutable rule reaches must carry a hash in its name, so the promise never to
+ * revalidate is one the export can keep. Nothing outside `_next/static/` may be reached by it.
+ * And no path may be matched by two `Cache-Control` rules, because Cloudflare joins those
+ * values rather than resolving them, which is how a file can carry the right rule and the
+ * wrong header. `scripts/cache-headers.mjs` has the reasoning and the quotes.
+ *
  * ## What even that cannot tell you
  *
  * That a header reached a browser. Every section here checks that the *files* say the right
@@ -37,9 +50,23 @@
  */
 
 import { readFile, readdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SECURITY_HEADERS } from './security-headers.mjs';
+import {
+  CACHE_RULES,
+  HASHED_ASSET_PREFIX,
+  HASHED_FILENAME,
+  IMMUTABLE_CACHE_CONTROL,
+  REVALIDATE_CACHE_CONTROL,
+  SERVICE_WORKER_PATH,
+  cachingRulesFor,
+  globToRegExp,
+  isContentAddressed,
+  parseHeadersFile,
+  parseVercelJson,
+  sourceToRegExp,
+} from './cache-headers.mjs';
 import {
   DEPLOY_TARGET,
   FRAME_GUARD_MARKER,
@@ -91,6 +118,12 @@ const failures = [];
 
 function must(condition, message) {
   if (!condition) failures.push(message);
+}
+
+/** Seconds, or `Infinity` when a value carries no `max-age` at all and so bounds nothing. */
+function maxAgeOf(value) {
+  const seconds = /max-age=(\d+)/.exec(value)?.[1];
+  return seconds === undefined ? Infinity : Number(seconds);
 }
 
 async function main() {
@@ -257,6 +290,140 @@ async function main() {
     );
   }
 
+  // 6. Caching (#188), and this one is *resolved* rather than grepped.
+  //
+  // `_headers` containing the string `immutable` proves nothing about which files get it, and
+  // the two ways this goes wrong are both invisible to a grep: a pattern that reaches past
+  // `_next/static/` and puts a year on a document, and a second rule overlapping the first,
+  // which on Cloudflare is joined rather than resolved and leaves `max-age=0` first in the
+  // value. So every file in the export is matched against the rules the emit actually wrote,
+  // in both files, and the claim `immutable` makes is checked against the export itself:
+  // a file whose name does not carry its content has no business being cached for a year.
+  const buildId = await readFile(join(root, 'apps', 'web', '.next', 'BUILD_ID'), 'utf8')
+    .then((text) => text.trim())
+    .catch(() => '');
+  const nextConfig = await readFile(join(root, 'apps', 'web', 'next.config.ts'), 'utf8').catch(
+    () => '',
+  );
+
+  const hostFiles = [
+    { label: '_headers', rules: parseHeadersFile(headers), toRegExp: globToRegExp },
+    { label: 'vercel.json', rules: parseVercelJson(vercel), toRegExp: sourceToRegExp },
+  ];
+
+  /** The URLs a browser actually asks for, which are not all of them file paths. */
+  const DOCUMENT_URLS = ['/', '/play/tic-tac-toe/', '/index.txt', '/manifest.webmanifest'];
+
+  const urlPaths = files.map((file) => file.slice(out.length).split(sep).join('/'));
+  const hashedAssets = urlPaths.filter((urlPath) => urlPath.startsWith(HASHED_ASSET_PREFIX));
+  const buildIdFiles = hashedAssets.filter(
+    (urlPath) => !HASHED_FILENAME.test(urlPath.split('/').pop() ?? ''),
+  ).length;
+
+  for (const { label, rules, toRegExp } of hostFiles) {
+    must(
+      rules.length <= 100,
+      `${label} has ${String(rules.length)} rules; Cloudflare accepts 100 in a _headers file`,
+    );
+    must(
+      rules.some((rule) => rule.value === IMMUTABLE_CACHE_CONTROL),
+      `${label} carries no immutable rule — hashed assets are revalidated on every visit, ` +
+        'which is the thing #188 exists to stop',
+    );
+
+    const overlaps = [];
+    const cacheControl = (urlPath) => {
+      const matched = cachingRulesFor(rules, urlPath, toRegExp);
+      if (matched.length > 1) {
+        overlaps.push(`${urlPath} (${matched.map((rule) => rule.path).join(', ')})`);
+      }
+      return matched[0]?.value ?? null;
+    };
+
+    // Counted rather than reported one by one: there are 177 hashed assets and 700-odd
+    // files, and a rule deleted by accident is one mistake, not seven hundred.
+    const notImmutable = [];
+    const notAddressed = [];
+    const wronglyImmutable = [];
+    for (const urlPath of urlPaths) {
+      const value = cacheControl(urlPath);
+      if (urlPath.startsWith(HASHED_ASSET_PREFIX)) {
+        if (value !== IMMUTABLE_CACHE_CONTROL)
+          notImmutable.push(`${urlPath} → ${value ?? 'no rule'}`);
+        if (!isContentAddressed(urlPath.slice(HASHED_ASSET_PREFIX.length), buildId)) {
+          notAddressed.push(urlPath);
+        }
+        continue;
+      }
+      if (value !== null && value.includes('immutable')) wronglyImmutable.push(urlPath);
+    }
+
+    must(
+      notImmutable.length === 0,
+      `${label}: ${String(notImmutable.length)} of ${String(hashedAssets.length)} hashed ` +
+        'asset(s) do not resolve to the immutable rule, so a repeat visit revalidates them — ' +
+        `first: ${notImmutable[0] ?? '?'}`,
+    );
+    must(
+      notAddressed.length === 0,
+      `${label}: ${String(notAddressed.length)} file(s) under ${HASHED_ASSET_PREFIX} are cached ` +
+        'for a year and immutably while carrying neither a content hash nor this build id in ' +
+        'the name, so the next deploy can serve different bytes from a URL a browser has been ' +
+        `told never to ask about again — first: ${notAddressed[0] ?? '?'}`,
+    );
+    must(
+      wronglyImmutable.length === 0,
+      `${label}: ${String(wronglyImmutable.length)} file(s) outside ${HASHED_ASSET_PREFIX} are ` +
+        'cached immutably; their URLs outlive their bytes, so a deploy would be invisible to ' +
+        `anybody already holding one — first: ${wronglyImmutable[0] ?? '?'}`,
+    );
+
+    // The classes the issue names, asked as URLs rather than as files.
+    const worker = cacheControl(SERVICE_WORKER_PATH);
+    must(
+      worker !== null && !worker.includes('immutable') && maxAgeOf(worker) <= 600,
+      `${label}: ${SERVICE_WORKER_PATH} resolves to ${worker ?? 'no rule'}. It is the only ` +
+        'signal a device that already has the site gets that a new build exists, so a long ' +
+        'lifetime there strands every returning visitor on a build you have deleted',
+    );
+    for (const urlPath of DOCUMENT_URLS) {
+      const value = cacheControl(urlPath);
+      must(
+        value === null || value === REVALIDATE_CACHE_CONTROL,
+        `${label}: ${urlPath} resolves to ${value ?? 'no rule'}, which is neither absent nor ` +
+          `"${REVALIDATE_CACHE_CONTROL}" — it is a document, and its bytes change every deploy`,
+      );
+    }
+
+    // The finding this whole arrangement is shaped around, asserted rather than remembered.
+    must(
+      overlaps.length === 0,
+      `${label}: ${String(overlaps.length)} path(s) are matched by two Cache-Control rules — ` +
+        `first: ${overlaps[0] ?? '?'}. Cloudflare joins the values of two matching rules with ` +
+        'a comma rather than letting the specific one win, and a recipient reads the first ' +
+        'max-age it meets, so an overlap does not look untidy — it disables the rule that was ' +
+        'meant to apply. Make them disjoint; see scripts/cache-headers.mjs',
+    );
+  }
+
+  // `_headers` says it in the file, so a reader of the artefact alone can see both classes.
+  for (const rule of CACHE_RULES) {
+    must(
+      headers.includes(`${rule.path}\n  Cache-Control: ${rule.value}`),
+      `_headers has lost the rule for ${rule.path} — did emit:host-config run?`,
+    );
+  }
+
+  // The build-id exception is safe only while the id is Next's per-build random string. Pin
+  // it and those two URLs become stable across deploys with a year of immutability on them.
+  must(
+    buildIdFiles === 0 || !/generateBuildId/.test(nextConfig),
+    `${String(buildIdFiles)} file(s) under ${HASHED_ASSET_PREFIX} have no hash in the name and ` +
+      'are cached immutably only because the build id above them is fresh on every build. ' +
+      'next.config.ts now sets generateBuildId, which makes that URL stable across deploys — ' +
+      'either drop the pin or stop serving that directory immutably',
+  );
+
   if (failures.length > 0) {
     console.error(`check-headers: ${String(failures.length)} problem(s)\n`);
     for (const failure of failures) console.error(`  ✗ ${failure}`);
@@ -268,6 +435,11 @@ async function main() {
     `check-headers: ${String(Object.keys(SECURITY_HEADERS).length)} headers, ` +
       `${String(pages.length)} pages with a policy (${String(hashedPages)} hashed), ` +
       'security.txt current',
+  );
+  console.log(
+    `check-headers: ${String(hashedAssets.length)} hashed asset(s) cached for a year and ` +
+      `immutably (${String(buildIdFiles)} by build id rather than by filename), ` +
+      `${String(urlPaths.length - hashedAssets.length)} file(s) revalidating, no rule overlaps`,
   );
   console.log('');
   console.log(formatDeliveryReport());
