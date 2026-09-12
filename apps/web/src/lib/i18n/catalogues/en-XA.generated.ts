@@ -18,9 +18,7 @@ const catalogue = {
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '⟦Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð, ƀûŧ ŧĥé ƀûïłð ĥåš ñöŧ łåñðéð. Ŧŕý åñöŧĥéŕ ĝåɱé. ······························⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
-    'Loading the game': '⟦Łöåðïñĝ ŧĥé ĝåɱé ······⟧',
     'Loading {name}…': '⟦Łöåðïñĝ {name}… ······⟧',
-    'Loading…': '⟦Łöåðïñĝ… ···⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
     'Offline. The games saved on this device still play.':
       '⟦Öƒƒłïñé. Ŧĥé ĝåɱéš šåṽéð öñ ŧĥïš ðéṽïçé šŧïłł þłåý. ··················⟧',

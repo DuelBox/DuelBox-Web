@@ -18,9 +18,7 @@ const catalogue = {
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled,‬ ‮but‬ ‮the‬ ‮build‬ ‮has‬ ‮not‬ ‮landed.‬ ‮Try‬ ‮another‬ ‮game.‬',
     Language: '‮Language‬',
-    'Loading the game': '‮Loading‬ ‮the‬ ‮game‬',
     'Loading {name}…': '‮Loading‬ {name}‮…‬',
-    'Loading…': '‮Loading…‬',
     'Mute sound': '‮Mute‬ ‮sound‬',
     'Offline. The games saved on this device still play.':
       '‮Offline.‬ ‮The‬ ‮games‬ ‮saved‬ ‮on‬ ‮this‬ ‮device‬ ‮still‬ ‮play.‬',
