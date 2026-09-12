@@ -49,7 +49,9 @@ const webSrc = join(here, '..', '..');
 const catalogueDir = join(here, 'catalogues');
 const loader = join(here, 'load.ts');
 const self = join(here, 'i18n.test.ts');
+const extractor = join(here, 'extract.ts');
 const layout = join(webSrc, 'app', 'layout.tsx');
+const fontsCss = join(webSrc, 'styles', 'fonts.css');
 
 /** The msgid list the extractor wrote, which `extract.test.ts` holds to the source. */
 const msgids = JSON.parse(
@@ -116,6 +118,52 @@ describe('the locale registry', () => {
 });
 
 /**
+ * The language menu renders every locale's name on every visit to `/settings/`, in every locale,
+ * so a name is subject to the font rule an English page is. `styles/fonts.css` gates each
+ * `-latin-ext` face behind a `unicode-range`, and `size-budget.json`'s first-session line rests
+ * on "fetched only when a glyph in that range renders, which no English page does". The first
+ * draft of the registry broke that with one letter: `Éñglïšh` has a `š` (U+0161), and WebKit
+ * fetched the 21,688-byte `plus-jakarta-sans-latin-ext` face on the English settings page to
+ * shape an `<option>` nobody had selected. The ranges are read out of the stylesheet rather than
+ * copied here, so a face that changes its subset moves this guard with it.
+ */
+describe('the locale names and the range-gated faces', () => {
+  /** The `[from, to]` code-point ranges of every `-latin-ext` face in `fonts.css`. */
+  const latinExt = (): [number, number][] => {
+    const ranges: [number, number][] = [];
+    for (const block of readFileSync(fontsCss, 'utf8').split('@font-face')) {
+      if (!/src:\s*url\('[^']*-latin-ext\.woff2'\)/.test(block)) continue;
+      const declared = /unicode-range:\s*([^;]+);/.exec(block)?.[1] ?? '';
+      for (const match of declared.matchAll(/U\+([0-9A-Fa-f]+)(?:-([0-9A-Fa-f]+))?/g)) {
+        ranges.push([parseInt(match[1]!, 16), parseInt(match[2] ?? match[1]!, 16)]);
+      }
+    }
+    return ranges;
+  };
+  /** The characters of `text` that would make a browser fetch a `-latin-ext` face. */
+  const needingLatinExt = (text: string): string[] => {
+    const ranges = latinExt();
+    return [...text].filter((char) => {
+      const point = char.codePointAt(0) ?? 0;
+      return ranges.some(([from, to]) => point >= from && point <= to);
+    });
+  };
+
+  it('reads the ranges out of fonts.css and recognises a glyph inside them', () => {
+    // The control: the letter the first draft shipped is inside, and the base subset is not.
+    expect(latinExt().length).toBeGreaterThan(0);
+    expect(needingLatinExt('Éñglïšh')).toEqual(['š']);
+    expect(needingLatinExt('Éñglïsh (pseudo) — English')).toEqual([]);
+  });
+
+  it('names every locale with glyphs the base subset covers', () => {
+    for (const code of LOCALE_CODES) {
+      expect(needingLatinExt(LOCALES[code].name), `${code}: ${LOCALES[code].name}`).toEqual([]);
+    }
+  });
+});
+
+/**
  * `?lang=` is the whole of "routing-aware" that a `output: 'export'` build can honestly
  * offer — see `provider.tsx`. It is read, never written back.
  */
@@ -172,15 +220,28 @@ describe('the registry, the catalogue files, the importers and the modules', () 
  * type-checks, it renders identically, and every other test in this file still passes.
  */
 describe('the lazy guard', () => {
-  /** A `'…/catalogues/…'` module specifier. Backticked prose is not a specifier. */
-  const quoted = /['"][^'"\n]*catalogues\/[^'"\n]*['"]/g;
-  const dynamic = /\bimport\(\s*['"][^'"\n]*catalogues\/[^'"\n]*['"]\s*\)/g;
+  /**
+   * A module specifier that reaches the catalogues: `'…/catalogues/<file>'`, or the directory
+   * itself — `'./catalogues'`, which resolves to a barrel `catalogues/index.ts` if one exists.
+   * The first draft matched only the form with a slash after the name, and a review showed the
+   * gap: a barrel in the directory (exempt below, because the directory is the thing being
+   * protected) imported as `'./catalogues'` folded a catalogue into the shell while every test
+   * here passed. The word has to sit where a path segment sits — after the quote or after a
+   * `/` — so a user-facing string with "catalogues" in its prose is not a specifier.
+   * Backticked prose is not one either.
+   */
+  const specifier = String.raw`['"](?:[^'"\n]*\/)?\.?catalogues(?:\/[^'"\n]*)?['"]`;
+  const quoted = new RegExp(specifier, 'g');
+  const dynamic = new RegExp(String.raw`\bimport\(\s*` + specifier + String.raw`\s*\)`, 'g');
 
   /**
-   * This file (it contains the patterns above) and the catalogues themselves, which are the
-   * thing being protected rather than a route to it.
+   * This file (it contains the patterns above); the catalogues themselves, which are the thing
+   * being protected rather than a route to it; and the extractor, which names the directory in
+   * order to *write* it and is a build-time module — the test below it holds that nothing but
+   * its own test imports it, so the exemption cannot become a route into the shell.
    */
-  const exempt = (file: string): boolean => file === self || file.startsWith(catalogueDir + sep);
+  const exempt = (file: string): boolean =>
+    file === self || file === extractor || file.startsWith(catalogueDir + sep);
 
   it('finds the app source tree, so an empty walk cannot pass', () => {
     // The failure this repository keeps a count of: a scan that found nothing and said
@@ -188,11 +249,51 @@ describe('the lazy guard', () => {
     expect(sources(webSrc).length).toBeGreaterThan(50);
   });
 
-  it('lets only load.ts name a catalogue', () => {
+  it('matches the shapes it is for, and not prose', () => {
+    // The pattern is the guard; a pattern nobody has run on its own inputs is a guess.
+    for (const hit of [
+      "'./catalogues/en-XA.generated'",
+      '"../i18n/catalogues/x"',
+      "'./catalogues'",
+      "'@/lib/i18n/catalogues'",
+      "'catalogues'",
+    ]) {
+      expect(hit.match(quoted), hit).not.toBeNull();
+    }
+    for (const miss of ["'Browse the catalogues'", "'catalogues-of-old'", '`./catalogues`']) {
+      expect(miss.match(quoted), miss).toBeNull();
+    }
+  });
+
+  it('lets only load.ts name a catalogue, or the directory they live in', () => {
     const naming = sources(webSrc)
       .filter((file) => !exempt(file))
       .filter((file) => [...readFileSync(file, 'utf8').matchAll(quoted)].length > 0);
     expect(naming.map((file) => relative(webSrc, file))).toEqual([relative(webSrc, loader)]);
+  });
+
+  it('keeps the extractor a build-time module, imported by nothing but its own test', () => {
+    // The exemption above would otherwise be a route: `extract.ts` names the directory, and a
+    // component that imported it would carry the TypeScript compiler into the shell as well.
+    // Every way of reaching it: the sibling form, the `@/` alias, and any relative path that
+    // ends in `/i18n/extract` — static or `import()`. The first draft matched the first two
+    // only, so `'../lib/i18n/extract'` from `app/` or `components/` walked past it.
+    const reaches = /(?:from\s+|import\(\s*)['"](?:\.\/extract|[^'"\n]*\/i18n\/extract)['"]/;
+    const importers = sources(webSrc)
+      .filter((file) => file !== extractor)
+      .filter((file) => reaches.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(webSrc, file));
+    expect(importers).toEqual(['lib/i18n/extract.test.ts']);
+  });
+
+  it('keeps the catalogues directory to generated modules, so a barrel cannot exist there', () => {
+    // The directory is exempt from the specifier scan, which is what makes a barrel inside it
+    // invisible to the scan; so the directory itself is held to one shape instead.
+    const entries = readdirSync(catalogueDir);
+    expect(entries.length).toBeGreaterThan(0);
+    expect(
+      entries.filter((entry) => !/^[A-Za-z][A-Za-z0-9-]*\.generated\.ts$/.test(entry)),
+    ).toEqual([]);
   });
 
   it('lets load.ts name one only inside import()', () => {

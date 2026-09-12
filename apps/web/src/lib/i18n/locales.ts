@@ -35,6 +35,16 @@ export interface LocaleInfo {
    * The name shown in the language control, written in the language it names. That is the
    * convention a language menu follows: somebody looking for their language cannot read the
    * name of it in a language they do not have. A pseudo-locale is named for what it is.
+   *
+   * Every name is rendered on every visit to `/settings/`, in every locale — the menu is the one
+   * place the whole registry is on screen at once — so a name is subject to the font rule an
+   * English page is: nothing outside the base `latin` subset of `styles/fonts.css`. The first
+   * draft named the accented pseudo-locale with a `š` (U+0161), one glyph inside the `-latin-ext`
+   * `unicode-range`, and WebKit fetched the 21,688-byte `plus-jakarta-sans-latin-ext` face for
+   * the English settings page to shape an `<option>` nobody had selected — a page that had
+   * fetched three faces fetched four. `i18n.test.ts` reads the ranges out of the stylesheet and
+   * fails on a name that would do that again. A real locale whose name needs its own script
+   * (#224) adds a range-gated face for it and fetches it there, not here.
    */
   readonly name: string;
   /**
@@ -82,7 +92,7 @@ export const DEFAULT_LOCALE = 'en';
  */
 export const LOCALES = {
   en: { name: 'English', dir: 'ltr' },
-  'en-XA': { name: 'Éñglïšh (pseudo)', dir: 'ltr' },
+  'en-XA': { name: 'Éñglïsh (pseudo)', dir: 'ltr' },
   'ar-XB': { name: 'Right-to-left (pseudo)', dir: 'rtl' },
 } as const satisfies Readonly<Record<string, LocaleInfo>>;
 

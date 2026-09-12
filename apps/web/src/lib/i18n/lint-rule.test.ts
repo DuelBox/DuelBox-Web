@@ -12,9 +12,28 @@ import rule from '../../../../../scripts/eslint-rules/no-untranslated-text.mjs';
  * report, and the things it must let through — a `t()` call, a `<T>`, an expression, a
  * decorative `alt=""`, anything inside `<noscript>` — produce none. The same parser the real
  * lint uses, so a fixture is parsed as the product's `.tsx` would be.
+ *
+ * The seven attributes are listed *here*, not imported from the rule. The first draft proved
+ * three of them (`aria-label`, `placeholder`, `alt`) and its only `title=` fixture sat inside
+ * `<noscript>` expecting nothing, so `title`, `aria-description`, `aria-roledescription` and
+ * `aria-valuetext` could each be dropped from the rule — or misspelt — with every test green;
+ * a review did exactly that with `title` and watched four tests pass. A list the rule does not
+ * own, with one positive fixture per entry, fails on either change, and it is the list the
+ * rule's header and `docs/i18n.md` promise.
  */
 
 const plugin = { rules: { 'no-untranslated-text': rule as Rule.RuleModule } };
+
+/** The attributes the rule's header promises, each of which must produce a report on its own. */
+const ATTRIBUTES = [
+  'aria-label',
+  'aria-description',
+  'aria-roledescription',
+  'aria-valuetext',
+  'title',
+  'placeholder',
+  'alt',
+] as const;
 const linter = new Linter();
 
 function lint(code: string): string[] {
@@ -42,6 +61,12 @@ describe('no-untranslated-text', () => {
     const messages = lint('const a = <h1>Settings</h1>;');
     expect(messages).toHaveLength(1);
     expect(messages[0]).toContain('Bare text in JSX: "Settings"');
+  });
+
+  it.each(ATTRIBUTES)('reports a string literal in %s, and names the attribute', (name) => {
+    expect(lint(`const a = <x ${name}="Words" />;`)).toEqual([
+      expect.stringContaining(`${name} is read to the visitor and its value is a literal: "Words"`),
+    ]);
   });
 
   it('reports a literal in a user-facing attribute, string or template', () => {
