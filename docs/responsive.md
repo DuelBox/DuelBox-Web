@@ -206,6 +206,13 @@ Verified in the browser suite, on Desktop Chrome, Pixel 7, and iPhone 14 Pro in 
 orientations: no horizontal overflow; the board fits its viewport with no part off-screen;
 nothing interactive sits outside the visual viewport.
 
+**Verified at the floor, with a match running.** Each of those three profiles is a real
+phone — 393x852 and 852x393 — and none of them is 320px. `e2e/safe-area.spec.ts` turns a
+running match to both cells of `NARROWEST` and reads them through the same
+`outsideSafeArea` the matrix uses, on one project per engine. That cell is there because the
+match HUD put its pause button 2px into the home indicator at 320x568, and both of its
+controls 8px into it at 568x320, on a layout every 393px project called clean (#2586).
+
 **Not verified: real safe-area insets.** Playwright sets a viewport, not a cutout, so
 `env(safe-area-inset-*)` resolves to zero in every test. The layout is provably sound; the
 inset values are not exercised. That needs a physical device, and #1885 stays open on it.
