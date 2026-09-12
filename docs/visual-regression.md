@@ -66,3 +66,5 @@ If the baselines are stale for a reason that is nobody's change — a Playwright
 revised text rendering, a font file replaced, the runner image moving — regenerate all five in
 one commit, say which upgrade did it in the message, and do it on its own branch so the diff
 is the whole story.
+
+Every baseline is a tracked image, so rule 3 applies to it: `e2e/assets.license.json` names each file, the CI run it was taken from and the repository's licence, and `check-asset-licenses.mjs` fails the build on a picture without an entry. When you commit a regenerated baseline, update its run number in that manifest in the same commit.
