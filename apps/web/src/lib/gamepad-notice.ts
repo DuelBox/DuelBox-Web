@@ -1,4 +1,5 @@
 import type { GamepadEvent, SeatId } from '@duelbox/engine';
+import { t, type Catalogue } from './i18n/messages';
 
 /**
  * What the pause panel says when a controller comes or goes mid-match (#130).
@@ -14,6 +15,7 @@ import type { GamepadEvent, SeatId } from '@duelbox/engine';
  * and drives nobody, and the swap button beside this is how it gets a seat.
  */
 export function gamepadNotice(
+  messages: Catalogue,
   event: GamepadEvent,
   names: Readonly<Record<SeatId, string>>,
 ): string {
@@ -21,15 +23,22 @@ export function gamepadNotice(
   switch (event.kind) {
     case 'connected':
       return who === null
-        ? 'A controller was plugged in, but both seats already have one. Swap it in below if it should drive a seat.'
-        : `A controller was plugged in. It will drive ${who}'s seat.`;
+        ? t(
+            messages,
+            'A controller was plugged in, but both seats already have one. Swap it in below if it should drive a seat.',
+          )
+        : t(messages, "A controller was plugged in. It will drive {who}'s seat.", { who });
     case 'disconnected':
       return who === null
-        ? 'A controller was unplugged. It was not driving a seat.'
-        : `${who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.`;
+        ? t(messages, 'A controller was unplugged. It was not driving a seat.')
+        : t(
+            messages,
+            "{who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.",
+            { who },
+          );
     case 'reassigned':
       return who === null
-        ? 'The controllers were swapped.'
-        : `The controllers were swapped. ${who}'s seat now has the other one.`;
+        ? t(messages, 'The controllers were swapped.')
+        : t(messages, "The controllers were swapped. {who}'s seat now has the other one.", { who });
   }
 }

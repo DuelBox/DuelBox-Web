@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { T } from '@/lib/i18n/T';
 import { RUNTIME_DEPENDENCIES, FONT_ATTRIBUTIONS } from './attribution-data.generated';
 import styles from './page.module.css';
 
@@ -16,34 +17,49 @@ export const metadata: Metadata = {
  * bundle nothing. The list itself is not maintained here — `scripts/emit-attribution.mjs`
  * composes `attribution-data.generated.ts` from the shipped dependencies and the OFL font
  * record, and a stale copy fails `pnpm check:attribution` and `attribution.generated.test.ts`.
+ *
+ * The sentences around the list go through `<T>` (#220); the rows do not. A library's name, its
+ * version, a licence's name and a typeface's author are identifiers of somebody else's work —
+ * translating "MIT" or a person's name would be inventing a second name for a thing that has
+ * one. The file path in the fonts paragraph is the same kind of string, and carries the one
+ * `eslint-disable` in this file rather than a msgid a translator would have to leave alone.
  */
 export default function AttributionPage() {
   return (
     <div className="db-wrap">
       <header className={styles.head}>
-        <h1>Attribution</h1>
-        <p className={styles.updated}>Generated from the shipped dependencies and font licences.</p>
+        <h1>
+          <T id="Attribution" />
+        </h1>
+        <p className={styles.updated}>
+          <T id="Generated from the shipped dependencies and font licences." />
+        </p>
       </header>
 
       <div className={styles.prose}>
         <p className={styles.lead}>
-          DuelBox is built with a small number of open-source libraries and fonts. This page lists
-          them and the licences they are used under. It is generated, not written by hand, so it
-          cannot drift from what actually ships.
+          <T id="DuelBox is built with a small number of open-source libraries and fonts. This page lists them and the licences they are used under. It is generated, not written by hand, so it cannot drift from what actually ships." />
         </p>
 
-        <h2>Libraries</h2>
+        <h2>
+          <T id="Libraries" />
+        </h2>
         <p>
-          The runtime dependencies bundled into the site, with the resolved version and licence of
-          each.
+          <T id="The runtime dependencies bundled into the site, with the resolved version and licence of each." />
         </p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th scope="col">Library</th>
-                <th scope="col">Version</th>
-                <th scope="col">Licence</th>
+                <th scope="col">
+                  <T id="Library" />
+                </th>
+                <th scope="col">
+                  <T id="Version" />
+                </th>
+                <th scope="col">
+                  <T id="Licence" />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -66,11 +82,22 @@ export default function AttributionPage() {
           </table>
         </div>
 
-        <h2>Fonts</h2>
+        <h2>
+          <T id="Fonts" />
+        </h2>
         <p>
-          Three typefaces, all variable fonts served from this origin under the SIL Open Font
-          Licence. The full licence text ships with the site in{' '}
-          <code>src/styles/fonts/OFL.txt</code>.
+          <T
+            id="{count} typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}."
+            values={{
+              // Counted from the record the list below renders, so the sentence cannot say
+              // "three" over a list of five again (the two Noto faces came with #2576).
+              count: FONT_ATTRIBUTIONS.length,
+              // A path into this repository, not copy: it is the same string in every
+              // language, and a msgid a translator must leave alone is worse than none.
+              // eslint-disable-next-line duelbox/no-untranslated-text -- a path, as above
+              file: <code>src/styles/fonts/OFL.txt</code>,
+            }}
+          />
         </p>
         <ul className={styles.fonts}>
           {FONT_ATTRIBUTIONS.map((font) => (
@@ -83,11 +110,20 @@ export default function AttributionPage() {
           ))}
         </ul>
 
-        <h2>Our own work</h2>
+        <h2>
+          <T id="Our own work" />
+        </h2>
         <p>
-          Everything else — the game code, the artwork, the sounds and the names — is original to
-          DuelBox and covered by this repository&apos;s licence. See{' '}
-          <Link href="/terms/">Terms of use</Link> for what that means for you.
+          <T
+            id="Everything else — the game code, the artwork, the sounds and the names — is original to DuelBox and covered by this repository's licence. See {terms} for what that means for you."
+            values={{
+              terms: (
+                <Link href="/terms/">
+                  <T id="Terms of use" />
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
     </div>

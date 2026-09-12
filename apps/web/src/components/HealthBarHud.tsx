@@ -1,6 +1,8 @@
 'use client';
 
 import type { Presentation, SeatId } from '@duelbox/engine';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { healthBarRotated, healthBarView, healthLevelLabel } from './health-bar';
 import { SeatGlyph } from './SeatGlyph';
 import styles from './HealthBarHud.module.css';
@@ -37,23 +39,31 @@ export function HealthBarHud({
   presentation = 'shared-screen',
   localSeat = 'p1',
 }: HealthBarHudProps) {
+  const messages = useMessages();
   const view = healthBarView(value);
   const rotated = healthBarRotated(seat, presentation, localSeat);
   const percent = Math.round(view.percent);
+  // The state word comes out of the pure model and is looked up here: the three words are a
+  // data source the extractor is told about in `lib/i18n/sources.ts` (#220).
+  const level = t(messages, healthLevelLabel(view.level));
   return (
     <div
       className={[styles.bar, rotated ? styles.rotated : ''].join(' ')}
       data-seat={seat}
       data-level={view.level}
       role="img"
-      aria-label={`${name} health: ${healthLevelLabel(view.level)}, ${String(percent)} percent`}
+      aria-label={t(messages, '{name} health: {level}, {percent} percent', {
+        name,
+        level,
+        percent,
+      })}
     >
       <SeatGlyph seat={seat} size={16} />
       <div className={styles.track}>
         {/* The width is the smooth part; the hatch under `data-level` is the non-colour one. */}
         <div className={styles.fill} style={{ width: `${String(view.percent)}%` }} />
       </div>
-      <span className={styles.tag}>{healthLevelLabel(view.level)}</span>
+      <span className={styles.tag}>{level}</span>
     </div>
   );
 }

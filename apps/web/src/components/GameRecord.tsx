@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { readGameRecord, type Opponent, type Tally } from '@/lib/head-to-head';
+import { T } from '@/lib/i18n/T';
 
 /**
  * One line of what this device has recorded for one game (#162).
@@ -45,6 +46,14 @@ import { readGameRecord, type Opponent, type Tally } from '@/lib/head-to-head';
  * it is why the two names arrive as props rather than being read here: `lib/seats.ts` is
  * the only file allowed to spell them, the page already imports it, and importing it here
  * would drag `@duelbox/engine` onto a shell route for two words.
+ *
+ * ## The sentence is one message, not five pieces
+ *
+ * The line was a template literal, which is a shape the lint rule cannot see and a
+ * translator cannot reorder: a language that puts the count before the name, or the word for
+ * "drawn" first, has to be able to move the whole sentence around its four values. So it is
+ * one `t()` id with four placeholders (#220), and the two names stay as they arrive — they
+ * are seat names, not copy, and `lib/seats.ts` spells them.
  */
 
 /** What each count reads as before storage has been read, and with no scripting at all. */
@@ -60,7 +69,7 @@ export function GameRecord({
   opponent: Opponent;
   /** What to call the near seat's wins, and the far seat's. */
   near: string;
-  far: string;
+  far: ReactNode;
 }) {
   const [tally, setTally] = useState<Tally | null>(null);
   useEffect(() => {
@@ -70,5 +79,12 @@ export function GameRecord({
   // Words rather than a colour or a glyph, so a win and a loss are the same two facts in
   // greyscale that they are on a colour screen (rule 7) — and so a screen reader is handed
   // a sentence rather than "3W 2L 1D" to spell out.
-  return `${near} ${shown.p1}, ${far} ${shown.p2}, ${shown.draws} drawn`;
+  // `<T>` rather than `t()` because `far` may be an element: the game page hands the bot row
+  // a translated "the bot" and the friend row a name, and a value in `t()` is a string.
+  return (
+    <T
+      id="{near} {nearWins}, {far} {farWins}, {draws} drawn"
+      values={{ near, nearWins: shown.p1, far, farWins: shown.p2, draws: shown.draws }}
+    />
+  );
 }

@@ -39,6 +39,8 @@ import {
   type GameManifest,
   type MatchPhase,
 } from '@duelbox/game-sdk';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { readBindings } from '@/lib/key-bindings';
 import {
   createRendererBackend,
@@ -248,6 +250,15 @@ export function GameHost({
   onErrorRef.current = onError;
   const onTraceReadyRef = useRef(onTraceReady);
   onTraceReadyRef.current = onTraceReady;
+  /*
+   * The catalogue is read through a ref for the same reason every callback above is (#220):
+   * the setup effect below raises one sentence of its own when the drawing surface is gone
+   * for good, and putting the catalogue in that effect's dependencies would tear the canvas
+   * down and restart the match the moment somebody changed language.
+   */
+  const messages = useMessages();
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   /**
    * Whether the renderer can be built yet (#16). True from the first render in every build
@@ -675,7 +686,11 @@ export function GameHost({
       canvas,
       (abandoned) => {
         if (abandoned) {
-          onGameError(new Error('The drawing surface was lost twice, so the match stopped.'));
+          onGameError(
+            new Error(
+              t(messagesRef.current, 'The drawing surface was lost twice, so the match stopped.'),
+            ),
+          );
           return;
         }
         // Exactly what `onBlur` does and for its reason: a key or a finger held when the
@@ -1006,7 +1021,7 @@ export function GameHost({
          `role="application"`, which would hand this element the assistive technology's own
          key handling in exchange for an interface we do not offer. */
       role="img"
-      aria-label={`${manifest.name} board`}
+      aria-label={t(messages, '{name} board', { name: manifest.name })}
       /* Focusable so the board can hold focus during play. Without this, focus sits on
          whichever button was last used and seat two's action key — Enter — activates it
          instead of playing: pressing it opened the pause menu rather than taking a turn.

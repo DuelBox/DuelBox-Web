@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { CATALOGUE, CATEGORIES } from '@/data/catalogue.generated';
 import { PLAYABLE, isPlayable } from '@/data/registry';
 import { groupByCategory, type CatalogueIndexEntry } from '@/lib/catalogue-filter';
+import { T } from '@/lib/i18n/T';
 import { AttractIdle } from '@/components/AttractIdle';
 import { CatalogBrowser } from '@/components/CatalogBrowser';
 import { GameCard } from '@/components/GameCard';
@@ -24,6 +25,12 @@ export const metadata: Metadata = {
  * shell budget — while the search, the chips and the stars run in the browser on the
  * index alone. The playable list goes in as a plain array for the same reason: the
  * registry it comes from carries a loader for every game.
+ *
+ * The two sentences this file owns go through `<T>` (#220); the controls' own copy is in
+ * `CatalogBrowser`, which is a client component and uses `t()`. The counts are values
+ * rather than part of the string, so one sentence covers every number it can hold. The
+ * `metadata` above stays English, with the rest of the metadata on this site: a crawler
+ * renders no client component and follows no `?lang=` (`docs/i18n.md`).
  */
 export default function GamesPage() {
   const entries: CatalogueIndexEntry[] = CATALOGUE.map((game) => ({
@@ -49,7 +56,9 @@ export default function GamesPage() {
       <TileSprite games={CATALOGUE} />
       <header className={styles.head}>
         <div className={styles.headRow}>
-          <h1>All games</h1>
+          <h1>
+            <T id="All games" />
+          </h1>
           <QuickPlay slugs={PLAYABLE} className={styles.surprise} />
         </div>
         {/* "Most also play across two devices" was the third site of the claim #102 took off
@@ -59,8 +68,10 @@ export default function GamesPage() {
             `bot`, not most of them. `app/metadata-claims.test.ts` counts the catalogue and
             fails this sentence if a game ever arrives without one. */}
         <p className={styles.count}>
-          {CATALOGUE.length} games across {categoryCount} categories. Every one plays with two
-          people on one device, and every one also takes a bot in the second seat.
+          <T
+            id="{games} games across {categories} categories. Every one plays with two people on one device, and every one also takes a bot in the second seat."
+            values={{ games: CATALOGUE.length, categories: categoryCount }}
+          />
         </p>
       </header>
 

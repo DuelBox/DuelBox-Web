@@ -1,13 +1,10 @@
 'use client';
 
 import type { BeforeInstallPromptEvent } from '@/lib/install-prompt-key';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import type * as InstallStore from '@/lib/install-prompt';
 import styles from './ServiceWorkerBridge.module.css';
-
-const INSTALL_NOTICE =
-  'Keep DuelBox on your home screen? It opens straight to the games, offline too.';
-const INSTALL_LABEL = 'Add it';
-const NOT_NOW_LABEL = 'Not now';
 
 /**
  * The two buttons of the install offer (#195), in a chunk of their own.
@@ -21,6 +18,10 @@ const NOT_NOW_LABEL = 'Not now';
  * It renders *inside* the bridge's own `role="status"` bar rather than a bar of its own, so
  * the site keeps its single status region — the constraint `ServiceWorkerBridge.tsx` sets
  * out at length, and one `e2e/settings.spec.ts` and `e2e/record.spec.ts` both depend on.
+ *
+ * Its three strings were module constants, which is a shape the lint rule cannot see through
+ * — `{INSTALL_LABEL}` is an expression to it — and they are `t()` calls at the point of use
+ * now (#220). Nothing else imported them.
  */
 export default function InstallOffer({
   event,
@@ -31,6 +32,7 @@ export default function InstallOffer({
   store: typeof InstallStore;
   onDone: () => void;
 }) {
+  const messages = useMessages();
   const ask = (): void => {
     void event
       .prompt()
@@ -47,16 +49,21 @@ export default function InstallOffer({
   };
   return (
     <>
-      <span>{INSTALL_NOTICE}</span>
+      <span>
+        {t(
+          messages,
+          'Keep DuelBox on your home screen? It opens straight to the games, offline too.',
+        )}
+      </span>
       <button type="button" className={`db-net-do ${styles.reload}`} onClick={ask}>
-        {INSTALL_LABEL}
+        {t(messages, 'Add it')}
       </button>
       <button
         type="button"
         className={`db-net-do ${styles.reload} ${styles.quiet}`}
         onClick={notNow}
       >
-        {NOT_NOW_LABEL}
+        {t(messages, 'Not now')}
       </button>
     </>
   );

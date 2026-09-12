@@ -6,23 +6,23 @@ import globals from 'globals';
 import noUntranslatedText from './scripts/eslint-rules/no-untranslated-text.mjs';
 
 /**
- * The files whose user-facing copy is fully converted to `t()` / `<T>` (#219, #220).
+ * Every `.tsx` under the web app is held to `duelbox/no-untranslated-text` (#219, #220).
  *
- * `duelbox/no-untranslated-text` is an error on exactly these, so a converted file stays
- * converted: a bare literal or an `aria-label="…"` added to one of them fails lint. It is not
- * yet applied anywhere else, because everything else is full of literals #220 has not reached
- * and a repository-wide error would be a red build for weeks. A file joins this list in the
- * commit that converts it. #220 grows it to every `.tsx` and then replaces it with the glob
- * `apps/web/src/**\/*.tsx`, at which point the ratchet becomes the rule. The rule and what it
- * cannot see are documented in `scripts/eslint-rules/no-untranslated-text.mjs` and
- * `docs/i18n.md`.
+ * The rule reports bare text in JSX and a literal in the seven user-facing attributes, so a
+ * sentence added to any component without `t()` / `<T>` fails lint. Until 12 September 2026 it
+ * was a ratchet, `I18N_CLEAN`, an explicit list a file joined in the commit that converted it;
+ * #220 converted every file and the list became this glob, at which point the ratchet became
+ * the rule. What stays exempt, each with its reason in `docs/i18n.md` under "deliberately not
+ * translated": anything inside `<noscript>` (the rule skips the subtree itself), and the handful
+ * of literals carrying an `eslint-disable-next-line duelbox/no-untranslated-text -- <reason>`
+ * comment — the skip link and the framed notice in `app/layout.tsx`, whose `<T>` would be
+ * serialised into all 108 play payloads, and the two lines of `play/[slug]/loading.tsx`, which
+ * a test holds to importing nothing. Game names, `metadata` exports and key caps are not
+ * literals the rule can see and are exempt by design rather than by comment. What the rule
+ * cannot see — a string reaching JSX through a variable — is what `e2e/pseudo-sweep.spec.ts`
+ * walks the pseudo-locale for.
  */
-const I18N_CLEAN = [
-  'apps/web/src/components/SoundToggle.tsx',
-  'apps/web/src/lib/i18n/T.tsx',
-  'apps/web/src/lib/i18n/provider.tsx',
-  'apps/web/src/app/settings/page.tsx',
-];
+const I18N_FILES = ['apps/web/src/**/*.tsx'];
 
 export default tseslint.config(
   {
@@ -148,8 +148,8 @@ export default tseslint.config(
     },
   },
   {
-    // The i18n ratchet: see `I18N_CLEAN` above.
-    files: I18N_CLEAN,
+    // The i18n rule: see `I18N_FILES` above.
+    files: I18N_FILES,
     plugins: { duelbox: { rules: { 'no-untranslated-text': noUntranslatedText } } },
     rules: { 'duelbox/no-untranslated-text': 'error' },
   },
