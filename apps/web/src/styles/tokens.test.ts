@@ -338,6 +338,174 @@ describe('colour lives in the palette', () => {
   });
 });
 
+/**
+ * The layer ladder and the spacing grid, held the same way the palette is (#70).
+ *
+ * The spacing, radius and shadow tokens have existed since the first stylesheet. What did
+ * not exist was any reason to use them, and the two halves of #70 are what that cost.
+ *
+ * **Layers.** Twelve `z-index` declarations across nine files, every one a bare number
+ * chosen by whoever wrote the file: 2, 3, 4, 4, 5, 5, 6, 7, 40, 100, 100, 200. Nothing
+ * named a layer, so nothing could be read without opening nine files and sorting them by
+ * hand — and the ordering genuinely matters here, because `PlaySurface` is
+ * `position: relative` with no `z-index`, which is not a stacking context: an overlay
+ * inside the board and a bar fixed to the viewport are painted against each other. A
+ * number picked by looking at the file next door is a number that works until the file
+ * next door moves.
+ *
+ * **Spacing.** Five stylesheets carried raw-pixel padding on key caps and badges. Those
+ * are small values and none of them was wrong, which is exactly the shape the colour guard
+ * above records: a scale is only a scale while every use goes through it, and a copied
+ * value is invisible in the diff of the file that matters.
+ *
+ * ## The escape hatch, and why it is a marker rather than a list
+ *
+ * Some values are deliberately not on the 4px grid. A key cap's 6px sits between two rungs
+ * and belongs to the glyph rather than the layout; the 2px above a badge exists so the
+ * badge does not grow the line it sits in; `.db-visually-hidden`'s `-1px` is half of a clip
+ * rectangle and not spacing at all. A guard that refuses those is a guard somebody deletes,
+ * and a guard with an allow-list of blessed pixel values is a second scale nobody named.
+ *
+ * So a raw pixel is allowed on a line that says `off-scale:` and why — the same shape as
+ * `physical:` in `direction.test.ts`, and readable in the stylesheet rather than in here.
+ * The marker excuses **its own line only**, which is the property worth testing: a stripper
+ * or a regex that let a marker cover the rest of a rule would turn the whole check into a
+ * pass, and that is the failure mode the twelfth CLAUDE.md entry was written about.
+ *
+ * ## The controls
+ *
+ * Neither branch has a file that is supposed to be full of what it looks for — the palette
+ * could be run over `tokens.css`, and there is no equivalent here — so both are run over a
+ * fixture that is: a raw `z-index: 5` and a `padding: 13px` must come back as two hits,
+ * with their line numbers. That covers the patterns and the reporting.
+ *
+ * What a fixture cannot cover is whether the scanner reaches real declarations at all, and
+ * a property regex that quietly matched nothing would look identical to a clean tree. So
+ * the last control counts the excused lines in the real stylesheets: the shell has six, and
+ * a run that finds none has stopped reading CSS rather than found it tidy.
+ */
+
+/** A rung of the ladder, or `auto`. `!important` is stripped before the comparison. */
+const LAYER_TOKEN = /^var\(\s*--db-z-[a-z0-9-]+\s*\)$|^auto$/;
+
+/** `padding`, `margin`, and every longhand either of them has. */
+const SPACING_PROPERTY =
+  /(?<![\w-])(?:padding|margin)(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?\s*:([^;{}]*)/g;
+
+/** A length in pixels, signed and possibly fractional, anywhere inside a value. */
+const PIXELS = /-?\d*\.?\d+px/g;
+
+/** The word that excuses a pixel, on the line the pixel is on and no other. */
+const OFF_SCALE = 'off-scale:';
+
+/** Every `z-index` in one stylesheet that is not a rung of the scale, as `file:line value`. */
+function rawLayers(source: string, label: string): string[] {
+  const code = withoutComments(source, false);
+  const found: string[] = [];
+  for (const match of code.matchAll(/(?<![\w-])z-index\s*:([^;{}]*)/g)) {
+    const value = (match[1] ?? '').replace(/!important/g, '').trim();
+    if (LAYER_TOKEN.test(value)) continue;
+    found.push(`${label}:${String(lineOf(code, match.index))} z-index: ${value}`);
+  }
+  return found;
+}
+
+/**
+ * Every raw pixel in a `padding` or `margin` in one stylesheet, as `file:line value`.
+ *
+ * Zero is always fine — `max(0px, var(--db-safe-left))` is a floor, not a measurement — and
+ * so is anything on a line carrying the marker. The marker is looked for in the *original*
+ * source, because blanking comments is what makes the scan possible in the first place.
+ */
+function rawSpacing(source: string, label: string): string[] {
+  const code = withoutComments(source, false);
+  const lines = source.split('\n');
+  const found: string[] = [];
+  for (const declaration of code.matchAll(SPACING_PROPERTY)) {
+    const value = declaration[1] ?? '';
+    const from = declaration.index + declaration[0].length - value.length;
+    for (const pixels of value.matchAll(PIXELS)) {
+      if (Number.parseFloat(pixels[0]) === 0) continue;
+      const line = lineOf(code, from + pixels.index);
+      if (lines[line - 1]?.includes(OFF_SCALE)) continue;
+      const where = declaration[0].trim().replace(/\s+/g, ' ');
+      found.push(`${label}:${String(line)} ${pixels[0]} in ${where}`);
+    }
+  }
+  return found;
+}
+
+/** The lines a stylesheet has excused, so the escape hatch can be counted rather than trusted. */
+function excused(source: string): number {
+  return source.split('\n').filter((line) => line.includes(OFF_SCALE)).length;
+}
+
+const FIXTURE = [
+  '.a {',
+  '  z-index: 5;',
+  '  padding: 13px;',
+  '}',
+  '.b {',
+  '  z-index: var(--db-z-cover);',
+  '  padding: 0 var(--db-space-2);',
+  '  margin-left: max(0px, var(--db-safe-left)); /* physical: side of the device */',
+  '  padding-block: 2px; /* off-scale: a key cap, between two rungs */',
+  '}',
+].join('\n');
+
+describe('layers and spacing live in the scale', () => {
+  const sheets = stylesheets(web).filter((path) => path !== PALETTE);
+
+  it('can see a raw layer and a raw pixel at all, which is what the next tests rest on', () => {
+    // No file in this repository is supposed to be full of either, so the pattern is proved
+    // against one that is. An inert regex would otherwise be indistinguishable from a tidy
+    // tree — see the header.
+    expect(rawLayers(FIXTURE, 'fixture')).toEqual(['fixture:2 z-index: 5']);
+    expect(rawSpacing(FIXTURE, 'fixture')).toEqual(['fixture:3 13px in padding: 13px']);
+  });
+
+  it('excuses a pixel only on the line that says why', () => {
+    // The marker covers its own line. If it ever covered the rule, or the file, this check
+    // would be the only thing between that and a guard that cannot fail.
+    const leaky = '.a {\n  padding: 3px; /* off-scale: deliberate */\n  margin: 9px;\n}';
+    expect(rawSpacing(leaky, 'probe')).toEqual(['probe:3 9px in margin: 9px']);
+    // And it has to be *that* marker: `physical:` answers a different question.
+    expect(rawSpacing('.a {\n  padding: 9px; /* physical: left edge */\n}', 'probe')).toEqual([
+      'probe:2 9px in padding: 9px',
+    ]);
+  });
+
+  it('reads a property name and not a word that contains one', () => {
+    expect(rawSpacing('.a {\n  --card-padding: 13px;\n}', 'probe')).toEqual([]);
+    expect(rawSpacing('.a {\n  scroll-margin: 13px;\n}', 'probe')).toEqual([]);
+  });
+
+  it('finds the stylesheets, and the off-scale lines they really carry', () => {
+    expect(sheets.length, 'stylesheets to scan').toBeGreaterThan(5);
+    const marked = sheets.map(read).reduce((total, css) => total + excused(css), 0);
+    expect(
+      marked,
+      'no stylesheet excuses a pixel — the scan has stopped reading CSS',
+    ).toBeGreaterThan(3);
+  });
+
+  it('and every z-index names a layer from styles/tokens.css', () => {
+    const raw = sheets.flatMap((path) => rawLayers(read(path), named(path)));
+    expect(
+      raw,
+      `use a var(--db-z-*) rung so the stacking order is readable in one file: ${raw.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('and no padding or margin is measured in raw pixels', () => {
+    const raw = sheets.flatMap((path) => rawSpacing(read(path), named(path)));
+    expect(
+      raw,
+      `use a var(--db-space-*) token, or say /* off-scale: why */ on the line: ${raw.join(', ')}`,
+    ).toEqual([]);
+  });
+});
+
 describe("the catalogue card's seat marks", () => {
   // Rule 7 applies to the shell as much as to a game, and this is the seat signal a player
   // meets first. The greyscale harness in `apps/web/src/data` walks games and never looks

@@ -16,7 +16,7 @@
   position: absolute;
   top: max(var(--db-space-2), var(--db-safe-top));
   right: max(var(--db-space-2), var(--db-safe-right)); /* physical: corner of the ltr surface */
-  z-index: 3;
+  z-index: var(--db-z-control);
   display: inline-flex;
   align-items: center;
   gap: var(--db-space-1);
@@ -42,7 +42,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  z-index: 6;
+  z-index: var(--db-z-confirm);
   display: grid;
   place-items: center;
   padding-top: max(var(--db-space-4), var(--db-safe-top));
