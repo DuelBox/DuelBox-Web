@@ -5,15 +5,20 @@
 const catalogue = {
   locale: 'ar-XB',
   messages: {
+    'A new version of DuelBox is ready.': '‮A‬ ‮new‬ ‮version‬ ‮of‬ ‮DuelBox‬ ‮is‬ ‮ready.‬',
+    'Add {name} to favourites': '‮Add‬ {name} ‮to‬ ‮favourites‬',
     Copied: '‮Copied‬',
     'Copy failed': '‮Copy‬ ‮failed‬',
     'Copy trace': '‮Copy‬ ‮trace‬',
+    Favourite: '‮Favourite‬',
     'Input trace': '‮Input‬ ‮trace‬',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled,‬ ‮but‬ ‮the‬ ‮build‬ ‮has‬ ‮not‬ ‮landed.‬ ‮Try‬ ‮another‬ ‮game.‬',
     Language: '‮Language‬',
     'Loading {name}…': '‮Loading‬ {name}‮…‬',
     'Mute sound': '‮Mute‬ ‮sound‬',
+    'Offline. The games saved on this device still play.':
+      '‮Offline.‬ ‮The‬ ‮games‬ ‮saved‬ ‮on‬ ‮this‬ ‮device‬ ‮still‬ ‮play.‬',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '‮Only‬ ‮the‬ ‮language‬ ‮you‬ ‮choose‬ ‮is‬ ‮downloaded,‬ ‮and‬ ‮it‬ ‮applies‬ ‮straight‬ ‮away.‬ ‮Nothing‬ ‮is‬ ‮translated‬ ‮yet:‬ ‮the‬ ‮two‬ ‮pseudo‬ ‮languages‬ ‮are‬ ‮the‬ ‮English‬ ‮made‬ ‮deliberately‬ ‮strange,‬ ‮so‬ ‮that‬ ‮anything‬ ‮still‬ ‮in‬ ‮plain‬ ‮English‬ ‮is‬ ‮a‬ ‮string‬ ‮the‬ ‮translation‬ ‮work‬ ‮has‬ ‮not‬ ‮reached.‬',
     'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.':
@@ -22,10 +27,13 @@ const catalogue = {
     'Play solo': '‮Play‬ ‮solo‬',
     'Play together here': '‮Play‬ ‮together‬ ‮here‬',
     'Quit match': '‮Quit‬ ‮match‬',
+    Reload: '‮Reload‬',
+    'Remove {name} from favourites': '‮Remove‬ {name} ‮from‬ ‮favourites‬',
     Restart: '‮Restart‬',
     Settings: '‮Settings‬',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '‮Sound,‬ ‮vibration,‬ ‮and‬ ‮what‬ ‮this‬ ‮device‬ ‮remembers‬ ‮about‬ ‮how‬ ‮you‬ ‮play.‬ ‮Every‬ ‮change‬ ‮applies‬ ‮straight‬ ‮away‬ ‮and‬ ‮is‬ ‮kept‬ ‮in‬ ‮this‬ ‮browser‬ ‮only‬ ‮—‬ ‮nothing‬ ‮here‬ ‮is‬ ‮sent‬ ‮anywhere.‬',
+    'Surprise me': '‮Surprise‬ ‮me‬',
     'The drawing surface was lost twice, so the match stopped.':
       '‮The‬ ‮drawing‬ ‮surface‬ ‮was‬ ‮lost‬ ‮twice,‬ ‮so‬ ‮the‬ ‮match‬ ‮stopped.‬',
     'The game hit an unexpected error.': '‮The‬ ‮game‬ ‮hit‬ ‮an‬ ‮unexpected‬ ‮error.‬',
@@ -39,6 +47,8 @@ const catalogue = {
     Trace: '‮Trace‬',
     'Unmute sound': '‮Unmute‬ ‮sound‬',
     '{name} board': '{name} ‮board‬',
+    '{one} and {two} are playing {game} — move to stop.':
+      '{one} ‮and‬ {two} ‮are‬ ‮playing‬ {game} ‮—‬ ‮move‬ ‮to‬ ‮stop.‬',
     '{size} kB': '{size} ‮kB‬',
   },
 } as const;

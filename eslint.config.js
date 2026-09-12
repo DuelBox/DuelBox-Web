@@ -25,7 +25,12 @@ const I18N_CLEAN = [
   'apps/web/src/components/PlaySurface.tsx',
   'apps/web/src/components/GameHost.tsx',
   'apps/web/src/components/GameErrorBoundary.tsx',
+  'apps/web/src/components/AttractStage.tsx',
+  'apps/web/src/components/AttractIdle.tsx',
   'apps/web/src/components/TracePanel.tsx',
+  'apps/web/src/components/ServiceWorkerBridge.tsx',
+  'apps/web/src/components/FavouriteButton.tsx',
+  'apps/web/src/components/QuickPlay.tsx',
 ];
 
 export default tseslint.config(

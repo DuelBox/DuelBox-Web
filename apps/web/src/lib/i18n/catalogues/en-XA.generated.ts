@@ -5,15 +5,20 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
+    'A new version of DuelBox is ready.': '⟦Å ñéŵ ṽéŕšïöñ öƒ ÐûéłƁöẋ ïš ŕéåðý. ············⟧',
+    'Add {name} to favourites': '⟦Åðð {name} ŧö ƒåṽöûŕïŧéš ·········⟧',
     Copied: '⟦Çöþïéð ···⟧',
     'Copy failed': '⟦Çöþý ƒåïłéð ····⟧',
     'Copy trace': '⟦Çöþý ŧŕåçé ····⟧',
+    Favourite: '⟦Ƒåṽöûŕïŧé ····⟧',
     'Input trace': '⟦Ïñþûŧ ŧŕåçé ····⟧',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '⟦Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð, ƀûŧ ŧĥé ƀûïłð ĥåš ñöŧ łåñðéð. Ŧŕý åñöŧĥéŕ ĝåɱé. ······························⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
     'Loading {name}…': '⟦Łöåðïñĝ {name}… ······⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
+    'Offline. The games saved on this device still play.':
+      '⟦Öƒƒłïñé. Ŧĥé ĝåɱéš šåṽéð öñ ŧĥïš ðéṽïçé šŧïłł þłåý. ··················⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
     'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.':
@@ -22,10 +27,13 @@ const catalogue = {
     'Play solo': '⟦Þłåý šöłö ····⟧',
     'Play together here': '⟦Þłåý ŧöĝéŧĥéŕ ĥéŕé ·······⟧',
     'Quit match': '⟦Ǫûïŧ ɱåŧçĥ ····⟧',
+    Reload: '⟦Ŕéłöåð ···⟧',
+    'Remove {name} from favourites': '⟦Ŕéɱöṽé {name} ƒŕöɱ ƒåṽöûŕïŧéš ···········⟧',
     Restart: '⟦Ŕéšŧåŕŧ ···⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
+    'Surprise me': '⟦Šûŕþŕïšé ɱé ····⟧',
     'The drawing surface was lost twice, so the match stopped.':
       '⟦Ŧĥé ðŕåŵïñĝ šûŕƒåçé ŵåš łöšŧ ŧŵïçé, šö ŧĥé ɱåŧçĥ šŧöþþéð. ····················⟧',
     'The game hit an unexpected error.': '⟦Ŧĥé ĝåɱé ĥïŧ åñ ûñéẋþéçŧéð éŕŕöŕ. ············⟧',
@@ -39,6 +47,8 @@ const catalogue = {
     Trace: '⟦Ŧŕåçé ··⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
     '{name} board': '⟦{name} ƀöåŕð ·····⟧',
+    '{one} and {two} are playing {game} — move to stop.':
+      '⟦{one} åñð {two} åŕé þłåýïñĝ {game} — ɱöṽé ŧö šŧöþ. ··················⟧',
     '{size} kB': '⟦{size} ķƁ ····⟧',
   },
 } as const;

@@ -22,12 +22,24 @@
  */
 
 import { errorMessage } from '@duelbox/game-sdk';
+import { OFFLINE_NOTICE, RELOAD_LABEL, UPDATE_NOTICE } from '../offline-state';
 
 /** Every registered source: a name for the failure message, and the strings it contributes. */
 export const DYNAMIC_SOURCES: readonly {
   readonly name: string;
   readonly strings: () => readonly string[];
 }[] = [
+  {
+    /*
+     * The three sentences the offline and update bar says (#192, #194), which
+     * `components/ServiceWorkerBridge.tsx` renders as `t(messages, OFFLINE_NOTICE)` and so on.
+     * They are constants rather than literals because `offline-state.test.ts` holds them
+     * against the substrings `e2e/offline.spec.ts` greps for — the reason the module gives for
+     * naming them — so the call sites have nothing for the extractor to read.
+     */
+    name: 'lib/offline-state.ts — the connection and update bar',
+    strings: () => [OFFLINE_NOTICE, UPDATE_NOTICE, RELOAD_LABEL],
+  },
   {
     /*
      * What `components/GameErrorBoundary.tsx` shows when a game threw something with no
