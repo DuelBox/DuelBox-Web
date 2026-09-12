@@ -716,6 +716,17 @@ interface Tally {
    * anybody deciding that it should.
    */
   readonly setAside: string[];
+  /**
+   * Pairs held back from {@link unexplained} because the second arm's scoreline is the first
+   * arm's, swapped seat for seat - the same match seen from the other chair rather than a
+   * second match. See {@link isSeatMirror}.
+   *
+   * Printed by the report for the reason {@link setAside} is printed: an exclusion nobody can
+   * see is how a guard stops guarding without anybody deciding that it should. Collected only
+   * where it is load-bearing - a game that read the opening seat and swung none of its pairs,
+   * which is the one shape {@link unexplained} would otherwise have called a finding.
+   */
+  readonly mirrored: string[];
   /** True if the same seed played differently when the device was shouted at. */
   readsInput: boolean;
   /**
@@ -730,6 +741,64 @@ interface Tally {
 /** `winner:steps:p1:p2` - the whole of what this harness can see of a match. */
 function fingerprint(result: Played): string {
   return `${String(result.winner)}:${String(result.steps)}:${String(result.p1)}:${String(result.p2)}`;
+}
+
+/**
+ * Is the second arm the first one seen from the other chair?
+ *
+ * The two arms of a seed differ in `context.openingSeat` and in nothing else, so a game that
+ * honours the opener and is otherwise symmetric plays **one match from the two chairs**. Every
+ * number that names a seat comes back swapped: what seat one took in the first arm, seat two
+ * took in the second, and the other way about. That is not state surviving from one match into
+ * the next - it is the strongest statement there is that neither chair is favoured, and it is
+ * the same property {@link OPENER_BLIND} had to stop its old proxy libelling.
+ *
+ * **`checkers` on `hard` is the case, and it took the nightly red every night for a month.**
+ * #2502 gave it a forty-move rule, so the match that used to run into the {@link MAX_STEPS}
+ * ceiling now *draws*, and the harness reported `seed 1000003: the same winner after the same
+ * 16489 steps, but 9-6 against 6-9`. Nine captures to six from one chair is six to nine from
+ * the other: the two openers played the same match and it was counted as a second one. The
+ * check read that swap as a scoreline the opening seat was still moving behind an
+ * `openerSwung` of zero - which is #2494's finding pointed exactly backwards, because a
+ * swapped scoreline is not a third scoreline.
+ *
+ * **What this does not admit, and why it is a narrowing rather than a loosening.** The mirror
+ * has to be complete, and two things have to hold together. The outcome must name no seat: a
+ * win names one, so the mirror of a win is the *other* seat winning, which moves `openerSwung`
+ * and never reaches this question - only a draw, or a match that never ended, can be its own
+ * mirror. And the tallies have to be each other's exactly. **9-6 against 6-9 is one match from
+ * two chairs; 9-6 against 8-7 is two different matches and is still a finding**, which is the
+ * pair the unit case below was watched failing on before this was kept.
+ */
+function isSeatMirror(first: Played, second: Played): boolean {
+  if (first.winner !== second.winner || first.steps !== second.steps) return false;
+  if (first.winner !== 'draw' && first.winner !== null) return false;
+  return first.p1 === second.p2 && first.p2 === second.p1;
+}
+
+/** What one seed's two arms are, read without reference to the game that produced them. */
+type PairVerdict = 'same' | 'swung' | 'mirrored' | 'ceilinged' | 'silent';
+
+/**
+ * Read a seed's two arms.
+ *
+ * Pure, and lifted out of {@link measure}, so every verdict can be put to a fixture rather
+ * than waited for in a sweep. The mirror verdict below spent a month failing the nightly
+ * before anybody read the message, and a reading nobody can construct a fixture for is a
+ * reading nobody watches fail.
+ *
+ * What a verdict *means* still depends on the game, and {@link measure} is what decides that:
+ * a `mirrored` pair is one match from two chairs for a game that read the opening seat, and
+ * two different matches for a game that never read it - that game's arms had to be
+ * bit-identical, and a swap is a difference like any other.
+ */
+function classifyPair(first: Played, second: Played): PairVerdict {
+  if (first.winner !== second.winner || first.steps !== second.steps) return 'swung';
+  if (first.p1 === second.p1 && first.p2 === second.p2) return 'same';
+  // Before the mirror, because "the same winner after the same number of steps" is a fact
+  // about the ceiling rather than about the opening seat when neither arm ended.
+  if (first.winner === null) return 'ceilinged';
+  return isSeatMirror(first, second) ? 'mirrored' : 'silent';
 }
 
 /**
@@ -768,6 +837,7 @@ function measure(id: string, loaded: LoadedGame): Tally {
     blind: false,
     unexplained: [],
     setAside: [],
+    mirrored: [],
     readsInput: false,
     outcomes: new Set<string>(),
   };
@@ -811,13 +881,20 @@ function measure(id: string, loaded: LoadedGame): Tally {
    * `openerSwung` counts endings and there were none to count, so a zero there is not the
    * claim "this game ignores the opener" and there is nothing to contradict.
    *
-   * **`checkers` on `hard` is the case, and it is why this list exists.** It reports
+   * **`checkers` on `hard` was the case this list was written for.** It reported
    * `seed 1000003: the same winner after the same 36000 steps, but 6-8 against 11-9` - and
-   * 36000 steps is {@link MAX_STEPS} exactly, both arms, with a null winner. It decides
-   * nothing inside ten simulated minutes at that tier, so it drops out of the sweep as
-   * unmeasurable and asserts nothing about seat balance at all; the two scorelines are how
+   * 36000 steps is {@link MAX_STEPS} exactly, both arms, with a null winner. It decided
+   * nothing inside ten simulated minutes at that tier, so it dropped out of the sweep as
+   * unmeasurable and asserted nothing about seat balance at all; the two scorelines were how
    * many pieces each side had taken when the clock ran out, which is precisely the thing the
    * opening seat is expected to move. It was being reported as hidden per-opener state.
+   *
+   * **That game no longer lands here**, and the list is kept for the shape rather than for the
+   * game: #2502's forty-move rule ends those matches, so `checkers` on `hard` now draws inside
+   * the ceiling and its pairs are {@link isSeatMirror} mirrors instead. A list that has no
+   * member today is still the right home for the next game whose bots cannot finish - and this
+   * is the second time the same seed of the same game has had to teach the harness that a
+   * difference it cannot explain and a difference it has not read are not the same thing.
    *
    * **This narrows the condition, and it is not a loosening of the assertion.** Three things
    * have to be true together before a pair lands here, and each one independently rules out
@@ -833,15 +910,26 @@ function measure(id: string, loaded: LoadedGame): Tally {
    * inference from how a match ended, drawn about a match that did not end.
    */
   const ceilinged: string[] = [];
+  /**
+   * Pairs whose two arms are one match seen from the two chairs - same outcome, same length,
+   * scoreline swapped seat for seat. {@link isSeatMirror} is where the reasoning lives.
+   *
+   * Read exactly like {@link ceilinged} and for the same reason: for a game that *read*
+   * `context.openingSeat` the swap is the opening seat doing its job, and for a game that
+   * never read it the two arms had to be bit-identical and a swap is a difference like any
+   * other. So the branch below reports these for a blind game and records them for a sighted
+   * one.
+   */
+  const mirrored: string[] = [];
 
   /** Everything the sweep can learn from having played both arms of one seed. */
   const comparePair = (index: number, first: Played, second: Played): void => {
     tally.pairsChecked += 1;
-    const swung = first.winner !== second.winner || first.steps !== second.steps;
-    if (swung) tally.openerSwung += 1;
-    if (!swung && first.p1 === second.p1 && first.p2 === second.p2) return;
+    const verdict = classifyPair(first, second);
+    if (verdict === 'swung') tally.openerSwung += 1;
+    if (verdict === 'same') return;
     const at = `seed ${String(seedAt(index))}`;
-    if (swung) {
+    if (verdict === 'swung') {
       divergent.push(`${at}: ${fingerprint(first)} against ${fingerprint(second)}`);
       return;
     }
@@ -849,8 +937,8 @@ function measure(id: string, loaded: LoadedGame): Tally {
       `${at}: the same winner after the same ${String(first.steps)} steps, but ` +
       `${String(first.p1)}-${String(first.p2)} against ` +
       `${String(second.p1)}-${String(second.p2)}`;
-    // `!swung` and a null winner means both arms hit the ceiling: neither ended.
-    if (first.winner === null) ceilinged.push(note);
+    if (verdict === 'ceilinged') ceilinged.push(note);
+    else if (verdict === 'mirrored') mirrored.push(note);
     else silent.push(note);
   };
 
@@ -926,7 +1014,10 @@ function measure(id: string, loaded: LoadedGame): Tally {
           `context.openingSeat, so something survived from one match into the next`,
       );
     }
-    for (const note of [...silent, ...ceilinged]) {
+    // The mirrors among them too: a game that never read the opening seat ran the identical
+    // code over the identical stream, so its two arms are the same match with the *same*
+    // scoreline. A swapped one is per-opener state in a game that cannot see the opener.
+    for (const note of [...silent, ...mirrored, ...ceilinged]) {
       tally.unexplained.push(
         `${note} - the game never read context.openingSeat, so the two arms should have been ` +
           `the same match`,
@@ -943,6 +1034,9 @@ function measure(id: string, loaded: LoadedGame): Tally {
     // Not a finding, and not silence either: both arms ran out the clock, so there is no
     // ending for openerSwung to have counted and nothing for the scoreline to contradict.
     tally.setAside.push(...ceilinged);
+    // Nor a finding: the second arm is the first one from the other chair, which is what a
+    // game that honours the opener and is symmetric under it produces. See isSeatMirror.
+    tally.mirrored.push(...mirrored);
   }
   return tally;
 }
@@ -1345,6 +1439,21 @@ function report(): string {
       for (const note of tally.setAside.slice(0, 2)) lines.push(`    ${note}`);
     }
   }
+  const chairs = [...rows, ...dark].filter((tally) => tally.mirrored.length > 0);
+  if (chairs.length > 0) {
+    lines.push('');
+    lines.push(
+      `pairs read as one match from two chairs: ${String(chairs.length)} games produced a seed ` +
+        `whose two arms came out the same length on the same seat-neutral outcome with the ` +
+        `scoreline swapped seat for seat. That is the same match seen from the other chair, ` +
+        `not a second one, and halving the sweep is still wrong for these because the game ` +
+        `read the opening seat - see isSeatMirror():`,
+    );
+    for (const tally of chairs) {
+      lines.push(`  ${tally.id}: ${String(tally.mirrored.length)} of ${String(tally.pairsChecked)}`);
+      for (const note of tally.mirrored.slice(0, 2)) lines.push(`    ${note}`);
+    }
+  }
 
   lines.push('');
   const mine = OUTSIDE_THE_BAND.filter((entry) => entry.tier === TIER).length;
@@ -1456,6 +1565,12 @@ describe('the balance harness', () => {
     // `openerSwung` is blind to by construction. A pair that differs at all in a game that
     // never asked which seat opened is state surviving from one match into the next, which
     // would make every number in this file a measurement of the harness.
+    //
+    // A *swapped* scoreline is neither, and it is the third shape: nine captures to six from
+    // one chair is six to nine from the other, which is one match seen twice rather than two
+    // matches. `checkers` on `hard` took this test red on every nightly run for a month for
+    // exactly that - see `isSeatMirror`, and the test below that holds both halves of the
+    // distinction against fixtures.
     const found = [...TALLIES.values()].filter((tally) => tally.unexplained.length > 0);
     const detail = found
       .map((tally) => `${tally.id} - ${tally.unexplained[0] ?? ''}`)
@@ -1466,6 +1581,89 @@ describe('the balance harness', () => {
         `they have hidden per-opener state and must not be measured from one arm:\n  ` +
         `${detail}`,
     ).toEqual([]);
+  });
+
+  it('reads a swapped scoreline as one match from two chairs, and a different one as two', () => {
+    // The narrowing above, both halves of it, against fixtures rather than against a sweep.
+    // `checkers` on `hard` failed the test above every night from 9 September 2026 with
+    // `the same winner after the same 16489 steps, but 9-6 against 6-9`, which is the two
+    // openers playing one match from the two chairs after #2502's forty-move rule started
+    // ending it. The half that matters more is the second one: a guard that stops firing is
+    // only worth keeping if it still fires, so the pair that is *not* a mirror is asserted
+    // here too, and was watched failing before this was kept.
+    const played = (winner: Played['winner'], p1: number, p2: number): Played => ({
+      winner,
+      steps: 16489,
+      p1,
+      p2,
+      readOpener: true,
+    });
+    expect(classifyPair(played('draw', 9, 6), played('draw', 6, 9))).toBe('mirrored');
+    expect(classifyPair(played('draw', 9, 6), played('draw', 9, 6))).toBe('same');
+    // Two different matches: 9-6 and 8-7 are not each other, whichever chair you read them
+    // from. This is the shape #2494 is about and it stays a finding.
+    expect(classifyPair(played('draw', 9, 6), played('draw', 8, 7))).toBe('silent');
+    // A win names a seat, so the mirror of a win is the *other* seat winning - which moves
+    // `openerSwung` and is a swing. The same seat winning both arms on swapped tallies is
+    // not one match from two chairs.
+    expect(classifyPair(played('p1', 9, 6), played('p1', 6, 9))).toBe('silent');
+
+    // And the same two pairs through the sweep itself, because what a verdict means is
+    // decided by `measure` rather than by the reading. A stand-in game, since the real ones
+    // cannot be asked to produce a chosen scoreline: it reads the opener, draws after the
+    // same five steps whichever seat opened, and reports the tallies it is given.
+    const borrowed = LOADED.get('tic-tac-toe');
+    expect(borrowed, 'tic-tac-toe is not in the registry').toBeDefined();
+    if (borrowed === undefined) return;
+    const stub = (tallies: (opener: SeatId) => readonly [number, number]): LoadedGame => ({
+      manifest: borrowed.manifest,
+      create: (): Game => {
+        let opener: SeatId = 'p1';
+        let steps = 0;
+        return {
+          init(context: GameContext): void {
+            opener = context.openingSeat;
+            steps = 0;
+          },
+          update(): void {
+            steps += 1;
+          },
+          render(): void {},
+          onPause(): void {},
+          onResume(): void {},
+          getScore: (): MatchScore => {
+            const [p1, p2] = tallies(opener);
+            return steps < 5 ? { p1: 0, p2: 0, winner: null } : { p1, p2, winner: 'draw' };
+          },
+          getActiveSeat: (): SeatId => opener,
+          destroy(): void {},
+        };
+      },
+    });
+
+    const chairs = measure('stub-mirror', stub((opener) => (opener === 'p1' ? [9, 6] : [6, 9])));
+    expect(chairs.blind, 'the stand-in reads context.openingSeat, so it is measured paired').toBe(
+      false,
+    );
+    expect(chairs.openerSwung, 'it draws in the same five steps either way').toBe(0);
+    expect(
+      chairs.unexplained,
+      `a scoreline that is the other arm's swapped seat for seat is the same match from the ` +
+        `other chair, not hidden per-opener state: ${chairs.unexplained.join('; ')}`,
+    ).toEqual([]);
+    expect(
+      chairs.mirrored.length,
+      'and the sweep has to leave a trace of every pair it held back',
+    ).toBeGreaterThan(0);
+
+    const two = measure('stub-not-a-mirror', stub((opener) => (opener === 'p1' ? [9, 6] : [8, 7])));
+    expect(two.openerSwung, 'this one also draws in the same five steps either way').toBe(0);
+    expect(
+      two.unexplained.length,
+      `9-6 against 8-7 is two different matches behind an openerSwung of 0, which is the ` +
+        `hidden per-opener state #2494 is about and must still fail`,
+    ).toBeGreaterThan(0);
+    expect(two.mirrored, 'and it is not a mirror').toEqual([]);
   });
 
   it('is not measuring anything a person at the device could have changed', () => {
