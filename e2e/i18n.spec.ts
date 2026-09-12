@@ -29,6 +29,12 @@ import EN_XA from '../apps/web/src/lib/i18n/catalogues/en-XA.generated';
  * On every engine, because this hydrates, imports a chunk and re-renders — none of which is
  * server-rendered content — and one test sets a desktop viewport because the header hides its
  * controls below 40rem, as `settings.spec.ts` does.
+ *
+ * The reload test also records every page error and `console.error` from before the first
+ * `goto`, and prints them in its failure message. It was seen flip `ar-XB/rtl → (removed) →
+ * en/ltr → ar-XB/rtl` once in about fifty-five runs — the shape of React re-applying the
+ * `<html>` attributes after a hydration error — and the record is so that a recurrence names
+ * its cause rather than only the symptom.
  */
 
 test.use({ serviceWorkers: 'block' });
@@ -167,6 +173,13 @@ test.describe('choosing a language', () => {
         });
       });
     });
+    // Every error the page raised, for the failure message below: the one flake seen here
+    // had the shape of a hydration error (see the header), and its text is the diagnosis.
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+    });
     const recorded = () =>
       page.evaluate(() => {
         const w = window as Window & {
@@ -190,7 +203,9 @@ test.describe('choosing a language', () => {
     const stored = new Set(['ar-XB', 'rtl']);
     expect(
       afterReady.filter((change) => !stored.has(change.now) || !stored.has(change.was ?? '')),
-      'lang/dir left the stored choice after DOMContentLoaded',
+      `lang/dir left the stored choice after DOMContentLoaded${
+        errors.length === 0 ? ' (no page or console errors)' : `; errors: ${errors.join(' | ')}`
+      }`,
     ).toEqual([]);
 
     // The control: the observer is live and this assertion can fail. Switching to English

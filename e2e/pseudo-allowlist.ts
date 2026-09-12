@@ -19,12 +19,24 @@ import { SEAT_CHARACTERS, SEAT_KEYS } from '../apps/web/src/lib/seats';
  * attribution record — rather than retyped, so a game added tomorrow is allowed by the same
  * rule that allows the hundred and eight today, and a licence the attribution page stops
  * naming stops being allowed with it.
+ *
+ * An entry may name the routes it is for. An author's name is copy anywhere but the
+ * attribution page, and a language's name anywhere but the menu that offers it, so an entry
+ * with `routes` excuses its text only where the page in question renders it and the same
+ * word on any other route is still a finding. An entry without `routes` — the brand, a game
+ * name, the landmarks in the root layout — applies everywhere.
  */
 export interface Allowed {
   /** The exact text, matched as a whole word: `Bo` does not excuse `Bot`. */
   readonly text: string;
   readonly reason: string;
+  /** The routes this text is expected on; absent means every route. */
+  readonly routes?: RegExp;
 }
+
+const ATTRIBUTION = /^\/attribution\/$/u;
+/** The pages that name the seat characters: the landing, how-to-play, a game's page, the play and embed routes. */
+const SEATS = /^\/(?:$|how-to-play\/|games\/|play\/|embed\/)/u;
 
 export const PSEUDO_ALLOWLIST: readonly Allowed[] = [
   ...CATALOGUE.map((game) => ({
@@ -34,27 +46,41 @@ export const PSEUDO_ALLOWLIST: readonly Allowed[] = [
   ...Object.values(LOCALES).map((locale) => ({
     text: locale.name,
     reason: 'a language names itself in the menu, so somebody can find their own',
+    routes: /^\/settings\/$/u,
   })),
   { text: 'DuelBox', reason: 'the brand' },
   ...SEAT_KEYS.flatMap((keys) => [keys.move, keys.action]).map((cap) => ({
     text: cap,
     reason: 'a key cap on the controls table: what is printed on the key',
   })),
-  { text: 'Esc', reason: 'a key cap in the how-to-play prose, like the table above it' },
+  {
+    text: 'Esc',
+    reason: 'a key cap in the how-to-play prose, like the table above it',
+    routes: /^\/how-to-play\/$/u,
+  },
   ...Object.values(SEAT_CHARACTERS).map((name) => ({
     text: name,
     reason: 'a seat character is a name, and a chosen player name replaces it',
+    routes: SEATS,
   })),
   ...RUNTIME_DEPENDENCIES.flatMap((dependency) => [
-    { text: dependency.name, reason: 'a package name on /attribution/' },
-    { text: dependency.licence, reason: 'a licence identifier on /attribution/' },
+    { text: dependency.name, reason: 'a package name on /attribution/', routes: ATTRIBUTION },
+    {
+      text: dependency.licence,
+      reason: 'a licence identifier on /attribution/',
+      routes: ATTRIBUTION,
+    },
   ]),
   ...FONT_ATTRIBUTIONS.flatMap((font) => [
-    { text: font.family, reason: 'a font family name on /attribution/' },
-    { text: font.licence, reason: 'a licence name on /attribution/' },
-    { text: font.author, reason: 'an author name on /attribution/' },
+    { text: font.family, reason: 'a font family name on /attribution/', routes: ATTRIBUTION },
+    { text: font.licence, reason: 'a licence name on /attribution/', routes: ATTRIBUTION },
+    { text: font.author, reason: 'an author name on /attribution/', routes: ATTRIBUTION },
   ]),
-  { text: 'duelbox', reason: 'the storage-key prefix /privacy/ quotes in <code>' },
+  {
+    text: 'duelbox',
+    reason: 'the storage-key prefix /privacy/ quotes in <code>',
+    routes: /^\/privacy\/$/u,
+  },
   // The five landmark names. Each is an attribute in a server component — an attribute cannot
   // hold an element, so <T> cannot reach it, and t() needs a client boundary — and four of the
   // five are in the root layout, where a boundary is paid in all 108 play payloads (docs/i18n.md,
@@ -63,10 +89,15 @@ export const PSEUDO_ALLOWLIST: readonly Allowed[] = [
   { text: 'Main', reason: "the header nav's landmark name, in the root layout" },
   { text: 'Footer', reason: "the footer nav's landmark name, in the root layout" },
   { text: 'Game categories', reason: "the footer hubs nav's landmark name, in the root layout" },
-  { text: 'Breadcrumb', reason: "the crumb nav's landmark name on a game page and a hub page" },
+  {
+    text: 'Breadcrumb',
+    reason: "the crumb nav's landmark name on a game page and a hub page",
+    routes: /^\/games\//u,
+  },
   {
     text: 'src/styles/fonts/OFL.txt',
     reason: 'a path into this repository, quoted on /attribution/',
+    routes: ATTRIBUTION,
   },
 ];
 

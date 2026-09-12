@@ -166,7 +166,9 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
         client wrapper, or a server-side lookup, which is a change to the framework rather than
         to this page.
       */}
-      {/* eslint-disable-next-line duelbox/no-untranslated-text */}
+      {/* eslint-disable-next-line duelbox/no-untranslated-text -- the landmark's name is an
+          attribute, and an attribute in a server component cannot render an element; noted
+          in docs/i18n.md and named in e2e/pseudo-allowlist.ts. */}
       <nav className={styles.crumbs} aria-label="Breadcrumb">
         <Link href="/games/">
           <T id="All games" />

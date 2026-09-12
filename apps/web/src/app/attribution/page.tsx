@@ -87,11 +87,14 @@ export default function AttributionPage() {
         </h2>
         <p>
           <T
-            id="Three typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}."
+            id="{count} typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}."
             values={{
+              // Counted from the record the list below renders, so the sentence cannot say
+              // "three" over a list of five again (the two Noto faces came with #2576).
+              count: FONT_ATTRIBUTIONS.length,
               // A path into this repository, not copy: it is the same string in every
               // language, and a msgid a translator must leave alone is worse than none.
-              // eslint-disable-next-line duelbox/no-untranslated-text
+              // eslint-disable-next-line duelbox/no-untranslated-text -- a path, as above
               file: <code>src/styles/fonts/OFL.txt</code>,
             }}
           />

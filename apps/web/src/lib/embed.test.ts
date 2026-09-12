@@ -2,14 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PLAYABLE } from '../data/registry';
-import {
-  EMBED_BRAND,
-  embedBacklinkLabel,
-  embedBacklinkPath,
-  embedIframeSrcPath,
-  embedSnippet,
-  embedStaticParams,
-} from './embed';
+import { embedBacklinkPath, embedIframeSrcPath, embedSnippet, embedStaticParams } from './embed';
 
 const APP = new URL('../app/', import.meta.url);
 function read(relative: string): string {
@@ -27,7 +20,6 @@ describe('the embed helpers', () => {
   it('points the backlink at the game’s own page', () => {
     expect(embedBacklinkPath('chess')).toBe('/games/chess/');
     expect(embedIframeSrcPath('chess')).toBe('/embed/chess/');
-    expect(embedBacklinkLabel('Chess')).toBe(`Play Chess on ${EMBED_BRAND}`);
   });
 
   it('documents a snippet with an absolute src and an accessible title', () => {
@@ -48,7 +40,10 @@ describe('the embed route', () => {
   it('renders DuelBox branding and a backlink to the game page', () => {
     expect(page).toContain('Wordmark');
     expect(page).toContain('embedBacklinkPath');
-    expect(page).toContain('embedBacklinkLabel');
+    // One msgid for the sentence, with the name as a value: the visible text through <T>, the
+    // wordmark link's accessible name through the client EmbedBrandLink (#220).
+    expect(page).toContain('<T id="Play {name} on DuelBox" values={{ name: game.name }} />');
+    expect(page).toContain('<EmbedBrandLink');
     // The backlink and brand both open out to the game page, severing the opener.
     expect(page).toContain('rel="noopener noreferrer"');
     expect(page).toContain('target="_blank"');

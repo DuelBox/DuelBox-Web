@@ -111,7 +111,7 @@ export default function HowToPlayPage() {
             values={{
               // A key cap rather than a word: the sentence around it is translated and the
               // legend on the key is not, exactly as the table above leaves `SEAT_KEYS` alone.
-              // eslint-disable-next-line duelbox/no-untranslated-text
+              // eslint-disable-next-line duelbox/no-untranslated-text -- a key cap, as above
               key: <kbd>Esc</kbd>,
             }}
           />
