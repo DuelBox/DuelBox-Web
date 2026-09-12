@@ -22,6 +22,17 @@ const I18N_CLEAN = [
   'apps/web/src/lib/i18n/T.tsx',
   'apps/web/src/lib/i18n/provider.tsx',
   'apps/web/src/app/settings/page.tsx',
+  'apps/web/src/app/page.tsx',
+  'apps/web/src/app/games/page.tsx',
+  'apps/web/src/app/games/category/*/page.tsx',
+  'apps/web/src/app/not-found.tsx',
+  'apps/web/src/app/offline/page.tsx',
+  'apps/web/src/components/CatalogBrowser.tsx',
+  'apps/web/src/components/GameCard.tsx',
+  'apps/web/src/components/GameTile.tsx',
+  'apps/web/src/components/SiteFooter.tsx',
+  'apps/web/src/components/SiteHeader.tsx',
+  'apps/web/src/components/Wordmark.tsx',
 ];
 
 export default tseslint.config(

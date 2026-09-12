@@ -5,14 +5,250 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
+    'A game asks the network for one thing, itself. Once its page and its code are on the device, the rules, the bot and the scoring all run here, which is why a match never waits for anything. So a game you have already played is still yours to play now.':
+      '⟦Å ĝåɱé åšķš ŧĥé ñéŧŵöŕķ ƒöŕ öñé ŧĥïñĝ, ïŧšéłƒ. Öñçé ïŧš þåĝé åñð ïŧš çöðé åŕé öñ ŧĥé ðéṽïçé, ŧĥé ŕûłéš, ŧĥé ƀöŧ åñð ŧĥé šçöŕïñĝ åłł ŕûñ ĥéŕé, ŵĥïçĥ ïš ŵĥý å ɱåŧçĥ ñéṽéŕ ŵåïŧš ƒöŕ åñýŧĥïñĝ. Šö å ĝåɱé ýöû ĥåṽé åłŕéåðý þłåýéð ïš šŧïłł ýöûŕš ŧö þłåý ñöŵ. ························································································⟧',
+    'A round takes about 1 minute.': '⟦Å ŕöûñð ŧåķéš åƀöûŧ 1 ɱïñûŧé. ···········⟧',
+    'A round takes about 2 minutes.': '⟦Å ŕöûñð ŧåķéš åƀöûŧ 2 ɱïñûŧéš. ···········⟧',
+    'A round takes about 40 seconds.': '⟦Å ŕöûñð ŧåķéš åƀöûŧ 40 šéçöñðš. ···········⟧',
+    'A tournament is seven games drawn at random, one match each, beginning with the game you started it from. Whoever takes four has won it, and the line-up is written down on your device, so it survives closing the tab.':
+      '⟦Å ŧöûŕñåɱéñŧ ïš šéṽéñ ĝåɱéš ðŕåŵñ åŧ ŕåñðöɱ, öñé ɱåŧçĥ éåçĥ, ƀéĝïññïñĝ ŵïŧĥ ŧĥé ĝåɱé ýöû šŧåŕŧéð ïŧ ƒŕöɱ. Ŵĥöéṽéŕ ŧåķéš ƒöûŕ ĥåš ŵöñ ïŧ, åñð ŧĥé łïñé-ûþ ïš ŵŕïŧŧéñ ðöŵñ öñ ýöûŕ ðéṽïçé, šö ïŧ šûŕṽïṽéš çłöšïñĝ ŧĥé ŧåƀ. ············································································⟧',
+    'Add {name} to favourites': '⟦Åðð {name} ŧö ƒåṽöûŕïŧéš ·········⟧',
+    'All games': '⟦Åłł ĝåɱéš ····⟧',
+    'All {count} games': '⟦Åłł {count} ĝåɱéš ······⟧',
+    Arcade: '⟦Åŕçåðé ···⟧',
+    'Arcade games': '⟦Åŕçåðé ĝåɱéš ·····⟧',
+    Arena: '⟦Åŕéñå ··⟧',
+    'Arena games': '⟦Åŕéñå ĝåɱéš ····⟧',
+    Attribution: '⟦Åŧŧŕïƀûŧïöñ ····⟧',
+    Board: '⟦Ɓöåŕð ··⟧',
+    'Board games': '⟦Ɓöåŕð ĝåɱéš ····⟧',
+    'Both players see the same thing at the same instant, and the only question is who answers first. Math Duel shows one sum and four answers, Match Rush hides a single shared symbol in two sets of five, and Fruit Duel scores against anyone who cuts something that was not fruit. A wrong answer scores for the other seat in all three, so accuracy is worth more than speed, and no round is longer than ninety seconds.':
+      '⟦Ɓöŧĥ þłåýéŕš šéé ŧĥé šåɱé ŧĥïñĝ åŧ ŧĥé šåɱé ïñšŧåñŧ, åñð ŧĥé öñłý ɋûéšŧïöñ ïš ŵĥö åñšŵéŕš ƒïŕšŧ. Ṁåŧĥ Ðûéł šĥöŵš öñé šûɱ åñð ƒöûŕ åñšŵéŕš, Ṁåŧçĥ Ŕûšĥ ĥïðéš å šïñĝłé šĥåŕéð šýɱƀöł ïñ ŧŵö šéŧš öƒ ƒïṽé, åñð Ƒŕûïŧ Ðûéł šçöŕéš åĝåïñšŧ åñýöñé ŵĥö çûŧš šöɱéŧĥïñĝ ŧĥåŧ ŵåš ñöŧ ƒŕûïŧ. Å ŵŕöñĝ åñšŵéŕ šçöŕéš ƒöŕ ŧĥé öŧĥéŕ šéåŧ ïñ åłł ŧĥŕéé, šö åççûŕåçý ïš ŵöŕŧĥ ɱöŕé ŧĥåñ šþééð, åñð ñö ŕöûñð ïš łöñĝéŕ ŧĥåñ ñïñéŧý šéçöñðš. ·················································································································································⟧',
+    'Browse all {count} games': '⟦Ɓŕöŵšé åłł {count} ĝåɱéš ·········⟧',
+    'Browse by category': '⟦Ɓŕöŵšé ƀý çåŧéĝöŕý ·······⟧',
+    Categories: '⟦Çåŧéĝöŕïéš ····⟧',
+    Category: '⟦Çåŧéĝöŕý ···⟧',
+    Clear: '⟦Çłéåŕ ··⟧',
+    'Clear all': '⟦Çłéåŕ åłł ····⟧',
+    'Clear recently played': '⟦Çłéåŕ ŕéçéñŧłý þłåýéð ········⟧',
+    'Clear search': '⟦Çłéåŕ šéåŕçĥ ·····⟧',
+    DMCA: '⟦ÐṀÇÅ ··⟧',
+    Deduction: '⟦Ðéðûçŧïöñ ····⟧',
+    'Deduction games': '⟦Ðéðûçŧïöñ ĝåɱéš ······⟧',
+    Dice: '⟦Ðïçé ··⟧',
+    'Dice games': '⟦Ðïçé ĝåɱéš ····⟧',
+    'DuelBox is a collection of small games for two people sharing one screen, and nothing else. There is no feed, no levels to work through and no lobby full of strangers: two of you, one device, and a game that finishes soon enough to play another.':
+      '⟦ÐûéłƁöẋ ïš å çöłłéçŧïöñ öƒ šɱåłł ĝåɱéš ƒöŕ ŧŵö þéöþłé šĥåŕïñĝ öñé šçŕééñ, åñð ñöŧĥïñĝ éłšé. Ŧĥéŕé ïš ñö ƒééð, ñö łéṽéłš ŧö ŵöŕķ ŧĥŕöûĝĥ åñð ñö łöƀƀý ƒûłł öƒ šŧŕåñĝéŕš: ŧŵö öƒ ýöû, öñé ðéṽïçé, åñð å ĝåɱé ŧĥåŧ ƒïñïšĥéš šööñ éñöûĝĥ ŧö þłåý åñöŧĥéŕ. ······················································································⟧',
+    'DuelBox keeps a page on your device once you have opened it there, and this address is not one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived here.':
+      '⟦ÐûéłƁöẋ ķééþš å þåĝé öñ ýöûŕ ðéṽïçé öñçé ýöû ĥåṽé öþéñéð ïŧ ŧĥéŕé, åñð ŧĥïš åððŕéšš ïš ñöŧ öñé öƒ ŧĥéɱ ýéŧ. Ñöŧĥïñĝ ïš ƀŕöķéñ åñð ñöŧĥïñĝ öƒ ýöûŕš ïš łöšŧ — ŧĥé þåĝé ĥåš ñöŧ åŕŕïṽéð ĥéŕé. ··································································⟧',
+    'DuelBox — 108 games for two players. Runs in your browser; nothing to install.':
+      '⟦ÐûéłƁöẋ — 108 ĝåɱéš ƒöŕ ŧŵö þłåýéŕš. Ŕûñš ïñ ýöûŕ ƀŕöŵšéŕ; ñöŧĥïñĝ ŧö ïñšŧåłł. ····························⟧',
+    'Every category has a page of its own that says what its games have in common, names the ones worth starting with, and tells you how long a round of one takes. If you know the sort of game you want before you know which game, that is where to begin.':
+      '⟦Éṽéŕý çåŧéĝöŕý ĥåš å þåĝé öƒ ïŧš öŵñ ŧĥåŧ šåýš ŵĥåŧ ïŧš ĝåɱéš ĥåṽé ïñ çöɱɱöñ, ñåɱéš ŧĥé öñéš ŵöŕŧĥ šŧåŕŧïñĝ ŵïŧĥ, åñð ŧéłłš ýöû ĥöŵ łöñĝ å ŕöûñð öƒ öñé ŧåķéš. Ïƒ ýöû ķñöŵ ŧĥé šöŕŧ öƒ ĝåɱé ýöû ŵåñŧ ƀéƒöŕé ýöû ķñöŵ ŵĥïçĥ ĝåɱé, ŧĥåŧ ïš ŵĥéŕé ŧö ƀéĝïñ. ·······················································································⟧',
+    'Every game has a bot, at three strengths. It sees no more than you can see and moves no faster than a person could; what changes from one strength to the next is how far ahead it looks and how often it slips.':
+      '⟦Éṽéŕý ĝåɱé ĥåš å ƀöŧ, åŧ ŧĥŕéé šŧŕéñĝŧĥš. Ïŧ šééš ñö ɱöŕé ŧĥåñ ýöû çåñ šéé åñð ɱöṽéš ñö ƒåšŧéŕ ŧĥåñ å þéŕšöñ çöûłð; ŵĥåŧ çĥåñĝéš ƒŕöɱ öñé šŧŕéñĝŧĥ ŧö ŧĥé ñéẋŧ ïš ĥöŵ ƒåŕ åĥéåð ïŧ łööķš åñð ĥöŵ öƒŧéñ ïŧ šłïþš. ·········································································⟧',
+    'Every game in the catalogue offers the first two of these, and any game can start the third.':
+      '⟦Éṽéŕý ĝåɱé ïñ ŧĥé çåŧåłöĝûé öƒƒéŕš ŧĥé ƒïŕšŧ ŧŵö öƒ ŧĥéšé, åñð åñý ĝåɱé çåñ šŧåŕŧ ŧĥé ŧĥïŕð. ·································⟧',
+    'Every game is built to the same shape, which is what makes the second one easy. The countdown, the score, the pause, the result and the rematch all come from the site rather than from the game, so they sit in the same place and behave the same way whichever one you opened. Esc pauses, for either player, in all of them.':
+      '⟦Éṽéŕý ĝåɱé ïš ƀûïłŧ ŧö ŧĥé šåɱé šĥåþé, ŵĥïçĥ ïš ŵĥåŧ ɱåķéš ŧĥé šéçöñð öñé éåšý. Ŧĥé çöûñŧðöŵñ, ŧĥé šçöŕé, ŧĥé þåûšé, ŧĥé ŕéšûłŧ åñð ŧĥé ŕéɱåŧçĥ åłł çöɱé ƒŕöɱ ŧĥé šïŧé ŕåŧĥéŕ ŧĥåñ ƒŕöɱ ŧĥé ĝåɱé, šö ŧĥéý šïŧ ïñ ŧĥé šåɱé þłåçé åñð ƀéĥåṽé ŧĥé šåɱé ŵåý ŵĥïçĥéṽéŕ öñé ýöû öþéñéð. Éšç þåûšéš, ƒöŕ éïŧĥéŕ þłåýéŕ, ïñ åłł öƒ ŧĥéɱ. ················································································································⟧',
+    Favourites: '⟦Ƒåṽöûŕïŧéš ····⟧',
+    Games: '⟦Ĝåɱéš ··⟧',
+    'Games about a lane and the traffic in it. Both players run their own strip of road side by side and the same hazards arrive for both, so nobody is unlucky in a way the other was not: Road Dodge leaves exactly one lane open, Slot Cars charges two seconds for a corner taken too fast, and Wheelie makes speed itself the thing that tips you over. Nothing here runs beyond a minute and a quarter, and Crash It is settled in twenty seconds.':
+      '⟦Ĝåɱéš åƀöûŧ å łåñé åñð ŧĥé ŧŕåƒƒïç ïñ ïŧ. Ɓöŧĥ þłåýéŕš ŕûñ ŧĥéïŕ öŵñ šŧŕïþ öƒ ŕöåð šïðé ƀý šïðé åñð ŧĥé šåɱé ĥåžåŕðš åŕŕïṽé ƒöŕ ƀöŧĥ, šö ñöƀöðý ïš ûñłûçķý ïñ å ŵåý ŧĥé öŧĥéŕ ŵåš ñöŧ: Ŕöåð Ðöðĝé łéåṽéš éẋåçŧłý öñé łåñé öþéñ, Šłöŧ Çåŕš çĥåŕĝéš ŧŵö šéçöñðš ƒöŕ å çöŕñéŕ ŧåķéñ ŧöö ƒåšŧ, åñð Ŵĥééłïé ɱåķéš šþééð ïŧšéłƒ ŧĥé ŧĥïñĝ ŧĥåŧ ŧïþš ýöû öṽéŕ. Ñöŧĥïñĝ ĥéŕé ŕûñš ƀéýöñð å ɱïñûŧé åñð å ɋûåŕŧéŕ, åñð Çŕåšĥ Ïŧ ïš šéŧŧłéð ïñ ŧŵéñŧý šéçöñðš. ·························································································································································⟧',
+    'Games about aiming rather than about being quick. Each one asks for a line and then a strength — the draw on the bow in Archery, the angle and the powder in Cannon Duel — and the shot then goes where it was sent while a crosswind or a moving target argues with it. Both seats fire under the same conditions, and most rounds take ninety seconds, with Tanks the quick one.':
+      '⟦Ĝåɱéš åƀöûŧ åïɱïñĝ ŕåŧĥéŕ ŧĥåñ åƀöûŧ ƀéïñĝ ɋûïçķ. Éåçĥ öñé åšķš ƒöŕ å łïñé åñð ŧĥéñ å šŧŕéñĝŧĥ — ŧĥé ðŕåŵ öñ ŧĥé ƀöŵ ïñ Åŕçĥéŕý, ŧĥé åñĝłé åñð ŧĥé þöŵðéŕ ïñ Çåññöñ Ðûéł — åñð ŧĥé šĥöŧ ŧĥéñ ĝöéš ŵĥéŕé ïŧ ŵåš šéñŧ ŵĥïłé å çŕöššŵïñð öŕ å ɱöṽïñĝ ŧåŕĝéŧ åŕĝûéš ŵïŧĥ ïŧ. Ɓöŧĥ šéåŧš ƒïŕé ûñðéŕ ŧĥé šåɱé çöñðïŧïöñš, åñð ɱöšŧ ŕöûñðš ŧåķé ñïñéŧý šéçöñðš, ŵïŧĥ Ŧåñķš ŧĥé ɋûïçķ öñé. ··································································································································⟧',
+    'Games about holding something in your head a few seconds longer than the person opposite. Memory Match is the sixteen-card table, where a matched pair keeps the turn, so somebody who remembers can clear it in a single visit; Pizza Memory deals an order, hides it, and asks for it back from the rail in front of you. Either one is done in about a minute.':
+      '⟦Ĝåɱéš åƀöûŧ ĥöłðïñĝ šöɱéŧĥïñĝ ïñ ýöûŕ ĥéåð å ƒéŵ šéçöñðš łöñĝéŕ ŧĥåñ ŧĥé þéŕšöñ öþþöšïŧé. Ṁéɱöŕý Ṁåŧçĥ ïš ŧĥé šïẋŧééñ-çåŕð ŧåƀłé, ŵĥéŕé å ɱåŧçĥéð þåïŕ ķééþš ŧĥé ŧûŕñ, šö šöɱéƀöðý ŵĥö ŕéɱéɱƀéŕš çåñ çłéåŕ ïŧ ïñ å šïñĝłé ṽïšïŧ; Þïžžå Ṁéɱöŕý ðéåłš åñ öŕðéŕ, ĥïðéš ïŧ, åñð åšķš ƒöŕ ïŧ ƀåçķ ƒŕöɱ ŧĥé ŕåïł ïñ ƒŕöñŧ öƒ ýöû. Éïŧĥéŕ öñé ïš ðöñé ïñ åƀöûŧ å ɱïñûŧé. ····························································································································⟧',
+    'Games about timing a jump. Each player gets a strip of their own — a sky in Happy Birds, a lane in Gravity Run, a perch in Chicken Jump — and the gap or the block arrives for both at the same moment, so the loser is whoever ran out of timing first. About a minute each, and Stampede is shorter.':
+      '⟦Ĝåɱéš åƀöûŧ ŧïɱïñĝ å ĵûɱþ. Éåçĥ þłåýéŕ ĝéŧš å šŧŕïþ öƒ ŧĥéïŕ öŵñ — å šķý ïñ Ĥåþþý Ɓïŕðš, å łåñé ïñ Ĝŕåṽïŧý Ŕûñ, å þéŕçĥ ïñ Çĥïçķéñ Ĵûɱþ — åñð ŧĥé ĝåþ öŕ ŧĥé ƀłöçķ åŕŕïṽéš ƒöŕ ƀöŧĥ åŧ ŧĥé šåɱé ɱöɱéñŧ, šö ŧĥé łöšéŕ ïš ŵĥöéṽéŕ ŕåñ öûŧ öƒ ŧïɱïñĝ ƒïŕšŧ. Åƀöûŧ å ɱïñûŧé éåçĥ, åñð Šŧåɱþéðé ïš šĥöŕŧéŕ. ·······································································································⟧',
+    'Games that take their rules from a real sport and shrink the pitch to one screen. Air Hockey and Tennis run in real time with both halves moving at once; Bowling and Darts take turns instead, and the board turns to face whoever is to play. Most finish inside two minutes, and Pool is the long one at about five.':
+      '⟦Ĝåɱéš ŧĥåŧ ŧåķé ŧĥéïŕ ŕûłéš ƒŕöɱ å ŕéåł šþöŕŧ åñð šĥŕïñķ ŧĥé þïŧçĥ ŧö öñé šçŕééñ. Åïŕ Ĥöçķéý åñð Ŧéññïš ŕûñ ïñ ŕéåł ŧïɱé ŵïŧĥ ƀöŧĥ ĥåłṽéš ɱöṽïñĝ åŧ öñçé; Ɓöŵłïñĝ åñð Ðåŕŧš ŧåķé ŧûŕñš ïñšŧéåð, åñð ŧĥé ƀöåŕð ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö þłåý. Ṁöšŧ ƒïñïšĥ ïñšïðé ŧŵö ɱïñûŧéš, åñð Þööł ïš ŧĥé łöñĝ öñé åŧ åƀöûŧ ƒïṽé. ·············································································································⟧',
+    'Games where the floor is the opponent. Robot Arena puts both robots on a disc that sweeps, fires and drops things on them; Spike Attacks sends a volley down a row of standing stones that crack a little further with every blow, so the cover runs out while the volleys do not. Whoever is still standing takes the round, three rounds take the match, and a round is about a minute.':
+      '⟦Ĝåɱéš ŵĥéŕé ŧĥé ƒłööŕ ïš ŧĥé öþþöñéñŧ. Ŕöƀöŧ Åŕéñå þûŧš ƀöŧĥ ŕöƀöŧš öñ å ðïšç ŧĥåŧ šŵééþš, ƒïŕéš åñð ðŕöþš ŧĥïñĝš öñ ŧĥéɱ; Šþïķé Åŧŧåçķš šéñðš å ṽöłłéý ðöŵñ å ŕöŵ öƒ šŧåñðïñĝ šŧöñéš ŧĥåŧ çŕåçķ å łïŧŧłé ƒûŕŧĥéŕ ŵïŧĥ éṽéŕý ƀłöŵ, šö ŧĥé çöṽéŕ ŕûñš öûŧ ŵĥïłé ŧĥé ṽöłłéýš ðö ñöŧ. Ŵĥöéṽéŕ ïš šŧïłł šŧåñðïñĝ ŧåķéš ŧĥé ŕöûñð, ŧĥŕéé ŕöûñðš ŧåķé ŧĥé ɱåŧçĥ, åñð å ŕöûñð ïš åƀöûŧ å ɱïñûŧé. ····································································································································⟧',
+    'How to play': '⟦Ĥöŵ ŧö þłåý ····⟧',
+    'It has not arrived here yet, like the one you just asked for.':
+      '⟦Ïŧ ĥåš ñöŧ åŕŕïṽéð ĥéŕé ýéŧ, łïķé ŧĥé öñé ýöû ĵûšŧ åšķéð ƒöŕ. ······················⟧',
+    'It is here. Open it and play.': '⟦Ïŧ ïš ĥéŕé. Öþéñ ïŧ åñð þłåý. ···········⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
+    Memory: '⟦Ṁéɱöŕý ···⟧',
+    'Memory games': '⟦Ṁéɱöŕý ĝåɱéš ·····⟧',
+    'Memory games for two players': '⟦Ṁéɱöŕý ĝåɱéš ƒöŕ ŧŵö þłåýéŕš ··········⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
+    Name: '⟦Ñåɱé ··⟧',
+    'Needs a connection': '⟦Ñééðš å çöññéçŧïöñ ·······⟧',
+    'No download · No account · Runs on your device':
+      '⟦Ñö ðöŵñłöåð · Ñö åççöûñŧ · Ŕûñš öñ ýöûŕ ðéṽïçé ·················⟧',
+    'No games match “{query}”': '⟦Ñö ĝåɱéš ɱåŧçĥ “{query}” ·········⟧',
+    'Not on this device': '⟦Ñöŧ öñ ŧĥïš ðéṽïçé ·······⟧',
+    'Not saved to this device': '⟦Ñöŧ šåṽéð ŧö ŧĥïš ðéṽïçé ·········⟧',
+    'Nothing needs setting up. Pick a game and it opens, or read the guide first — it is one page, and it covers the seats, the keys, and what to do when there is only one of you.':
+      '⟦Ñöŧĥïñĝ ñééðš šéŧŧïñĝ ûþ. Þïçķ å ĝåɱé åñð ïŧ öþéñš, öŕ ŕéåð ŧĥé ĝûïðé ƒïŕšŧ — ïŧ ïš öñé þåĝé, åñð ïŧ çöṽéŕš ŧĥé šéåŧš, ŧĥé ķéýš, åñð ŵĥåŧ ŧö ðö ŵĥéñ ŧĥéŕé ïš öñłý öñé öƒ ýöû. ·····························································⟧',
+    'Nothing to install, nothing to sign up for':
+      '⟦Ñöŧĥïñĝ ŧö ïñšŧåłł, ñöŧĥïñĝ ŧö šïĝñ ûþ ƒöŕ ···············⟧',
+    'Nothing you do here is sent anywhere, because there is nowhere to send it. The games, the bots and the physics all run in your own browser, and there is no advertising, no analytics and not one cookie.':
+      '⟦Ñöŧĥïñĝ ýöû ðö ĥéŕé ïš šéñŧ åñýŵĥéŕé, ƀéçåûšé ŧĥéŕé ïš ñöŵĥéŕé ŧö šéñð ïŧ. Ŧĥé ĝåɱéš, ŧĥé ƀöŧš åñð ŧĥé þĥýšïçš åłł ŕûñ ïñ ýöûŕ öŵñ ƀŕöŵšéŕ, åñð ŧĥéŕé ïš ñö åðṽéŕŧïšïñĝ, ñö åñåłýŧïçš åñð ñöŧ öñé çööķïé. ·······································································⟧',
+    'On this device': '⟦Öñ ŧĥïš ðéṽïçé ·····⟧',
+    'One floor, two bodies, and no turns to hide behind. Everything is decided by where you stand and how hard you arrive: Sumo Push wants the other wrestler past the edge of the ring, Spin War wants their top out of the dish, and King of the Yard wants the crown while making whoever wears it the one being chased. Nothing here runs longer than ninety seconds.':
+      '⟦Öñé ƒłööŕ, ŧŵö ƀöðïéš, åñð ñö ŧûŕñš ŧö ĥïðé ƀéĥïñð. Éṽéŕýŧĥïñĝ ïš ðéçïðéð ƀý ŵĥéŕé ýöû šŧåñð åñð ĥöŵ ĥåŕð ýöû åŕŕïṽé: Šûɱö Þûšĥ ŵåñŧš ŧĥé öŧĥéŕ ŵŕéšŧłéŕ þåšŧ ŧĥé éðĝé öƒ ŧĥé ŕïñĝ, Šþïñ Ŵåŕ ŵåñŧš ŧĥéïŕ ŧöþ öûŧ öƒ ŧĥé ðïšĥ, åñð Ķïñĝ öƒ ŧĥé Ýåŕð ŵåñŧš ŧĥé çŕöŵñ ŵĥïłé ɱåķïñĝ ŵĥöéṽéŕ ŵéåŕš ïŧ ŧĥé öñé ƀéïñĝ çĥåšéð. Ñöŧĥïñĝ ĥéŕé ŕûñš łöñĝéŕ ŧĥåñ ñïñéŧý šéçöñðš. ·····························································································································⟧',
+    'One game from each of twelve categories, so what you meet first is twelve different sorts of game rather than twelve versions of one.':
+      '⟦Öñé ĝåɱé ƒŕöɱ éåçĥ öƒ ŧŵéłṽé çåŧéĝöŕïéš, šö ŵĥåŧ ýöû ɱééŧ ƒïŕšŧ ïš ŧŵéłṽé ðïƒƒéŕéñŧ šöŕŧš öƒ ĝåɱé ŕåŧĥéŕ ŧĥåñ ŧŵéłṽé ṽéŕšïöñš öƒ öñé. ···············································⟧',
+    'One game, and it is about asking the right question. Guess Who deals thirty characters and gives each player a different one to find, and a turn goes either on a question that halves the field or on naming a character outright — so guessing early is a real option and usually a poor one. Best of three, about a minute a game.':
+      '⟦Öñé ĝåɱé, åñð ïŧ ïš åƀöûŧ åšķïñĝ ŧĥé ŕïĝĥŧ ɋûéšŧïöñ. Ĝûéšš Ŵĥö ðéåłš ŧĥïŕŧý çĥåŕåçŧéŕš åñð ĝïṽéš éåçĥ þłåýéŕ å ðïƒƒéŕéñŧ öñé ŧö ƒïñð, åñð å ŧûŕñ ĝöéš éïŧĥéŕ öñ å ɋûéšŧïöñ ŧĥåŧ ĥåłṽéš ŧĥé ƒïéłð öŕ öñ ñåɱïñĝ å çĥåŕåçŧéŕ öûŧŕïĝĥŧ — šö ĝûéššïñĝ éåŕłý ïš å ŕéåł öþŧïöñ åñð ûšûåłłý å þööŕ öñé. Ɓéšŧ öƒ ŧĥŕéé, åƀöûŧ å ɱïñûŧé å ĝåɱé. ··················································································································⟧',
+    'One game, and its whole idea is that neither role is assigned. Guard and Thief keeps the coins you can spend in the other player’s vault, so the moment you leave your own floor you are the thief and they are the guard — and you still have to come home to bank what you carried. About a minute, and a good part of it goes on deciding whether to set off at all.':
+      '⟦Öñé ĝåɱé, åñð ïŧš ŵĥöłé ïðéå ïš ŧĥåŧ ñéïŧĥéŕ ŕöłé ïš åššïĝñéð. Ĝûåŕð åñð Ŧĥïéƒ ķééþš ŧĥé çöïñš ýöû çåñ šþéñð ïñ ŧĥé öŧĥéŕ þłåýéŕ’š ṽåûłŧ, šö ŧĥé ɱöɱéñŧ ýöû łéåṽé ýöûŕ öŵñ ƒłööŕ ýöû åŕé ŧĥé ŧĥïéƒ åñð ŧĥéý åŕé ŧĥé ĝûåŕð — åñð ýöû šŧïłł ĥåṽé ŧö çöɱé ĥöɱé ŧö ƀåñķ ŵĥåŧ ýöû çåŕŕïéð. Åƀöûŧ å ɱïñûŧé, åñð å ĝööð þåŕŧ öƒ ïŧ ĝöéš öñ ðéçïðïñĝ ŵĥéŧĥéŕ ŧö šéŧ öƒƒ åŧ åłł. ······························································································································⟧',
+    'One game, and the only one in the catalogue timed by a track rather than by a clock. Disco Battle runs the same line of notes at both players at once, each note landing on that player’s own platform, and pays three for dead centre and one for near enough. A note let go costs you, and so does answering a note that was never there, all inside the forty seconds the song lasts.':
+      '⟦Öñé ĝåɱé, åñð ŧĥé öñłý öñé ïñ ŧĥé çåŧåłöĝûé ŧïɱéð ƀý å ŧŕåçķ ŕåŧĥéŕ ŧĥåñ ƀý å çłöçķ. Ðïšçö Ɓåŧŧłé ŕûñš ŧĥé šåɱé łïñé öƒ ñöŧéš åŧ ƀöŧĥ þłåýéŕš åŧ öñçé, éåçĥ ñöŧé łåñðïñĝ öñ ŧĥåŧ þłåýéŕ’š öŵñ þłåŧƒöŕɱ, åñð þåýš ŧĥŕéé ƒöŕ ðéåð çéñŧŕé åñð öñé ƒöŕ ñéåŕ éñöûĝĥ. Å ñöŧé łéŧ ĝö çöšŧš ýöû, åñð šö ðöéš åñšŵéŕïñĝ å ñöŧé ŧĥåŧ ŵåš ñéṽéŕ ŧĥéŕé, åłł ïñšïðé ŧĥé ƒöŕŧý šéçöñðš ŧĥé šöñĝ łåšŧš. ····································································································································⟧',
+    'One game, in a category of its own because it is a race that leaves a wall behind it. Snake Clash puts two snakes in one arena where you can steer but cannot stop and cannot reverse, so the trail you have already laid is as dangerous to you as anything the other snake does. Ten pellets wins, inside two minutes.':
+      '⟦Öñé ĝåɱé, ïñ å çåŧéĝöŕý öƒ ïŧš öŵñ ƀéçåûšé ïŧ ïš å ŕåçé ŧĥåŧ łéåṽéš å ŵåłł ƀéĥïñð ïŧ. Šñåķé Çłåšĥ þûŧš ŧŵö šñåķéš ïñ öñé åŕéñå ŵĥéŕé ýöû çåñ šŧééŕ ƀûŧ çåññöŧ šŧöþ åñð çåññöŧ ŕéṽéŕšé, šö ŧĥé ŧŕåïł ýöû ĥåṽé åłŕéåðý łåïð ïš åš ðåñĝéŕöûš ŧö ýöû åš åñýŧĥïñĝ ŧĥé öŧĥéŕ šñåķé ðöéš. Ŧéñ þéłłéŧš ŵïñš, ïñšïðé ŧŵö ɱïñûŧéš. ··············································································································⟧',
+    'One limit, stated rather than buried. Your browser keeps a copy of the site and of each game after you open it, so a game you have played before opens and plays with no connection at all — but a game you have never opened is not on the device, and needs one. The catalogue marks which games are here, in words.':
+      '⟦Öñé łïɱïŧ, šŧåŧéð ŕåŧĥéŕ ŧĥåñ ƀûŕïéð. Ýöûŕ ƀŕöŵšéŕ ķééþš å çöþý öƒ ŧĥé šïŧé åñð öƒ éåçĥ ĝåɱé åƒŧéŕ ýöû öþéñ ïŧ, šö å ĝåɱé ýöû ĥåṽé þłåýéð ƀéƒöŕé öþéñš åñð þłåýš ŵïŧĥ ñö çöññéçŧïöñ åŧ åłł — ƀûŧ å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ öñ ŧĥé ðéṽïçé, åñð ñééðš öñé. Ŧĥé çåŧåłöĝûé ɱåŕķš ŵĥïçĥ ĝåɱéš åŕé ĥéŕé, ïñ ŵöŕðš. ·············································································································⟧',
+    'One of you, and a bot': '⟦Öñé öƒ ýöû, åñð å ƀöŧ ········⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
+    'Opening a game once, while you have a connection, is enough: this device keeps it for next time.':
+      '⟦Öþéñïñĝ å ĝåɱé öñçé, ŵĥïłé ýöû ĥåṽé å çöññéçŧïöñ, ïš éñöûĝĥ: ŧĥïš ðéṽïçé ķééþš ïŧ ƒöŕ ñéẋŧ ŧïɱé. ··································⟧',
+    Party: '⟦Þåŕŧý ··⟧',
+    'Party games': '⟦Þåŕŧý ĝåɱéš ····⟧',
+    'Party games for two players': '⟦Þåŕŧý ĝåɱéš ƒöŕ ŧŵö þłåýéŕš ··········⟧',
+    Platform: '⟦Þłåŧƒöŕɱ ···⟧',
+    'Platform games': '⟦Þłåŧƒöŕɱ ĝåɱéš ·····⟧',
+    Play: '⟦Þłåý ··⟧',
+    'Play now': '⟦Þłåý ñöŵ ···⟧',
+    Privacy: '⟦Þŕïṽåçý ···⟧',
+    'Put the phone or the laptop down between you and take a side each. A touch belongs to the side it began on even when a finger crosses the middle, and in games played turn by turn the board turns round so that whoever is to move reads it upright.':
+      '⟦Þûŧ ŧĥé þĥöñé öŕ ŧĥé łåþŧöþ ðöŵñ ƀéŧŵééñ ýöû åñð ŧåķé å šïðé éåçĥ. Å ŧöûçĥ ƀéłöñĝš ŧö ŧĥé šïðé ïŧ ƀéĝåñ öñ éṽéñ ŵĥéñ å ƒïñĝéŕ çŕöššéš ŧĥé ɱïððłé, åñð ïñ ĝåɱéš þłåýéð ŧûŕñ ƀý ŧûŕñ ŧĥé ƀöåŕð ŧûŕñš ŕöûñð šö ŧĥåŧ ŵĥöéṽéŕ ïš ŧö ɱöṽé ŕéåðš ïŧ ûþŕïĝĥŧ. ······················································································⟧',
+    Puzzle: '⟦Þûžžłé ···⟧',
+    'Puzzle games': '⟦Þûžžłé ĝåɱéš ·····⟧',
+    'Puzzles built for one person, dealt once and then played by two. Solitaire, Sudoku and Sliding Puzzle put a single board between both seats and alternate the moves, so a card sent to a foundation or a square answered correctly is a square the other player no longer has. Most take ninety seconds; Maze Paint is the short one at forty-five.':
+      '⟦Þûžžłéš ƀûïłŧ ƒöŕ öñé þéŕšöñ, ðéåłŧ öñçé åñð ŧĥéñ þłåýéð ƀý ŧŵö. Šöłïŧåïŕé, Šûðöķû åñð Šłïðïñĝ Þûžžłé þûŧ å šïñĝłé ƀöåŕð ƀéŧŵééñ ƀöŧĥ šéåŧš åñð åłŧéŕñåŧé ŧĥé ɱöṽéš, šö å çåŕð šéñŧ ŧö å ƒöûñðåŧïöñ öŕ å šɋûåŕé åñšŵéŕéð çöŕŕéçŧłý ïš å šɋûåŕé ŧĥé öŧĥéŕ þłåýéŕ ñö łöñĝéŕ ĥåš. Ṁöšŧ ŧåķé ñïñéŧý šéçöñðš; Ṁåžé Þåïñŧ ïš ŧĥé šĥöŕŧ öñé åŧ ƒöŕŧý-ƒïṽé. ·······················································································································⟧',
+    Racing: '⟦Ŕåçïñĝ ···⟧',
+    'Racing & Trails': '⟦Ŕåçïñĝ & Ŧŕåïłš ······⟧',
+    'Racing & Trails games': '⟦Ŕåçïñĝ & Ŧŕåïłš ĝåɱéš ········⟧',
+    'Racing and trail games for two': '⟦Ŕåçïñĝ åñð ŧŕåïł ĝåɱéš ƒöŕ ŧŵö ···········⟧',
+    'Racing games': '⟦Ŕåçïñĝ ĝåɱéš ·····⟧',
+    Reaction: '⟦Ŕéåçŧïöñ ···⟧',
+    'Reaction games': '⟦Ŕéåçŧïöñ ĝåɱéš ·····⟧',
+    'Reaction games for two players': '⟦Ŕéåçŧïöñ ĝåɱéš ƒöŕ ŧŵö þłåýéŕš ···········⟧',
+    'Recently played': '⟦Ŕéçéñŧłý þłåýéð ······⟧',
+    'Remove {name} from favourites': '⟦Ŕéɱöṽé {name} ƒŕöɱ ƒåṽöûŕïŧéš ···········⟧',
+    'Report a bug': '⟦Ŕéþöŕŧ å ƀûĝ ·····⟧',
+    Rhythm: '⟦Ŕĥýŧĥɱ ···⟧',
+    'Rhythm games': '⟦Ŕĥýŧĥɱ ĝåɱéš ·····⟧',
+    'Round length': '⟦Ŕöûñð łéñĝŧĥ ·····⟧',
+    'Rounds run from about 1 minute to about 5 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 1 ɱïñûŧé ŧö åƀöûŧ 5 ɱïñûŧéš. ··················⟧',
+    'Rounds run from about 20 seconds to about 1 minute.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 20 šéçöñðš ŧö åƀöûŧ 1 ɱïñûŧé. ··················⟧',
+    'Rounds run from about 20 seconds to about 7 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 20 šéçöñðš ŧö åƀöûŧ 7 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 3 minutes to about 7 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 3 ɱïñûŧéš ŧö åƀöûŧ 7 ɱïñûŧéš. ··················⟧',
+    'Rounds run from about 30 seconds to about 2 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 30 šéçöñðš ŧö åƀöûŧ 2 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 35 seconds to about 3 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 35 šéçöñðš ŧö åƀöûŧ 3 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 38 seconds to about 1 minute.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 38 šéçöñðš ŧö åƀöûŧ 1 ɱïñûŧé. ··················⟧',
+    'Rounds run from about 40 seconds to about 1 minute.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 40 šéçöñðš ŧö åƀöûŧ 1 ɱïñûŧé. ··················⟧',
+    'Rounds run from about 40 seconds to about 2 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 40 šéçöñðš ŧö åƀöûŧ 2 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 40 seconds to about 5 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 40 šéçöñðš ŧö åƀöûŧ 5 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 40 seconds to about 55 seconds.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 40 šéçöñðš ŧö åƀöûŧ 55 šéçöñðš. ···················⟧',
+    'Rounds run from about 45 seconds to about 2 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 45 šéçöñðš ŧö åƀöûŧ 2 ɱïñûŧéš. ···················⟧',
+    'Rounds run from about 45 seconds to about 3 minutes.':
+      '⟦Ŕöûñðš ŕûñ ƒŕöɱ åƀöûŧ 45 šéçöñðš ŧö åƀöûŧ 3 ɱïñûŧéš. ···················⟧',
+    'Saved on this device': '⟦Šåṽéð öñ ŧĥïš ðéṽïçé ·······⟧',
+    'Search by name or category': '⟦Šéåŕçĥ ƀý ñåɱé öŕ çåŧéĝöŕý ··········⟧',
+    'Search games': '⟦Šéåŕçĥ ĝåɱéš ·····⟧',
+    'See all {count} →': '⟦Šéé åłł {count} → ······⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
+    'Seven games, one winner': '⟦Šéṽéñ ĝåɱéš, öñé ŵïññéŕ ·········⟧',
+    'Share one phone or one laptop, two of you either side of the screen. No opponent around? {seat} will take the other seat.':
+      '⟦Šĥåŕé öñé þĥöñé öŕ öñé łåþŧöþ, ŧŵö öƒ ýöû éïŧĥéŕ šïðé öƒ ŧĥé šçŕééñ. Ñö öþþöñéñŧ åŕöûñð? {seat} ŵïłł ŧåķé ŧĥé öŧĥéŕ šéåŧ. ···········································⟧',
+    Shooter: '⟦Šĥööŧéŕ ···⟧',
+    'Shooter games': '⟦Šĥööŧéŕ ĝåɱéš ·····⟧',
+    Solo: '⟦Šöłö ··⟧',
+    'Solo games': '⟦Šöłö ĝåɱéš ····⟧',
+    'Solo games played as a duel': '⟦Šöłö ĝåɱéš þłåýéð åš å ðûéł ··········⟧',
+    'Sort by': '⟦Šöŕŧ ƀý ···⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
+    Sports: '⟦Šþöŕŧš ···⟧',
+    'Sports games': '⟦Šþöŕŧš ĝåɱéš ·····⟧',
+    'Start a game': '⟦Šŧåŕŧ å ĝåɱé ·····⟧',
+    'Start playing': '⟦Šŧåŕŧ þłåýïñĝ ·····⟧',
+    Stealth: '⟦Šŧéåłŧĥ ···⟧',
+    'Stealth games': '⟦Šŧéåłŧĥ ĝåɱéš ·····⟧',
+    Survival: '⟦Šûŕṽïṽåł ···⟧',
+    'Survival games': '⟦Šûŕṽïṽåł ĝåɱéš ·····⟧',
+    'Terms of use': '⟦Ŧéŕɱš öƒ ûšé ·····⟧',
+    'That page is not here': '⟦Ŧĥåŧ þåĝé ïš ñöŧ ĥéŕé ········⟧',
+    'The address may have a typo in it, or the page may have moved since something linked to it. Nothing is lost — every game in the catalogue is one press away.':
+      '⟦Ŧĥé åððŕéšš ɱåý ĥåṽé å ŧýþö ïñ ïŧ, öŕ ŧĥé þåĝé ɱåý ĥåṽé ɱöṽéð šïñçé šöɱéŧĥïñĝ łïñķéð ŧö ïŧ. Ñöŧĥïñĝ ïš łöšŧ — éṽéŕý ĝåɱé ïñ ŧĥé çåŧåłöĝûé ïš öñé þŕéšš åŵåý. ·······················································⟧',
+    'The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:':
+      '⟦Ŧĥé çåŧåłöĝûé ķñöŵš ŵĥïçĥ ïš ŵĥïçĥ. Ŵĥïłé ýöû åŕé åŵåý ƒŕöɱ å çöññéçŧïöñ ïŧ ɱåŕķš éṽéŕý ĝåɱé ïñ ŧĥé łïšŧ åš öñé öƒ ŧŵö ŧĥïñĝš: ·············································⟧',
+    'The games to reach for when somebody has half a minute and no appetite for a rulebook. One idea each, learned by playing it: bank more of the drifting notes in Money Grabber, take the pond before the other frog does in Frogs Fight, own more of the floor in Paint Fight. Most are over inside a minute, and none of them runs past three.':
+      '⟦Ŧĥé ĝåɱéš ŧö ŕéåçĥ ƒöŕ ŵĥéñ šöɱéƀöðý ĥåš ĥåłƒ å ɱïñûŧé åñð ñö åþþéŧïŧé ƒöŕ å ŕûłéƀööķ. Öñé ïðéå éåçĥ, łéåŕñéð ƀý þłåýïñĝ ïŧ: ƀåñķ ɱöŕé öƒ ŧĥé ðŕïƒŧïñĝ ñöŧéš ïñ Ṁöñéý Ĝŕåƀƀéŕ, ŧåķé ŧĥé þöñð ƀéƒöŕé ŧĥé öŧĥéŕ ƒŕöĝ ðöéš ïñ Ƒŕöĝš Ƒïĝĥŧ, öŵñ ɱöŕé öƒ ŧĥé ƒłööŕ ïñ Þåïñŧ Ƒïĝĥŧ. Ṁöšŧ åŕé öṽéŕ ïñšïðé å ɱïñûŧé, åñð ñöñé öƒ ŧĥéɱ ŕûñš þåšŧ ŧĥŕéé. ·····················································································································⟧',
+    'The roll is all of the luck, and the decision is what to spend it on. Dice Yatzy gives you five dice, three rolls and thirteen boxes that each take exactly one hand, so the skill is in spending a bad roll cheaply; Shut the Box is the shorter one, closing numbered tiles until nothing adds up any more. Yatzy is the longest game in the catalogue at about seven minutes.':
+      '⟦Ŧĥé ŕöłł ïš åłł öƒ ŧĥé łûçķ, åñð ŧĥé ðéçïšïöñ ïš ŵĥåŧ ŧö šþéñð ïŧ öñ. Ðïçé Ýåŧžý ĝïṽéš ýöû ƒïṽé ðïçé, ŧĥŕéé ŕöłłš åñð ŧĥïŕŧééñ ƀöẋéš ŧĥåŧ éåçĥ ŧåķé éẋåçŧłý öñé ĥåñð, šö ŧĥé šķïłł ïš ïñ šþéñðïñĝ å ƀåð ŕöłł çĥéåþłý; Šĥûŧ ŧĥé Ɓöẋ ïš ŧĥé šĥöŕŧéŕ öñé, çłöšïñĝ ñûɱƀéŕéð ŧïłéš ûñŧïł ñöŧĥïñĝ åððš ûþ åñý ɱöŕé. Ýåŧžý ïš ŧĥé łöñĝéšŧ ĝåɱé ïñ ŧĥé çåŧåłöĝûé åŧ åƀöûŧ šéṽéñ ɱïñûŧéš. ·································································································································⟧',
+    'There is no app to download and no store to visit. A link opens a game, and the person you hand the device to needs nothing at all: no account, no invitation, no name typed in.':
+      '⟦Ŧĥéŕé ïš ñö åþþ ŧö ðöŵñłöåð åñð ñö šŧöŕé ŧö ṽïšïŧ. Å łïñķ öþéñš å ĝåɱé, åñð ŧĥé þéŕšöñ ýöû ĥåñð ŧĥé ðéṽïçé ŧö ñééðš ñöŧĥïñĝ åŧ åłł: ñö åççöûñŧ, ñö ïñṽïŧåŧïöñ, ñö ñåɱé ŧýþéð ïñ. ······························································⟧',
+    'Three ways to play': '⟦Ŧĥŕéé ŵåýš ŧö þłåý ·······⟧',
+    'Try one of these instead.': '⟦Ŧŕý öñé öƒ ŧĥéšé ïñšŧéåð. ·········⟧',
+    'Turn-based games with a board between the two players, so the screen turns a hundred and eighty degrees each turn and both people read it upright from their own side of the device. Chess, Checkers and Backgammon are here in full, castling and bearing off included, alongside shorter grids like Reversi and Dots and Boxes. Chess is budgeted at five minutes; Tic Tac Toe is a minute.':
+      '⟦Ŧûŕñ-ƀåšéð ĝåɱéš ŵïŧĥ å ƀöåŕð ƀéŧŵééñ ŧĥé ŧŵö þłåýéŕš, šö ŧĥé šçŕééñ ŧûŕñš å ĥûñðŕéð åñð éïĝĥŧý ðéĝŕééš éåçĥ ŧûŕñ åñð ƀöŧĥ þéöþłé ŕéåð ïŧ ûþŕïĝĥŧ ƒŕöɱ ŧĥéïŕ öŵñ šïðé öƒ ŧĥé ðéṽïçé. Çĥéšš, Çĥéçķéŕš åñð Ɓåçķĝåɱɱöñ åŕé ĥéŕé ïñ ƒûłł, çåšŧłïñĝ åñð ƀéåŕïñĝ öƒƒ ïñçłûðéð, åłöñĝšïðé šĥöŕŧéŕ ĝŕïðš łïķé Ŕéṽéŕšï åñð Ðöŧš åñð Ɓöẋéš. Çĥéšš ïš ƀûðĝéŧéð åŧ ƒïṽé ɱïñûŧéš; Ŧïç Ŧåç Ŧöé ïš å ɱïñûŧé. ······································································································································⟧',
+    'Twelve to start with': '⟦Ŧŵéłṽé ŧö šŧåŕŧ ŵïŧĥ ·······⟧',
+    'Two games built around a ball that never stops and a paddle you own one end of. Brick Blast puts a wall of bricks between the two baselines and keeps two balls in play at once; Pinball Duel gives each side a pair of flippers and a goal to defend. Both are first to five, and both are over inside a minute.':
+      '⟦Ŧŵö ĝåɱéš ƀûïłŧ åŕöûñð å ƀåłł ŧĥåŧ ñéṽéŕ šŧöþš åñð å þåððłé ýöû öŵñ öñé éñð öƒ. Ɓŕïçķ Ɓłåšŧ þûŧš å ŵåłł öƒ ƀŕïçķš ƀéŧŵééñ ŧĥé ŧŵö ƀåšéłïñéš åñð ķééþš ŧŵö ƀåłłš ïñ þłåý åŧ öñçé; Þïñƀåłł Ðûéł ĝïṽéš éåçĥ šïðé å þåïŕ öƒ ƒłïþþéŕš åñð å ĝöåł ŧö ðéƒéñð. Ɓöŧĥ åŕé ƒïŕšŧ ŧö ƒïṽé, åñð ƀöŧĥ åŕé öṽéŕ ïñšïðé å ɱïñûŧé. ···········································································································⟧',
+    'Two games with almost no rules and a great deal to think about. Pop It is a game of Nim in disguise: choose any run of neighbouring bubbles in one row, and whoever is left with the last bubble loses. Traffic Jam has the opposite temperament, two cars shouldering each other towards the water around one island — three minutes of arithmetic against forty-five seconds of shoving.':
+      '⟦Ŧŵö ĝåɱéš ŵïŧĥ åłɱöšŧ ñö ŕûłéš åñð å ĝŕéåŧ ðéåł ŧö ŧĥïñķ åƀöûŧ. Þöþ Ïŧ ïš å ĝåɱé öƒ Ñïɱ ïñ ðïšĝûïšé: çĥööšé åñý ŕûñ öƒ ñéïĝĥƀöûŕïñĝ ƀûƀƀłéš ïñ öñé ŕöŵ, åñð ŵĥöéṽéŕ ïš łéƒŧ ŵïŧĥ ŧĥé łåšŧ ƀûƀƀłé łöšéš. Ŧŕåƒƒïç Ĵåɱ ĥåš ŧĥé öþþöšïŧé ŧéɱþéŕåɱéñŧ, ŧŵö çåŕš šĥöûłðéŕïñĝ éåçĥ öŧĥéŕ ŧöŵåŕðš ŧĥé ŵåŧéŕ åŕöûñð öñé ïšłåñð — ŧĥŕéé ɱïñûŧéš öƒ åŕïŧĥɱéŧïç åĝåïñšŧ ƒöŕŧý-ƒïṽé šéçöñðš öƒ šĥöṽïñĝ. ·····································································································································⟧',
+    'Two of you, one device': '⟦Ŧŵö öƒ ýöû, öñé ðéṽïçé ········⟧',
+    'Two players · vs Bot': '⟦Ŧŵö þłåýéŕš · ṽš Ɓöŧ ·······⟧',
+    'Two players · vs Bot · Solo': '⟦Ŧŵö þłåýéŕš · ṽš Ɓöŧ · Šöłö ··········⟧',
+    'Two-player arcade games': '⟦Ŧŵö-þłåýéŕ åŕçåðé ĝåɱéš ·········⟧',
+    'Two-player arena games': '⟦Ŧŵö-þłåýéŕ åŕéñå ĝåɱéš ········⟧',
+    'Two-player board games': '⟦Ŧŵö-þłåýéŕ ƀöåŕð ĝåɱéš ········⟧',
+    'Two-player deduction games': '⟦Ŧŵö-þłåýéŕ ðéðûçŧïöñ ĝåɱéš ··········⟧',
+    'Two-player dice games': '⟦Ŧŵö-þłåýéŕ ðïçé ĝåɱéš ········⟧',
+    'Two-player platform games': '⟦Ŧŵö-þłåýéŕ þłåŧƒöŕɱ ĝåɱéš ·········⟧',
+    'Two-player puzzle games': '⟦Ŧŵö-þłåýéŕ þûžžłé ĝåɱéš ·········⟧',
+    'Two-player racing games': '⟦Ŧŵö-þłåýéŕ ŕåçïñĝ ĝåɱéš ·········⟧',
+    'Two-player rhythm games': '⟦Ŧŵö-þłåýéŕ ŕĥýŧĥɱ ĝåɱéš ·········⟧',
+    'Two-player shooting and aiming games': '⟦Ŧŵö-þłåýéŕ šĥööŧïñĝ åñð åïɱïñĝ ĝåɱéš ·············⟧',
+    'Two-player sports games': '⟦Ŧŵö-þłåýéŕ šþöŕŧš ĝåɱéš ·········⟧',
+    'Two-player stealth games': '⟦Ŧŵö-þłåýéŕ šŧéåłŧĥ ĝåɱéš ·········⟧',
+    'Two-player survival games': '⟦Ŧŵö-þłåýéŕ šûŕṽïṽåł ĝåɱéš ·········⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
+    'What the site remembers, it remembers on your device, and one page has all of it: the settings page lists everything kept here, writes it out to a file you can take with you, and erases the lot in one press.':
+      '⟦Ŵĥåŧ ŧĥé šïŧé ŕéɱéɱƀéŕš, ïŧ ŕéɱéɱƀéŕš öñ ýöûŕ ðéṽïçé, åñð öñé þåĝé ĥåš åłł öƒ ïŧ: ŧĥé šéŧŧïñĝš þåĝé łïšŧš éṽéŕýŧĥïñĝ ķéþŧ ĥéŕé, ŵŕïŧéš ïŧ öûŧ ŧö å ƒïłé ýöû çåñ ŧåķé ŵïŧĥ ýöû, åñð éŕåšéš ŧĥé łöŧ ïñ öñé þŕéšš. ·········································································⟧',
+    'What this is': '⟦Ŵĥåŧ ŧĥïš ïš ·····⟧',
+    'about 1 minute': '⟦åƀöûŧ 1 ɱïñûŧé ·····⟧',
+    'about 2 minutes': '⟦åƀöûŧ 2 ɱïñûŧéš ······⟧',
+    'about 20 seconds': '⟦åƀöûŧ 20 šéçöñðš ······⟧',
+    'about 3 minutes': '⟦åƀöûŧ 3 ɱïñûŧéš ······⟧',
+    'about 30 seconds': '⟦åƀöûŧ 30 šéçöñðš ······⟧',
+    'about 34 seconds': '⟦åƀöûŧ 34 šéçöñðš ······⟧',
+    'about 35 seconds': '⟦åƀöûŧ 35 šéçöñðš ······⟧',
+    'about 38 seconds': '⟦åƀöûŧ 38 šéçöñðš ······⟧',
+    'about 4 minutes': '⟦åƀöûŧ 4 ɱïñûŧéš ······⟧',
+    'about 40 seconds': '⟦åƀöûŧ 40 šéçöñðš ······⟧',
+    'about 45 seconds': '⟦åƀöûŧ 45 šéçöñðš ······⟧',
+    'about 5 minutes': '⟦åƀöûŧ 5 ɱïñûŧéš ······⟧',
+    'about 55 seconds': '⟦åƀöûŧ 55 šéçöñðš ······⟧',
+    'about 7 minutes': '⟦åƀöûŧ 7 ɱïñûŧéš ······⟧',
+    'for two players': '⟦ƒöŕ ŧŵö þłåýéŕš ······⟧',
+    '{count} game': '⟦{count} ĝåɱé ·····⟧',
+    '{count} game, played by two people on one device.':
+      '⟦{count} ĝåɱé, þłåýéð ƀý ŧŵö þéöþłé öñ öñé ðéṽïçé. ··················⟧',
+    '{count} games': '⟦{count} ĝåɱéš ·····⟧',
+    '{count} games, played by two people on one device.':
+      '⟦{count} ĝåɱéš, þłåýéð ƀý ŧŵö þéöþłé öñ öñé ðéṽïçé. ··················⟧',
+    '{games} games across {categories} categories. Every one plays with two people on one device, and every one also takes a bot in the second seat.':
+      '⟦{games} ĝåɱéš åçŕöšš {categories} çåŧéĝöŕïéš. Éṽéŕý öñé þłåýš ŵïŧĥ ŧŵö þéöþłé öñ öñé ðéṽïçé, åñð éṽéŕý öñé åłšö ŧåķéš å ƀöŧ ïñ ŧĥé šéçöñð šéåŧ. ···················································⟧',
   },
 } as const;
 
