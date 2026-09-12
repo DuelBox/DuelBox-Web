@@ -141,8 +141,10 @@ export default function PlayLoading() {
       {/* The play route promises a heading in every phase — see the page beside this file,
           which renders one for exactly this reason. This is a phase. It cannot name the
           game: a loading file is handed no params, by design. */}
+      {/* eslint-disable-next-line duelbox/no-untranslated-text -- reaching the catalogue is an import, and loading-states.test.ts holds this file to none (the docstring above) */}
       <h1 className="db-visually-hidden">Loading the game</h1>
       <div className="db-panel">
+        {/* eslint-disable-next-line duelbox/no-untranslated-text -- same reason as the heading */}
         <p role="status">Loading…</p>
       </div>
     </div>
