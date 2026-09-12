@@ -89,6 +89,13 @@ const onCi = process.env.CI === 'true' || process.env.CI === '1';
 const runAllocation = process.env.DUELBOX_ALLOCATION === '1';
 
 /**
+ * Lifts the balance sweep's exclusion below, so the measurement that justifies it can be
+ * taken again. Nothing in CI sets it; it exists because a number quoted in a comment that
+ * nobody can reproduce is the shape this repository keeps getting caught by.
+ */
+const runBalanceUnderCoverage = process.env.DUELBOX_BALANCE_COVERAGE === '1';
+
+/**
  * V8's internal optimisation controls, for the one file that cannot work without them.
  *
  * `packages/engine/src/allocation.test.ts` is the rule 5 guard: it measures bytes allocated
@@ -153,6 +160,49 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       ...(runAllocation ? [] : ['packages/engine/src/allocation.test.ts']),
+      /**
+       * The seat-balance sweep, which is a bot measurement rather than a coverage sample and
+       * had been failing the nightly gate every night since 9 September 2026.
+       *
+       * `apps/web/src/data/balance-aggregate.test.ts` plays every game's bots over fifty seeds
+       * in a `beforeAll`, and its hook budget is measured rather than guessed: 50 seeds times
+       * 2400 ms a seed times the four-to-five CI runs this work slower at, which is **600 s**
+       * on `normal`. Under v8 instrumentation the sweep takes **461.7 s on a quiet twelve-core
+       * development machine** - 77% of a budget that already has CI's multiplier spent inside
+       * it - so on a runner it is somewhere between 1,800 and 2,300 s and the nightly
+       * `coverage` job ended `Failed Suites 1 ... Error: Hook timed out in 600000ms`, with the
+       * `[vitest-worker]: Timeout calling "onTaskUpdate"` this file's first docstring explains,
+       * on runs 34327671130, 34453659095, 34577407195, 34681983965 and 34691911651.
+       *
+       * Raising the hook budget under coverage was the other repair and it is the wrong one.
+       * It would ask for roughly forty minutes of a ninety-minute job to re-measure bot balance
+       * that `nightly.yml` already measures three times on its own - `normal` at 250 seeds,
+       * `easy` and `hard` at 50 - on jobs that exist because that work needs a quiet machine to
+       * mean anything. The coverage job would then be mostly a balance sweep, and the gate it
+       * is here for would be behind it.
+       *
+       * **And the sweep was not carrying the thresholds, which is the claim that had to be
+       * checked rather than assumed.** Measured with this exclusion in place, `pnpm
+       * test:coverage` completes in 666 s over 384 files and 13,901 tests and reports **98.75%
+       * of lines, 94.36% of branches, 97.97% of functions and 98.75% of statements** against
+       * the 70% floor below. Every one of the **108 `rules.ts` files is at 95.67% or better**
+       * without it - each game's own suites and `bot-parity` cover the rules, and the sweep
+       * plays them to measure a seat rather than to reach a line. The weakest covered file is
+       * `engine/src/scene.ts` at 78.03%, and it is eight points clear.
+       *
+       * The cost, stated rather than implied: a change that leaves `rules.ts` reachable only
+       * from the balance sweep would no longer be counted. Nothing in the catalogue is in that
+       * position today, and the three balance jobs still run the file every night.
+       *
+       * `DUELBOX_BALANCE_COVERAGE=1` lifts this, because an `exclude` outranks a filter and the
+       * numbers above have to stay reproducible:
+       *
+       *     DUELBOX_COVERAGE=1 DUELBOX_BALANCE_COVERAGE=1 npx vitest run --coverage \
+       *       apps/web/src/data/balance-aggregate.test.ts
+       */
+      ...(underCoverage && !runBalanceUnderCoverage
+        ? ['apps/web/src/data/balance-aggregate.test.ts']
+        : []),
     ],
     environment: 'node',
     poolOptions: {
