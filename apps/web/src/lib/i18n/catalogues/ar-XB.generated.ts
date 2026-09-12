@@ -5,14 +5,41 @@
 const catalogue = {
   locale: 'ar-XB',
   messages: {
+    Copied: '‮Copied‬',
+    'Copy failed': '‮Copy‬ ‮failed‬',
+    'Copy trace': '‮Copy‬ ‮trace‬',
+    'Input trace': '‮Input‬ ‮trace‬',
+    'Its rules and controls are settled, but the build has not landed. Try another game.':
+      '‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled,‬ ‮but‬ ‮the‬ ‮build‬ ‮has‬ ‮not‬ ‮landed.‬ ‮Try‬ ‮another‬ ‮game.‬',
     Language: '‮Language‬',
+    'Loading {name}…': '‮Loading‬ {name}‮…‬',
     'Mute sound': '‮Mute‬ ‮sound‬',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '‮Only‬ ‮the‬ ‮language‬ ‮you‬ ‮choose‬ ‮is‬ ‮downloaded,‬ ‮and‬ ‮it‬ ‮applies‬ ‮straight‬ ‮away.‬ ‮Nothing‬ ‮is‬ ‮translated‬ ‮yet:‬ ‮the‬ ‮two‬ ‮pseudo‬ ‮languages‬ ‮are‬ ‮the‬ ‮English‬ ‮made‬ ‮deliberately‬ ‮strange,‬ ‮so‬ ‮that‬ ‮anything‬ ‮still‬ ‮in‬ ‮plain‬ ‮English‬ ‮is‬ ‮a‬ ‮string‬ ‮the‬ ‮translation‬ ‮work‬ ‮has‬ ‮not‬ ‮reached.‬',
+    'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.':
+      '‮Or‬ ‮play‬ ‮a‬ ‮tournament:‬ {games} ‮games‬ ‮drawn‬ ‮at‬ ‮random,‬ ‮starting‬ ‮with‬ ‮this‬ ‮one.‬ ‮First‬ ‮to‬ {wins} ‮takes‬ ‮it.‬',
+    'Play against {name}': '‮Play‬ ‮against‬ {name}',
+    'Play solo': '‮Play‬ ‮solo‬',
+    'Play together here': '‮Play‬ ‮together‬ ‮here‬',
+    'Quit match': '‮Quit‬ ‮match‬',
+    Restart: '‮Restart‬',
     Settings: '‮Settings‬',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '‮Sound,‬ ‮vibration,‬ ‮and‬ ‮what‬ ‮this‬ ‮device‬ ‮remembers‬ ‮about‬ ‮how‬ ‮you‬ ‮play.‬ ‮Every‬ ‮change‬ ‮applies‬ ‮straight‬ ‮away‬ ‮and‬ ‮is‬ ‮kept‬ ‮in‬ ‮this‬ ‮browser‬ ‮only‬ ‮—‬ ‮nothing‬ ‮here‬ ‮is‬ ‮sent‬ ‮anywhere.‬',
+    'The drawing surface was lost twice, so the match stopped.':
+      '‮The‬ ‮drawing‬ ‮surface‬ ‮was‬ ‮lost‬ ‮twice,‬ ‮so‬ ‮the‬ ‮match‬ ‮stopped.‬',
+    'The game hit an unexpected error.': '‮The‬ ‮game‬ ‮hit‬ ‮an‬ ‮unexpected‬ ‮error.‬',
+    'The game stopped unexpectedly.': '‮The‬ ‮game‬ ‮stopped‬ ‮unexpectedly.‬',
+    'The match was stopped safely. You can start it over or head back.':
+      '‮The‬ ‮match‬ ‮was‬ ‮stopped‬ ‮safely.‬ ‮You‬ ‮can‬ ‮start‬ ‮it‬ ‮over‬ ‮or‬ ‮head‬ ‮back.‬',
+    'This game hit a snag': '‮This‬ ‮game‬ ‮hit‬ ‮a‬ ‮snag‬',
+    'This game is not playable yet': '‮This‬ ‮game‬ ‮is‬ ‮not‬ ‮playable‬ ‮yet‬',
+    'Tournament against {name}': '‮Tournament‬ ‮against‬ {name}',
+    'Tournament together': '‮Tournament‬ ‮together‬',
+    Trace: '‮Trace‬',
     'Unmute sound': '‮Unmute‬ ‮sound‬',
+    '{name} board': '{name} ‮board‬',
+    '{size} kB': '{size} ‮kB‬',
   },
 } as const;
 

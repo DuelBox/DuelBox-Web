@@ -18,14 +18,29 @@
  *
  * Kept as functions rather than arrays so that a source can import a data module — a module
  * `extract.ts` should not have to know about — and so that the cost of that import is paid by the
- * extractor and the unit suite, never by a page.
+ * extractor and the unit suite, never by a page. Nothing a browser downloads imports this file.
  */
+
+import { errorMessage } from '@duelbox/game-sdk';
 
 /** Every registered source: a name for the failure message, and the strings it contributes. */
 export const DYNAMIC_SOURCES: readonly {
   readonly name: string;
   readonly strings: () => readonly string[];
-}[] = [];
+}[] = [
+  {
+    /*
+     * What `components/GameErrorBoundary.tsx` shows when a game threw something with no
+     * message of its own: `errorMessage` in the SDK supplies the sentence, and the boundary
+     * renders `<T id={errorMessage(error)} />` — an id no call site spells out. Taken from the
+     * function rather than copied, so a reworded fallback cannot leave this behind. The two
+     * sentences the shell itself throws are `t()` calls in `PlaySurface` and `GameHost` and
+     * need no entry here; a message a game threw is that game's own string and is not a msgid.
+     */
+    name: '@duelbox/game-sdk errorMessage — the fallback the recovery screen shows',
+    strings: () => [errorMessage(undefined)],
+  },
+];
 
 /** Every string every registered source contributes, in one list, unsorted and not yet unique. */
 export function dynamicMessages(): readonly string[] {

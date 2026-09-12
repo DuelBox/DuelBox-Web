@@ -22,6 +22,10 @@ const I18N_CLEAN = [
   'apps/web/src/lib/i18n/T.tsx',
   'apps/web/src/lib/i18n/provider.tsx',
   'apps/web/src/app/settings/page.tsx',
+  'apps/web/src/components/PlaySurface.tsx',
+  'apps/web/src/components/GameHost.tsx',
+  'apps/web/src/components/GameErrorBoundary.tsx',
+  'apps/web/src/components/TracePanel.tsx',
 ];
 
 export default tseslint.config(

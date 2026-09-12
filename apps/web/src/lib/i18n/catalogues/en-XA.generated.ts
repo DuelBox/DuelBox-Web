@@ -5,14 +5,41 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
+    Copied: '⟦Çöþïéð ···⟧',
+    'Copy failed': '⟦Çöþý ƒåïłéð ····⟧',
+    'Copy trace': '⟦Çöþý ŧŕåçé ····⟧',
+    'Input trace': '⟦Ïñþûŧ ŧŕåçé ····⟧',
+    'Its rules and controls are settled, but the build has not landed. Try another game.':
+      '⟦Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð, ƀûŧ ŧĥé ƀûïłð ĥåš ñöŧ łåñðéð. Ŧŕý åñöŧĥéŕ ĝåɱé. ······························⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
+    'Loading {name}…': '⟦Łöåðïñĝ {name}… ······⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
+    'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.':
+      '⟦Öŕ þłåý å ŧöûŕñåɱéñŧ: {games} ĝåɱéš ðŕåŵñ åŧ ŕåñðöɱ, šŧåŕŧïñĝ ŵïŧĥ ŧĥïš öñé. Ƒïŕšŧ ŧö {wins} ŧåķéš ïŧ. ····································⟧',
+    'Play against {name}': '⟦Þłåý åĝåïñšŧ {name} ·······⟧',
+    'Play solo': '⟦Þłåý šöłö ····⟧',
+    'Play together here': '⟦Þłåý ŧöĝéŧĥéŕ ĥéŕé ·······⟧',
+    'Quit match': '⟦Ǫûïŧ ɱåŧçĥ ····⟧',
+    Restart: '⟦Ŕéšŧåŕŧ ···⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
+    'The drawing surface was lost twice, so the match stopped.':
+      '⟦Ŧĥé ðŕåŵïñĝ šûŕƒåçé ŵåš łöšŧ ŧŵïçé, šö ŧĥé ɱåŧçĥ šŧöþþéð. ····················⟧',
+    'The game hit an unexpected error.': '⟦Ŧĥé ĝåɱé ĥïŧ åñ ûñéẋþéçŧéð éŕŕöŕ. ············⟧',
+    'The game stopped unexpectedly.': '⟦Ŧĥé ĝåɱé šŧöþþéð ûñéẋþéçŧéðłý. ···········⟧',
+    'The match was stopped safely. You can start it over or head back.':
+      '⟦Ŧĥé ɱåŧçĥ ŵåš šŧöþþéð šåƒéłý. Ýöû çåñ šŧåŕŧ ïŧ öṽéŕ öŕ ĥéåð ƀåçķ. ·······················⟧',
+    'This game hit a snag': '⟦Ŧĥïš ĝåɱé ĥïŧ å šñåĝ ·······⟧',
+    'This game is not playable yet': '⟦Ŧĥïš ĝåɱé ïš ñöŧ þłåýåƀłé ýéŧ ···········⟧',
+    'Tournament against {name}': '⟦Ŧöûŕñåɱéñŧ åĝåïñšŧ {name} ·········⟧',
+    'Tournament together': '⟦Ŧöûŕñåɱéñŧ ŧöĝéŧĥéŕ ·······⟧',
+    Trace: '⟦Ŧŕåçé ··⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
+    '{name} board': '⟦{name} ƀöåŕð ·····⟧',
+    '{size} kB': '⟦{size} ķƁ ····⟧',
   },
 } as const;
 
