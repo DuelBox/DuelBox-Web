@@ -10,9 +10,9 @@ import {
   WAYS_TO_PLAY,
   WHAT_SECTION,
   featuredGames,
-  gameCount,
   roundSpread,
 } from '@/lib/landing';
+import { T } from '@/lib/i18n/T';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { GameCard } from '@/components/GameCard';
 import { TileSprite } from '@/components/TileSprite';
@@ -35,6 +35,28 @@ import styles from './page.module.css';
  * The copy itself is in `lib/landing.ts`, held to the house voice by its own test, for the
  * reason the category hubs' copy is in `lib/categories.ts`: prose inside a component is
  * prose nothing checks.
+ *
+ * ## Every word of it goes through `<T>` (#220), and it is still a server component
+ *
+ * `<T id="…" />` with no values renders the string itself, so the HTML this page exports in
+ * English is byte for byte what it was; the lookup happens in the browser, for a visitor who
+ * has chosen another language. The strings that come from `lib/landing.ts` — the six
+ * headings, their paragraphs, the three ways to play — arrive here as variables, so they are
+ * registered in `lib/i18n/sources.ts` as `landing copy` rather than extracted from a call
+ * site, and the same entry carries the sentence `roundSpread` builds out of the catalogue's
+ * own round lengths. Category names are registered once, from the catalogue, for all four
+ * places the site renders one.
+ *
+ * Counts are the exception and take a placeholder — `{count} games`, not the rendered
+ * `20 games` — because a number is not a word a translator should have to retype for every
+ * value it can take. `lib/landing.ts`'s `gameCount` went with the last call site that
+ * needed one; `landing.test.ts` records what it held.
+ *
+ * `T` is a client component, so this page's import graph now contains one — which is
+ * exactly what `landing.test.ts`'s server-rendering guard exists to prevent. That test now
+ * allows `lib/i18n/*` and nothing else, and says why: the locale provider is mounted in the
+ * root layout, so those modules are on every route already and this page adds no chunk of
+ * its own by using them. Any other client directive in the graph still fails it.
  */
 export default function HomePage() {
   const featured = featuredGames(
@@ -56,30 +78,38 @@ export default function HomePage() {
               thing while delivering the first. The catalogue is where the distinction can be
               made per game, in words, and it is made there (#193). This eyebrow keeps to the
               three claims that are true of every visitor without qualification. */}
-          <p className={styles.eyebrow}>No download · No account · Runs on your device</p>
+          <p className={styles.eyebrow}>
+            <T id="No download · No account · Runs on your device" />
+          </p>
           <h1 className={styles.title}>
-            {CATALOGUE.length} games
+            <T id="{count} games" values={{ count: CATALOGUE.length }} />
             <br />
-            for two players
+            <T id="for two players" />
           </h1>
           {/* The lede said "play from your own device against a friend anywhere", which is
               the one thing on this page a visitor cannot do: the shell offers `friend` and
               `bot` and nothing else, and cross-device play is an engine seam with no
               pairing, no transport and no route behind it. The note on `WAYS_TO_PLAY`
               carries the evidence. */}
+          {/* One sentence with the seat's name in it rather than three fragments: a
+              translator needs the whole sentence to put the name where their grammar puts
+              it. The name itself is not translated — `Pip` and `Bo` are names, like the
+              games' own. */}
           <p className={styles.lede}>
-            Share one phone or one laptop, two of you either side of the screen. No opponent around?{' '}
-            {SEAT_CHARACTERS.p2} will take the other seat.
+            <T
+              id="Share one phone or one laptop, two of you either side of the screen. No opponent around? {seat} will take the other seat."
+              values={{ seat: SEAT_CHARACTERS.p2 }}
+            />
           </p>
           <div className={styles.actions}>
             <Link href="/games/" className={styles.primary}>
-              Start playing
+              <T id="Start playing" />
             </Link>
             {/* Labelled with the heading of the page it opens. It said "How it works",
                 which is a fifth name for a page the header, the footer and the guide's own
                 h1 all call How to play (#2513). */}
             <Link href="/how-to-play/" className={styles.secondary}>
-              How to play
+              <T id="How to play" />
             </Link>
           </div>
         </div>
@@ -92,11 +122,11 @@ export default function HomePage() {
           now the heading's own text. */}
       <section className={`db-wrap ${styles.section}`} aria-labelledby={WAYS_SECTION.id}>
         <h2 id={WAYS_SECTION.id} className={styles.sectionTitle}>
-          {WAYS_SECTION.heading}
+          <T id={WAYS_SECTION.heading} />
         </h2>
         {WAYS_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
         <div className={styles.ways}>
@@ -114,8 +144,12 @@ export default function HomePage() {
                   content and cannot live inside phrasing content, and the body is a
                   sentence. */}
               <div>
-                <h3 className={styles.wayTitle}>{way.title}</h3>
-                <p className={styles.wayBody}>{way.body}</p>
+                <h3 className={styles.wayTitle}>
+                  <T id={way.title} />
+                </h3>
+                <p className={styles.wayBody}>
+                  <T id={way.body} />
+                </p>
               </div>
             </article>
           ))}
@@ -125,13 +159,15 @@ export default function HomePage() {
       <section className={`db-wrap ${styles.section}`} aria-labelledby={FEATURED_SECTION.id}>
         <div className={styles.sectionHead}>
           <h2 id={FEATURED_SECTION.id} className={styles.sectionTitle}>
-            {FEATURED_SECTION.heading}
+            <T id={FEATURED_SECTION.heading} />
           </h2>
-          <Link href="/games/">See all {CATALOGUE.length} →</Link>
+          <Link href="/games/">
+            <T id="See all {count} →" values={{ count: CATALOGUE.length }} />
+          </Link>
         </div>
         {FEATURED_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
         <div className={styles.grid}>
@@ -143,26 +179,28 @@ export default function HomePage() {
 
       <section className={`db-wrap ${styles.section}`} aria-labelledby={WHAT_SECTION.id}>
         <h2 id={WHAT_SECTION.id} className={styles.sectionTitle}>
-          {WHAT_SECTION.heading}
+          <T id={WHAT_SECTION.heading} />
         </h2>
         {WHAT_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
         {/* From the catalogue's own `roundSeconds` rather than from a sentence somebody
             wrote once: the shortest game and the longest are both facts a new game can
             change, and a line that goes stale is worse than no line. */}
-        <p className={styles.prose}>{roundSpread(CATALOGUE)}</p>
+        <p className={styles.prose}>
+          <T id={roundSpread(CATALOGUE)} />
+        </p>
       </section>
 
       <section className={`db-wrap ${styles.section}`} aria-labelledby={FREE_SECTION.id}>
         <h2 id={FREE_SECTION.id} className={styles.sectionTitle}>
-          {FREE_SECTION.heading}
+          <T id={FREE_SECTION.heading} />
         </h2>
         {FREE_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
       </section>
@@ -181,19 +219,24 @@ export default function HomePage() {
       */}
       <section className={`db-wrap ${styles.section}`} aria-labelledby={CATEGORIES_SECTION.id}>
         <h2 id={CATEGORIES_SECTION.id} className={styles.sectionTitle}>
-          {CATEGORIES_SECTION.heading}
+          <T id={CATEGORIES_SECTION.heading} />
         </h2>
         {CATEGORIES_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
         <ul className={styles.categories}>
           {CATEGORY_HUBS.map((hub) => (
             <li key={hub.slug}>
               <Link href={`/games/category/${hub.slug}/`} className={styles.category}>
-                {hub.category}
-                <span className={styles.categoryCount}>{gameCount(gamesIn(hub.category))}</span>
+                <T id={hub.category} />
+                <span className={styles.categoryCount}>
+                  <T
+                    id={gamesIn(hub.category) === 1 ? '{count} game' : '{count} games'}
+                    values={{ count: gamesIn(hub.category) }}
+                  />
+                </span>
               </Link>
             </li>
           ))}
@@ -202,11 +245,11 @@ export default function HomePage() {
 
       <section className={`db-wrap ${styles.section}`} aria-labelledby={START_SECTION.id}>
         <h2 id={START_SECTION.id} className={styles.sectionTitle}>
-          {START_SECTION.heading}
+          <T id={START_SECTION.heading} />
         </h2>
         {START_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>
-            {text}
+            <T id={text} />
           </p>
         ))}
         {/* Not a second "Start playing": `e2e/smoke.spec.ts` reaches the catalogue by that
@@ -214,10 +257,10 @@ export default function HomePage() {
             one. The catalogue's own count is the more useful label here anyway. */}
         <div className={styles.actions}>
           <Link href="/games/" className={styles.primary}>
-            Browse all {CATALOGUE.length} games
+            <T id="Browse all {count} games" values={{ count: CATALOGUE.length }} />
           </Link>
           <Link href="/how-to-play/" className={styles.secondary}>
-            How to play
+            <T id="How to play" />
           </Link>
         </div>
       </section>

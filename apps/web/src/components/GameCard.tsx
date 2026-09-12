@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { CatalogueEntry } from '@/data/catalogue.generated';
 import { isPlayable } from '@/data/registry';
 import { formatRound } from '@/lib/format';
+import { T } from '@/lib/i18n/T';
 import { GameTile } from './GameTile';
 import styles from './GameCard.module.css';
 
@@ -81,6 +82,22 @@ import styles from './GameCard.module.css';
  * client component that owns the grid — and not a directive at the top of this file.
  */
 
+/**
+ * What each mode is called on the card, joined with a middle dot into one line.
+ *
+ * The joined line is what a locale translates, not the three words separately, and it is
+ * registered in `lib/i18n/sources.ts` as `catalogue mode lines` — the catalogue holds two
+ * combinations, so that is two strings rather than 108. Registered rather than extracted
+ * because the extractor reads literals at call sites and this arrives as a variable
+ * (`docs/i18n.md`), and joined rather than rendered a word at a time because a word at a
+ * time would put three text nodes and two comment markers where the export has one string,
+ * on every one of 108 cards, for a line whose separator is punctuation.
+ *
+ * That leaves the labels written here and the labels `sources.ts` joins as two copies of
+ * one fact. `game-card.test.ts` reads both and fails when they stop agreeing, because a
+ * registered string the card does not render is an orphan `i18n.test.ts` refuses, and a
+ * rendered one nobody registered shows in plain English on a pseudo-localised screen.
+ */
 const MODE_LABEL: Record<string, string> = {
   friend: 'Two players',
   bot: 'vs Bot',
@@ -153,14 +170,22 @@ export function GameCard({ game }: { game: CatalogueEntry }) {
           <i className={styles.p1} />
           <i className={styles.p2} />
         </span>
-        {playable ? <span className={styles.playable}>Play</span> : null}
+        {playable ? (
+          <span className={styles.playable}>
+            <T id="Play" />
+          </span>
+        ) : null}
       </div>
+      {/* The name is not translated: `scripts/check-game-names.mjs` holds every one of them
+          against the reference app's, so a translated name is a second name nobody has
+          cleared (`docs/i18n.md`). The category and the round length are, and both arrive
+          as data — registered in `lib/i18n/sources.ts` from the catalogue itself. */}
       <span className={styles.name}>{game.name}</span>
       <span className={styles.meta}>
-        {game.category} · {formatRound(game.roundSeconds)}
+        <T id={game.category} /> · <T id={formatRound(game.roundSeconds)} />
       </span>
       <span className={styles.modes}>
-        {game.modes.map((mode) => MODE_LABEL[mode] ?? mode).join(' · ')}
+        <T id={game.modes.map((mode) => MODE_LABEL[mode] ?? mode).join(' · ')} />
       </span>
       {/* Both claims, neither shown until the attribute above has a value. A card that
           cannot be played is not annotated at all: its link goes to the game's page rather
@@ -168,8 +193,12 @@ export function GameCard({ game }: { game: CatalogueEntry }) {
           the game rather than about the page a tap would open. */}
       {playable ? (
         <>
-          <span className={styles.stored}>On this device</span>
-          <span className={styles.missing}>Not on this device</span>
+          <span className={styles.stored}>
+            <T id="On this device" />
+          </span>
+          <span className={styles.missing}>
+            <T id="Not on this device" />
+          </span>
         </>
       ) : null}
     </Link>
