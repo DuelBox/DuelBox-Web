@@ -54,6 +54,7 @@ const catalogue = {
     'A cup sits in a goal mouth and each player owns a ball. Keep a line, hold for power, and let go to kick. Holing out pays three from range and one from close in, over nine kicks each.':
       '‮A‬ ‮cup‬ ‮sits‬ ‮in‬ ‮a‬ ‮goal‬ ‮mouth‬ ‮and‬ ‮each‬ ‮player‬ ‮owns‬ ‮a‬ ‮ball.‬ ‮Keep‬ ‮a‬ ‮line,‬ ‮hold‬ ‮for‬ ‮power,‬ ‮and‬ ‮let‬ ‮go‬ ‮to‬ ‮kick.‬ ‮Holing‬ ‮out‬ ‮pays‬ ‮three‬ ‮from‬ ‮range‬ ‮and‬ ‮one‬ ‮from‬ ‮close‬ ‮in,‬ ‮over‬ ‮nine‬ ‮kicks‬ ‮each.‬',
     'A draw': '‮A‬ ‮draw‬',
+    'A draw at {game}': '‮A‬ ‮draw‬ ‮at‬ {game}',
     'A fairground striker each. Swing as the needle crosses the mark and the puck goes up the tower; let it turn round instead and the hammer winds harder, but the needle comes back faster. Four rounds, higher total wins.':
       '‮A‬ ‮fairground‬ ‮striker‬ ‮each.‬ ‮Swing‬ ‮as‬ ‮the‬ ‮needle‬ ‮crosses‬ ‮the‬ ‮mark‬ ‮and‬ ‮the‬ ‮puck‬ ‮goes‬ ‮up‬ ‮the‬ ‮tower;‬ ‮let‬ ‮it‬ ‮turn‬ ‮round‬ ‮instead‬ ‮and‬ ‮the‬ ‮hammer‬ ‮winds‬ ‮harder,‬ ‮but‬ ‮the‬ ‮needle‬ ‮comes‬ ‮back‬ ‮faster.‬ ‮Four‬ ‮rounds,‬ ‮higher‬ ‮total‬ ‮wins.‬',
     "A floor of ice each, seven by seven. Standing wears through the tile under you and stepping off costs it as well. Go through, or run out of ice to step onto, and the round is your opponent's. First to three.":
@@ -343,6 +344,8 @@ const catalogue = {
     'Generated from the shipped dependencies and font licences.':
       '‮Generated‬ ‮from‬ ‮the‬ ‮shipped‬ ‮dependencies‬ ‮and‬ ‮font‬ ‮licences.‬',
     'Getting in touch': '‮Getting‬ ‮in‬ ‮touch‬',
+    "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.":
+      "‮Gives‬ ‮the‬ ‮near‬ ‮seat‬ ‮the‬ ‮far‬ ‮seat's‬ ‮colour‬ ‮and‬ ‮the‬ ‮far‬ ‮seat‬ ‮the‬ ‮near‬ ‮seat's,‬ ‮on‬ ‮the‬ ‮scoreboard‬ ‮and‬ ‮on‬ ‮the‬ ‮board.‬ ‮The‬ ‮shapes‬ ‮and‬ ‮your‬ ‮names‬ ‮stay‬ ‮where‬ ‮they‬ ‮are.‬",
     Go: '‮Go‬',
     'Go again': '‮Go‬ ‮again‬',
     'Go to game {n}': '‮Go‬ ‮to‬ ‮game‬ {n}',
@@ -881,6 +884,7 @@ const catalogue = {
     Survival: '‮Survival‬',
     'Survival games': '‮Survival‬ ‮games‬',
     'Swap controllers': '‮Swap‬ ‮controllers‬',
+    'Swap the seat colours': '‮Swap‬ ‮the‬ ‮seat‬ ‮colours‬',
     'Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.':
       '‮Take‬ ‮turns‬ ‮drawing‬ ‮one‬ ‮edge‬ ‮between‬ ‮two‬ ‮dots.‬ ‮Completing‬ ‮a‬ ‮box‬ ‮scores‬ ‮it‬ ‮and‬ ‮buys‬ ‮another‬ ‮turn,‬ ‮so‬ ‮the‬ ‮skill‬ ‮is‬ ‮in‬ ‮choosing‬ ‮which‬ ‮edge‬ ‮to‬ ‮give‬ ‮away.‬ ‮Most‬ ‮boxes‬ ‮wins.‬',
     'Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.':
@@ -1078,8 +1082,6 @@ const catalogue = {
       '‮This‬ ‮game‬ ‮is‬ ‮still‬ ‮being‬ ‮built.‬ ‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled;‬ ‮the‬ ‮playable‬ ‮build‬ ‮lands‬ ‮with‬ ‮its‬ ‮milestone.‬',
     'This page stopped part-way. It is usually momentary — trying again reloads just this part, not the whole site, and nothing about your games is stored anywhere to lose.':
       '‮This‬ ‮page‬ ‮stopped‬ ‮part-way.‬ ‮It‬ ‮is‬ ‮usually‬ ‮momentary‬ ‮—‬ ‮trying‬ ‮again‬ ‮reloads‬ ‮just‬ ‮this‬ ‮part,‬ ‮not‬ ‮the‬ ‮whole‬ ‮site,‬ ‮and‬ ‮nothing‬ ‮about‬ ‮your‬ ‮games‬ ‮is‬ ‮stored‬ ‮anywhere‬ ‮to‬ ‮lose.‬',
-    'Three typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
-      '‮Three‬ ‮typefaces,‬ ‮all‬ ‮variable‬ ‮fonts‬ ‮served‬ ‮from‬ ‮this‬ ‮origin‬ ‮under‬ ‮the‬ ‮SIL‬ ‮Open‬ ‮Font‬ ‮Licence.‬ ‮The‬ ‮full‬ ‮licence‬ ‮text‬ ‮ships‬ ‮with‬ ‮the‬ ‮site‬ ‮in‬ {file}‮.‬',
     'Three ways to play': '‮Three‬ ‮ways‬ ‮to‬ ‮play‬',
     Touch: '‮Touch‬',
     'Touch anywhere in your own half and your swimmer heads for your finger.':
@@ -1354,6 +1356,8 @@ const catalogue = {
     '{count} point': '{count} ‮point‬',
     '{count} points': '{count} ‮points‬',
     '{count} still to save': '{count} ‮still‬ ‮to‬ ‮save‬',
+    '{count} typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
+      '{count} ‮typefaces,‬ ‮all‬ ‮variable‬ ‮fonts‬ ‮served‬ ‮from‬ ‮this‬ ‮origin‬ ‮under‬ ‮the‬ ‮SIL‬ ‮Open‬ ‮Font‬ ‮Licence.‬ ‮The‬ ‮full‬ ‮licence‬ ‮text‬ ‮ships‬ ‮with‬ ‮the‬ ‮site‬ ‮in‬ {file}‮.‬',
     '{done} of {total}': '{done} ‮of‬ {total}',
     '{done} of {total} on this device, {rest} ({left}).':
       '{done} ‮of‬ {total} ‮on‬ ‮this‬ ‮device,‬ {rest} ‮(‬{left}‮).‬',
@@ -1383,6 +1387,7 @@ const catalogue = {
     '{name} health: {level}, {percent} percent': '{name} ‮health:‬ {level}‮,‬ {percent} ‮percent‬',
     '{name} plays this half': '{name} ‮plays‬ ‮this‬ ‮half‬',
     '{name} wins': '{name} ‮wins‬',
+    '{name} wins at {game}': '{name} ‮wins‬ ‮at‬ {game}',
     '{name} wins the tournament': '{name} ‮wins‬ ‮the‬ ‮tournament‬',
     '{name}’s skill': '{name}‮’s‬ ‮skill‬',
     '{near} {nearWins}, {far} {farWins}, {draws} drawn':

@@ -39,6 +39,7 @@ import { seatForPoint, seatRotated, toScreen, toWorld } from './seat.js';
 import type { LogicalSize } from './seat.js';
 import { loopbackPair } from './transport.js';
 import { Tween } from './tween.js';
+import { standardEase } from './motion.js';
 import {
   add,
   addScaled,
@@ -1044,6 +1045,21 @@ describe('the per-step primitives allocate nothing', () => {
     const tween = new Tween({ durationSeconds: 0.4 });
     tween.restart(0, 1);
     expectAllocationFree('Tween.step', () => {
+      tween.step(1 / 60);
+      SINK[0] = tween.value;
+    });
+  });
+
+  it('steps and reads a tween on the standard curve', () => {
+    // `standardEase` is the motion signature's `cubic-bezier(0.2, 0.8, 0.2, 1)` — the same
+    // curve `--db-ease` gives the shell — and it is the only easing in this engine that is
+    // not a polynomial: it inverts the x-curve by Newton iteration on every read. A solver is
+    // exactly where a scratch object or a `[u, x]` pair would go, so it is measured rather
+    // than assumed. Five doubles cross the call, which is the caller's cost and not the
+    // curve's; see `sees what a caller pays to hand over a number` above.
+    const tween = new Tween({ durationSeconds: 0.4, easing: standardEase });
+    tween.restart(0, 1);
+    expectAllocationFree('Tween.step standardEase', () => {
       tween.step(1 / 60);
       SINK[0] = tween.value;
     });

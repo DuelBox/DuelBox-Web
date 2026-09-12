@@ -11,7 +11,7 @@
   position: fixed;
   inset-inline-start: max(var(--db-space-2), var(--db-safe-inline-start));
   bottom: max(var(--db-space-2), var(--db-safe-bottom));
-  z-index: 100;
+  z-index: var(--db-z-escape);
   padding: var(--db-space-2) var(--db-space-3);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-sm);

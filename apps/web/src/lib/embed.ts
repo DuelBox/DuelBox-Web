@@ -15,7 +15,10 @@
 
 import { PLAYABLE } from '../data/registry';
 
-/** The brand shown on the embed and in the backlink label. */
+/**
+ * The brand in the snippet's iframe title. The backlink's own sentence, "Play {name} on
+ * DuelBox", is a msgid rendered by the route (#220), not a string built here.
+ */
 export const EMBED_BRAND = 'DuelBox';
 
 /** Only playable games get an embed route — the same set the play route builds. */
@@ -31,11 +34,6 @@ export function embedBacklinkPath(slug: string): string {
 /** The path the embed iframe is served at. */
 export function embedIframeSrcPath(slug: string): string {
   return `/embed/${slug}/`;
-}
-
-/** The visible label of the backlink, e.g. "Play Chess on DuelBox". */
-export function embedBacklinkLabel(gameName: string): string {
-  return `Play ${gameName} on ${EMBED_BRAND}`;
 }
 
 /**

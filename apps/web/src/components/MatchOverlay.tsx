@@ -647,8 +647,8 @@ function ShareResult({
     void import('@/lib/share-card')
       .then(async (card) => {
         const data = { game, slug, names: seatNames, score, outcome };
-        const blob = await card.renderShareCard(data);
-        const result = await card.shareOrDownload(blob, data);
+        const blob = await card.renderShareCard(messages, data);
+        const result = await card.shareOrDownload(messages, blob, data);
         setStatus(
           result === 'downloaded'
             ? t(messages, 'Saved as {file}.', { file: card.shareCardFilename(data) })

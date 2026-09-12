@@ -45,6 +45,9 @@ const ROUTES: readonly string[] = [
   '/attribution/',
   '/offline/',
   '/no-such-page/',
+  // The embed of a game: its own footer carries the backlink sentence and the wordmark link's
+  // name, and nothing else on the site renders that route.
+  '/embed/tic-tac-toe/',
 ];
 
 interface Found {
@@ -99,14 +102,17 @@ function collect(page: Page): Promise<Found[]> {
   });
 }
 
-const ALLOWED = [...PSEUDO_ALLOWLIST]
-  .map((entry) => entry.text)
-  .filter((text) => /[A-Za-z]/u.test(text))
-  .sort((a, b) => b.length - a.length)
-  .map(
-    (text) =>
-      new RegExp(`(?<!\\p{L})${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\p{L})`, 'gu'),
-  );
+/** The allowlist as whole-word patterns, for one route: an entry with `routes` counts only there. */
+function allowedOn(route: string): RegExp[] {
+  return PSEUDO_ALLOWLIST.filter((entry) => entry.routes === undefined || entry.routes.test(route))
+    .map((entry) => entry.text)
+    .filter((text) => /[A-Za-z]/u.test(text))
+    .sort((a, b) => b.length - a.length)
+    .map(
+      (text) =>
+        new RegExp(`(?<!\\p{L})${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\p{L})`, 'gu'),
+    );
+}
 
 /**
  * The ASCII letters of `text` that the allowlist does not account for, or null.
@@ -118,7 +124,7 @@ const ALLOWED = [...PSEUDO_ALLOWLIST]
  * would let the second kind through. A sentence with an element in it is several text nodes,
  * which is the other reason not to pair brackets across a node.
  */
-export function unexplained(text: string): string | null {
+export function unexplained(text: string, route: string): string | null {
   if (!/[A-Za-z]/u.test(text)) return null;
   // Shapes first, on whole tokens, because an email address contains the brand and the
   // allowlist would take that word out from the middle of it.
@@ -127,13 +133,13 @@ export function unexplained(text: string): string | null {
     .filter((token) => token.length > 0)
     .filter((token) => !PSEUDO_ALLOWED_PATTERNS.some(({ pattern }) => pattern.test(token)))
     .join(' ');
-  for (const allowed of ALLOWED) rest = rest.replace(allowed, ' ');
+  for (const allowed of allowedOn(route)) rest = rest.replace(allowed, ' ');
   return /[A-Za-z]/u.test(rest) ? rest : null;
 }
 
-async function sweep(page: Page, screen: string): Promise<void> {
+async function sweep(page: Page, route: string, screen = route): Promise<void> {
   const misses = (await collect(page)).flatMap((item) => {
-    const rest = unexplained(item.value);
+    const rest = unexplained(item.value, route);
     return rest === null ? [] : [`${item.where} ${item.kind}: "${item.value}" — plain: "${rest}"`];
   });
   expect(
@@ -160,7 +166,7 @@ test.describe('the pseudo-locale sweep', () => {
 
   test('/play/tic-tac-toe/ — the lobby, then the pause menu', async ({ page }) => {
     await open(page, '/play/tic-tac-toe/');
-    await sweep(page, '/play/tic-tac-toe/ lobby');
+    await sweep(page, '/play/tic-tac-toe/', '/play/tic-tac-toe/ lobby');
 
     const start = page.getByRole('button', { name: EN_XA.messages['Play together here'] });
     await expect(start).toBeVisible();
@@ -171,6 +177,6 @@ test.describe('the pseudo-locale sweep', () => {
     await page.waitForTimeout(3500);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toBeVisible();
-    await sweep(page, '/play/tic-tac-toe/ paused');
+    await sweep(page, '/play/tic-tac-toe/', '/play/tic-tac-toe/ paused');
   });
 });

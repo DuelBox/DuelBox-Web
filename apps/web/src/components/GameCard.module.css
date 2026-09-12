@@ -129,7 +129,7 @@
   position: absolute;
   inset-inline-end: var(--db-space-2);
   top: var(--db-space-2);
-  padding: 2px 8px;
+  padding: 2px var(--db-space-2); /* off-scale: 2px, so the badge does not grow its line */
   border-radius: var(--db-radius-pill);
   background: var(--db-brand);
   color: var(--db-paper);

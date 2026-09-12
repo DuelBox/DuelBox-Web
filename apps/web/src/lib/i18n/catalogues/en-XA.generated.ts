@@ -54,6 +54,7 @@ const catalogue = {
     'A cup sits in a goal mouth and each player owns a ball. Keep a line, hold for power, and let go to kick. Holing out pays three from range and one from close in, over nine kicks each.':
       '⟦Å çûþ šïŧš ïñ å ĝöåł ɱöûŧĥ åñð éåçĥ þłåýéŕ öŵñš å ƀåłł. Ķééþ å łïñé, ĥöłð ƒöŕ þöŵéŕ, åñð łéŧ ĝö ŧö ķïçķ. Ĥöłïñĝ öûŧ þåýš ŧĥŕéé ƒŕöɱ ŕåñĝé åñð öñé ƒŕöɱ çłöšé ïñ, öṽéŕ ñïñé ķïçķš éåçĥ. ···························································································⟧',
     'A draw': '⟦Å ðŕåŵ ···⟧',
+    'A draw at {game}': '⟦Å ðŕåŵ åŧ {game} ········⟧',
     'A fairground striker each. Swing as the needle crosses the mark and the puck goes up the tower; let it turn round instead and the hammer winds harder, but the needle comes back faster. Four rounds, higher total wins.':
       '⟦Å ƒåïŕĝŕöûñð šŧŕïķéŕ éåçĥ. Šŵïñĝ åš ŧĥé ñééðłé çŕöššéš ŧĥé ɱåŕķ åñð ŧĥé þûçķ ĝöéš ûþ ŧĥé ŧöŵéŕ; łéŧ ïŧ ŧûŕñ ŕöûñð ïñšŧéåð åñð ŧĥé ĥåɱɱéŕ ŵïñðš ĥåŕðéŕ, ƀûŧ ŧĥé ñééðłé çöɱéš ƀåçķ ƒåšŧéŕ. Ƒöûŕ ŕöûñðš, ĥïĝĥéŕ ŧöŧåł ŵïñš. ············································································································⟧',
     "A floor of ice each, seven by seven. Standing wears through the tile under you and stepping off costs it as well. Go through, or run out of ice to step onto, and the round is your opponent's. First to three.":
@@ -348,6 +349,8 @@ const catalogue = {
     'Generated from the shipped dependencies and font licences.':
       '⟦Ĝéñéŕåŧéð ƒŕöɱ ŧĥé šĥïþþéð ðéþéñðéñçïéš åñð ƒöñŧ łïçéñçéš. ·····························⟧',
     'Getting in touch': '⟦Ĝéŧŧïñĝ ïñ ŧöûçĥ ········⟧',
+    "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.":
+      "⟦Ĝïṽéš ŧĥé ñéåŕ šéåŧ ŧĥé ƒåŕ šéåŧ'š çöłöûŕ åñð ŧĥé ƒåŕ šéåŧ ŧĥé ñéåŕ šéåŧ'š, öñ ŧĥé šçöŕéƀöåŕð åñð öñ ŧĥé ƀöåŕð. Ŧĥé šĥåþéš åñð ýöûŕ ñåɱéš šŧåý ŵĥéŕé ŧĥéý åŕé. ···············································································⟧",
     Go: '⟦Ĝö ·⟧',
     'Go again': '⟦Ĝö åĝåïñ ····⟧',
     'Go to game {n}': '⟦Ĝö ŧö ĝåɱé {n} ·······⟧',
@@ -888,6 +891,7 @@ const catalogue = {
     Survival: '⟦Šûŕṽïṽåł ····⟧',
     'Survival games': '⟦Šûŕṽïṽåł ĝåɱéš ·······⟧',
     'Swap controllers': '⟦Šŵåþ çöñŧŕöłłéŕš ········⟧',
+    'Swap the seat colours': '⟦Šŵåþ ŧĥé šéåŧ çöłöûŕš ···········⟧',
     'Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.':
       '⟦Ŧåķé ŧûŕñš ðŕåŵïñĝ öñé éðĝé ƀéŧŵééñ ŧŵö ðöŧš. Çöɱþłéŧïñĝ å ƀöẋ šçöŕéš ïŧ åñð ƀûýš åñöŧĥéŕ ŧûŕñ, šö ŧĥé šķïłł ïš ïñ çĥööšïñĝ ŵĥïçĥ éðĝé ŧö ĝïṽé åŵåý. Ṁöšŧ ƀöẋéš ŵïñš. ···················································································⟧',
     'Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.':
@@ -1087,8 +1091,6 @@ const catalogue = {
       '⟦Ŧĥïš ĝåɱé ïš šŧïłł ƀéïñĝ ƀûïłŧ. Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð; ŧĥé þłåýåƀłé ƀûïłð łåñðš ŵïŧĥ ïŧš ɱïłéšŧöñé. ························································⟧',
     'This page stopped part-way. It is usually momentary — trying again reloads just this part, not the whole site, and nothing about your games is stored anywhere to lose.':
       '⟦Ŧĥïš þåĝé šŧöþþéð þåŕŧ-ŵåý. Ïŧ ïš ûšûåłłý ɱöɱéñŧåŕý — ŧŕýïñĝ åĝåïñ ŕéłöåðš ĵûšŧ ŧĥïš þåŕŧ, ñöŧ ŧĥé ŵĥöłé šïŧé, åñð ñöŧĥïñĝ åƀöûŧ ýöûŕ ĝåɱéš ïš šŧöŕéð åñýŵĥéŕé ŧö łöšé. ····················································································⟧',
-    'Three typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
-      '⟦Ŧĥŕéé ŧýþéƒåçéš, åłł ṽåŕïåƀłé ƒöñŧš šéŕṽéð ƒŕöɱ ŧĥïš öŕïĝïñ ûñðéŕ ŧĥé ŠÏŁ Öþéñ Ƒöñŧ Łïçéñçé. Ŧĥé ƒûłł łïçéñçé ŧéẋŧ šĥïþš ŵïŧĥ ŧĥé šïŧé ïñ {file}. ·········································································⟧',
     'Three ways to play': '⟦Ŧĥŕéé ŵåýš ŧö þłåý ·········⟧',
     Touch: '⟦Ŧöûçĥ ···⟧',
     'Touch anywhere in your own half and your swimmer heads for your finger.':
@@ -1368,6 +1370,8 @@ const catalogue = {
     '{count} point': '⟦{count} þöïñŧ ·······⟧',
     '{count} points': '⟦{count} þöïñŧš ·······⟧',
     '{count} still to save': '⟦{count} šŧïłł ŧö šåṽé ···········⟧',
+    '{count} typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
+      '⟦{count} ŧýþéƒåçéš, åłł ṽåŕïåƀłé ƒöñŧš šéŕṽéð ƒŕöɱ ŧĥïš öŕïĝïñ ûñðéŕ ŧĥé ŠÏŁ Öþéñ Ƒöñŧ Łïçéñçé. Ŧĥé ƒûłł łïçéñçé ŧéẋŧ šĥïþš ŵïŧĥ ŧĥé šïŧé ïñ {file}. ··········································································⟧',
     '{done} of {total}': '⟦{done} öƒ {total} ·········⟧',
     '{done} of {total} on this device, {rest} ({left}).':
       '⟦{done} öƒ {total} öñ ŧĥïš ðéṽïçé, {rest} ({left}). ·························⟧',
@@ -1399,6 +1403,7 @@ const catalogue = {
       '⟦{name} ĥéåłŧĥ: {level}, {percent} þéŕçéñŧ ·····················⟧',
     '{name} plays this half': '⟦{name} þłåýš ŧĥïš ĥåłƒ ···········⟧',
     '{name} wins': '⟦{name} ŵïñš ······⟧',
+    '{name} wins at {game}': '⟦{name} ŵïñš åŧ {game} ···········⟧',
     '{name} wins the tournament': '⟦{name} ŵïñš ŧĥé ŧöûŕñåɱéñŧ ·············⟧',
     '{name}’s skill': '⟦{name}’š šķïłł ·······⟧',
     '{near} {nearWins}, {far} {farWins}, {draws} drawn':

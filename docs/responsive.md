@@ -126,11 +126,92 @@ a very long game name — scrolls inside its own container, never by moving the 
 is asserted in the browser suite on four device profiles, and it is the one responsive
 property that is a bug rather than a preference when it breaks.
 
+### The layer ladder
+
+The third dimension of the shell grid is named in `styles/tokens.css` too, as
+`--db-z-overlay`, `--db-z-control`, `--db-z-hint`, `--db-z-cover`, `--db-z-confirm`,
+`--db-z-recovery`, `--db-z-bar`, `--db-z-escape` and `--db-z-frame-notice` — ten apart, in
+that order, from the pause panel over the board up to the framed-page notice. One ladder
+rather than one per component, because there is only one stacking context to be a ladder
+in: `PlaySurface` is `position: relative` with no `z-index`, no `isolation` and no
+transform, so an overlay inside the board and a bar fixed to the viewport are painted
+against each other rather than each within its own world. Layer zero has no token, since
+everything in flow is ordered by the document. `tokens.test.ts` fails any `z-index` in the
+shell that is not one of these, and any raw-pixel `padding` or `margin` that is not zero
+and does not carry an `/* off-scale: why */` marker on its own line — a key cap's 6px and a
+badge's 2px sit between two rungs of the 4px spacing grid and say so where they are
+written.
+
+## Verifying it
+
+Two commands, and neither of them is a second screenshot-comparison system. The matrix is
+evidence a person reads once, on the issue it was made for; the pictures a machine compares
+on every push are `e2e/visual.spec.ts`'s committed baselines and nothing else.
+
+### One game: `pnpm responsive <slug>`
+
+```bash
+pnpm build            # it drives the real static export, not a dev server
+pnpm responsive tic-tac-toe
+pnpm responsive tic-tac-toe --all-engines     # adds real WebKit
+```
+
+`scripts/responsive-matrix.mjs` serves `apps/web/out`, opens `/games/<slug>/`, the
+`/play/<slug>/` lobby and `/play/<slug>/` with a match running, and walks all eleven cells of
+this document's two tables — the five width classes in both orientations, plus `short`. Each
+cell is photographed to `responsive-matrix/<slug>/<state>/<class>-<orientation>-<engine>.png`
+(gitignored) and measured for three things: horizontal overflow, any visible interactive
+element outside the viewport or inside the inset band, and the board's box relative to the
+viewport. It prints a row per cell, prints the output directory, and exits non-zero with a
+table of violations. `compact` and `short` carry a real iPhone's `--db-safe-*` values because
+those are the classes a notched phone occupies; the wider ones carry zero, for the reason in
+the section below.
+
+**This is how a game's responsive issue closes.** Run it, read the table, attach the matrix —
+the cells that changed, or all of them for a first pass — and say which class the fix was for.
+An issue closed against a screenshot of one phone is an issue closed against one eighth of the
+question.
+
+### Every game: the nightly sweep
+
+`e2e/responsive-sweep.spec.ts` opens every slug in `PLAYABLE` at 320px portrait and landscape
+and asserts the same two properties through the same helpers (`e2e/responsive.ts`), so a
+nightly failure reproduces exactly under `pnpm responsive <slug>`. It is inert without
+`DUELBOX_RESPONSIVE_SWEEP=1` and runs in `nightly.yml` on Chromium and real WebKit. It starts
+no match, deliberately: the lobby is the layout that differs per game, a running match is the
+shell's furniture around a letterboxed canvas, and 107 countdowns would not fit the quarter
+hour that job is budgeted.
+
+### Diffs on a pull request
+
+They come from the pipeline that already exists, because a second one would be a second set of
+baselines to keep for the same five screens.
+
+- **A change to the shell** — the header, the grid, a spacing token, anything in this
+  document's part two — moves the committed PNGs in `e2e/__screenshots__`, the job goes red
+  with a diff attached, and `docs/visual-regression.md` is the accept flow: download the
+  baselines and the diffs, look at every lit pixel, and commit the new baselines *in the same
+  commit as the change that moved them*.
+- **A change to one game's layout** does not touch those five screens by design — the
+  catalogue grid, the game landing pages and the category hubs are deliberately not
+  photographed there, because a baseline that churns is a baseline nobody reads. The evidence
+  for that change is the matrix from `pnpm responsive <slug>`, attached to the pull request.
+
+The sweep is the backstop under both: it cannot say a screen looks wrong, only that nothing
+scrolls sideways and no control has left the screen, on all 107 games rather than five.
+
 ## What is verified, and what is not
 
 Verified in the browser suite, on Desktop Chrome, Pixel 7, and iPhone 14 Pro in both
 orientations: no horizontal overflow; the board fits its viewport with no part off-screen;
 nothing interactive sits outside the visual viewport.
+
+**Verified at the floor, with a match running.** Each of those three profiles is a real
+phone — 393x852 and 852x393 — and none of them is 320px. `e2e/safe-area.spec.ts` turns a
+running match to both cells of `NARROWEST` and reads them through the same
+`outsideSafeArea` the matrix uses, on one project per engine. That cell is there because the
+match HUD put its pause button 2px into the home indicator at 320x568, and both of its
+controls 8px into it at 568x320, on a layout every 393px project called clean (#2586).
 
 **Not verified: real safe-area insets.** Playwright sets a viewport, not a cutout, so
 `env(safe-area-inset-*)` resolves to zero in every test. The layout is provably sound; the

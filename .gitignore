@@ -25,6 +25,12 @@ test-results/
 out/
 next-env.d.ts
 
+# The responsive matrix (#1891). `pnpm responsive <slug>` writes thirty-three screenshots
+# per game per engine: a picture of one run on one machine, not a baseline anybody compares
+# against. The committed pictures are `e2e/__screenshots__` and nothing else (#227); these
+# are for attaching to the issue the run was made for.
+responsive-matrix/
+
 # The dev server keeps its own build output so a production build cannot clobber it.
 apps/web/.next-dev/
 

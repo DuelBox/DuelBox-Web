@@ -426,6 +426,23 @@ export function SettingsPanel() {
           )}
         </p>
 
+        {/* #161. Which of the pair the near seat gets. A third axis on the palette rather than
+            a third palette, and colour only: the shapes and the names stay with their seats
+            (rule 7 — a shape that followed the colour would stop telling the seats apart). */}
+        <Switch
+          label={t(messages, 'Swap the seat colours')}
+          checked={settings.seatSwap}
+          onChange={(seatSwap) => {
+            change({ seatSwap });
+          }}
+        />
+        <p className={styles.note}>
+          {t(
+            messages,
+            "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.",
+          )}
+        </p>
+
         {/* #179. Assist mode. The value is a wall-clock multiplier the loop applies to the
             fixed step, so the match plays in slow motion without changing the simulation —
             the same game, more time to read it and to react. Never faster than full. */}

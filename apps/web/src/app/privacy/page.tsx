@@ -92,7 +92,7 @@ export default function PrivacyPage() {
               // The prefix every key this page lists begins with. A storage key is not copy —
               // it is the same string in every language, and translating it would rename a
               // store.
-              // eslint-disable-next-line duelbox/no-untranslated-text
+              // eslint-disable-next-line duelbox/no-untranslated-text -- an identifier, as above
               prefix: <code>duelbox:</code>,
             }}
           />

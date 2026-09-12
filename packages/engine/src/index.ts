@@ -91,6 +91,20 @@ export {
 } from './tween.js';
 export type { Easing, TweenOptions, MotionPreference } from './tween.js';
 
+/**
+ * The motion signature's numbers (#72). Also reachable as `@duelbox/engine/motion`, which is
+ * the spelling `apps/web/src/styles/tokens.ts` uses: the shell's root layout imports that
+ * file, so pulling the barrel in through it would put the whole engine on every non-play
+ * route, and the subpath is a few hundred bytes that depend on nothing.
+ */
+export {
+  MOTION,
+  REDUCED_MOTION_SECONDS,
+  cubicBezier,
+  standardEase,
+  motionDuration,
+} from './motion.js';
+
 export {
   Shake,
   Flash,
@@ -108,6 +122,8 @@ export {
   seatPalette,
   setActiveSeatPalette,
   activeSeatPaletteId,
+  setSeatSwap,
+  seatSwapped,
 } from './palette.js';
 export type { SeatPalette, SeatPaletteId } from './palette.js';
 

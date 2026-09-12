@@ -50,7 +50,7 @@ export default function DmcaPage() {
               ),
               // The address is not copy: it is the same string in every language, and it is
               // about to be replaced by a real one.
-              // eslint-disable-next-line duelbox/no-untranslated-text
+              // eslint-disable-next-line duelbox/no-untranslated-text -- an address, as above
               address: <code>abuse@duelbox.example</code>,
             }}
           />
