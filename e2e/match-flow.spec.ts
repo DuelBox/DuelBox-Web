@@ -37,7 +37,17 @@ test.describe('the match flow', () => {
 
     // Nobody touches the controls, so the human seat crashes and the bot outlives it.
     await expect(page.getByText(/wins|draw/i).first()).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByRole('button', { name: /Rematch/i })).toBeVisible();
+    const rematchButton = page.getByRole('button', { name: /Rematch/i });
+    await expect(rematchButton).toBeVisible();
+
+    // Rematch is a genuinely new match, not the old result screen relabelled: it counts
+    // in again the same way the opening match did, and the HUD's own controls — dead on
+    // the result screen — come back live rather than staying stuck on the final score.
+    await rematchButton.click();
+    const countdown = page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ });
+    await expect(countdown).toBeVisible();
+    await expect(countdown).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Pause the match' })).toBeVisible();
   });
 
   test('shows both seats and their scores in one shared HUD', async ({ page }) => {
