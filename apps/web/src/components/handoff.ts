@@ -1,5 +1,6 @@
 import type { SeatId } from '@duelbox/engine';
 import type { GameManifest } from '@duelbox/game-sdk';
+import { t, type Catalogue } from '../lib/i18n/messages';
 
 /**
  * The pass-and-play hand-off, decided without a DOM (#134).
@@ -30,7 +31,14 @@ export function shouldHandOff(
   return handoffEnabled(manifest) && to !== null && from !== null && from !== to;
 }
 
-/** The prompt shown on the blackout. */
-export function handoffPrompt(name: string): string {
-  return `Pass to ${name}`;
+/**
+ * The prompt shown on the blackout.
+ *
+ * The catalogue is a parameter rather than the overlay writing the sentence itself (#220), so
+ * the one place the prompt is spelled is still the one place it is spelled — and it is spelled
+ * as a literal the extractor reads by shape. An empty catalogue is English, which is what every
+ * lookup falls through to anyway.
+ */
+export function handoffPrompt(messages: Catalogue, name: string): string {
+  return t(messages, 'Pass to {name}', { name });
 }
