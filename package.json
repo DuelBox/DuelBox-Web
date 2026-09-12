@@ -27,6 +27,7 @@
     "balance:audit": "DUELBOX_BALANCE_SEEDS=250 pnpm balance:sweep",
     "e2e": "playwright test",
     "e2e:all": "DUELBOX_ALL_ENGINES=1 playwright test",
+    "responsive": "node scripts/responsive-matrix.mjs",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "check:zero-cost": "node scripts/check-zero-cost.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",

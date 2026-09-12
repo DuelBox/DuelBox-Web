@@ -214,6 +214,14 @@ const ONE_PER_ENGINE = [
   // four projects would be four copies of two measurements, and the two that matter are one
   // per engine.
   '**/rotate-prompt.spec.ts',
+  // `responsive-sweep.spec.ts` (#1891) walks every playable lobby at 320px portrait and
+  // landscape, both of which it sets itself, so a project that has already chosen a viewport
+  // contributes nothing but its engine. Both engines are wanted: what it measures is where a
+  // control's box lands, and a `<select>`, a radio and a search field are drawn by the
+  // browser rather than by the stylesheet. It is inert without `DUELBOX_RESPONSIVE_SWEEP=1`
+  // and runs in `nightly.yml`, so on a push this is two skipped entries a game and no
+  // browser context at all.
+  '**/responsive-sweep.spec.ts',
 ];
 
 export default defineConfig({
