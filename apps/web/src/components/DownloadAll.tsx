@@ -12,6 +12,8 @@ import {
   persistenceNote,
   type DownloadState,
 } from '@/lib/download-all';
+import { t } from '@/lib/i18n/messages';
+import { useLocale, useMessages } from '@/lib/i18n/use-messages';
 import styles from './SettingsPanel.module.css';
 
 /**
@@ -45,9 +47,14 @@ import styles from './SettingsPanel.module.css';
  * The site keeps exactly one status region — `ServiceWorkerBridge`'s bar — and two specs ask
  * for "the" one. The progress line is `aria-live="polite"` on an element that is not a status
  * region, the same arrangement `KeyBindings` uses for its refusals.
+ *
+ * ## The copy (#220)
+ *
+ * A client component, so every string here goes through `t()`. The sentences with numbers in
+ * them are `lib/download-all.ts`'s, assembled there because that is where the numbers are;
+ * what is left here is the two refusals, the quota line and the button. The `<progress>`
+ * fallback is a message too — it is the text a browser without the element shows.
  */
-
-const NOT_CONTROLLED = 'Available once the site has finished saving itself to this device.';
 
 function controller(): ServiceWorker | null {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
@@ -55,6 +62,8 @@ function controller(): ServiceWorker | null {
 }
 
 export default function DownloadAll() {
+  const messages = useMessages();
+  const locale = useLocale();
   const [state, setState] = useState<DownloadState | null>(null);
   const [controlled, setControlled] = useState<boolean | null>(null);
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -94,7 +103,10 @@ export default function DownloadAll() {
         .then(({ usage, quota: limit }) => {
           if (typeof usage === 'number' && typeof limit === 'number') {
             setQuota(
-              `${formatBytes(usage)} of ${formatBytes(limit)} of this site's storage in use`,
+              t(messages, "{used} of {limit} of this site's storage in use", {
+                used: formatBytes(messages, usage),
+                limit: formatBytes(messages, limit),
+              }),
             );
           }
         })
@@ -106,19 +118,27 @@ export default function DownloadAll() {
     controller()?.postMessage({ type: DOWNLOAD_CANCEL });
   };
 
-  if (controlled === false) return <p className={styles.note}>{NOT_CONTROLLED}</p>;
-  if (state === null) return <p className={styles.note}>Asking what is on this device…</p>;
+  if (controlled === false) {
+    return (
+      <p className={styles.note}>
+        {t(messages, 'Available once the site has finished saving itself to this device.')}
+      </p>
+    );
+  }
+  if (state === null) {
+    return <p className={styles.note}>{t(messages, 'Asking what is on this device…')}</p>;
+  }
 
   const action = downloadAction(state);
-  const note = persistenceNote(persisted);
+  const note = persistenceNote(messages, persisted);
   return (
     <div>
       <p className={styles.note} aria-live="polite">
-        {describeDownload(state)}
+        {describeDownload(messages, locale, state)}
       </p>
       {state.running ? (
         <progress className={styles.progress} max={state.games} value={state.done}>
-          {String(state.done)} of {String(state.games)}
+          {t(messages, '{done} of {total}', { done: state.done, total: state.games })}
         </progress>
       ) : null}
       {action === null ? null : (
@@ -128,7 +148,7 @@ export default function DownloadAll() {
             className={styles.button}
             onClick={action === 'download' ? start : cancel}
           >
-            {action === 'download' ? 'Download all games' : 'Cancel'}
+            {t(messages, action === 'download' ? 'Download all games' : 'Cancel')}
           </button>
         </div>
       )}

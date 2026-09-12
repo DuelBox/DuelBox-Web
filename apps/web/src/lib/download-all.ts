@@ -11,7 +11,29 @@
  * Everything below is pure so it can be held in a test without a browser. The component
  * that posts the messages and renders the result is `components/DownloadAll.tsx`, reached
  * through `lazy()` from the settings page so that none of it is shell.
+ *
+ * ## The copy (#220)
+ *
+ * The sentences are assembled here, so this is where they are translated: a function that
+ * returned English for the component to look up would be handing it a string no catalogue
+ * has a key for. The catalogue and the locale are parameters for the reason
+ * `lib/i18n/messages.ts` gives — these stay pure functions the unit suite calls with `{}`
+ * and gets exactly the English they always returned.
+ *
+ * Every state is one msgid with `{placeholders}`, never a join of translated fragments, so a
+ * language that puts the size before the count can. The two counted halves — "108 games",
+ * "12 still to save" — go through `plural()` for the categories English does not have.
+ *
+ * Nothing here is registered in `lib/i18n/sources.ts`, and that is deliberate rather than an
+ * omission. A source registers strings that reach a lookup through a variable, by listing
+ * them; the strings below have no list to be. "108 games, 1.3 MB" is not one string but one
+ * per count times one per size, which is unbounded — the numbers are the *values*, and they
+ * belong in placeholders where the extractor already sees the sentence around them. The only
+ * thing a source would add is a way to get them wrong.
  */
+
+import { plural, t, type Catalogue } from './i18n/messages';
+import type { LocaleCode } from './i18n/locales';
 
 /** Page → worker: save every game this device does not hold. Carries nothing else. */
 export const DOWNLOAD_ALL = 'DOWNLOAD_ALL';
@@ -60,10 +82,12 @@ export function isDownloadState(value: unknown): value is DownloadState & { type
  * this repository's numbers already use (`check-size.mjs` prints the same way). Never "B":
  * nothing here is small enough to be worth a unit below a kilobyte.
  */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '0 KB';
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${Math.round(bytes / 1024)} KB`;
+export function formatBytes(messages: Catalogue, bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return t(messages, '{n} KB', { n: 0 });
+  if (bytes >= 1024 * 1024) {
+    return t(messages, '{n} MB', { n: (bytes / (1024 * 1024)).toFixed(1) });
+  }
+  return t(messages, '{n} KB', { n: Math.round(bytes / 1024) });
 }
 
 /**
@@ -74,34 +98,71 @@ export function formatBytes(bytes: number): string {
  * true. The quota stop says what happened *and* that nothing was lost, since "the browser
  * refused" on its own reads as "your download is broken".
  */
-export function describeDownload(state: DownloadState): string {
-  const all = `${String(state.games)} games, ${formatBytes(state.bytesTotal)}`;
-  if (state.games === 0) return 'Nothing to download in this build.';
+export function describeDownload(
+  messages: Catalogue,
+  locale: LocaleCode,
+  state: DownloadState,
+): string {
+  if (state.games === 0) return t(messages, 'Nothing to download in this build.');
+  const size = formatBytes(messages, state.bytesTotal);
+  // "108 games" and "12 still to save": the counted halves, so a language with more than
+  // English's two categories gets them. English spells both forms the same in the second
+  // one — the sentence around it is what carries the meaning — and a locale that needs
+  // them apart supplies its own under the suffixed keys `plural()` documents.
+  const games = plural(messages, locale, state.games, {
+    one: '{count} game',
+    other: '{count} games',
+  });
   if (state.running) {
-    return (
-      `Saving ${String(state.done)} of ${String(state.games)} — ` +
-      `${formatBytes(state.bytesDone)} of ${formatBytes(state.bytesTotal)}`
-    );
+    return t(messages, 'Saving {done} of {total} — {saved} of {size}', {
+      done: state.done,
+      total: state.games,
+      saved: formatBytes(messages, state.bytesDone),
+      size,
+    });
   }
-  if (state.done >= state.games) return `All ${all} — on this device.`;
-  const rest = `${String(state.games - state.done)} still to save`;
+  if (state.done >= state.games) {
+    return t(messages, 'All {games}, {size} — on this device.', { games, size });
+  }
+  const rest = plural(messages, locale, state.games - state.done, {
+    one: '{count} still to save',
+    other: '{count} still to save',
+  });
   switch (state.stopped) {
     case 'cancelled':
-      return `Stopped. ${String(state.done)} of ${String(state.games)} saved, ${rest}.`;
+      return t(messages, 'Stopped. {done} of {total} saved, {rest}.', {
+        done: state.done,
+        total: state.games,
+        rest,
+      });
     case 'quota':
-      return (
-        `The browser ran out of room. ${String(state.done)} of ${String(state.games)} saved` +
-        ' and nothing already saved was damaged; free some space and press again to continue.'
+      return t(
+        messages,
+        'The browser ran out of room. {done} of {total} saved and nothing already saved was damaged; free some space and press again to continue.',
+        { done: state.done, total: state.games },
       );
     case 'network':
-      return (
-        `The connection went away. ${String(state.done)} of ${String(state.games)} saved;` +
-        ' press again to continue from there.'
+      return t(
+        messages,
+        'The connection went away. {done} of {total} saved; press again to continue from there.',
+        { done: state.done, total: state.games },
       );
     default:
       return state.done === 0
-        ? `${all}. Saved on this device, they open with no connection at all.`
-        : `${String(state.done)} of ${String(state.games)} on this device, ${rest} (${formatBytes(state.bytesTotal - state.bytesDone)}).`;
+        ? t(
+            messages,
+            '{games}, {size}. Saved on this device, they open with no connection at all.',
+            {
+              games,
+              size,
+            },
+          )
+        : t(messages, '{done} of {total} on this device, {rest} ({left}).', {
+            done: state.done,
+            total: state.games,
+            rest,
+            left: formatBytes(messages, state.bytesTotal - state.bytesDone),
+          });
   }
 }
 
@@ -122,9 +183,12 @@ export function downloadAction(state: DownloadState): 'download' | 'cancel' | nu
  * silence, because the whole reason somebody downloads a hundred games before a flight is
  * to still have them on the plane.
  */
-export function persistenceNote(persisted: boolean | null): string | null {
+export function persistenceNote(messages: Catalogue, persisted: boolean | null): string | null {
   if (persisted === null) return null;
-  return persisted
-    ? 'The browser has agreed to keep these when it needs space.'
-    : 'The browser may clear these when it needs space; they come back on the next download.';
+  return t(
+    messages,
+    persisted
+      ? 'The browser has agreed to keep these when it needs space.'
+      : 'The browser may clear these when it needs space; they come back on the next download.',
+  );
 }

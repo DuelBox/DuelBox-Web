@@ -620,10 +620,12 @@ export function SettingsPanel() {
         {/* #196. The other half of the offline promise: what you played is what you keep,
             and this is how to keep the rest before a flight. The worker owns the list, the
             fetching, the progress and the eviction; the page asks and reports. */}
-        <h3 className={styles.subhead}>Games saved on this device</h3>
+        <h3 className={styles.subhead}>{t(messages, 'Games saved on this device')}</h3>
         <p className={styles.note}>
-          Each game is saved here the first time you open it. Save all of them at once for a journey
-          with no connection; a stopped download picks up where it left off.
+          {t(
+            messages,
+            'Each game is saved here the first time you open it. Save all of them at once for a journey with no connection; a stopped download picks up where it left off.',
+          )}
         </p>
         <Suspense fallback={null}>
           <DownloadAll />

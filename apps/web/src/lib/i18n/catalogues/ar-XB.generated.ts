@@ -131,6 +131,7 @@ const catalogue = {
       '‮All‬ ‮time‬ ‮in‬ {game}‮:‬ {p1} {wins1} ‮—‬ {wins2} {p2}',
     'All {category} games': '‮All‬ {category} ‮games‬',
     'All {count} games': '‮All‬ {count} ‮games‬',
+    'All {games}, {size} — on this device.': '‮All‬ {games}‮,‬ {size} ‮—‬ ‮on‬ ‮this‬ ‮device.‬',
     'An order is dealt onto your pizza, held for a moment, and taken away. Rebuild it from the rail in front of you and ring the bell to send it out, because wrong or unfinished is spoiled. Most orders served wins.':
       '‮An‬ ‮order‬ ‮is‬ ‮dealt‬ ‮onto‬ ‮your‬ ‮pizza,‬ ‮held‬ ‮for‬ ‮a‬ ‮moment,‬ ‮and‬ ‮taken‬ ‮away.‬ ‮Rebuild‬ ‮it‬ ‮from‬ ‮the‬ ‮rail‬ ‮in‬ ‮front‬ ‮of‬ ‮you‬ ‮and‬ ‮ring‬ ‮the‬ ‮bell‬ ‮to‬ ‮send‬ ‮it‬ ‮out,‬ ‮because‬ ‮wrong‬ ‮or‬ ‮unfinished‬ ‮is‬ ‮spoiled.‬ ‮Most‬ ‮orders‬ ‮served‬ ‮wins.‬',
     'Any screen': '‮Any‬ ‮screen‬',
@@ -138,7 +139,10 @@ const catalogue = {
     'Arcade games': '‮Arcade‬ ‮games‬',
     Arena: '‮Arena‬',
     'Arena games': '‮Arena‬ ‮games‬',
+    'Asking what is on this device…': '‮Asking‬ ‮what‬ ‮is‬ ‮on‬ ‮this‬ ‮device…‬',
     Attribution: '‮Attribution‬',
+    'Available once the site has finished saving itself to this device.':
+      '‮Available‬ ‮once‬ ‮the‬ ‮site‬ ‮has‬ ‮finished‬ ‮saving‬ ‮itself‬ ‮to‬ ‮this‬ ‮device.‬',
     'Back to all games': '‮Back‬ ‮to‬ ‮all‬ ‮games‬',
     'Banknotes drift across one table with a safe let into each end. A hand grips every note under its palm at once, but a full hand moves at less than half the speed of an empty one. Most money banked wins.':
       '‮Banknotes‬ ‮drift‬ ‮across‬ ‮one‬ ‮table‬ ‮with‬ ‮a‬ ‮safe‬ ‮let‬ ‮into‬ ‮each‬ ‮end.‬ ‮A‬ ‮hand‬ ‮grips‬ ‮every‬ ‮note‬ ‮under‬ ‮its‬ ‮palm‬ ‮at‬ ‮once,‬ ‮but‬ ‮a‬ ‮full‬ ‮hand‬ ‮moves‬ ‮at‬ ‮less‬ ‮than‬ ‮half‬ ‮the‬ ‮speed‬ ‮of‬ ‮an‬ ‮empty‬ ‮one.‬ ‮Most‬ ‮money‬ ‮banked‬ ‮wins.‬',
@@ -170,6 +174,7 @@ const catalogue = {
     'Browse all {count} games': '‮Browse‬ ‮all‬ {count} ‮games‬',
     'Browse by category': '‮Browse‬ ‮by‬ ‮category‬',
     'By touch': '‮By‬ ‮touch‬',
+    Cancel: '‮Cancel‬',
     Categories: '‮Categories‬',
     Category: '‮Category‬',
     'Change something for the next round': '‮Change‬ ‮something‬ ‮for‬ ‮the‬ ‮next‬ ‮round‬',
@@ -214,6 +219,7 @@ const catalogue = {
     Dismiss: '‮Dismiss‬',
     'Display and play': '‮Display‬ ‮and‬ ‮play‬',
     Down: '‮Down‬',
+    'Download all games': '‮Download‬ ‮all‬ ‮games‬',
     'Drag across the bubbles you want to press':
       '‮Drag‬ ‮across‬ ‮the‬ ‮bubbles‬ ‮you‬ ‮want‬ ‮to‬ ‮press‬',
     'Drag anywhere in your own half; your net follows your finger and cannot outrun it':
@@ -261,6 +267,8 @@ const catalogue = {
       '‮DuelBox‬ ‮reimplements‬ ‮the‬ ‮rules‬ ‮of‬ ‮public-domain‬ ‮and‬ ‮everyday‬ ‮games‬ ‮—‬ ‮which‬ ‮are‬ ‮not‬ ‮protected‬ ‮—‬ ‮and‬ ‮writes‬ ‮its‬ ‮own‬ ‮code,‬ ‮art,‬ ‮sounds‬ ‮and‬ ‮names.‬ ‮We‬ ‮keep‬ ‮a‬ ‮written‬ ‮record‬ ‮of‬ ‮the‬ ‮naming‬ ‮and‬ ‮licensing‬ ‮decision‬ ‮for‬ ‮every‬ ‮game,‬ ‮so‬ ‮a‬ ‮concern‬ ‮about‬ ‮a‬ ‮name‬ ‮or‬ ‮an‬ ‮asset‬ ‮is‬ ‮usually‬ ‮answered‬ ‮with‬ ‮a‬ ‮document‬ ‮we‬ ‮already‬ ‮hold.‬ ‮See‬ {terms} ‮and‬ {attribution}‮.‬',
     'DuelBox — 108 games for two players. Runs in your browser; nothing to install.':
       '‮DuelBox‬ ‮—‬ ‮108‬ ‮games‬ ‮for‬ ‮two‬ ‮players.‬ ‮Runs‬ ‮in‬ ‮your‬ ‮browser;‬ ‮nothing‬ ‮to‬ ‮install.‬',
+    'Each game is saved here the first time you open it. Save all of them at once for a journey with no connection; a stopped download picks up where it left off.':
+      '‮Each‬ ‮game‬ ‮is‬ ‮saved‬ ‮here‬ ‮the‬ ‮first‬ ‮time‬ ‮you‬ ‮open‬ ‮it.‬ ‮Save‬ ‮all‬ ‮of‬ ‮them‬ ‮at‬ ‮once‬ ‮for‬ ‮a‬ ‮journey‬ ‮with‬ ‮no‬ ‮connection;‬ ‮a‬ ‮stopped‬ ‮download‬ ‮picks‬ ‮up‬ ‮where‬ ‮it‬ ‮left‬ ‮off.‬',
     "Each player's pieces differ in shape as well as colour, so every game is playable in greyscale and to a colour-blind player.":
       "‮Each‬ ‮player's‬ ‮pieces‬ ‮differ‬ ‮in‬ ‮shape‬ ‮as‬ ‮well‬ ‮as‬ ‮colour,‬ ‮so‬ ‮every‬ ‮game‬ ‮is‬ ‮playable‬ ‮in‬ ‮greyscale‬ ‮and‬ ‮to‬ ‮a‬ ‮colour-blind‬ ‮player.‬",
     Easy: '‮Easy‬',
@@ -326,6 +334,7 @@ const catalogue = {
       '‮Games‬ ‮about‬ ‮holding‬ ‮something‬ ‮in‬ ‮your‬ ‮head‬ ‮a‬ ‮few‬ ‮seconds‬ ‮longer‬ ‮than‬ ‮the‬ ‮person‬ ‮opposite.‬ ‮Memory‬ ‮Match‬ ‮is‬ ‮the‬ ‮sixteen-card‬ ‮table,‬ ‮where‬ ‮a‬ ‮matched‬ ‮pair‬ ‮keeps‬ ‮the‬ ‮turn,‬ ‮so‬ ‮somebody‬ ‮who‬ ‮remembers‬ ‮can‬ ‮clear‬ ‮it‬ ‮in‬ ‮a‬ ‮single‬ ‮visit;‬ ‮Pizza‬ ‮Memory‬ ‮deals‬ ‮an‬ ‮order,‬ ‮hides‬ ‮it,‬ ‮and‬ ‮asks‬ ‮for‬ ‮it‬ ‮back‬ ‮from‬ ‮the‬ ‮rail‬ ‮in‬ ‮front‬ ‮of‬ ‮you.‬ ‮Either‬ ‮one‬ ‮is‬ ‮done‬ ‮in‬ ‮about‬ ‮a‬ ‮minute.‬',
     'Games about timing a jump. Each player gets a strip of their own — a sky in Happy Birds, a lane in Gravity Run, a perch in Chicken Jump — and the gap or the block arrives for both at the same moment, so the loser is whoever ran out of timing first. About a minute each, and Stampede is shorter.':
       '‮Games‬ ‮about‬ ‮timing‬ ‮a‬ ‮jump.‬ ‮Each‬ ‮player‬ ‮gets‬ ‮a‬ ‮strip‬ ‮of‬ ‮their‬ ‮own‬ ‮—‬ ‮a‬ ‮sky‬ ‮in‬ ‮Happy‬ ‮Birds,‬ ‮a‬ ‮lane‬ ‮in‬ ‮Gravity‬ ‮Run,‬ ‮a‬ ‮perch‬ ‮in‬ ‮Chicken‬ ‮Jump‬ ‮—‬ ‮and‬ ‮the‬ ‮gap‬ ‮or‬ ‮the‬ ‮block‬ ‮arrives‬ ‮for‬ ‮both‬ ‮at‬ ‮the‬ ‮same‬ ‮moment,‬ ‮so‬ ‮the‬ ‮loser‬ ‮is‬ ‮whoever‬ ‮ran‬ ‮out‬ ‮of‬ ‮timing‬ ‮first.‬ ‮About‬ ‮a‬ ‮minute‬ ‮each,‬ ‮and‬ ‮Stampede‬ ‮is‬ ‮shorter.‬',
+    'Games saved on this device': '‮Games‬ ‮saved‬ ‮on‬ ‮this‬ ‮device‬',
     'Games that take their rules from a real sport and shrink the pitch to one screen. Air Hockey and Tennis run in real time with both halves moving at once; Bowling and Darts take turns instead, and the board turns to face whoever is to play. Most finish inside two minutes, and Pool is the long one at about five.':
       '‮Games‬ ‮that‬ ‮take‬ ‮their‬ ‮rules‬ ‮from‬ ‮a‬ ‮real‬ ‮sport‬ ‮and‬ ‮shrink‬ ‮the‬ ‮pitch‬ ‮to‬ ‮one‬ ‮screen.‬ ‮Air‬ ‮Hockey‬ ‮and‬ ‮Tennis‬ ‮run‬ ‮in‬ ‮real‬ ‮time‬ ‮with‬ ‮both‬ ‮halves‬ ‮moving‬ ‮at‬ ‮once;‬ ‮Bowling‬ ‮and‬ ‮Darts‬ ‮take‬ ‮turns‬ ‮instead,‬ ‮and‬ ‮the‬ ‮board‬ ‮turns‬ ‮to‬ ‮face‬ ‮whoever‬ ‮is‬ ‮to‬ ‮play.‬ ‮Most‬ ‮finish‬ ‮inside‬ ‮two‬ ‮minutes,‬ ‮and‬ ‮Pool‬ ‮is‬ ‮the‬ ‮long‬ ‮one‬ ‮at‬ ‮about‬ ‮five.‬',
     'Games where the floor is the opponent. Robot Arena puts both robots on a disc that sweeps, fires and drops things on them; Spike Attacks sends a volley down a row of standing stones that crack a little further with every blow, so the cover runs out while the volleys do not. Whoever is still standing takes the round, three rounds take the match, and a round is about a minute.':
@@ -457,6 +466,7 @@ const catalogue = {
     'Note:': '‮Note:‬',
     'Nothing needs setting up. Pick a game and it opens, or read the guide first — it is one page, and it covers the seats, the keys, and what to do when there is only one of you.':
       '‮Nothing‬ ‮needs‬ ‮setting‬ ‮up.‬ ‮Pick‬ ‮a‬ ‮game‬ ‮and‬ ‮it‬ ‮opens,‬ ‮or‬ ‮read‬ ‮the‬ ‮guide‬ ‮first‬ ‮—‬ ‮it‬ ‮is‬ ‮one‬ ‮page,‬ ‮and‬ ‮it‬ ‮covers‬ ‮the‬ ‮seats,‬ ‮the‬ ‮keys,‬ ‮and‬ ‮what‬ ‮to‬ ‮do‬ ‮when‬ ‮there‬ ‮is‬ ‮only‬ ‮one‬ ‮of‬ ‮you.‬',
+    'Nothing to download in this build.': '‮Nothing‬ ‮to‬ ‮download‬ ‮in‬ ‮this‬ ‮build.‬',
     'Nothing to import: that file holds nothing this version of DuelBox keeps.':
       '‮Nothing‬ ‮to‬ ‮import:‬ ‮that‬ ‮file‬ ‮holds‬ ‮nothing‬ ‮this‬ ‮version‬ ‮of‬ ‮DuelBox‬ ‮keeps.‬',
     'Nothing to install, nothing to sign up for':
@@ -479,8 +489,8 @@ const catalogue = {
       '‮On‬ ‮your‬ ‮turn,‬ ‮tap‬ ‮the‬ ‮face-up‬ ‮card‬ ‮of‬ ‮any‬ ‮pile‬ ‮to‬ ‮take‬ ‮it‬',
     'Once a page has loaded, playing it needs no network at all. Close the tab and come back and a game you have opened before still opens — your browser kept a copy of it. A game you have never opened is not on this device, and the catalogue says which is which.':
       '‮Once‬ ‮a‬ ‮page‬ ‮has‬ ‮loaded,‬ ‮playing‬ ‮it‬ ‮needs‬ ‮no‬ ‮network‬ ‮at‬ ‮all.‬ ‮Close‬ ‮the‬ ‮tab‬ ‮and‬ ‮come‬ ‮back‬ ‮and‬ ‮a‬ ‮game‬ ‮you‬ ‮have‬ ‮opened‬ ‮before‬ ‮still‬ ‮opens‬ ‮—‬ ‮your‬ ‮browser‬ ‮kept‬ ‮a‬ ‮copy‬ ‮of‬ ‮it.‬ ‮A‬ ‮game‬ ‮you‬ ‮have‬ ‮never‬ ‮opened‬ ‮is‬ ‮not‬ ‮on‬ ‮this‬ ‮device,‬ ‮and‬ ‮the‬ ‮catalogue‬ ‮says‬ ‮which‬ ‮is‬ ‮which.‬',
-    'Once a page has loaded, playing it needs nothing further from the network: the game, the bot and the physics all run on your device. Your browser also keeps a copy of the site, and of each game after you open it, so a game you have played before opens again with no connection at all. That cache holds this site’s own files and nothing about you — no scores, no names, no identifier — it is never sent anywhere, and clearing your browser’s site data removes it. A game you have never opened is not saved, and says so rather than showing an error.':
-      '‮Once‬ ‮a‬ ‮page‬ ‮has‬ ‮loaded,‬ ‮playing‬ ‮it‬ ‮needs‬ ‮nothing‬ ‮further‬ ‮from‬ ‮the‬ ‮network:‬ ‮the‬ ‮game,‬ ‮the‬ ‮bot‬ ‮and‬ ‮the‬ ‮physics‬ ‮all‬ ‮run‬ ‮on‬ ‮your‬ ‮device.‬ ‮Your‬ ‮browser‬ ‮also‬ ‮keeps‬ ‮a‬ ‮copy‬ ‮of‬ ‮the‬ ‮site,‬ ‮and‬ ‮of‬ ‮each‬ ‮game‬ ‮after‬ ‮you‬ ‮open‬ ‮it,‬ ‮so‬ ‮a‬ ‮game‬ ‮you‬ ‮have‬ ‮played‬ ‮before‬ ‮opens‬ ‮again‬ ‮with‬ ‮no‬ ‮connection‬ ‮at‬ ‮all.‬ ‮That‬ ‮cache‬ ‮holds‬ ‮this‬ ‮site’s‬ ‮own‬ ‮files‬ ‮and‬ ‮nothing‬ ‮about‬ ‮you‬ ‮—‬ ‮no‬ ‮scores,‬ ‮no‬ ‮names,‬ ‮no‬ ‮identifier‬ ‮—‬ ‮it‬ ‮is‬ ‮never‬ ‮sent‬ ‮anywhere,‬ ‮and‬ ‮clearing‬ ‮your‬ ‮browser’s‬ ‮site‬ ‮data‬ ‮removes‬ ‮it.‬ ‮A‬ ‮game‬ ‮you‬ ‮have‬ ‮never‬ ‮opened‬ ‮is‬ ‮not‬ ‮saved,‬ ‮and‬ ‮says‬ ‮so‬ ‮rather‬ ‮than‬ ‮showing‬ ‮an‬ ‮error.‬',
+    'Once a page has loaded, playing it needs nothing further from the network: the game, the bot and the physics all run on your device. Your browser also keeps a copy of the site, and of each game after you open it, so a game you have played before opens again with no connection at all. That cache holds this site’s own files and nothing about you — no scores, no names, no identifier — it is never sent anywhere, and clearing your browser’s site data removes it. A game you have never opened is not saved unless you ask for the whole collection from the settings page, and a game that is not here says so rather than showing an error. So that it knows which to drop first if the browser runs short of room, the cache also notes when each game was last opened — a date beside a game’s name, kept in that same cache, and never sent anywhere.':
+      '‮Once‬ ‮a‬ ‮page‬ ‮has‬ ‮loaded,‬ ‮playing‬ ‮it‬ ‮needs‬ ‮nothing‬ ‮further‬ ‮from‬ ‮the‬ ‮network:‬ ‮the‬ ‮game,‬ ‮the‬ ‮bot‬ ‮and‬ ‮the‬ ‮physics‬ ‮all‬ ‮run‬ ‮on‬ ‮your‬ ‮device.‬ ‮Your‬ ‮browser‬ ‮also‬ ‮keeps‬ ‮a‬ ‮copy‬ ‮of‬ ‮the‬ ‮site,‬ ‮and‬ ‮of‬ ‮each‬ ‮game‬ ‮after‬ ‮you‬ ‮open‬ ‮it,‬ ‮so‬ ‮a‬ ‮game‬ ‮you‬ ‮have‬ ‮played‬ ‮before‬ ‮opens‬ ‮again‬ ‮with‬ ‮no‬ ‮connection‬ ‮at‬ ‮all.‬ ‮That‬ ‮cache‬ ‮holds‬ ‮this‬ ‮site’s‬ ‮own‬ ‮files‬ ‮and‬ ‮nothing‬ ‮about‬ ‮you‬ ‮—‬ ‮no‬ ‮scores,‬ ‮no‬ ‮names,‬ ‮no‬ ‮identifier‬ ‮—‬ ‮it‬ ‮is‬ ‮never‬ ‮sent‬ ‮anywhere,‬ ‮and‬ ‮clearing‬ ‮your‬ ‮browser’s‬ ‮site‬ ‮data‬ ‮removes‬ ‮it.‬ ‮A‬ ‮game‬ ‮you‬ ‮have‬ ‮never‬ ‮opened‬ ‮is‬ ‮not‬ ‮saved‬ ‮unless‬ ‮you‬ ‮ask‬ ‮for‬ ‮the‬ ‮whole‬ ‮collection‬ ‮from‬ ‮the‬ ‮settings‬ ‮page,‬ ‮and‬ ‮a‬ ‮game‬ ‮that‬ ‮is‬ ‮not‬ ‮here‬ ‮says‬ ‮so‬ ‮rather‬ ‮than‬ ‮showing‬ ‮an‬ ‮error.‬ ‮So‬ ‮that‬ ‮it‬ ‮knows‬ ‮which‬ ‮to‬ ‮drop‬ ‮first‬ ‮if‬ ‮the‬ ‮browser‬ ‮runs‬ ‮short‬ ‮of‬ ‮room,‬ ‮the‬ ‮cache‬ ‮also‬ ‮notes‬ ‮when‬ ‮each‬ ‮game‬ ‮was‬ ‮last‬ ‮opened‬ ‮—‬ ‮a‬ ‮date‬ ‮beside‬ ‮a‬ ‮game’s‬ ‮name,‬ ‮kept‬ ‮in‬ ‮that‬ ‮same‬ ‮cache,‬ ‮and‬ ‮never‬ ‮sent‬ ‮anywhere.‬',
     'One ball, two beetles and a base at each end. A beetle shoves the ball directly away from itself, so where you arrive decides where it goes, and walking across it rolls it out of a squeeze. Keep clear of the ladybirds and deliver three.':
       '‮One‬ ‮ball,‬ ‮two‬ ‮beetles‬ ‮and‬ ‮a‬ ‮base‬ ‮at‬ ‮each‬ ‮end.‬ ‮A‬ ‮beetle‬ ‮shoves‬ ‮the‬ ‮ball‬ ‮directly‬ ‮away‬ ‮from‬ ‮itself,‬ ‮so‬ ‮where‬ ‮you‬ ‮arrive‬ ‮decides‬ ‮where‬ ‮it‬ ‮goes,‬ ‮and‬ ‮walking‬ ‮across‬ ‮it‬ ‮rolls‬ ‮it‬ ‮out‬ ‮of‬ ‮a‬ ‮squeeze.‬ ‮Keep‬ ‮clear‬ ‮of‬ ‮the‬ ‮ladybirds‬ ‮and‬ ‮deliver‬ ‮three.‬',
     "One board of numbered tiles with a single gap, and two players solving it from opposite sides of the table. You want the tiles in order as you read them, and so does your opponent, so every helpful slide gets in the other's way.":
@@ -760,6 +770,8 @@ const catalogue = {
       "‮Run‬ ‮down‬ ‮a‬ ‮burrow,‬ ‮changing‬ ‮rails‬ ‮to‬ ‮keep‬ ‮clear‬ ‮of‬ ‮the‬ ‮cats'‬ ‮paws‬ ‮and‬ ‮to‬ ‮reach‬ ‮the‬ ‮cheese.‬ ‮Every‬ ‮piece‬ ‮is‬ ‮there‬ ‮for‬ ‮both‬ ‮rats,‬ ‮so‬ ‮this‬ ‮is‬ ‮a‬ ‮race‬ ‮rather‬ ‮than‬ ‮a‬ ‮scramble.‬ ‮First‬ ‮to‬ ‮carry‬ ‮sixteen‬ ‮home‬ ‮wins.‬",
     'Saved as {file}.': '‮Saved‬ ‮as‬ {file}‮.‬',
     'Saved on this device': '‮Saved‬ ‮on‬ ‮this‬ ‮device‬',
+    'Saving {done} of {total} — {saved} of {size}':
+      '‮Saving‬ {done} ‮of‬ {total} ‮—‬ {saved} ‮of‬ {size}',
     Score: '‮Score‬',
     'Score {score}': '‮Score‬ {score}',
     "Scores are not part of it. No match's score is written down anywhere, on your device or ours — a running tally is held in memory while you play and is gone when you close the tab. The head-to-head above is a count of matches, not a record of any of them: it knows you have won six and not which six, when, or by how much. A tournament in progress is the one thing here that remembers who won a particular game, because a line-up nobody can score is not a tournament, and it goes when the tournament does.":
@@ -861,6 +873,8 @@ const catalogue = {
     'Start playing': '‮Start‬ ‮playing‬',
     Stealth: '‮Stealth‬',
     'Stealth games': '‮Stealth‬ ‮games‬',
+    'Stopped. {done} of {total} saved, {rest}.':
+      '‮Stopped.‬ {done} ‮of‬ {total} ‮saved,‬ {rest}‮.‬',
     'Strike the ball at the goal at the far end, choosing a line and then how hard. Whoever concedes restarts from the centre spot, and the first to three goals wins.':
       '‮Strike‬ ‮the‬ ‮ball‬ ‮at‬ ‮the‬ ‮goal‬ ‮at‬ ‮the‬ ‮far‬ ‮end,‬ ‮choosing‬ ‮a‬ ‮line‬ ‮and‬ ‮then‬ ‮how‬ ‮hard.‬ ‮Whoever‬ ‮concedes‬ ‮restarts‬ ‮from‬ ‮the‬ ‮centre‬ ‮spot,‬ ‮and‬ ‮the‬ ‮first‬ ‮to‬ ‮three‬ ‮goals‬ ‮wins.‬',
     'Surprise me': '‮Surprise‬ ‮me‬',
@@ -979,10 +993,18 @@ const catalogue = {
       '‮The‬ ‮address‬ ‮may‬ ‮have‬ ‮a‬ ‮typo‬ ‮in‬ ‮it,‬ ‮or‬ ‮the‬ ‮page‬ ‮may‬ ‮have‬ ‮moved‬ ‮since‬ ‮something‬ ‮linked‬ ‮to‬ ‮it.‬ ‮Nothing‬ ‮is‬ ‮lost‬ ‮—‬ ‮every‬ ‮game‬ ‮in‬ ‮the‬ ‮catalogue‬ ‮is‬ ‮one‬ ‮press‬ ‮away.‬',
     'The board is exactly where you left it.':
       '‮The‬ ‮board‬ ‮is‬ ‮exactly‬ ‮where‬ ‮you‬ ‮left‬ ‮it.‬',
+    'The browser has agreed to keep these when it needs space.':
+      '‮The‬ ‮browser‬ ‮has‬ ‮agreed‬ ‮to‬ ‮keep‬ ‮these‬ ‮when‬ ‮it‬ ‮needs‬ ‮space.‬',
+    'The browser may clear these when it needs space; they come back on the next download.':
+      '‮The‬ ‮browser‬ ‮may‬ ‮clear‬ ‮these‬ ‮when‬ ‮it‬ ‮needs‬ ‮space;‬ ‮they‬ ‮come‬ ‮back‬ ‮on‬ ‮the‬ ‮next‬ ‮download.‬',
+    'The browser ran out of room. {done} of {total} saved and nothing already saved was damaged; free some space and press again to continue.':
+      '‮The‬ ‮browser‬ ‮ran‬ ‮out‬ ‮of‬ ‮room.‬ {done} ‮of‬ {total} ‮saved‬ ‮and‬ ‮nothing‬ ‮already‬ ‮saved‬ ‮was‬ ‮damaged;‬ ‮free‬ ‮some‬ ‮space‬ ‮and‬ ‮press‬ ‮again‬ ‮to‬ ‮continue.‬',
     'The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:':
       '‮The‬ ‮catalogue‬ ‮knows‬ ‮which‬ ‮is‬ ‮which.‬ ‮While‬ ‮you‬ ‮are‬ ‮away‬ ‮from‬ ‮a‬ ‮connection‬ ‮it‬ ‮marks‬ ‮every‬ ‮game‬ ‮in‬ ‮the‬ ‮list‬ ‮as‬ ‮one‬ ‮of‬ ‮two‬ ‮things:‬',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
       "‮The‬ ‮coins‬ ‮you‬ ‮can‬ ‮spend‬ ‮are‬ ‮in‬ ‮the‬ ‮other‬ ‮player's‬ ‮vault,‬ ‮so‬ ‮the‬ ‮only‬ ‮way‬ ‮to‬ ‮score‬ ‮is‬ ‮to‬ ‮leave‬ ‮your‬ ‮own‬ ‮floor,‬ ‮and‬ ‮the‬ ‮moment‬ ‮you‬ ‮do‬ ‮you‬ ‮are‬ ‮the‬ ‮thief‬ ‮and‬ ‮they‬ ‮are‬ ‮the‬ ‮guard.‬ ‮Come‬ ‮home‬ ‮to‬ ‮bank‬ ‮what‬ ‮you‬ ‮carried.‬ ‮Most‬ ‮coins‬ ‮after‬ ‮a‬ ‮minute‬ ‮wins.‬",
+    'The connection went away. {done} of {total} saved; press again to continue from there.':
+      '‮The‬ ‮connection‬ ‮went‬ ‮away.‬ {done} ‮of‬ {total} ‮saved;‬ ‮press‬ ‮again‬ ‮to‬ ‮continue‬ ‮from‬ ‮there.‬',
     'The controllers were swapped.': '‮The‬ ‮controllers‬ ‮were‬ ‮swapped.‬',
     "The controllers were swapped. {who}'s seat now has the other one.":
       "‮The‬ ‮controllers‬ ‮were‬ ‮swapped.‬ {who}‮'s‬ ‮seat‬ ‮now‬ ‮has‬ ‮the‬ ‮other‬ ‮one.‬",
@@ -1331,9 +1353,15 @@ const catalogue = {
       '{count} ‮games,‬ ‮played‬ ‮by‬ ‮two‬ ‮people‬ ‮on‬ ‮one‬ ‮device.‬',
     '{count} point': '{count} ‮point‬',
     '{count} points': '{count} ‮points‬',
+    '{count} still to save': '{count} ‮still‬ ‮to‬ ‮save‬',
+    '{done} of {total}': '{done} ‮of‬ {total}',
+    '{done} of {total} on this device, {rest} ({left}).':
+      '{done} ‮of‬ {total} ‮on‬ ‮this‬ ‮device,‬ {rest} ‮(‬{left}‮).‬',
     '{games} and pick one.': '{games} ‮and‬ ‮pick‬ ‮one.‬',
     '{games} games across {categories} categories. Every one plays with two people on one device, and every one also takes a bot in the second seat.':
       '{games} ‮games‬ ‮across‬ {categories} ‮categories.‬ ‮Every‬ ‮one‬ ‮plays‬ ‮with‬ ‮two‬ ‮people‬ ‮on‬ ‮one‬ ‮device,‬ ‮and‬ ‮every‬ ‮one‬ ‮also‬ ‮takes‬ ‮a‬ ‮bot‬ ‮in‬ ‮the‬ ‮second‬ ‮seat.‬',
+    '{games}, {size}. Saved on this device, they open with no connection at all.':
+      '{games}‮,‬ {size}‮.‬ ‮Saved‬ ‮on‬ ‮this‬ ‮device,‬ ‮they‬ ‮open‬ ‮with‬ ‮no‬ ‮connection‬ ‮at‬ ‮all.‬',
     '{game} is switched off at the moment. {reason} It comes back on here as soon as that is put right, and nothing else in the catalogue is affected.':
       '{game} ‮is‬ ‮switched‬ ‮off‬ ‮at‬ ‮the‬ ‮moment.‬ {reason} ‮It‬ ‮comes‬ ‮back‬ ‮on‬ ‮here‬ ‮as‬ ‮soon‬ ‮as‬ ‮that‬ ‮is‬ ‮put‬ ‮right,‬ ‮and‬ ‮nothing‬ ‮else‬ ‮in‬ ‮the‬ ‮catalogue‬ ‮is‬ ‮affected.‬',
     '{items} and {last}': '{items} ‮and‬ {last}',
@@ -1361,6 +1389,8 @@ const catalogue = {
       '{near} {nearWins}‮,‬ {far} {farWins}‮,‬ {draws} ‮drawn‬',
     '{note} the contact address below is a placeholder ({address}) and is not yet a monitored inbox. It must be replaced with the real address before launch.':
       '{note} ‮the‬ ‮contact‬ ‮address‬ ‮below‬ ‮is‬ ‮a‬ ‮placeholder‬ ‮(‬{address}‮)‬ ‮and‬ ‮is‬ ‮not‬ ‮yet‬ ‮a‬ ‮monitored‬ ‮inbox.‬ ‮It‬ ‮must‬ ‮be‬ ‮replaced‬ ‮with‬ ‮the‬ ‮real‬ ‮address‬ ‮before‬ ‮launch.‬',
+    '{n} KB': '{n} ‮KB‬',
+    '{n} MB': '{n} ‮MB‬',
     '{one} and {two} are playing {game} — move to stop.':
       '{one} ‮and‬ {two} ‮are‬ ‮playing‬ {game} ‮—‬ ‮move‬ ‮to‬ ‮stop.‬',
     '{p1} {wins1} — {wins2} {p2}': '{p1} {wins1} ‮—‬ {wins2} {p2}',
@@ -1370,6 +1400,8 @@ const catalogue = {
     '{seat} takes the other seat, at three levels.':
       '{seat} ‮takes‬ ‮the‬ ‮other‬ ‮seat,‬ ‮at‬ ‮three‬ ‮levels.‬',
     '{size} kB': '{size} ‮kB‬',
+    "{used} of {limit} of this site's storage in use":
+      "{used} ‮of‬ {limit} ‮of‬ ‮this‬ ‮site's‬ ‮storage‬ ‮in‬ ‮use‬",
     "{who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.":
       "{who}‮'s‬ ‮controller‬ ‮was‬ ‮unplugged.‬ ‮That‬ ‮seat‬ ‮is‬ ‮back‬ ‮on‬ ‮the‬ ‮keyboard‬ ‮and‬ ‮touch‬ ‮until‬ ‮one‬ ‮is‬ ‮plugged‬ ‮in.‬",
     '{won}W {lost}L {drawn}D': '{won}‮W‬ {lost}‮L‬ {drawn}‮D‬',
