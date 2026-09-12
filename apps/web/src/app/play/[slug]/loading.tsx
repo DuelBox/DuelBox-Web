@@ -1,3 +1,5 @@
+import { T } from '@/lib/i18n/T';
+
 /**
  * What the play route shows while its own payload and code are still on their way (#93).
  *
@@ -119,6 +121,11 @@
  * A server component, and it has to stay one. The shell budget has about two kilobytes of
  * headroom, and a fallback that shipped a component would bill every visitor for the
  * moment before somebody else's game.
+ *
+ * Its two lines of copy go through `<T>` for the reason the page beside it does, and at the
+ * same price: this markup is in all 108 play payloads, so the wrapper is paid 108 times. It
+ * was measured with the heading on the page rather than separately — the commit carries the
+ * figure — and `speculatedBytes` clears its budget with it.
  */
 export default function PlayLoading() {
   return (
@@ -126,9 +133,13 @@ export default function PlayLoading() {
       {/* The play route promises a heading in every phase — see the page beside this file,
           which renders one for exactly this reason. This is a phase. It cannot name the
           game: a loading file is handed no params, by design. */}
-      <h1 className="db-visually-hidden">Loading the game</h1>
+      <h1 className="db-visually-hidden">
+        <T id="Loading the game" />
+      </h1>
       <div className="db-panel">
-        <p role="status">Loading…</p>
+        <p role="status">
+          <T id="Loading…" />
+        </p>
       </div>
     </div>
   );

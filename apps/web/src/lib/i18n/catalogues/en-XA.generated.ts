@@ -7,15 +7,20 @@ const catalogue = {
   messages: {
     'A new version of DuelBox is ready.': '⟦Å ñéŵ ṽéŕšïöñ öƒ ÐûéłƁöẋ ïš ŕéåðý. ············⟧',
     'Add {name} to favourites': '⟦Åðð {name} ŧö ƒåṽöûŕïŧéš ·········⟧',
+    'All games': '⟦Åłł ĝåɱéš ····⟧',
     Copied: '⟦Çöþïéð ···⟧',
     'Copy failed': '⟦Çöþý ƒåïłéð ····⟧',
     'Copy trace': '⟦Çöþý ŧŕåçé ····⟧',
     Favourite: '⟦Ƒåṽöûŕïŧé ····⟧',
+    'If it keeps happening, this code identifies it: {code}':
+      '⟦Ïƒ ïŧ ķééþš ĥåþþéñïñĝ, ŧĥïš çöðé ïðéñŧïƒïéš ïŧ: {code} ···················⟧',
     'Input trace': '⟦Ïñþûŧ ŧŕåçé ····⟧',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '⟦Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð, ƀûŧ ŧĥé ƀûïłð ĥåš ñöŧ łåñðéð. Ŧŕý åñöŧĥéŕ ĝåɱé. ······························⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
+    'Loading the game': '⟦Łöåðïñĝ ŧĥé ĝåɱé ······⟧',
     'Loading {name}…': '⟦Łöåðïñĝ {name}… ······⟧',
+    'Loading…': '⟦Łöåðïñĝ… ···⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
     'Offline. The games saved on this device still play.':
       '⟦Öƒƒłïñé. Ŧĥé ĝåɱéš šåṽéð öñ ŧĥïš ðéṽïçé šŧïłł þłåý. ··················⟧',
@@ -26,11 +31,14 @@ const catalogue = {
     'Play against {name}': '⟦Þłåý åĝåïñšŧ {name} ·······⟧',
     'Play solo': '⟦Þłåý šöłö ····⟧',
     'Play together here': '⟦Þłåý ŧöĝéŧĥéŕ ĥéŕé ·······⟧',
+    'Play {name}': '⟦Þłåý {name} ····⟧',
+    'Play {name} on DuelBox': '⟦Þłåý {name} öñ ÐûéłƁöẋ ········⟧',
     'Quit match': '⟦Ǫûïŧ ɱåŧçĥ ····⟧',
     Reload: '⟦Ŕéłöåð ···⟧',
     'Remove {name} from favourites': '⟦Ŕéɱöṽé {name} ƒŕöɱ ƒåṽöûŕïŧéš ···········⟧',
     Restart: '⟦Ŕéšŧåŕŧ ···⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
+    'Something went wrong here': '⟦Šöɱéŧĥïñĝ ŵéñŧ ŵŕöñĝ ĥéŕé ·········⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
     'Surprise me': '⟦Šûŕþŕïšé ɱé ····⟧',
@@ -40,11 +48,16 @@ const catalogue = {
     'The game stopped unexpectedly.': '⟦Ŧĥé ĝåɱé šŧöþþéð ûñéẋþéçŧéðłý. ···········⟧',
     'The match was stopped safely. You can start it over or head back.':
       '⟦Ŧĥé ɱåŧçĥ ŵåš šŧöþþéð šåƒéłý. Ýöû çåñ šŧåŕŧ ïŧ öṽéŕ öŕ ĥéåð ƀåçķ. ·······················⟧',
+    'This DuelBox game cannot be embedded here.':
+      '⟦Ŧĥïš ÐûéłƁöẋ ĝåɱé çåññöŧ ƀé éɱƀéððéð ĥéŕé. ···············⟧',
     'This game hit a snag': '⟦Ŧĥïš ĝåɱé ĥïŧ å šñåĝ ·······⟧',
     'This game is not playable yet': '⟦Ŧĥïš ĝåɱé ïš ñöŧ þłåýåƀłé ýéŧ ···········⟧',
+    'This page stopped part-way. It is usually momentary — trying again reloads just this part, not the whole site, and nothing about your games is stored anywhere to lose.':
+      '⟦Ŧĥïš þåĝé šŧöþþéð þåŕŧ-ŵåý. Ïŧ ïš ûšûåłłý ɱöɱéñŧåŕý — ŧŕýïñĝ åĝåïñ ŕéłöåðš ĵûšŧ ŧĥïš þåŕŧ, ñöŧ ŧĥé ŵĥöłé šïŧé, åñð ñöŧĥïñĝ åƀöûŧ ýöûŕ ĝåɱéš ïš šŧöŕéð åñýŵĥéŕé ŧö łöšé. ···························································⟧',
     'Tournament against {name}': '⟦Ŧöûŕñåɱéñŧ åĝåïñšŧ {name} ·········⟧',
     'Tournament together': '⟦Ŧöûŕñåɱéñŧ ŧöĝéŧĥéŕ ·······⟧',
     Trace: '⟦Ŧŕåçé ··⟧',
+    'Try again': '⟦Ŧŕý åĝåïñ ····⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
     '{name} board': '⟦{name} ƀöåŕð ·····⟧',
     '{one} and {two} are playing {game} — move to stop.':

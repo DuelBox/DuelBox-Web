@@ -31,6 +31,10 @@ const I18N_CLEAN = [
   'apps/web/src/components/ServiceWorkerBridge.tsx',
   'apps/web/src/components/FavouriteButton.tsx',
   'apps/web/src/components/QuickPlay.tsx',
+  'apps/web/src/app/error.tsx',
+  'apps/web/src/app/embed/[slug]/EmbedFrame.tsx',
+  'apps/web/src/app/play/[slug]/page.tsx',
+  'apps/web/src/app/play/[slug]/loading.tsx',
 ];
 
 export default tseslint.config(

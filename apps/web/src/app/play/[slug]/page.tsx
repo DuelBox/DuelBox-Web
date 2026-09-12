@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
 import { PlaySurface } from '@/components/PlaySurface';
+import { T } from '@/lib/i18n/T';
 
 /**
  * Only games with a playable build get a play route; the rest keep their catalogue page.
@@ -46,8 +47,19 @@ export default async function PlayPage({ params }: { params: Promise<{ slug: str
         deliberately: this is a server component, so the heading is in the exported HTML and
         costs the shell budget nothing, and it is present in every phase rather than only in
         the ones a client component happens to render.
+
+        A `<T>` rather than a literal, and the one in this territory whose price had to be
+        argued (#220): a server component's translated copy is serialised into the route
+        payload, and this route has 108 of them. Measured on the built export by rewriting
+        the element back to plain text in every payload and gzipping again — the number is in
+        the commit — and `speculatedBytes` still clears its budget, so the only heading a
+        screen-reader user gets on this page is translated like the rest of the copy. The
+        `<noscript>` below is deliberately not: nothing in it is translated anywhere on the
+        site, and it is already the most expensive markup on this line.
       */}
-      <h1 className="db-visually-hidden">Play {game?.name ?? slug}</h1>
+      <h1 className="db-visually-hidden">
+        <T id="Play {name}" values={{ name: game?.name ?? slug }} />
+      </h1>
       {/*
         What a visitor with scripting off is told, instead of being told to wait.
 

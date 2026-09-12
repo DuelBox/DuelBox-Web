@@ -7,15 +7,20 @@ const catalogue = {
   messages: {
     'A new version of DuelBox is ready.': '‮A‬ ‮new‬ ‮version‬ ‮of‬ ‮DuelBox‬ ‮is‬ ‮ready.‬',
     'Add {name} to favourites': '‮Add‬ {name} ‮to‬ ‮favourites‬',
+    'All games': '‮All‬ ‮games‬',
     Copied: '‮Copied‬',
     'Copy failed': '‮Copy‬ ‮failed‬',
     'Copy trace': '‮Copy‬ ‮trace‬',
     Favourite: '‮Favourite‬',
+    'If it keeps happening, this code identifies it: {code}':
+      '‮If‬ ‮it‬ ‮keeps‬ ‮happening,‬ ‮this‬ ‮code‬ ‮identifies‬ ‮it:‬ {code}',
     'Input trace': '‮Input‬ ‮trace‬',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled,‬ ‮but‬ ‮the‬ ‮build‬ ‮has‬ ‮not‬ ‮landed.‬ ‮Try‬ ‮another‬ ‮game.‬',
     Language: '‮Language‬',
+    'Loading the game': '‮Loading‬ ‮the‬ ‮game‬',
     'Loading {name}…': '‮Loading‬ {name}‮…‬',
+    'Loading…': '‮Loading…‬',
     'Mute sound': '‮Mute‬ ‮sound‬',
     'Offline. The games saved on this device still play.':
       '‮Offline.‬ ‮The‬ ‮games‬ ‮saved‬ ‮on‬ ‮this‬ ‮device‬ ‮still‬ ‮play.‬',
@@ -26,11 +31,14 @@ const catalogue = {
     'Play against {name}': '‮Play‬ ‮against‬ {name}',
     'Play solo': '‮Play‬ ‮solo‬',
     'Play together here': '‮Play‬ ‮together‬ ‮here‬',
+    'Play {name}': '‮Play‬ {name}',
+    'Play {name} on DuelBox': '‮Play‬ {name} ‮on‬ ‮DuelBox‬',
     'Quit match': '‮Quit‬ ‮match‬',
     Reload: '‮Reload‬',
     'Remove {name} from favourites': '‮Remove‬ {name} ‮from‬ ‮favourites‬',
     Restart: '‮Restart‬',
     Settings: '‮Settings‬',
+    'Something went wrong here': '‮Something‬ ‮went‬ ‮wrong‬ ‮here‬',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '‮Sound,‬ ‮vibration,‬ ‮and‬ ‮what‬ ‮this‬ ‮device‬ ‮remembers‬ ‮about‬ ‮how‬ ‮you‬ ‮play.‬ ‮Every‬ ‮change‬ ‮applies‬ ‮straight‬ ‮away‬ ‮and‬ ‮is‬ ‮kept‬ ‮in‬ ‮this‬ ‮browser‬ ‮only‬ ‮—‬ ‮nothing‬ ‮here‬ ‮is‬ ‮sent‬ ‮anywhere.‬',
     'Surprise me': '‮Surprise‬ ‮me‬',
@@ -40,11 +48,16 @@ const catalogue = {
     'The game stopped unexpectedly.': '‮The‬ ‮game‬ ‮stopped‬ ‮unexpectedly.‬',
     'The match was stopped safely. You can start it over or head back.':
       '‮The‬ ‮match‬ ‮was‬ ‮stopped‬ ‮safely.‬ ‮You‬ ‮can‬ ‮start‬ ‮it‬ ‮over‬ ‮or‬ ‮head‬ ‮back.‬',
+    'This DuelBox game cannot be embedded here.':
+      '‮This‬ ‮DuelBox‬ ‮game‬ ‮cannot‬ ‮be‬ ‮embedded‬ ‮here.‬',
     'This game hit a snag': '‮This‬ ‮game‬ ‮hit‬ ‮a‬ ‮snag‬',
     'This game is not playable yet': '‮This‬ ‮game‬ ‮is‬ ‮not‬ ‮playable‬ ‮yet‬',
+    'This page stopped part-way. It is usually momentary — trying again reloads just this part, not the whole site, and nothing about your games is stored anywhere to lose.':
+      '‮This‬ ‮page‬ ‮stopped‬ ‮part-way.‬ ‮It‬ ‮is‬ ‮usually‬ ‮momentary‬ ‮—‬ ‮trying‬ ‮again‬ ‮reloads‬ ‮just‬ ‮this‬ ‮part,‬ ‮not‬ ‮the‬ ‮whole‬ ‮site,‬ ‮and‬ ‮nothing‬ ‮about‬ ‮your‬ ‮games‬ ‮is‬ ‮stored‬ ‮anywhere‬ ‮to‬ ‮lose.‬',
     'Tournament against {name}': '‮Tournament‬ ‮against‬ {name}',
     'Tournament together': '‮Tournament‬ ‮together‬',
     Trace: '‮Trace‬',
+    'Try again': '‮Try‬ ‮again‬',
     'Unmute sound': '‮Unmute‬ ‮sound‬',
     '{name} board': '{name} ‮board‬',
     '{one} and {two} are playing {game} — move to stop.':
