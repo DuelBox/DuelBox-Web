@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { ServiceWorkerBridge } from '@/components/ServiceWorkerBridge';
+import { LocaleProvider } from '@/lib/i18n/provider';
 import {
   FRAMED_NOTICE_ID,
   FRAMED_NOTICE_LINK,
@@ -128,7 +129,25 @@ export const viewport: Viewport = {
  * reads this string back and fails if it stops matching what those two files do: the same
  * key, only `light` and `dark` stamped, `system` and everything else left to the media
  * query in `tokens.css`. Wrapped in try/catch because storage throws in private browsing on
- * some engines, and a theme script that throws would take the page down with it. */
+ * some engines, and a theme script that throws would take the page down with it.
+ *
+ * The last two lines stamp `lang` and `dir` from the stored locale (#219, #222) for the same
+ * reason and under the same constraint: a right-to-left choice that waited for hydration would
+ * paint the shell left-to-right and then flip it. The script cannot import `lib/i18n/locales.ts`,
+ * so it carries its own copy of the non-default codes and their directions in `D`, and
+ * `lib/i18n/i18n.test.ts` reads that object out of this file and fails if it disagrees with the
+ * registry in either direction — a code the registry does not have must never be stamped, and
+ * a right-to-left locale the script does not know would flash. English is left to the markup,
+ * which already says `lang="en"`, so a visitor who never chose a language runs one lookup. The
+ * value is checked against the two directions rather than for truthiness because `l` comes
+ * out of storage: a blob with `"locale":"constructor"` would otherwise find `Object` on the
+ * lookup's prototype and stamp it.
+ *
+ * Every byte here is paid 108 times over in the route payloads a catalogue browse prefetches
+ * (`size-budget.json`, `_raised_2026_09_08_speculated`). MEASURED on one payload: the first
+ * draft, two arrays and two `setAttribute` calls, was 74 gzipped bytes a payload — 8.0 KB over
+ * the 108; this shape, one object and the reflected `lang`/`dir` properties, is what replaced
+ * it, and `_rederived_2026_09_12_i18n` records the number it came down to. */
 const THEME_SCRIPT = `(function(){try{
 var raw=localStorage.getItem('duelbox:settings');
 var t=raw&&JSON.parse(raw);
@@ -140,6 +159,8 @@ else el.removeAttribute('data-theme');
 var seats=s?s.seatPalette:null;
 if(seats==='colourblind')el.setAttribute('data-seat-palette','colourblind');
 else el.removeAttribute('data-seat-palette');
+var l=s?s.locale:null,D={'en-XA':'ltr','ar-XB':'rtl'},d=D[l];
+if(d==='ltr'||d==='rtl'){el.lang=l;el.dir=d;}
 }catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -153,12 +174,26 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* First in the body so it runs during parse, before the ground is painted. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FRAME_GUARD }} />
-        <a className="db-skip" href="#main">
-          Skip to content
-        </a>
-        <div className="db-shell">
-          <SiteHeader />
-          {/*
+        {/*
+          The locale provider (#219) wraps everything the two scripts above do not own: one
+          context for the whole tree, so the header's mute, the settings page and the match
+          HUD read one catalogue and the chunk for a chosen locale is fetched once. It renders
+          no element, so the exported markup is what it was. Its cost is the client reference
+          it adds to every route payload, on the same 108x multiplier the frame notice below
+          records — measured in `size-budget.json`'s `_rederived_2026_09_12_i18n`.
+
+          The skip link's text is deliberately still a literal here rather than a `<T>`: a
+          `<T>` in this file is serialised into all 108 prefetched play payloads, and
+          `lib/i18n/T.tsx` says in its own header not to put one here. It is translated when
+          #220 moves the link into a component of its own.
+        */}
+        <LocaleProvider>
+          <a className="db-skip" href="#main">
+            Skip to content
+          </a>
+          <div className="db-shell">
+            <SiteHeader />
+            {/*
             `tabIndex={-1}` is what makes the link above a skip link rather than a scroll.
 
             A fragment link moves the *viewport* to its target; it moves focus only if the
@@ -173,12 +208,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             its way past. `globals.css` explains why it is also the one focusable thing on
             the site with no focus ring.
           */}
-          <main id="main" className="db-main" tabIndex={-1}>
-            {children}
-          </main>
-          <SiteFooter />
-        </div>
-        {/*
+            <main id="main" className="db-main" tabIndex={-1}>
+              {children}
+            </main>
+            <SiteFooter />
+          </div>
+          {/*
           The page's end of the service worker (#192 #193 #194), and the only client
           component this file mounts. Where it sits was decided rather than defaulted, so
           the three reasons are here rather than in a commit message nobody will find.
@@ -214,7 +249,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           because two of them here would break `e2e/settings.spec.ts` and
           `e2e/record.spec.ts`, which both ask for the only one.
         */}
-        {/*
+          {/*
           What a refused frame shows, and it is markup rather than script for two reasons.
 
           **Size (#2545).** Next serialises this whole tree into the `index.txt` route payload
@@ -243,13 +278,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           document affects where it is painted — and on a framed page everything above it is
           `visibility: hidden`, so its link is the only focusable thing left.
         */}
-        <div id={FRAMED_NOTICE_ID}>
-          {`${FRAMED_NOTICE_TEXT} `}
-          <a href="." target="_blank" rel="noopener">
-            {FRAMED_NOTICE_LINK}
-          </a>
-        </div>
-        <ServiceWorkerBridge />
+          <div id={FRAMED_NOTICE_ID}>
+            {`${FRAMED_NOTICE_TEXT} `}
+            <a href="." target="_blank" rel="noopener">
+              {FRAMED_NOTICE_LINK}
+            </a>
+          </div>
+          <ServiceWorkerBridge />
+        </LocaleProvider>
       </body>
     </html>
   );
