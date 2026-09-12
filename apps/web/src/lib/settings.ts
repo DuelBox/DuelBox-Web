@@ -1,5 +1,5 @@
 /**
- * The player's settings: sound, vibration, theme, seat palette and assist speed.
+ * The player's settings: sound, vibration, theme, seat palette, assist speed and language.
  *
  * One key for all of them rather than one each, for the reason `last-mode.ts` gives for
  * keeping the tier with the mode: a second key is a second set of failure paths, and this
@@ -20,6 +20,11 @@
  * missing field reads back as its default, so a settings blob written before these
  * existed is still valid — only a value present and wrong is replaced.
  *
+ * `locale` (#219) arrived on exactly those terms. It is `en`, the language this site is
+ * written in, and English is the one locale with no catalogue to fetch — so a visitor who
+ * never opens the language control downloads nothing for it at all. `i18n/load.ts` sets out
+ * why that is a property of the layout rather than a promise about it.
+ *
  * `readSettings` is safe to call anywhere except during a static render, because it
  * reaches storage through `local-store.ts` and never throws; a component reads it in an
  * effect, shows the defaults on the first paint, and applies the stored value a frame
@@ -29,6 +34,7 @@
  * key and the version rather than importing them.
  */
 
+import { DEFAULT_LOCALE, isLocale, type LocaleCode } from './i18n/locales';
 import { KEY_PREFIX, readVersioned, removeJson, writeVersioned } from './local-store';
 
 /**
@@ -78,16 +84,29 @@ export interface Settings {
    * an assist, and would hand the quicker device an edge cross-device.
    */
   readonly gameSpeed: number;
+  /**
+   * Which language the shell renders in, `en` unless the player chose another (#219).
+   *
+   * A field in this blob rather than a key of its own, for the reason at the top of this
+   * file and one more: `PLAYER_DATA_KEYS` is what the privacy page counts its stores
+   * against, and a language is a preference like the theme rather than a seventh thing
+   * this product keeps about a pair. It travels in an export with the rest of the settings.
+   *
+   * Nothing here reads `navigator.language`. `docs/privacy-policy.md` states as a checked
+   * row that this product does not, and that should stay true: a locale is chosen, on
+   * `/settings/` or through a `?lang=` on a link somebody followed.
+   */
+  readonly locale: LocaleCode;
 }
 
 export const SETTINGS_KEY = `${KEY_PREFIX}settings`;
 
 /**
  * The shape written today: `{ version: 1, muted, volume, haptics, theme, seatPalette,
- * seatSwap, gameSpeed }`. The version is 1 and stays 1 through the three fields added for
- * the accessibility wave and the swap that followed them (#161): each reads back as its
- * default when absent, so no migration is owed and a blob from before they existed is
- * still a valid version-1 blob.
+ * seatSwap, gameSpeed, locale }`. The version is 1 and stays 1 through the three fields
+ * added for the accessibility wave, the swap that followed them (#161) and the locale
+ * after that: each reads back as its default when absent, so no migration is owed and a
+ * blob from before they existed is still a valid version-1 blob.
  */
 const VERSION = 1;
 
@@ -102,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
   seatPalette: 'default',
   seatSwap: false,
   gameSpeed: 1,
+  locale: DEFAULT_LOCALE,
 };
 
 const THEMES: readonly ThemeChoice[] = ['system', 'light', 'dark'];
@@ -114,9 +134,11 @@ const SEAT_PALETTES: readonly SeatPaletteChoice[] = ['default', 'colourblind'];
  * 1.2 by a build with a different range still means "loud", and a player who chose loud
  * should not come back to the default because of it. A volume that is not a finite number
  * means nothing, and that one does become the default. Game speed is clamped the same way,
- * into [MIN_GAME_SPEED, 1]; the enumerated fields (theme, seat palette) fall back to their
- * default for any value not in their small set, so a `theme` of `"midnight"` from a build
- * that shipped a fourth option does not leave the reader holding a string it cannot map.
+ * into [MIN_GAME_SPEED, 1]; the enumerated fields (theme, seat palette, locale) fall back
+ * to their default for any value not in their small set, so a `theme` of `"midnight"` from
+ * a build that shipped a fourth option does not leave the reader holding a string it cannot
+ * map, and a `locale` of `"de"` from a build that shipped German does not leave the language
+ * control offering a chunk this build has no way to fetch.
  */
 function sanitise(value: Record<string, unknown>): Settings {
   const volume = value['volume'];
@@ -142,6 +164,7 @@ function sanitise(value: Record<string, unknown>): Settings {
       typeof speed === 'number' && Number.isFinite(speed)
         ? Math.min(1, Math.max(MIN_GAME_SPEED, speed))
         : DEFAULT_SETTINGS.gameSpeed,
+    locale: isLocale(value['locale']) ? value['locale'] : DEFAULT_SETTINGS.locale,
   };
 }
 

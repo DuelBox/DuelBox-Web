@@ -3,6 +3,26 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import noUntranslatedText from './scripts/eslint-rules/no-untranslated-text.mjs';
+
+/**
+ * The files whose user-facing copy is fully converted to `t()` / `<T>` (#219, #220).
+ *
+ * `duelbox/no-untranslated-text` is an error on exactly these, so a converted file stays
+ * converted: a bare literal or an `aria-label="…"` added to one of them fails lint. It is not
+ * yet applied anywhere else, because everything else is full of literals #220 has not reached
+ * and a repository-wide error would be a red build for weeks. A file joins this list in the
+ * commit that converts it. #220 grows it to every `.tsx` and then replaces it with the glob
+ * `apps/web/src/**\/*.tsx`, at which point the ratchet becomes the rule. The rule and what it
+ * cannot see are documented in `scripts/eslint-rules/no-untranslated-text.mjs` and
+ * `docs/i18n.md`.
+ */
+const I18N_CLEAN = [
+  'apps/web/src/components/SoundToggle.tsx',
+  'apps/web/src/lib/i18n/T.tsx',
+  'apps/web/src/lib/i18n/provider.tsx',
+  'apps/web/src/app/settings/page.tsx',
+];
 
 export default tseslint.config(
   {
@@ -126,6 +146,12 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
     },
+  },
+  {
+    // The i18n ratchet: see `I18N_CLEAN` above.
+    files: I18N_CLEAN,
+    plugins: { duelbox: { rules: { 'no-untranslated-text': noUntranslatedText } } },
+    rules: { 'duelbox/no-untranslated-text': 'error' },
   },
   {
     files: ['**/*.js', '**/*.mjs'],

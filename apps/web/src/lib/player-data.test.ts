@@ -153,6 +153,7 @@ describe('exporting', () => {
           seatPalette: 'default',
           seatSwap: false,
           gameSpeed: 1,
+          locale: 'en',
         },
         [HEAD_TO_HEAD_KEY]: {
           version: 1,
@@ -230,6 +231,7 @@ describe('importing', () => {
       seatPalette: 'default',
       seatSwap: false,
       gameSpeed: 1,
+      locale: 'en',
     });
     // The record travels with everything else (#2448): a pair who move to a new phone
     // keep the score they have been keeping against each other.

@@ -25,7 +25,7 @@
   background: var(--db-ink);
   color: var(--db-paper);
   font-size: var(--db-text-sm);
-  text-align: left;
+  text-align: start;
 }
 
 .dismiss {

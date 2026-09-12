@@ -7,8 +7,12 @@
   z-index: 7;
   display: grid;
   place-items: center;
-  padding: max(var(--db-space-4), var(--db-safe-top)) max(var(--db-space-4), var(--db-safe-right))
-    max(var(--db-space-4), var(--db-safe-bottom)) max(var(--db-space-4), var(--db-safe-left));
+  /* Four longhands rather than one shorthand, like the pause and result panels: the two
+     side insets are the notch's, which is on a side of the device and not of the sentence. */
+  padding-top: max(var(--db-space-4), var(--db-safe-top));
+  padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
+  padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
+  padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
   text-align: center;
   background: var(--db-ink);
   border-radius: var(--db-radius);
