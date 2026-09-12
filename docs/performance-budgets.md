@@ -72,14 +72,18 @@ not aspirational. All figures are **gzipped bytes, because that is what crosses 
 | **On demand** | `onDemandBytes` — **61.0 KB** (62,464 B) | The play route's own scripts plus anything reached by an `import()`. Nobody downloads it by arriving; it is paid when a player commits to a game. |
 | **One game chunk** | `gameChunkBytes` — **12.0 KB** (12,288 B) | The marginal cost of the one game a player actually picked. One chunk per game is the whole point of the layout. |
 | **Speculated** | `speculatedBytes` — **510.0 KB** (522,240 B) | The 108 `/play/<slug>/index.txt` route payloads a browse of the catalogue prefetches for cards nobody presses. Not JavaScript, which is why no guard saw it until #2545. Raised for #219, whose provider and before-paint `lang`/`dir` stamp are in the root layout and so in every payload — `_raised_2026_09_12_speculated` has the per-payload measurement. |
-| **First session** | `firstSessionBytes` — **326.0 KB** (333,824 B) | Arrive, pick a game, play it: the landing document, its stylesheets, the three base-subset faces, the shell, the worker, the play route's code and the largest game chunk. Wire bytes, derived from the lines above plus the three non-JavaScript ones nothing weighed before (#2446). |
+| **First session** | `firstSessionBytes` — **326.0 KB** (333,824 B) | Arrive, pick a game, play it: the landing document, its stylesheets, the faces an English page actually fetches (the range rule below, not the filename), the shell, the worker, the play route's code and the largest game chunk. Wire bytes, derived from the lines above plus the three non-JavaScript ones nothing weighed before (#2446). |
 | **Browsing session** | `browsingSessionBytes` — **780.0 KB** (798,720 B) | Arrive at the catalogue and scroll to the end of it, pressing nothing: the catalogue document, stylesheets, faces, shell, worker and all 108 speculated payloads. The most a visitor who buys nothing can cost (#2446). |
 | **Catalogue on screen** | `catalogueBytes` — **260.0 KB** (266,240 B) | What the grid costs before any card comes near the viewport: document, stylesheets, faces, shell. There is no `<img>` in the export — every tile is inline SVG through one sprite — so this is the catalogue's whole asset budget (#2419). |
 
 **The three session lines are wire bytes, not JavaScript.** Fonts count at file size (a woff2
-is compressed internally; gzip adds 0.1%), and only the base subsets — `unicode-range` means a
-`-latin-ext` face is fetched only when a glyph in that range renders, which no English page
-does. **The first session is not held to ADR 0001's 182 KB**, and the reason is written in
+is compressed internally; gzip adds 0.1%), and only the base faces — `unicode-range` means a
+face is fetched only when a glyph in its range renders, and a face whose range excludes
+printable ASCII (the three `latin-ext` faces, and since #224 the Devanagari and Arabic faces)
+is one no English page fetches. `check-size.mjs` reads the range out of the built stylesheet
+to decide, reports those faces beside the totals rather than in them, and holds the service
+worker's precache to the same rule; `docs/fonts.md` has the numbers. **The first session is
+not held to ADR 0001's 182 KB**, and the reason is written in
 `size-budget.json` → `_set_2026_09_08_sessions`: that figure was measured on 20 August over
 eleven files, before the faces were self-hosted (86 KB of today's 313) and before the service
 worker existed, and the hosting decision it justified is unchanged by the session being larger.

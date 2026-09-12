@@ -9,7 +9,7 @@
  */
 .overlay {
   position: fixed;
-  left: max(var(--db-space-2), var(--db-safe-left));
+  inset-inline-start: max(var(--db-space-2), var(--db-safe-inline-start));
   bottom: max(var(--db-space-2), var(--db-safe-bottom));
   z-index: 100;
   padding: var(--db-space-2) var(--db-space-3);

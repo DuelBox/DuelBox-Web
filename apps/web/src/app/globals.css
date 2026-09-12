@@ -161,7 +161,7 @@ html[data-framed] #db-framed {
 
 .db-skip {
   position: absolute;
-  left: max(var(--db-space-4), var(--db-safe-left));
+  inset-inline-start: max(var(--db-space-4), var(--db-safe-inline-start));
   top: calc(var(--db-space-4) * -4);
   z-index: 100;
   padding: var(--db-space-3) var(--db-space-4);
@@ -315,15 +315,53 @@ html[data-framed] #db-framed {
   margin-inline: auto;
   /* max(), so the notch only ever widens the gutter and never narrows it. In landscape
      on a notched phone the cutout is on one side, and content there is unreadable. */
-  padding-left: max(var(--db-space-5), var(--db-safe-left));
-  padding-right: max(var(--db-space-5), var(--db-safe-right));
+  padding-left: max(var(--db-space-5), var(--db-safe-left)); /* physical: side of the device */
+  padding-right: max(var(--db-space-5), var(--db-safe-right)); /* physical: side of the device */
 }
 
 @media (max-width: 40rem) {
   .db-wrap {
-    padding-left: max(var(--db-space-4), var(--db-safe-left));
-    padding-right: max(var(--db-space-4), var(--db-safe-right));
+    padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
+    padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   }
+}
+
+/*
+ * The interface glyphs that point along a line turn round with the line (#222).
+ *
+ * `back` and `forward` mean "towards the start" and "towards the end", and under an Arabic
+ * shell the start is on the right — so the arrow that says "back" has to point right there.
+ * `Icon.tsx` puts this class on exactly the names in `MIRRORED_ICONS` (`lib/icons.ts`), and
+ * nothing else: play, pause, a tick, a cross, a cog, a star, a trophy and a speaker are the
+ * same picture in every reading direction, and a mirrored play triangle would mean "rewind".
+ * Global rather than a module class so `e2e/rtl.spec.ts` can reach it by name in the built
+ * export; only the transform lives here, colour stays with `currentColor`.
+ *
+ * Scaled by the sign token rather than written as `[dir='rtl'] .db-mirror { scaleX(-1) }`,
+ * because an ancestor selector cannot see the play surface: `<html dir="rtl">` matches it
+ * from outside the `ltr` island the surface pins (PlaySurface.module.css), so an arrow drawn
+ * inside a match would flip while everything around it stayed. `--db-inline-sign` is -1
+ * under the shell's `[dir='rtl']` and set back to 1 inside the island, which is exactly the
+ * question this glyph is asking. In a left-to-right shell it is `scaleX(1)`, an identity.
+ * `direction.test.ts` fails any `[dir=…]` rule outside tokens.css for the same reason.
+ *
+ * `inline-block` is for the class worn by text, not by an `<svg>`: `transform` applies only
+ * to a transformable element, and a non-replaced inline box is not one, so a `<span>` with
+ * this class in running text would not turn round without it. It is *not* what turns the
+ * one text arrow a route renders today — the landing page's "See all 108 →" (page.tsx) is
+ * a flex item of an `inline-flex` link, which blockifies it (`display` computes to `block`
+ * on it), and measured against the built export with this declaration removed from the
+ * rule, that arrow still read `matrix(-1, 0, 0, 1, 0, 0)`. The declaration is measured
+ * where it is load-bearing instead: `e2e/rtl.spec.ts` draws a span with the class in a
+ * paragraph and photographs it, because a computed `transform` serialises the matrix on a
+ * span forced back to `inline` too (measured) and a flip about the centre moves no box.
+ * A 24px `<svg>` appended to a landing-page paragraph read the same box and the same
+ * paragraph height with and without the class (measured), so the icons lose nothing.
+ * `direction.test.ts` holds this rule to `MIRROR_CLASS` in `lib/icons.ts` by name.
+ */
+.db-mirror {
+  display: inline-block;
+  transform: scaleX(var(--db-inline-sign));
 }
 
 /* Present to assistive technology, invisible on screen. Used where a visual signal
@@ -399,8 +437,8 @@ html[data-match='live'] .db-net-bar {
 .db-net-bar {
   pointer-events: none;
   position: fixed;
-  left: max(var(--db-space-3), var(--db-safe-left));
-  right: max(var(--db-space-3), var(--db-safe-right));
+  left: max(var(--db-space-3), var(--db-safe-left)); /* physical: side of the device */
+  right: max(var(--db-space-3), var(--db-safe-right)); /* physical: side of the device */
   bottom: max(var(--db-space-3), var(--db-safe-bottom));
   z-index: 40;
   display: flex;
