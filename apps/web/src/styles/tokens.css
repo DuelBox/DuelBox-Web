@@ -124,6 +124,39 @@
   --db-safe-right: env(safe-area-inset-right, 0px);
   --db-safe-bottom: env(safe-area-inset-bottom, 0px);
   --db-safe-left: env(safe-area-inset-left, 0px);
+  /* The same edges by reading direction, for chrome that sits at the *start* or the *end* of
+     a line rather than on a given side of the device — the skip link, the exit control. The
+     `[dir='rtl']` block below swaps them. A symmetric pair (a gutter padded on both sides)
+     keeps the physical tokens: the cutout is on a side of the device, not of the sentence.
+     `styles/direction.test.ts` holds that line. */
+  --db-safe-inline-start: var(--db-safe-left);
+  --db-safe-inline-end: var(--db-safe-right);
+  /* 1 or -1: which way "towards the inline end" is, for a transform that has to travel along
+     a line. CSS has logical insets and margins and no logical `translateX`. */
+  --db-inline-sign: 1;
+}
+
+/* Right-to-left (#222). `dir` is stamped on <html> by the locale registry, and the shell
+   mirrors through logical properties alone — `direction.test.ts` fails on a physical one that
+   carries no `physical:` marker — so this block is everything RTL has to say to the tokens.
+   Seats, boards and control zones are sides of the device and do not follow it: the play
+   surface pins `direction: ltr` and sets these three back (`PlaySurface.module.css`). See
+   docs/rtl.md. */
+[dir='rtl'] {
+  --db-safe-inline-start: var(--db-safe-right);
+  --db-safe-inline-end: var(--db-safe-left);
+  --db-inline-sign: -1;
+}
+
+/* And back again for an island that pins itself left-to-right inside a mirrored shell — the
+   play surface, which wears `dir="ltr"` (rule 9). Custom properties inherit, so without this
+   block a control inside it would sit at its right edge under `ltr` while clearing the *left*
+   cutout the shell's `rtl` had put in `--db-safe-inline-end`. Held to the block above by
+   `direction.test.ts`: every token turned round there is turned back here. */
+[dir='ltr'] {
+  --db-safe-inline-start: var(--db-safe-left);
+  --db-safe-inline-end: var(--db-safe-right);
+  --db-inline-sign: 1;
 }
 
 /**
