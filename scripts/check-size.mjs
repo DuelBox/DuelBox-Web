@@ -15,6 +15,9 @@
  *     collapses that into the shell.
  *   - **Speculated** — the route payloads the router fetches for links nobody has pressed.
  *     Not JavaScript, and therefore invisible here until #185 measured it: see below.
+ *   - **A locale** — the catalogue chunk for the one language a player chose (#219). Like a
+ *     game, a visitor downloads one of these at a time and the default (English) has none, so
+ *     the number that matters is the largest, not the sum. See "Locale chunks" below.
  *
  * Gzipped, because that is what crosses the wire.
  *
@@ -305,9 +308,121 @@ for (const [slug, file] of [...gameChunks].sort()) {
   }
 }
 
+// ---------------------------------------------------------------------------------
+// Locale chunks: which on-demand chunks are one language's catalogue? (#219)
+// ---------------------------------------------------------------------------------
+// The same shape as the game chunks, for the same reason. Every non-default locale in
+// `apps/web/src/lib/i18n/locales.ts` is reached by one `import()` in `load.ts` and by nothing
+// else, so it is an async chunk a browser fetches only when that language is chosen. A
+// visitor downloads one at a time, so — like a game — the number that matters is the largest,
+// and it is weighed on a line of its own rather than left inside the on-demand total, where
+// a translation of the whole site's copy would otherwise sit beside the play route's code.
+//
+// A chunk *is* a locale's catalogue when it carries the marker every generated catalogue
+// module opens with — `locale:"en-XA",messages:` in the minified output — and nothing else in
+// the build spells an object that way (checked: the only `locale:` in the framework chunks
+// is followed by an identifier, not a quoted code). Both quote styles are matched because the
+// minifier's choice is not a contract.
+//
+// What fails the build, each of which `i18n.test.ts` also catches earlier for the cases it
+// can see from the source:
+//   - a chunk carrying two locales, which has stopped being one-chunk-per-locale;
+//   - a chunk carrying a locale the registry does not list, or the default locale, which
+//     has no catalogue by design (English is the fallback at every call site);
+//   - a locale chunk in the *shell* — a static `import` of a catalogue somewhere has folded
+//     a language into what every visitor downloads, and the lazy guard in `i18n.test.ts`
+//     is the cheaper way to find out which file did it;
+//   - a registered locale with no chunk at all or with two, so the control could offer a
+//     language whose bytes are not in the export.
+//
+// The registry is read with a regular expression, one code per line followed by `{`, the way
+// the game registry is read above — `locales.ts` says so at the top and keeps that shape.
+const localesSource = readFileSync(join(WEB, 'src/lib/i18n/locales.ts'), 'utf8');
+const defaultLocale = /\bDEFAULT_LOCALE = '([^']+)'/.exec(localesSource)?.[1];
+const registryStart = localesSource.indexOf('export const LOCALES = {');
+const registryEnd = localesSource.indexOf('\n}', registryStart);
+const localeCodes =
+  registryStart === -1 || registryEnd === -1
+    ? []
+    : [
+        ...localesSource
+          .slice(registryStart, registryEnd)
+          .matchAll(/^\s*'?([A-Za-z][A-Za-z0-9-]*)'?:\s*\{/gm),
+      ].map((match) => match[1]);
+if (defaultLocale === undefined || localeCodes.length === 0) {
+  failures.push(
+    'cannot read the locale registry out of apps/web/src/lib/i18n/locales.ts — the locale' +
+      ' bucket would then measure nothing and report a saving',
+  );
+}
+const nonDefaultLocales = localeCodes.filter((code) => code !== defaultLocale);
+const LOCALE_MARKER = /\blocale:["']([A-Za-z][A-Za-z0-9-]*)["'],messages:/g;
+
+/** Locale code → the chunk(s) carrying its catalogue. */
+const localeChunks = new Map();
+const localeChunkFiles = new Set();
+for (const file of files) {
+  const source = readFileSync(file, 'utf8');
+  const named = [...new Set([...source.matchAll(LOCALE_MARKER)].map((match) => match[1]))];
+  if (named.length === 0) continue;
+  const where = relative(OUT, file);
+  if (named.length > 1) {
+    failures.push(
+      `${where} carries ${String(named.length)} locales (${named.join(', ')}) — one chunk per` +
+        ' locale is the whole point of the layout',
+    );
+  }
+  for (const code of named) {
+    if (!localeCodes.includes(code)) {
+      failures.push(`${where} carries a catalogue for "${code}", which locales.ts does not list`);
+    } else if (code === defaultLocale) {
+      failures.push(
+        `${where} carries a catalogue for the default locale "${code}" — English is the` +
+          ' fallback at every call site and must have no chunk',
+      );
+    }
+    if (shellEager.has(file)) {
+      failures.push(
+        `${where} carries the ${code} catalogue and is in the shell, so every visitor downloads` +
+          ' that language — a static import of a catalogue has folded it in; i18n.test.ts' +
+          ' names the file',
+      );
+    } else if (!onDemand.has(file)) {
+      failures.push(
+        `${where} carries the ${code} catalogue but is not reachable by import() from the` +
+          ' shell, so the language control cannot fetch it',
+      );
+    }
+    localeChunks.set(code, [...(localeChunks.get(code) ?? []), file]);
+  }
+  localeChunkFiles.add(file);
+}
+for (const code of nonDefaultLocales) {
+  const count = (localeChunks.get(code) ?? []).length;
+  if (count !== 1) {
+    failures.push(
+      `${code} is in the locale registry and has ${String(count)} chunk(s) in the export;` +
+        ' exactly one is required — check load.ts and the catalogues directory',
+    );
+  }
+}
+for (const file of localeChunkFiles) onDemand.delete(file);
+const localeReport = [];
+for (const [code, chunks] of [...localeChunks].sort()) {
+  for (const file of chunks) {
+    localeReport.push(
+      `  ${code.padEnd(22)} ${kb(sizes.get(file) ?? 0).padStart(9)}  ${relative(OUT, file)}`,
+    );
+  }
+}
+
 const shellBytes = bytesOf(shellEager);
 const onDemandBytes = bytesOf(onDemand);
 const legacyPolyfillBytes = bytesOf(legacyPolyfills);
+// The largest catalogue, not the sum: a player has one language at a time. English has none,
+// which is why a first session below does not include it — a visitor who never opens the
+// language control fetches no catalogue at all.
+const localeBytes = Math.max(0, ...[...localeChunkFiles].map((file) => sizes.get(file) ?? 0));
 const biggestGame = Math.max(0, ...[...gameChunkFiles].map((file) => sizes.get(file) ?? 0));
 
 // The one fact the bucket above rests on, read from the export rather than believed. A
@@ -387,6 +502,11 @@ console.log(
     ` ${kb(legacyPolyfillBytes)}`,
 );
 console.log(`check-size: on demand (paid on choosing a game) ${kb(onDemandBytes)}`);
+console.log(
+  `check-size: locale (paid on choosing a language; the largest of` +
+    ` ${String(localeChunkFiles.size)}, and English has none) ${kb(localeBytes)}`,
+);
+if (localeReport.length > 0) console.log(localeReport.join('\n'));
 console.log(
   `check-size: worst case for one player ${kb(shellBytes + onDemandBytes + biggestGame)}` +
     ` = shell + on demand + the largest game, on an engine this site supports`,
@@ -833,6 +953,7 @@ const unclassified = files.filter(
     !legacyPolyfills.has(file) &&
     !onDemand.has(file) &&
     !gameChunkFiles.has(file) &&
+    !localeChunkFiles.has(file) &&
     !neverFetched.has(file) &&
     !workerFiles.includes(file),
 );
@@ -856,6 +977,25 @@ if (legacyPolyfillBytes > BUDGET.legacyPolyfillBytes) {
 if (onDemandBytes > BUDGET.onDemandBytes) {
   failures.push(
     `on-demand code is ${kb(onDemandBytes)}, over the ${kb(BUDGET.onDemandBytes)} budget`,
+  );
+}
+// Named rather than defaulted, for the reason the session keys give below: `x > undefined`
+// is false, and a bucket whose budget is missing from the file passes every build.
+if (typeof BUDGET.localeBytes !== 'number') failures.push('size-budget.json has no localeBytes');
+if (localeBytes > BUDGET.localeBytes) {
+  failures.push(
+    `the largest locale catalogue is ${kb(localeBytes)}, over the ${kb(BUDGET.localeBytes)}` +
+      ' budget — a real translation is expected to be larger than the pseudo-locales, and' +
+      ' the number is raised with a measurement, not a guess',
+  );
+}
+// A floor as well: the registry has non-default locales, so a build that emitted no locale
+// chunk at all has lost the `import()` — the per-locale count above fails for each, and this
+// says why the largest-of-none reads zero rather than letting a zero read as a saving.
+if (nonDefaultLocales.length > 0 && localeChunkFiles.size === 0) {
+  failures.push(
+    'no locale chunk at all in the export, while locales.ts registers ' +
+      `${nonDefaultLocales.join(', ')} — the catalogues are no longer reached by import()`,
   );
 }
 // A floor as well as a ceiling. Every card in the grid links a play route, so a build that

@@ -22,6 +22,7 @@
     "create-game": "node scripts/create-game.mjs",
     "catalogue": "python3 scripts/generate_catalog.py",
     "fuzz:soak": "DUELBOX_FUZZ_MINUTES=60 vitest run apps/web/src/data/input-fuzz.test.ts",
+    "i18n:extract": "DUELBOX_EMIT_LOCALES=1 vitest run apps/web/src/lib/i18n/extract.test.ts",
     "balance:sweep": "vitest run apps/web/src/data/balance-aggregate.test.ts",
     "balance:audit": "DUELBOX_BALANCE_SEEDS=250 pnpm balance:sweep",
     "e2e": "playwright test",

@@ -26,6 +26,9 @@ import {
   writePlayerName,
 } from '@/lib/player-names';
 import { HINTS_SEEN_KEY, resetHints } from '@/lib/control-hints';
+import { LOCALE_CODES, LOCALES } from '@/lib/i18n/locales';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { KEY_BINDINGS_KEY } from '@/lib/key-bindings-key';
 import { clearRecent, RECENT_KEY } from '@/lib/recent';
 import { SETTINGS_KEY, type Settings } from '@/lib/settings';
@@ -86,6 +89,16 @@ function titleOf(slug: string): string {
   return slug.replace(/-/g, ' ');
 }
 
+/**
+ * The language control's options, built from the registry so the two cannot disagree (#219).
+ *
+ * Each language is named in itself — somebody looking for their own cannot read the name of it
+ * written in a language they do not have — which is why the labels do not go through `t()`:
+ * a translated language menu is one that has to be read in the language being escaped from.
+ * Module level rather than in the component: it is the same list every render.
+ */
+const LANGUAGE_OPTIONS = LOCALE_CODES.map((code) => ({ value: code, label: LOCALES[code].name }));
+
 const EXPORT_FILENAME = 'duelbox-player-data.json';
 
 /**
@@ -127,6 +140,7 @@ function describeImport(imported: readonly string[]): string {
 export function SettingsPanel() {
   const id = useId();
   const [settings, update] = useSettings();
+  const messages = useMessages();
   const [supported, setSupported] = useState(false);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
   /** Whether the first-play hints have been asked for again on this visit (#137). */
@@ -417,6 +431,31 @@ export function SettingsPanel() {
         <p className={styles.note}>
           Slows every real-time game down so there is more time to react. Turn-based games are
           untouched, and a change takes effect on the next match you start.
+        </p>
+
+        {/* #219. Only the language chosen here is downloaded — every locale but English is an
+            async chunk reached by an `import()`, so a visitor who never opens this control pays
+            nothing for the others. The change applies on this page and in the header the moment
+            it is made, with no reload, through the one provider in the root layout. The two
+            choices beside English are pseudo-locales rather than translations, and the note
+            says so in the player's own words: a language nobody has reviewed would read as
+            broken to the people it claims to serve (#221), and this control is here for the
+            plumbing that #220 and #221 fill. The label and the note are the two strings this
+            control adds, and both go through `t()`; the option names deliberately do not. */}
+        <SelectRow
+          id={`${id}-language`}
+          label={t(messages, 'Language')}
+          value={settings.locale}
+          onChange={(locale) => {
+            change({ locale: locale as Settings['locale'] });
+          }}
+          options={LANGUAGE_OPTIONS}
+        />
+        <p className={styles.note}>
+          {t(
+            messages,
+            'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.',
+          )}
         </p>
       </section>
 

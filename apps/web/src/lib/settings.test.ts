@@ -49,6 +49,9 @@ describe('the defaults', () => {
       theme: 'system',
       seatPalette: 'default',
       gameSpeed: 1,
+      // And the language is the one the site is written in (#219), which is the only
+      // locale with no catalogue to fetch — so the default costs no bytes and no request.
+      locale: 'en',
     });
   });
 });
@@ -78,6 +81,7 @@ describe('reading and writing settings', () => {
     writeSettings({ theme: 'dark' });
     writeSettings({ seatPalette: 'colourblind' });
     writeSettings({ gameSpeed: 0.75 });
+    writeSettings({ locale: 'en-XA' });
     expect(readSettings()).toEqual({
       muted: true,
       volume: 0.4,
@@ -85,6 +89,7 @@ describe('reading and writing settings', () => {
       theme: 'dark',
       seatPalette: 'colourblind',
       gameSpeed: 0.75,
+      locale: 'en-XA',
     });
   });
 
@@ -109,6 +114,11 @@ describe('reading and writing settings', () => {
     expect(writeSettings({ theme: 'midnight' as never }).theme).toBe('system');
     expect(writeSettings({ seatPalette: 'colourblind' }).seatPalette).toBe('colourblind');
     expect(writeSettings({ seatPalette: 'neon' as never }).seatPalette).toBe('default');
+    // A locale is the same case with a sharper consequence (#219): a code from a build that
+    // shipped German would leave the language control offering a chunk this build cannot
+    // fetch, so an unrecognised one becomes English rather than being kept.
+    expect(writeSettings({ locale: 'en-XA' }).locale).toBe('en-XA');
+    expect(writeSettings({ locale: 'de' as never }).locale).toBe('en');
   });
 
   it('stores a version under its own key', () => {
@@ -123,6 +133,7 @@ describe('reading and writing settings', () => {
       theme: 'system',
       seatPalette: 'default',
       gameSpeed: 1,
+      locale: 'en',
     });
   });
 
@@ -149,12 +160,13 @@ describe('surviving whatever is actually in storage', () => {
   it('takes the default for a field that is wrong and keeps the ones that are right', () => {
     // Field by field: a volume this build cannot read should cost the player their
     // volume, not their mute as well. The same holds across the accessibility fields —
-    // a garbage theme and a garbage speed fall back without touching the palette choice.
+    // a garbage theme, a garbage speed and a locale this build does not have all fall back
+    // without touching the palette choice.
     install(
       fakeStorage({
         [SETTINGS_KEY]:
           '{"version":1,"muted":true,"volume":"loud","haptics":"yes",' +
-          '"theme":42,"seatPalette":"colourblind","gameSpeed":"fast"}',
+          '"theme":42,"seatPalette":"colourblind","gameSpeed":"fast","locale":"de"}',
       }),
     );
     expect(readSettings()).toEqual({
@@ -164,13 +176,14 @@ describe('surviving whatever is actually in storage', () => {
       theme: 'system',
       seatPalette: 'colourblind',
       gameSpeed: 1,
+      locale: 'en',
     });
   });
 
   it('reads back the fields added later as their defaults from an old blob', () => {
-    // A settings blob written before theme, palette and speed existed is still a valid
-    // version-1 blob: the absent fields read as their defaults rather than as null, which
-    // is why the version did not have to move.
+    // A settings blob written before theme, palette, speed and locale existed is still a
+    // valid version-1 blob: the absent fields read as their defaults rather than as null,
+    // which is why the version did not have to move.
     install(fakeStorage({ [SETTINGS_KEY]: '{"version":1,"muted":true,"volume":0.5}' }));
     expect(readSettings()).toEqual({
       muted: true,
@@ -179,6 +192,7 @@ describe('surviving whatever is actually in storage', () => {
       theme: 'system',
       seatPalette: 'default',
       gameSpeed: 1,
+      locale: 'en',
     });
   });
 
