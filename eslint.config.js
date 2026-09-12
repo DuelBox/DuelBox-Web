@@ -61,6 +61,16 @@ const I18N_CLEAN = [
   'apps/web/src/components/SiteFooter.tsx',
   'apps/web/src/components/SiteHeader.tsx',
   'apps/web/src/components/Wordmark.tsx',
+  'apps/web/src/app/terms/page.tsx',
+  'apps/web/src/app/attribution/page.tsx',
+  'apps/web/src/app/dmca/page.tsx',
+  'apps/web/src/app/privacy/page.tsx',
+  'apps/web/src/app/how-to-play/page.tsx',
+  // The brackets are escaped: `files` is a glob, and `[slug]` unescaped is a character class
+  // matching one of s, l, u, g — so the rule silently applied to nothing on the one page that
+  // carries a disable comment, and ESLint reported the disable as naming a rule it had never
+  // heard of. That error is the only reason this was noticed.
+  'apps/web/src/app/games/\\[slug\\]/page.tsx',
 ];
 
 export default tseslint.config(
