@@ -53,12 +53,46 @@ export const BOT_DIFFICULTIES = ['easy', 'normal', 'hard'] as const;
 export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];
 
 /**
+ * The tiers as the pre-match radios name them, and the one place each is spelled (#220).
+ *
+ * The labels used to be computed from {@link BOT_DIFFICULTIES} by upper-casing the first
+ * letter, which is a rule about English rather than a name: a language whose word for "easy"
+ * is not capitalised mid-sentence cannot be reached through it, and the extractor cannot read
+ * a string that is built. Written out, each is a message id a locale can translate.
+ *
+ * The tier word the HUD and the tournament track say mid-sentence is the *union member*
+ * itself — "Round 2 of 3 · easy" — which is a second, lower-case spelling of the same three
+ * words on purpose: capitalisation belongs to the position in the sentence, and both sets are
+ * registered in `lib/i18n/sources.ts` so a locale gets both.
+ */
+export const DIFFICULTY_LABELS: Readonly<Record<BotDifficulty, string>> = {
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+};
+
+/**
  * Best-of lengths the shell offers.
  *
  * Odd only, so a best-of cannot be split down the middle, and short: this is a game two
  * people play standing up, and a best-of-seven is a commitment rather than a round.
  */
 export const ROUND_CHOICES = [1, 3, 5] as const;
+
+/**
+ * Each offered length, as the radio names it (#220).
+ *
+ * "1 round" rather than "one round" only because on a 412px phone the spelled-out version
+ * wraps onto a second line and its neighbours do not, which reads as a broken column; and
+ * "1 round" rather than "Best of 1", which is not a set. Written out for the reason
+ * {@link DIFFICULTY_LABELS} is: a label assembled from a number and a word is a label no
+ * extractor can read and no grammar but English can rearrange.
+ */
+export const ROUND_LABELS: Readonly<Record<(typeof ROUND_CHOICES)[number], string>> = {
+  1: '1 round',
+  3: 'Best of 3',
+  5: 'Best of 5',
+};
 
 /** The tier a player who expresses no preference gets. */
 export const DEFAULT_DIFFICULTY: BotDifficulty = 'normal';

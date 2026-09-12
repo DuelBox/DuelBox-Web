@@ -5,153 +5,141 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
-    'A short buzz when a round ends and a longer one when the match does. Off unless you turn it on, and it does nothing on a device without the Vibration API — which includes every iPhone.':
-      '⟦Å šĥöŕŧ ƀûžž ŵĥéñ å ŕöûñð éñðš åñð å łöñĝéŕ öñé ŵĥéñ ŧĥé ɱåŧçĥ ðöéš. Öƒƒ ûñłéšš ýöû ŧûŕñ ïŧ öñ, åñð ïŧ ðöéš ñöŧĥïñĝ öñ å ðéṽïçé ŵïŧĥöûŧ ŧĥé Ṽïƀŕåŧïöñ ÅÞÏ — ŵĥïçĥ ïñçłûðéš éṽéŕý ïÞĥöñé. ·································································⟧',
-    Action: '⟦Åçŧïöñ ···⟧',
-    'Add it': '⟦Åðð ïŧ ···⟧',
-    'Between the two of you': '⟦Ɓéŧŵééñ ŧĥé ŧŵö öƒ ýöû ········⟧',
-    Changed: '⟦Çĥåñĝéð ···⟧',
-    'Clear favourites': '⟦Çłéåŕ ƒåṽöûŕïŧéš ······⟧',
-    'Clear recently played': '⟦Çłéåŕ ŕéçéñŧłý þłåýéð ········⟧',
-    'Clear the record': '⟦Çłéåŕ ŧĥé ŕéçöŕð ······⟧',
-    'Colour-blind friendly (amber and blue)':
-      '⟦Çöłöûŕ-ƀłïñð ƒŕïéñðłý (åɱƀéŕ åñð ƀłûé) ··············⟧',
-    Dark: '⟦Ðåŕķ ··⟧',
-    Defaults: '⟦Ðéƒåûłŧš ···⟧',
-    'Display and play': '⟦Ðïšþłåý åñð þłåý ······⟧',
-    Down: '⟦Ðöŵñ ··⟧',
-    "Every game added up. Matches against the bot are not in it: a bot's wins belong to nobody.":
-      "⟦Éṽéŕý ĝåɱé åððéð ûþ. Ṁåŧçĥéš åĝåïñšŧ ŧĥé ƀöŧ åŕé ñöŧ ïñ ïŧ: å ƀöŧ'š ŵïñš ƀéłöñĝ ŧö ñöƀöðý. ································⟧",
-    "Everything DuelBox keeps, all of it in this browser's storage and none of it sent anywhere. Export it to carry it to another device, import it there, or erase it here.":
-      "⟦Éṽéŕýŧĥïñĝ ÐûéłƁöẋ ķééþš, åłł öƒ ïŧ ïñ ŧĥïš ƀŕöŵšéŕ'š šŧöŕåĝé åñð ñöñé öƒ ïŧ šéñŧ åñýŵĥéŕé. Éẋþöŕŧ ïŧ ŧö çåŕŕý ïŧ ŧö åñöŧĥéŕ ðéṽïçé, ïɱþöŕŧ ïŧ ŧĥéŕé, öŕ éŕåšé ïŧ ĥéŕé. ···························································⟧",
-    'Everything DuelBox kept on this device has been erased.':
-      '⟦Éṽéŕýŧĥïñĝ ÐûéłƁöẋ ķéþŧ öñ ŧĥïš ðéṽïçé ĥåš ƀééñ éŕåšéð. ····················⟧',
-    Export: '⟦Éẋþöŕŧ ···⟧',
-    Favourites: '⟦Ƒåṽöûŕïŧéš ····⟧',
-    'Favourites cleared.': '⟦Ƒåṽöûŕïŧéš çłéåŕéð. ·······⟧',
-    'First-play hints': '⟦Ƒïŕšŧ-þłåý ĥïñŧš ······⟧',
-    'Full speed': '⟦Ƒûłł šþééð ····⟧',
-    'Game speed': '⟦Ĝåɱé šþééð ····⟧',
-    'Games with a remembered setup': '⟦Ĝåɱéš ŵïŧĥ å ŕéɱéɱƀéŕéð šéŧûþ ···········⟧',
-    'Hints will show again': '⟦Ĥïñŧš ŵïłł šĥöŵ åĝåïñ ········⟧',
-    Import: '⟦Ïɱþöŕŧ ···⟧',
-    'Imported {what}.': '⟦Ïɱþöŕŧéð {what}. ······⟧',
-    'Keep DuelBox on your home screen? It opens straight to the games, offline too.':
-      '⟦Ķééþ ÐûéłƁöẋ öñ ýöûŕ ĥöɱé šçŕééñ? Ïŧ öþéñš šŧŕåïĝĥŧ ŧö ŧĥé ĝåɱéš, öƒƒłïñé ŧöö. ····························⟧',
+    ', {drawn} drawn': '⟦, {drawn} ðŕåŵñ ······⟧',
+    '1 round': '⟦1 ŕöûñð ···⟧',
+    'A draw': '⟦Å ðŕåŵ ···⟧',
+    'A new best on this device.': '⟦Å ñéŵ ƀéšŧ öñ ŧĥïš ðéṽïçé. ··········⟧',
+    'A new best.': '⟦Å ñéŵ ƀéšŧ. ····⟧',
+    'A solo run has one seat, so there is nobody to hand the other to.':
+      '⟦Å šöłö ŕûñ ĥåš öñé šéåŧ, šö ŧĥéŕé ïš ñöƀöðý ŧö ĥåñð ŧĥé öŧĥéŕ ŧö. ·······················⟧',
+    'A solo run is one round.': '⟦Å šöłö ŕûñ ïš öñé ŕöûñð. ·········⟧',
+    'All time in {game}: {p1} {wins1} — {wins2} {p2}':
+      '⟦Åłł ŧïɱé ïñ {game}: {p1} {wins1} — {wins2} {p2} ·················⟧',
+    'Back to all games': '⟦Ɓåçķ ŧö åłł ĝåɱéš ······⟧',
+    'Best of 3': '⟦Ɓéšŧ öƒ 3 ····⟧',
+    'Best of 5': '⟦Ɓéšŧ öƒ 5 ····⟧',
+    'Best on this device: {best}.': '⟦Ɓéšŧ öñ ŧĥïš ðéṽïçé: {best}. ··········⟧',
+    'Best {best}.': '⟦Ɓéšŧ {best}. ·····⟧',
+    'Bot skill: {tier} for all {games} games':
+      '⟦Ɓöŧ šķïłł: {tier} ƒöŕ åłł {games} ĝåɱéš ··············⟧',
+    'Change something for the next round': '⟦Çĥåñĝé šöɱéŧĥïñĝ ƒöŕ ŧĥé ñéẋŧ ŕöûñð ·············⟧',
+    Controls: '⟦Çöñŧŕöłš ···⟧',
+    Critical: '⟦Çŕïŧïçåł ···⟧',
+    Dismiss: '⟦Ðïšɱïšš ···⟧',
+    Easy: '⟦Éåšý ··⟧',
+    'Every longer length is already decided by the score so far.':
+      '⟦Éṽéŕý łöñĝéŕ łéñĝŧĥ ïš åłŕéåðý ðéçïðéð ƀý ŧĥé šçöŕé šö ƒåŕ. ·····················⟧',
+    Exit: '⟦Éẋïŧ ··⟧',
+    Finish: '⟦Ƒïñïšĥ ···⟧',
+    'Game options': '⟦Ĝåɱé öþŧïöñš ·····⟧',
+    'Game over': '⟦Ĝåɱé öṽéŕ ····⟧',
+    'Game over. Score {score}. {best}': '⟦Ĝåɱé öṽéŕ. Šçöŕé {score}. {best} ············⟧',
+    'Game over. {outcome}.': '⟦Ĝåɱé öṽéŕ. {outcome}. ········⟧',
+    'Game {n} of {total}': '⟦Ĝåɱé {n} öƒ {total} ·······⟧',
+    'Game {n}: drawn': '⟦Ĝåɱé {n}: ðŕåŵñ ······⟧',
+    'Game {n}: playing now': '⟦Ĝåɱé {n}: þłåýïñĝ ñöŵ ········⟧',
+    'Game {n}: to come': '⟦Ĝåɱé {n}: ŧö çöɱé ······⟧',
+    'Game {n}: {name} won': '⟦Ĝåɱé {n}: {name} ŵöñ ·······⟧',
+    Go: '⟦Ĝö ·⟧',
+    'Go again': '⟦Ĝö åĝåïñ ···⟧',
+    'Go to game {n}': '⟦Ĝö ŧö ĝåɱé {n} ·····⟧',
+    'Hand the device over, then continue when you have it.':
+      '⟦Ĥåñð ŧĥé ðéṽïçé öṽéŕ, ŧĥéñ çöñŧïñûé ŵĥéñ ýöû ĥåṽé ïŧ. ···················⟧',
+    'Hand the far seat to a person': '⟦Ĥåñð ŧĥé ƒåŕ šéåŧ ŧö å þéŕšöñ ···········⟧',
+    Hard: '⟦Ĥåŕð ··⟧',
+    Healthy: '⟦Ĥéåłŧĥý ···⟧',
+    'I have it — continue': '⟦Ï ĥåṽé ïŧ — çöñŧïñûé ·······⟧',
+    'Keep playing': '⟦Ķééþ þłåýïñĝ ·····⟧',
     Keys: '⟦Ķéýš ··⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
-    Left: '⟦Łéƒŧ ··⟧',
-    Light: '⟦Łïĝĥŧ ··⟧',
-    'Match my device': '⟦Ṁåŧçĥ ɱý ðéṽïçé ······⟧',
-    'Matches recorded': '⟦Ṁåŧçĥéš ŕéçöŕðéð ······⟧',
-    'Most played': '⟦Ṁöšŧ þłåýéð ····⟧',
-    Mute: '⟦Ṁûŧé ··⟧',
+    'Leave the match': '⟦Łéåṽé ŧĥé ɱåŧçĥ ······⟧',
+    'Leave the match?': '⟦Łéåṽé ŧĥé ɱåŧçĥ? ······⟧',
+    'Leave the tournament': '⟦Łéåṽé ŧĥé ŧöûŕñåɱéñŧ ·······⟧',
+    'Let the bot take the far seat': '⟦Łéŧ ŧĥé ƀöŧ ŧåķé ŧĥé ƒåŕ šéåŧ ···········⟧',
+    Low: '⟦Łöŵ ··⟧',
+    'Match controls': '⟦Ṁåŧçĥ çöñŧŕöłš ·····⟧',
+    'Match length': '⟦Ṁåŧçĥ łéñĝŧĥ ·····⟧',
+    'Match over': '⟦Ṁåŧçĥ öṽéŕ ····⟧',
+    'Match over. {outcome}. {tally}.': '⟦Ṁåŧçĥ öṽéŕ. {outcome}. {tally}. ···········⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
-    'Name for the far seat': '⟦Ñåɱé ƒöŕ ŧĥé ƒåŕ šéåŧ ········⟧',
-    'Name for the near seat': '⟦Ñåɱé ƒöŕ ŧĥé ñéåŕ šéåŧ ········⟧',
-    'Not now': '⟦Ñöŧ ñöŵ ···⟧',
-    'Nothing to import: that file holds nothing this version of DuelBox keeps.':
-      '⟦Ñöŧĥïñĝ ŧö ïɱþöŕŧ: ŧĥåŧ ƒïłé ĥöłðš ñöŧĥïñĝ ŧĥïš ṽéŕšïöñ öƒ ÐûéłƁöẋ ķééþš. ··························⟧',
-    'Nothing yet. Finish a match and it appears here.':
-      '⟦Ñöŧĥïñĝ ýéŧ. Ƒïñïšĥ å ɱåŧçĥ åñð ïŧ åþþéåŕš ĥéŕé. ·················⟧',
-    Off: '⟦Öƒƒ ··⟧',
-    On: '⟦Öñ ·⟧',
+    'Next round': '⟦Ñéẋŧ ŕöûñð ····⟧',
+    Normal: '⟦Ñöŕɱåł ···⟧',
+    'Not added to the record: the far seat changed hands during this match.':
+      '⟦Ñöŧ åððéð ŧö ŧĥé ŕéçöŕð: ŧĥé ƒåŕ šéåŧ çĥåñĝéð ĥåñðš ðûŕïñĝ ŧĥïš ɱåŧçĥ. ·························⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
-    'Press a key': '⟦Þŕéšš å ķéý ····⟧',
-    'Press a key box, then press the key you want. Escape cancels.':
-      '⟦Þŕéšš å ķéý ƀöẋ, ŧĥéñ þŕéšš ŧĥé ķéý ýöû ŵåñŧ. Éšçåþé çåñçéłš. ······················⟧',
-    'Press again to clear favourites': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ƒåṽöûŕïŧéš ···········⟧',
-    'Press again to clear recently played': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ŕéçéñŧłý þłåýéð ·············⟧',
-    'Press again to clear the record': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ŧĥé ŕéçöŕð ···········⟧',
-    'Press again to reset everything': '⟦Þŕéšš åĝåïñ ŧö ŕéšéŧ éṽéŕýŧĥïñĝ ···········⟧',
-    'Recently played': '⟦Ŕéçéñŧłý þłåýéð ······⟧',
-    'Recently played cleared.': '⟦Ŕéçéñŧłý þłåýéð çłéåŕéð. ·········⟧',
-    'Relaxed (three-quarter speed)': '⟦Ŕéłåẋéð (ŧĥŕéé-ɋûåŕŧéŕ šþééð) ···········⟧',
-    'Reset everything': '⟦Ŕéšéŧ éṽéŕýŧĥïñĝ ······⟧',
-    "Reset {seat}'s keys": "⟦Ŕéšéŧ {seat}'š ķéýš ·······⟧",
-    Right: '⟦Ŕïĝĥŧ ··⟧',
+    'Pass the device': '⟦Þåšš ŧĥé ðéṽïçé ······⟧',
+    'Pass to {name}': '⟦Þåšš ŧö {name} ·····⟧',
+    'Pause the match': '⟦Þåûšé ŧĥé ɱåŧçĥ ······⟧',
+    Paused: '⟦Þåûšéð ···⟧',
+    'Play game {n}': '⟦Þłåý ĝåɱé {n} ·····⟧',
+    'Play {game}': '⟦Þłåý {game} ····⟧',
+    'Playing on two devices at once is not built. To carry a tournament to another device, export your data from Settings on this one and import it there.':
+      '⟦Þłåýïñĝ öñ ŧŵö ðéṽïçéš åŧ öñçé ïš ñöŧ ƀûïłŧ. Ŧö çåŕŕý å ŧöûŕñåɱéñŧ ŧö åñöŧĥéŕ ðéṽïçé, éẋþöŕŧ ýöûŕ ðåŧå ƒŕöɱ Šéŧŧïñĝš öñ ŧĥïš öñé åñð ïɱþöŕŧ ïŧ ŧĥéŕé. ·····················································⟧',
+    'Quit and forfeit': '⟦Ǫûïŧ åñð ƒöŕƒéïŧ ······⟧',
+    'Quit match': '⟦Ǫûïŧ ɱåŧçĥ ····⟧',
+    'Quitting now forfeits the match to the other player. This cannot be undone.':
+      '⟦Ǫûïŧŧïñĝ ñöŵ ƒöŕƒéïŧš ŧĥé ɱåŧçĥ ŧö ŧĥé öŧĥéŕ þłåýéŕ. Ŧĥïš çåññöŧ ƀé ûñðöñé. ···························⟧',
+    Rematch: '⟦Ŕéɱåŧçĥ ···⟧',
+    Restart: '⟦Ŕéšŧåŕŧ ···⟧',
+    Resume: '⟦Ŕéšûɱé ···⟧',
+    'Round {round}': '⟦Ŕöûñð {round} ·····⟧',
+    'Round {round} of {rounds}': '⟦Ŕöûñð {round} öƒ {rounds} ·········⟧',
+    'Round {round}. {outcome}. {tally}.': '⟦Ŕöûñð {round}. {outcome}. {tally}. ············⟧',
+    'Rounds won: {p1} {wins1}, {p2} {wins2}':
+      '⟦Ŕöûñðš ŵöñ: {p1} {wins1}, {p2} {wins2} ··············⟧',
     'Saved as {file}.': '⟦Šåṽéð åš {file}. ······⟧',
-    'Seat colours': '⟦Šéåŧ çöłöûŕš ·····⟧',
+    Score: '⟦Šçöŕé ··⟧',
+    'Score {score}': '⟦Šçöŕé {score} ·····⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
-    'Show the hints again': '⟦Šĥöŵ ŧĥé ĥïñŧš åĝåïñ ·······⟧',
-    'Slow (half speed)': '⟦Šłöŵ (ĥåłƒ šþééð) ······⟧',
-    'Slows every real-time game down so there is more time to react. Turn-based games are untouched, and a change takes effect on the next match you start.':
-      '⟦Šłöŵš éṽéŕý ŕéåł-ŧïɱé ĝåɱé ðöŵñ šö ŧĥéŕé ïš ɱöŕé ŧïɱé ŧö ŕéåçŧ. Ŧûŕñ-ƀåšéð ĝåɱéš åŕé ûñŧöûçĥéð, åñð å çĥåñĝé ŧåķéš éƒƒéçŧ öñ ŧĥé ñéẋŧ ɱåŧçĥ ýöû šŧåŕŧ. ·····················································⟧',
-    Sound: '⟦Šöûñð ··⟧',
+    'Share result': '⟦Šĥåŕé ŕéšûłŧ ·····⟧',
+    'Shared.': '⟦Šĥåŕéð. ···⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
-    'Standard (red and blue)': '⟦Šŧåñðåŕð (ŕéð åñð ƀłûé) ·········⟧',
-    'That export has no data in it.': '⟦Ŧĥåŧ éẋþöŕŧ ĥåš ñö ðåŧå ïñ ïŧ. ···········⟧',
-    'That export was written by a different version of DuelBox ({version}) and this one cannot read it.':
-      '⟦Ŧĥåŧ éẋþöŕŧ ŵåš ŵŕïŧŧéñ ƀý å ðïƒƒéŕéñŧ ṽéŕšïöñ öƒ ÐûéłƁöẋ ({version}) åñð ŧĥïš öñé çåññöŧ ŕéåð ïŧ. ···································⟧',
-    'That file could not be read.': '⟦Ŧĥåŧ ƒïłé çöûłð ñöŧ ƀé ŕéåð. ··········⟧',
-    'That file is not a DuelBox player-data export.':
-      '⟦Ŧĥåŧ ƒïłé ïš ñöŧ å ÐûéłƁöẋ þłåýéŕ-ðåŧå éẋþöŕŧ. ·················⟧',
-    'That file is not valid JSON.': '⟦Ŧĥåŧ ƒïłé ïš ñöŧ ṽåłïð ĴŠÖÑ. ··········⟧',
-    'That was a tap.': '⟦Ŧĥåŧ ŵåš å ŧåþ. ······⟧',
-    'The far seat': '⟦Ŧĥé ƒåŕ šéåŧ ·····⟧',
-    'The first time you open a game, each half of the screen says whose it is until that player moves. Ask for them again and every game shows them once more.':
-      '⟦Ŧĥé ƒïŕšŧ ŧïɱé ýöû öþéñ å ĝåɱé, éåçĥ ĥåłƒ öƒ ŧĥé šçŕééñ šåýš ŵĥöšé ïŧ ïš ûñŧïł ŧĥåŧ þłåýéŕ ɱöṽéš. Åšķ ƒöŕ ŧĥéɱ åĝåïñ åñð éṽéŕý ĝåɱé šĥöŵš ŧĥéɱ öñçé ɱöŕé. ······················································⟧',
-    'The head-to-head record is cleared. Both of you are back on nothing.':
-      '⟦Ŧĥé ĥéåð-ŧö-ĥéåð ŕéçöŕð ïš çłéåŕéð. Ɓöŧĥ öƒ ýöû åŕé ƀåçķ öñ ñöŧĥïñĝ. ························⟧',
-    'The names on the scoreboard during a match, on this device and nowhere else. Leave one empty and that seat keeps its own name.':
-      '⟦Ŧĥé ñåɱéš öñ ŧĥé šçöŕéƀöåŕð ðûŕïñĝ å ɱåŧçĥ, öñ ŧĥïš ðéṽïçé åñð ñöŵĥéŕé éłšé. Łéåṽé öñé éɱþŧý åñð ŧĥåŧ šéåŧ ķééþš ïŧš öŵñ ñåɱé. ·············································⟧',
-    'The near seat': '⟦Ŧĥé ñéåŕ šéåŧ ·····⟧',
-    'The near seat has won {won}, the far seat {lost}, and {drawn} ended level.':
-      '⟦Ŧĥé ñéåŕ šéåŧ ĥåš ŵöñ {won}, ŧĥé ƒåŕ šéåŧ {lost}, åñð {drawn} éñðéð łéṽéł. ··························⟧',
-    'The standard red and blue are hard to tell apart with red–green colour blindness. The alternative keeps the two seats far apart in colour as well as in shape.':
-      '⟦Ŧĥé šŧåñðåŕð ŕéð åñð ƀłûé åŕé ĥåŕð ŧö ŧéłł åþåŕŧ ŵïŧĥ ŕéð–ĝŕééñ çöłöûŕ ƀłïñðñéšš. Ŧĥé åłŧéŕñåŧïṽé ķééþš ŧĥé ŧŵö šéåŧš ƒåŕ åþåŕŧ ïñ çöłöûŕ åš ŵéłł åš ïñ šĥåþé. ························································⟧',
-    Theme: '⟦Ŧĥéɱé ··⟧',
-    'This device did not vibrate.': '⟦Ŧĥïš ðéṽïçé ðïð ñöŧ ṽïƀŕåŧé. ··········⟧',
-    'Try it': '⟦Ŧŕý ïŧ ···⟧',
-    'Turn vibration on first, then try again.':
-      '⟦Ŧûŕñ ṽïƀŕåŧïöñ öñ ƒïŕšŧ, ŧĥéñ ŧŕý åĝåïñ. ··············⟧',
+    'Swap controllers': '⟦Šŵåþ çöñŧŕöłłéŕš ······⟧',
+    'The board is exactly where you left it.':
+      '⟦Ŧĥé ƀöåŕð ïš éẋåçŧłý ŵĥéŕé ýöû łéƒŧ ïŧ. ··············⟧',
+    'The far seat, the bot and the match length change between rounds — finish this round first.':
+      '⟦Ŧĥé ƒåŕ šéåŧ, ŧĥé ƀöŧ åñð ŧĥé ɱåŧçĥ łéñĝŧĥ çĥåñĝé ƀéŧŵééñ ŕöûñðš — ƒïñïšĥ ŧĥïš ŕöûñð ƒïŕšŧ. ································⟧',
+    'The picture could not be made. Try again.':
+      '⟦Ŧĥé þïçŧûŕé çöûłð ñöŧ ƀé ɱåðé. Ŧŕý åĝåïñ. ···············⟧',
+    'The tournament settled the seats, the bot and the length when it started. Leave the tournament to change them.':
+      '⟦Ŧĥé ŧöûŕñåɱéñŧ šéŧŧłéð ŧĥé šéåŧš, ŧĥé ƀöŧ åñð ŧĥé łéñĝŧĥ ŵĥéñ ïŧ šŧåŕŧéð. Łéåṽé ŧĥé ŧöûŕñåɱéñŧ ŧö çĥåñĝé ŧĥéɱ. ·······································⟧',
+    'There is no bot in this match to make harder or easier.':
+      '⟦Ŧĥéŕé ïš ñö ƀöŧ ïñ ŧĥïš ɱåŧçĥ ŧö ɱåķé ĥåŕðéŕ öŕ éåšïéŕ. ····················⟧',
+    Touch: '⟦Ŧöûçĥ ··⟧',
+    Tournament: '⟦Ŧöûŕñåɱéñŧ ····⟧',
+    'Tournament drawn': '⟦Ŧöûŕñåɱéñŧ ðŕåŵñ ······⟧',
+    'Turn the device sideways for a bigger board.':
+      '⟦Ŧûŕñ ŧĥé ðéṽïçé šïðéŵåýš ƒöŕ å ƀïĝĝéŕ ƀöåŕð. ················⟧',
+    'Turn the device upright for a bigger board.':
+      '⟦Ŧûŕñ ŧĥé ðéṽïçé ûþŕïĝĥŧ ƒöŕ å ƀïĝĝéŕ ƀöåŕð. ················⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
-    Up: '⟦Ûþ ·⟧',
-    Vibration: '⟦Ṽïƀŕåŧïöñ ····⟧',
-    Volume: '⟦Ṽöłûɱé ···⟧',
-    'What you are called': '⟦Ŵĥåŧ ýöû åŕé çåłłéð ·······⟧',
-    'Which keys drive each seat, on this device. The two seats cannot share a key, and the keys the page itself needs — Escape, Tab and the modifiers — cannot be taken.':
-      '⟦Ŵĥïçĥ ķéýš ðŕïṽé éåçĥ šéåŧ, öñ ŧĥïš ðéṽïçé. Ŧĥé ŧŵö šéåŧš çåññöŧ šĥåŕé å ķéý, åñð ŧĥé ķéýš ŧĥé þåĝé ïŧšéłƒ ñééðš — Éšçåþé, Ŧåƀ åñð ŧĥé ɱöðïƒïéŕš — çåññöŧ ƀé ŧåķéñ. ··························································⟧',
-    "Wins, losses and draws are the near seat's, bot matches included.":
-      "⟦Ŵïñš, łöššéš åñð ðŕåŵš åŕé ŧĥé ñéåŕ šéåŧ'š, ƀöŧ ɱåŧçĥéš ïñçłûðéð. ·······················⟧",
-    'Your browser would not save the data. Storage may be full or disabled.':
-      '⟦Ýöûŕ ƀŕöŵšéŕ ŵöûłð ñöŧ šåṽé ŧĥé ðåŧå. Šŧöŕåĝé ɱåý ƀé ƒûłł öŕ ðïšåƀłéð. ·························⟧',
-    'Your data': '⟦Ýöûŕ ðåŧå ····⟧',
-    action: '⟦åçŧïöñ ···⟧',
-    down: '⟦ðöŵñ ··⟧',
-    left: '⟦łéƒŧ ··⟧',
-    right: '⟦ŕïĝĥŧ ··⟧',
-    'the far seat': '⟦ŧĥé ƒåŕ šéåŧ ·····⟧',
-    'the keys you chose for the two seats': '⟦ŧĥé ķéýš ýöû çĥöšé ƒöŕ ŧĥé ŧŵö šéåŧš ·············⟧',
-    'the names you chose for the two seats':
-      '⟦ŧĥé ñåɱéš ýöû çĥöšé ƒöŕ ŧĥé ŧŵö šéåŧš ·············⟧',
-    'the near seat': '⟦ŧĥé ñéåŕ šéåŧ ·····⟧',
-    'the near seat has won {won}, lost {lost} and drawn {drawn}':
-      '⟦ŧĥé ñéåŕ šéåŧ ĥåš ŵöñ {won}, łöšŧ {lost} åñð ðŕåŵñ {drawn} ·····················⟧',
-    'the setup you last used for each game':
-      '⟦ŧĥé šéŧûþ ýöû łåšŧ ûšéð ƒöŕ éåçĥ ĝåɱé ·············⟧',
-    up: '⟦ûþ ·⟧',
-    'which games have shown you their first-play hints':
-      '⟦ŵĥïçĥ ĝåɱéš ĥåṽé šĥöŵñ ýöû ŧĥéïŕ ƒïŕšŧ-þłåý ĥïñŧš ··················⟧',
-    'your favourites': '⟦ýöûŕ ƒåṽöûŕïŧéš ······⟧',
-    'your head-to-head record': '⟦ýöûŕ ĥéåð-ŧö-ĥéåð ŕéçöŕð ·········⟧',
-    'your recently played games': '⟦ýöûŕ ŕéçéñŧłý þłåýéð ĝåɱéš ··········⟧',
-    'your settings': '⟦ýöûŕ šéŧŧïñĝš ·····⟧',
-    '{action} for {seat}': '⟦{action} ƒöŕ {seat} ·······⟧',
-    '{items} and {last}': '⟦{items} åñð {last} ·······⟧',
-    '{key} already belongs to {seat}. One key cannot drive both.':
-      '⟦{key} åłŕéåðý ƀéłöñĝš ŧö {seat}. Öñé ķéý çåññöŧ ðŕïṽé ƀöŧĥ. ·····················⟧',
-    '{key} cannot be used here.': '⟦{key} çåññöŧ ƀé ûšéð ĥéŕé. ··········⟧',
-    "{key} is already this seat's {slot}.": "⟦{key} ïš åłŕéåðý ŧĥïš šéåŧ'š {slot}. ·············⟧",
-    '{key} is one DuelBox needs for the page itself. Pick another.':
-      '⟦{key} ïš öñé ÐûéłƁöẋ ñééðš ƒöŕ ŧĥé þåĝé ïŧšéłƒ. Þïçķ åñöŧĥéŕ. ······················⟧',
-    '{near} {nearWins}, {far} {farWins}, {draws} drawn':
-      '⟦{near} {nearWins}, {far} {farWins}, {draws} ðŕåŵñ ··················⟧',
-    '{won}W {lost}L {drawn}D': '⟦{won}Ŵ {lost}Ł {drawn}Ð ·········⟧',
-    "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.":
-      "⟦“Ṁåŧçĥ ɱý ðéṽïçé” ƒöłłöŵš ýöûŕ šýšŧéɱ'š łïĝĥŧ öŕ ðåŕķ šéŧŧïñĝ åñð çĥåñĝéš ŵïŧĥ ïŧ. Łïĝĥŧ åñð Ðåŕķ öṽéŕŕïðé ïŧ. ·······································⟧",
+    easy: '⟦éåšý ··⟧',
+    hard: '⟦ĥåŕð ··⟧',
+    'in use': '⟦ïñ ûšé ···⟧',
+    normal: '⟦ñöŕɱåł ···⟧',
+    solo: '⟦šöłö ··⟧',
+    thinking: '⟦ŧĥïñķïñĝ ···⟧',
+    turn: '⟦ŧûŕñ ··⟧',
+    vs: '⟦ṽš ·⟧',
+    '{count} point': '⟦{count} þöïñŧ ·····⟧',
+    '{count} points': '⟦{count} þöïñŧš ·····⟧',
+    '{name} has {points}': '⟦{name} ĥåš {points} ·······⟧',
+    '{name} has {points}, and it is their turn':
+      '⟦{name} ĥåš {points}, åñð ïŧ ïš ŧĥéïŕ ŧûŕñ ···············⟧',
+    '{name} has {points}, and they are thinking':
+      '⟦{name} ĥåš {points}, åñð ŧĥéý åŕé ŧĥïñķïñĝ ···············⟧',
+    '{name} health: {level}, {percent} percent':
+      '⟦{name} ĥéåłŧĥ: {level}, {percent} þéŕçéñŧ ···············⟧',
+    '{name} plays this half': '⟦{name} þłåýš ŧĥïš ĥåłƒ ········⟧',
+    '{name} wins': '⟦{name} ŵïñš ····⟧',
+    '{name} wins the tournament': '⟦{name} ŵïñš ŧĥé ŧöûŕñåɱéñŧ ··········⟧',
+    '{name}’s skill': '⟦{name}’š šķïłł ·····⟧',
+    '{p1} {wins1} — {wins2} {p2}': '⟦{p1} {wins1} — {wins2} {p2} ··········⟧',
+    '{p1} {wins1} — {wins2} {p2} · first to {target} takes it':
+      '⟦{p1} {wins1} — {wins2} {p2} · ƒïŕšŧ ŧö {target} ŧåķéš ïŧ ····················⟧',
+    '{p1} {wins1}, {p2} {wins2}': '⟦{p1} {wins1}, {p2} {wins2} ··········⟧',
   },
 } as const;
 

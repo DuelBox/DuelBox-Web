@@ -26,6 +26,18 @@ const I18N_CLEAN = [
   'apps/web/src/components/KeyBindings.tsx',
   'apps/web/src/components/GameRecord.tsx',
   'apps/web/src/components/InstallOffer.tsx',
+  // The play route (#220): the match overlay, the HUD and everything they render.
+  'apps/web/src/components/ControlHints.tsx',
+  'apps/web/src/components/Controls.tsx',
+  'apps/web/src/components/ExitControl.tsx',
+  'apps/web/src/components/GameOptionsPanel.tsx',
+  'apps/web/src/components/HandoffOverlay.tsx',
+  'apps/web/src/components/HealthBarHud.tsx',
+  'apps/web/src/components/MatchHud.tsx',
+  'apps/web/src/components/MatchOptions.tsx',
+  'apps/web/src/components/MatchOverlay.tsx',
+  'apps/web/src/components/RotatePrompt.tsx',
+  'apps/web/src/components/TournamentTrack.tsx',
 ];
 
 export default tseslint.config(

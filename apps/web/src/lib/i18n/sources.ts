@@ -32,6 +32,9 @@
  */
 
 import { IMPORT_ERRORS, PLAYER_DATA_KEY_NAMES } from '../player-data';
+import { healthLevelLabel } from '../../components/health-bar';
+import { CHANGE_REASONS } from '../match-changes';
+import { BOT_DIFFICULTIES, DIFFICULTY_LABELS, ROUND_LABELS } from '../match-setup';
 
 /** Every registered source: a name for the failure message, and the strings it contributes. */
 export const DYNAMIC_SOURCES: readonly {
@@ -50,6 +53,37 @@ export const DYNAMIC_SOURCES: readonly {
     // `importPlayerData` returns exactly these five.
     name: 'why a settings import was refused (lib/player-data.ts)',
     strings: () => Object.values(IMPORT_ERRORS),
+  },
+  // --- The play route (#220): the match overlay, the HUD and the tournament track. ---
+  {
+    /**
+     * The bot tier said mid-sentence — "Round 2 of 3 · easy", "Bot skill: easy for all 7
+     * games". The union member *is* the word, so the ids are the members themselves and
+     * `MatchHud`/`TournamentTrack` render `t(messages, tier)`.
+     */
+    name: 'the bot tier, said mid-sentence (MatchHud, TournamentTrack)',
+    strings: () => [...BOT_DIFFICULTIES],
+  },
+  {
+    /**
+     * The same three tiers capitalised, plus the three match lengths, as the pre-match and
+     * between-rounds radios name them. `MatchOptions` renders `t(messages, choice.label)`.
+     */
+    name: 'the tier and length labels on the match-options radios',
+    strings: () => [...Object.values(DIFFICULTY_LABELS), ...Object.values(ROUND_LABELS)],
+  },
+  {
+    /**
+     * Why a match refuses to change something about itself. `MatchOverlay` renders
+     * `t(messages, verdict.reason)` on the pause panel and under the round result.
+     */
+    name: 'the reasons a match refuses a change (lib/match-changes.ts)',
+    strings: () => CHANGE_REASONS,
+  },
+  {
+    /** The health bar's state word, beside the bar and inside its `aria-label`. */
+    name: 'the health-bar level words (components/health-bar.ts)',
+    strings: () => (['ok', 'low', 'critical'] as const).map(healthLevelLabel),
   },
 ];
 

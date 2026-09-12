@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { GameManifest } from '@duelbox/game-sdk';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { SEAT_CHARACTERS, SEAT_KEYS } from '@/lib/seats';
 import { sharedInputMethod, type InputMethod } from '@/lib/input-method';
 import { SeatGlyph } from './SeatGlyph';
@@ -43,6 +45,7 @@ import styles from './Controls.module.css';
  * touchscreen laptop who is using the keyboard.
  */
 export function Controls({ manifest }: { manifest: GameManifest }) {
+  const messages = useMessages();
   const [used, setUsed] = useState<InputMethod | null>(null);
 
   // In an effect, never during render: the site is a static export, so a value read while
@@ -58,7 +61,7 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
 
   return (
     <div className={styles.controls}>
-      <span className={styles.title}>Controls</span>
+      <span className={styles.title}>{t(messages, 'Controls')}</span>
 
       <ul className={styles.seats}>
         {SEAT_KEYS.map(({ seat, move, action }) => (
@@ -73,13 +76,23 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
         ))}
       </ul>
 
-      <Hint label="Keys" text={manifest.controls.keyboard} marked={used === 'keyboard'} />
+      {/* The legend's own words go through `t()`; the hint text beside them is the game's own,
+          from its manifest under `packages/games`, which this pass does not reach (#220). */}
+      <Hint
+        label={t(messages, 'Keys')}
+        text={manifest.controls.keyboard}
+        marked={used === 'keyboard'}
+      />
       {/* The only thing that has ever decided whether a touch hint exists is whether the game
           declares one. It is emphatically not decided by what the player last used: a game
           with a pointer mapping keeps offering it to a player who has been typing, because
           the pointer mapping still works. */}
       {manifest.controls.pointer ? (
-        <Hint label="Touch" text={manifest.controls.pointer} marked={used === 'pointer'} />
+        <Hint
+          label={t(messages, 'Touch')}
+          text={manifest.controls.pointer}
+          marked={used === 'pointer'}
+        />
       ) : null}
     </div>
   );
@@ -94,11 +107,12 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
  * channel and never the only one.
  */
 function Hint({ label, text, marked }: { label: string; text: string; marked: boolean }) {
+  const messages = useMessages();
   return (
     <div className={marked ? `${styles.row} ${styles.marked}` : styles.row}>
       <span className={styles.label}>
         {label}
-        <span className={styles.mark}>in use</span>
+        <span className={styles.mark}>{t(messages, 'in use')}</span>
       </span>
       <span className={styles.text}>{text}</span>
     </div>
