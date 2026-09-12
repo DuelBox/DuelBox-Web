@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { setActiveSeatPalette, type GamepadEvent, type SeatId } from '@duelbox/engine';
+import { setActiveSeatPalette, setSeatSwap, type GamepadEvent, type SeatId } from '@duelbox/engine';
 import {
   advanceClock,
   clockExpired,
@@ -357,7 +357,10 @@ export function PlaySurface({ slug }: { slug: string }) {
     // choice has to be in effect before the dynamic import inside `loadGame` resolves and
     // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
     // has already been read. It is a no-op on the default and cheap either way.
-    setActiveSeatPalette(readSettings().seatPalette);
+    const chosen = readSettings();
+    // The swap (#161) rides with the palette, for the same reason and at the same moment.
+    setSeatSwap(chosen.seatSwap);
+    setActiveSeatPalette(chosen.seatPalette);
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;

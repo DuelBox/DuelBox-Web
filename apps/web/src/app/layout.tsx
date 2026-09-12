@@ -131,6 +131,11 @@ export const viewport: Viewport = {
  * query in `tokens.css`. Wrapped in try/catch because storage throws in private browsing on
  * some engines, and a theme script that throws would take the page down with it.
  *
+ * The swap (#161) is stamped next to the palette it belongs to and for the same reason: a seat
+ * whose colour arrived a frame late would paint in the other seat's colour first. It is an empty
+ * attribute rather than a value because there are two states and `tokens.css` only ever asks
+ * whether it is there.
+ *
  * The last two lines stamp `lang` and `dir` from the stored locale (#219, #222) for the same
  * reason and under the same constraint: a right-to-left choice that waited for hydration would
  * paint the shell left-to-right and then flip it. The script cannot import `lib/i18n/locales.ts`,
@@ -159,6 +164,8 @@ else el.removeAttribute('data-theme');
 var seats=s?s.seatPalette:null;
 if(seats==='colourblind')el.setAttribute('data-seat-palette','colourblind');
 else el.removeAttribute('data-seat-palette');
+if(s&&s.seatSwap===true)el.setAttribute('data-seat-swap','');
+else el.removeAttribute('data-seat-swap');
 var l=s?s.locale:null,D={'en-XA':'ltr','ar-XB':'rtl'},d=D[l];
 if(d==='ltr'||d==='rtl'){el.lang=l;el.dir=d;}
 }catch(e){}})();`;

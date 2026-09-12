@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, readSettings, writeSettings, type Settings } from './settings';
-import { applySeatPalette, applyTheme } from './theme';
+import { applySeatPalette, applySeatSwap, applyTheme } from './theme';
 
 /**
  * The subscription every settings control shares (#171, #135, #76, #174, #219).
@@ -100,10 +100,12 @@ export function useSettings(): readonly [Settings, (patch: Partial<Settings>) =>
       // into React state, so a choice made on the settings page reaches every open surface
       // the moment it changes rather than on the next load — the same argument the level
       // uses just below. The inline script in `layout.tsx` handles both before the first
-      // paint; this handles them after. The games take the seat palette through the engine,
-      // which `GameHost` selects at match start.
+      // paint; this handles them after. The swap (#161) rides along with the palette for the
+      // same reason and through the same one attribute. The games take the seat palette and
+      // the swap through the engine, which `GameHost` selects at match start.
       applyTheme(next.theme);
       applySeatPalette(next.seatPalette);
+      applySeatSwap(next.seatSwap);
       void import('./audio').then((module) => {
         module.applySoundSettings(next);
       });

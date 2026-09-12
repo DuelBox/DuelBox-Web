@@ -335,6 +335,8 @@ const catalogue = {
     'Generated from the shipped dependencies and font licences.':
       '‮Generated‬ ‮from‬ ‮the‬ ‮shipped‬ ‮dependencies‬ ‮and‬ ‮font‬ ‮licences.‬',
     'Getting in touch': '‮Getting‬ ‮in‬ ‮touch‬',
+    "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.":
+      "‮Gives‬ ‮the‬ ‮near‬ ‮seat‬ ‮the‬ ‮far‬ ‮seat's‬ ‮colour‬ ‮and‬ ‮the‬ ‮far‬ ‮seat‬ ‮the‬ ‮near‬ ‮seat's,‬ ‮on‬ ‮the‬ ‮scoreboard‬ ‮and‬ ‮on‬ ‮the‬ ‮board.‬ ‮The‬ ‮shapes‬ ‮and‬ ‮your‬ ‮names‬ ‮stay‬ ‮where‬ ‮they‬ ‮are.‬",
     Go: '‮Go‬',
     'Go again': '‮Go‬ ‮again‬',
     'Go to game {n}': '‮Go‬ ‮to‬ ‮game‬ {n}',
@@ -868,6 +870,7 @@ const catalogue = {
     Survival: '‮Survival‬',
     'Survival games': '‮Survival‬ ‮games‬',
     'Swap controllers': '‮Swap‬ ‮controllers‬',
+    'Swap the seat colours': '‮Swap‬ ‮the‬ ‮seat‬ ‮colours‬',
     'Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.':
       '‮Take‬ ‮turns‬ ‮drawing‬ ‮one‬ ‮edge‬ ‮between‬ ‮two‬ ‮dots.‬ ‮Completing‬ ‮a‬ ‮box‬ ‮scores‬ ‮it‬ ‮and‬ ‮buys‬ ‮another‬ ‮turn,‬ ‮so‬ ‮the‬ ‮skill‬ ‮is‬ ‮in‬ ‮choosing‬ ‮which‬ ‮edge‬ ‮to‬ ‮give‬ ‮away.‬ ‮Most‬ ‮boxes‬ ‮wins.‬',
     'Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.':

@@ -339,6 +339,8 @@ const catalogue = {
     'Generated from the shipped dependencies and font licences.':
       '⟦Ĝéñéŕåŧéð ƒŕöɱ ŧĥé šĥïþþéð ðéþéñðéñçïéš åñð ƒöñŧ łïçéñçéš. ·····························⟧',
     'Getting in touch': '⟦Ĝéŧŧïñĝ ïñ ŧöûçĥ ········⟧',
+    "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.":
+      "⟦Ĝïṽéš ŧĥé ñéåŕ šéåŧ ŧĥé ƒåŕ šéåŧ'š çöłöûŕ åñð ŧĥé ƒåŕ šéåŧ ŧĥé ñéåŕ šéåŧ'š, öñ ŧĥé šçöŕéƀöåŕð åñð öñ ŧĥé ƀöåŕð. Ŧĥé šĥåþéš åñð ýöûŕ ñåɱéš šŧåý ŵĥéŕé ŧĥéý åŕé. ···············································································⟧",
     Go: '⟦Ĝö ·⟧',
     'Go again': '⟦Ĝö åĝåïñ ····⟧',
     'Go to game {n}': '⟦Ĝö ŧö ĝåɱé {n} ·······⟧',
@@ -874,6 +876,7 @@ const catalogue = {
     Survival: '⟦Šûŕṽïṽåł ····⟧',
     'Survival games': '⟦Šûŕṽïṽåł ĝåɱéš ·······⟧',
     'Swap controllers': '⟦Šŵåþ çöñŧŕöłłéŕš ········⟧',
+    'Swap the seat colours': '⟦Šŵåþ ŧĥé šéåŧ çöłöûŕš ···········⟧',
     'Take turns drawing one edge between two dots. Completing a box scores it and buys another turn, so the skill is in choosing which edge to give away. Most boxes wins.':
       '⟦Ŧåķé ŧûŕñš ðŕåŵïñĝ öñé éðĝé ƀéŧŵééñ ŧŵö ðöŧš. Çöɱþłéŧïñĝ å ƀöẋ šçöŕéš ïŧ åñð ƀûýš åñöŧĥéŕ ŧûŕñ, šö ŧĥé šķïłł ïš ïñ çĥööšïñĝ ŵĥïçĥ éðĝé ŧö ĝïṽé åŵåý. Ṁöšŧ ƀöẋéš ŵïñš. ···················································································⟧',
     'Take turns shelling the other hull while sliding your own armour plate to meet the shell coming back. A plate can only block so often before it needs recharging, and twelve breaches sink a ship.':

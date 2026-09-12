@@ -161,6 +161,7 @@ describe('exporting', () => {
           haptics: false,
           theme: 'system',
           seatPalette: 'default',
+          seatSwap: false,
           gameSpeed: 1,
           locale: 'en',
         },
@@ -238,6 +239,7 @@ describe('importing', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
       locale: 'en',
     });
