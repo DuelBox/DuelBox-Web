@@ -221,6 +221,14 @@ const ONE_PER_ENGINE = [
   // and not Chromium alone: line breaking, `overflow-wrap` and the intrinsic width of a native
   // `select` are engine decisions, and this spec is made of exactly those.
   '**/text-expansion.spec.ts',
+  // `responsive-sweep.spec.ts` (#1891) walks every playable lobby at 320px portrait and
+  // landscape, both of which it sets itself, so a project that has already chosen a viewport
+  // contributes nothing but its engine. Both engines are wanted: what it measures is where a
+  // control's box lands, and a `<select>`, a radio and a search field are drawn by the
+  // browser rather than by the stylesheet. It is inert without `DUELBOX_RESPONSIVE_SWEEP=1`
+  // and runs in `nightly.yml`, so on a push this is two skipped entries a game and no
+  // browser context at all.
+  '**/responsive-sweep.spec.ts',
 ];
 
 export default defineConfig({

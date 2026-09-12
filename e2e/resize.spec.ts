@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { startMatch } from './responsive';
 
 /**
  * A match survives being resized, rotated, and folded.
@@ -30,14 +31,6 @@ const mounts = (page: Page) =>
 /** The whole visible match state, as a screen reader would read it. */
 const hudText = (page: Page) => page.getByRole('group', { name: 'Score' }).innerText();
 
-async function startMatch(page: Page): Promise<void> {
-  await page.goto('/play/tic-tac-toe/');
-  await page.getByRole('button', { name: 'Play together here' }).click();
-  await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({
-    timeout: 10_000,
-  });
-}
-
 test.describe('resizing mid-match', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(COUNT_MOUNTS);
@@ -46,7 +39,7 @@ test.describe('resizing mid-match', () => {
   test('does not rebuild the game', async ({ page }) => {
     // A rebuild would restart the match, which is the failure this guards against: the
     // player would see the board reset because they turned their phone.
-    await startMatch(page);
+    await startMatch(page, 'tic-tac-toe');
     const before = await mounts(page);
 
     for (const size of [
@@ -63,7 +56,7 @@ test.describe('resizing mid-match', () => {
   });
 
   test('preserves the score and whose turn it is through a rotation', async ({ page }) => {
-    await startMatch(page);
+    await startMatch(page, 'tic-tac-toe');
     await page.setViewportSize({ width: 400, height: 800 });
     await page.waitForTimeout(200);
     const before = await hudText(page);
@@ -80,7 +73,7 @@ test.describe('resizing mid-match', () => {
   });
 
   test('keeps the board on screen at every size it passes through', async ({ page }) => {
-    await startMatch(page);
+    await startMatch(page, 'tic-tac-toe');
     for (const size of [
       { width: 320, height: 568 },
       { width: 393, height: 852 },
@@ -118,7 +111,7 @@ test.describe('resizing mid-match', () => {
   });
 
   test('never scrolls the page sideways at any size', async ({ page }) => {
-    await startMatch(page);
+    await startMatch(page, 'tic-tac-toe');
     for (const width of [320, 375, 414, 640, 768, 1024, 1440, 2560, 3840]) {
       await page.setViewportSize({ width, height: 800 });
       await page.waitForTimeout(150);
@@ -132,7 +125,7 @@ test.describe('resizing mid-match', () => {
   test('survives a fold: a very narrow viewport and back', async ({ page }) => {
     // A folding phone can reach widths no phone ever had. The board must not vanish and
     // the match must not restart.
-    await startMatch(page);
+    await startMatch(page, 'tic-tac-toe');
     const before = await mounts(page);
     await page.setViewportSize({ width: 280, height: 653 });
     await page.waitForTimeout(250);
