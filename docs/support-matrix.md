@@ -89,26 +89,20 @@ formed, readable page: the catalogue, the rules, the legal pages, all as plain m
 links. It does not white-screen. This is a property of the architecture
 (`docs/adr/0001-static-first-hosting.md`), not of a fallback anyone wrote, and it holds now.
 
-**Half two — an explicit "this browser can't run the games" notice does not yet exist.** A
-reader with JavaScript disabled, or on an engine too old for the games, is not *told* that;
-they simply find that the play button leads to a Canvas that never starts. A clear message is
-still owed. The minimal, sufficient implementation is:
+**Half two — telling the visitor, in two cases.** A reader with JavaScript disabled is now
+told: the play route carries a `<noscript>` block (#103, `apps/web/src/app/play/[slug]/page.tsx`)
+saying a game needs JavaScript and linking back to the catalogue and the guide, and
+`e2e/no-javascript.spec.ts` holds it on every push. It is on the play route rather than in the
+shell deliberately — a `<noscript>` in `layout.tsx` would be serialised into all 108 play-route
+payloads a catalogue browse prefetches (the thirteenth guard in CLAUDE.md is the measurement:
+markup in the root layout is not free), and the play route is the only page where scripting
+off leaves a visitor with nothing to do.
 
-- A `<noscript>` block in the app shell (`apps/web/src/app/layout.tsx`) with one sentence —
-  "DuelBox needs JavaScript to run its games; the catalogue and rules are readable without
-  it." — styled as an unobtrusive banner. This covers the JS-disabled case completely and
-  costs the shell budget nothing (it is server-rendered markup, which `check-size.mjs` does
-  not count).
-- For the too-old-engine case, a tiny shell-level component on the play route that renders a
-  "your browser can't run this game" panel when a required capability probe fails (Canvas 2D
-  context creation), in place of the dead canvas.
-
-**This half is unbuilt in this change, deliberately.** Both implementation sites —
-`layout.tsx` and the play route / `PlaySurface` — are outside the territory of the work that
-authored this matrix, and a shell-wide notice touching every page is exactly the kind of
-shared-file change that should not be made as a side effect of writing a doc. It is a small,
-well-specified follow-up (the `<noscript>` line alone satisfies the common case) and is
-called out here so the requirement is recorded rather than assumed met.
+What is still owed is the too-old-engine case: an engine that runs script but cannot create a
+Canvas 2D context, or lacks something the games need, still finds a play button that leads to a
+canvas that never starts. The minimal implementation is a capability probe on the play route
+that renders a "your browser can't run this game" panel in place of the dead canvas. It is a
+small, well-specified follow-up, recorded here so the requirement is not assumed met.
 
 ## Keeping this honest
 
