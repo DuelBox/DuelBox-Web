@@ -3,8 +3,8 @@
  * Finish the service worker: give it the list of URLs that make up this build's shell, and
  * a revision computed from their contents.
  *
- * The source is `apps/web/public/sw.js` and it ships with three placeholders in it, because
- * the two facts it needs cannot be known before the export exists. Chunk names carry a hash
+ * The source is `apps/web/public/sw.js` and it ships with four placeholders in it, because
+ * the facts it needs cannot be known before the export exists. Chunk names carry a hash
  * of their own contents, so the list is different every time anything changes; and the
  * revision has to be a fingerprint of *what is being cached*, which is not knowable from
  * the source of the worker either. `next build` copies `public/` into `out/` verbatim, so
@@ -49,12 +49,23 @@
  * new top-level route joins the shell automatically, which is the right default: a route
  * that is one segment deep is a route the site's own navigation reaches.
  *
- * That leaves the deliberate gap this change does not close. The play documents are not
- * precached, so a game that has never been opened is not on the device, and asking for one
- * offline gets `/offline/` rather than the game. Saving all 108 up front is #196 — it needs
- * a quota strategy and a way for a person to decline half a gigabyte of games they will
- * never open — and a game a player actually opens is saved by the worker's runtime path,
- * which is the promise that can be kept without asking anybody anything.
+ * The play documents are still not precached: a game that has never been opened is not on
+ * the device unless somebody asked for it, and a game a player actually opens is saved by
+ * the worker's runtime path, which is the promise that can be kept without asking anybody
+ * anything. What #196 adds is the asking. `GAMES` below is the list the worker downloads
+ * from when the settings page says so — one entry per play route, with the files that route
+ * needs and what they weigh — and it is emitted here for the same reason the precache list
+ * is: the game's own chunk is reached through `import()`, no HTML names it, and only the
+ * webpack runtime knows which numbered chunk is which game.
+ *
+ * ## What one game needs, and how the chunk is found
+ *
+ * The play document, everything under `_next/` that document references and the shell does
+ * not already hold, and the game's chunk. The chunk is found the way `check-size.mjs` finds
+ * it: the runtime's chunk-id map names every `import()`-able file, and exactly one of those
+ * carries `id:"<slug>"` — the manifest the game module exports. A slug with no such chunk is
+ * a build this script refuses rather than a download that leaves the game unplayable, and a
+ * slug with two is refused for the same reason, because a wrong chunk is worse than none.
  *
  * **Everything those documents reference**, followed one level further where a reference
  * is not visible in HTML: the scripts and stylesheets in their `src`/`href` attributes,
@@ -173,7 +184,17 @@ function fail(detail) {
 function diskPath(out, url) {
   const path = url.split(/[?#]/)[0];
   if (!path.startsWith(`${BASE_PATH}/`)) return null;
-  return join(out, path.slice(BASE_PATH.length));
+  // Decoded for the disk and only for the disk. A play document references its route chunk
+  // as `app/play/%5Bslug%5D/page-….js` because the directory is literally `[slug]`, and the
+  // browser asks for the encoded form — so the URL stays as written, and the file it names is
+  // found by decoding it. The first real export this ran against failed 108 times here.
+  let decoded;
+  try {
+    decoded = decodeURIComponent(path.slice(BASE_PATH.length));
+  } catch {
+    return null;
+  }
+  return join(out, decoded);
 }
 
 async function isFile(path) {
@@ -362,6 +383,149 @@ async function precacheList(out) {
   return [...entries].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
+/** The routes of the play documents in this export, one per game, sorted for stable output. */
+async function playRoutes(out) {
+  let entries;
+  try {
+    entries = await readdir(join(out, 'play'), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const routes = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (await isFile(join(out, 'play', entry.name, 'index.html'))) routes.push(entry.name);
+  }
+  return routes.sort();
+}
+
+/**
+ * The `import()`-able chunks, from the webpack runtime's own chunk-id map.
+ *
+ * `__webpack_require__.u` is minified to something like
+ * `"static/chunks/"+e+"."+({8:"8e3b…",26:"2726…"})[e]+".js"`; the object after the literal
+ * is read rather than the whole expression, so a minifier reshuffling the arithmetic cannot
+ * quietly yield an empty map. `check-size.mjs` reads it the same way, and for the same reason.
+ */
+async function asyncChunks(out) {
+  const dir = join(out, '_next', 'static', 'chunks');
+  let names;
+  try {
+    names = await readdir(dir);
+  } catch {
+    return [];
+  }
+  const runtime = names.find((name) => /^webpack-[^/]*\.js$/.test(name));
+  if (runtime === undefined) return [];
+  const source = await readFile(join(dir, runtime), 'utf8');
+  const anchor = source.indexOf('"static/chunks/"');
+  const map = anchor === -1 ? '' : source.slice(anchor, source.indexOf('}', anchor));
+  const files = [];
+  for (const [, id, hash] of map.matchAll(/(\d+):"([0-9a-z]+)"/g)) {
+    const file = `${id}.${hash}.js`;
+    if (await isFile(join(dir, file)))
+      files.push({ url: `${BASE_PATH}/_next/static/chunks/${file}`, path: join(dir, file) });
+  }
+  return files;
+}
+
+/**
+ * A route slug's game id, which is what its chunk is stamped with.
+ *
+ * Most routes are their id. A few are not — `/play/ball-games/` loads
+ * `@duelbox/game-ballgames-physics` — and the table that says so is `SLUG_ALIASES` in
+ * `apps/web/src/data/registry.ts`, held against the game ids by `slug-aliases.test.ts`. Read
+ * from the source rather than duplicated here, so the day a slug is renamed there is no
+ * second table to forget. A slug that is neither an id nor an alias is looked for as itself,
+ * and the chunk scan below then fails the build by name rather than guessing.
+ */
+async function slugAliases() {
+  const registry = join(root, 'apps', 'web', 'src', 'data', 'registry.ts');
+  let source;
+  try {
+    source = await readFile(registry, 'utf8');
+  } catch {
+    return new Map();
+  }
+  const block = /SLUG_ALIASES[^=]*=\s*\{([\s\S]*?)\};/.exec(source)?.[1] ?? '';
+  const aliases = new Map();
+  // A key is quoted only when it has to be: `'ball-games': 'ballgames-physics'` and
+  // `lumberjack: 'lumber-jack'` sit in the same table, and the first version of this read
+  // only the first shape — and failed the build by name on the second, which is the
+  // emitter doing its job.
+  for (const [, quoted, bare, id] of block.matchAll(
+    /(?:'([a-z0-9-]+)'|\b([a-z0-9]+)):\s*'([a-z0-9-]+)'/g,
+  )) {
+    aliases.set(quoted ?? bare, id);
+  }
+  return aliases;
+}
+
+/**
+ * What "download all" needs, in a shape that does not repeat itself 108 times (#196).
+ *
+ * The play route's own chunks — the ones every play document references and the shell does
+ * not hold — are the same files for every game, so they are listed **once** as `shared` and
+ * weighed once as `sharedBytes`. The first version of this listed them per game, and the
+ * emitted worker grew by 8 KB and told the settings page the catalogue weighed 6.2 MB, of
+ * which about 5 MB was the same fifty kilobytes counted a hundred and eight times. Per game
+ * what is left is the slug, the file name of its own chunk under `prefix`, and the gzipped
+ * weight of its document plus that chunk. The document's URL is `<base path>/play/<slug>/`,
+ * which the worker derives rather than stores.
+ *
+ * `precached` is the set of URLs the shell already holds, so nothing in it is listed again.
+ */
+async function downloadList(out, precached) {
+  const slugs = await playRoutes(out);
+  const prefix = `${BASE_PATH}/_next/static/chunks/`;
+  const list = { prefix, shared: [], sharedBytes: 0, games: [] };
+  if (slugs.length === 0) return list;
+  const chunks = await asyncChunks(out);
+  const sources = await Promise.all(chunks.map((chunk) => readFile(chunk.path, 'utf8')));
+  const aliases = await slugAliases();
+  const shared = new Map();
+  for (const slug of slugs) {
+    const id = aliases.get(slug) ?? slug;
+    const route = `${BASE_PATH}/play/${slug}/`;
+    const documentPath = join(out, 'play', slug, 'index.html');
+    const html = await readFile(documentPath, 'utf8');
+    for (const url of referencesIn(html)) {
+      if (!url.startsWith(`${BASE_PATH}/_next/`) || precached.has(url) || shared.has(url)) continue;
+      const path = diskPath(out, url);
+      if (path === null || !(await isFile(path))) {
+        fail(`${route} references ${url}, which the build did not emit`);
+        continue;
+      }
+      shared.set(url, path);
+    }
+    const owners = chunks.filter(
+      (chunk, index) =>
+        sources[index].includes(`id:"${id}"`) || sources[index].includes(`id:'${id}'`),
+    );
+    if (owners.length !== 1) {
+      fail(
+        `${route} has ${String(owners.length)} candidate chunk(s) carrying id:"${id}" among the` +
+          ' import()-able chunks; a download that saved the wrong one, or none, would leave the' +
+          ' game unplayable offline while the catalogue said it was here',
+      );
+      continue;
+    }
+    const chunk = owners[0];
+    if (!chunk.url.startsWith(prefix)) {
+      fail(`${chunk.url} is not under ${prefix}, so the worker could not name it by file alone`);
+      continue;
+    }
+    const bytes =
+      gzipSync(await readFile(documentPath)).length + gzipSync(await readFile(chunk.path)).length;
+    list.games.push({ slug, chunk: chunk.url.slice(prefix.length), bytes });
+  }
+  for (const [url, path] of [...shared].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    list.shared.push(url);
+    list.sharedBytes += gzipSync(await readFile(path)).length;
+  }
+  return list;
+}
+
 /**
  * A fingerprint of the shell, from the shell.
  *
@@ -420,6 +584,9 @@ async function emit(out) {
   const revision = revisionOf(entries, contents);
   const urls = entries.map(([url]) => url);
 
+  const download = await downloadList(out, new Set(urls));
+  if (failures.length > 0) return null;
+
   let worker = await readFile(source, 'utf8');
   worker = substitute(worker, "'__REVISION__'", JSON.stringify(revision));
   worker = substitute(worker, "'__OFFLINE__'", JSON.stringify(OFFLINE_ROUTE));
@@ -428,6 +595,11 @@ async function emit(out) {
     "['__PRECACHE__']",
     `[\n${urls.map((url) => `  ${JSON.stringify(url)},`).join('\n')}\n]`,
   );
+  // The games are not part of the revision, deliberately: they are not precached, so a
+  // change to one game's chunk must not rename the caches and throw the whole shell away.
+  // Their hashed URLs change with the chunk, and a stale entry is simply one the runtime
+  // path never matches.
+  worker = substitute(worker, "['__GAMES__']", JSON.stringify(download, null, 2));
   if (failures.length > 0) return null;
 
   // Compile what is about to be written, without running it. A botched substitution is the
@@ -444,9 +616,20 @@ async function emit(out) {
   await writeFile(join(out, 'sw.js'), worker);
   const raw = contents.reduce((sum, body) => sum + body.length, 0);
   const wire = contents.reduce((sum, body) => sum + gzipSync(body).length, 0);
+  const gamesWire =
+    download.sharedBytes + download.games.reduce((sum, game) => sum + game.bytes, 0);
   let gatedBytes = 0;
   for (const path of rangeGated.values()) gatedBytes += (await stat(path)).size;
-  return { revision, entries: urls.length, raw, wire, gated: rangeGated.size, gatedBytes };
+  return {
+    revision,
+    entries: urls.length,
+    raw,
+    wire,
+    games: download.games.length,
+    gamesWire,
+    gated: rangeGated.size,
+    gatedBytes,
+  };
 }
 
 const out =
@@ -469,6 +652,10 @@ if (emitted === null) {
   console.log(
     `  precache: ${String(emitted.entries)} URL(s), ${kb(emitted.raw)} on disk,` +
       ` ${kb(emitted.wire)} over the wire — what a first visit installs`,
+  );
+  console.log(
+    `  download all: ${String(emitted.games)} game(s), ${kb(emitted.gamesWire)} over the wire` +
+      ' — what the settings page offers to save (#196)',
   );
   console.log(
     `  left to the runtime path: ${String(emitted.gated)} range-gated face(s),` +

@@ -169,6 +169,10 @@ const CHROMIUM_ONLY = [
   // bot-versus-bot match is the same simulation on every engine by rule 8. A second engine
   // would re-run the catalogue's idle timer to learn nothing.
   '**/attract-mode.spec.ts',
+  // `download-all.spec.ts` (#196) proves a downloaded game opens with the network gone, which
+  // needs `context.setOffline` — Chromium and Firefox only, for the reason `offline.spec.ts`
+  // sets out at length: a route-abort does not reach a worker's own fetch.
+  '**/download-all.spec.ts',
 ];
 
 /**

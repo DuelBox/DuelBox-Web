@@ -27,6 +27,13 @@
  * 3. **No telemetry.** Nothing is reported anywhere. No beacon, no counters, no error
  *    endpoint. The worker answers a request the page already made, and that is the whole
  *    of what it does.
+ * 4. **One thing a page may ask for, and nothing about what it gets.** #196 lets the
+ *    settings page ask for the whole catalogue to be saved. That is the one request the
+ *    worker originates on a page's behalf outside install, and the page has no say in *what*
+ *    is fetched: the list is {@link DOWNLOAD}, substituted at build time, and the message that
+ *    starts the download carries no URL, no slug and no argument the download reads.
+ *    `check-zero-cost.mjs` holds that shape — the helper is reached from the message
+ *    handler alone, called with nothing, and touches nothing the message carried.
  *
  * ## Why the globals are declared in a comment
  *
@@ -87,6 +94,33 @@ const PRECACHE = ['__PRECACHE__'];
  * a fallback that needs the network is not one.
  */
 const OFFLINE_URL = '__OFFLINE__';
+
+/**
+ * Every game, with what it takes to open one cold (#196).
+ *
+ * Emitted by `scripts/emit-service-worker.mjs` from the export, in a shape that does not
+ * repeat itself: `shared` is the play route's own chunks — the same files for every game,
+ * listed and weighed once — and each game is its slug, the file name of its chunk under
+ * `prefix`, and the gzipped weight of its document plus that chunk. The chunk is the one the
+ * play page reaches through `import()`, which no HTML mentions and which is why a page
+ * cannot compute this list for itself (`lib/offline-ready.ts` records the gap).
+ *
+ * The runtime path above saves a game when it is played. This list is for the person who
+ * wants all of them before a flight, and it is only ever read by {@link downloadGames},
+ * which only ever runs because a page asked.
+ */
+const DOWNLOAD = ['__GAMES__'];
+
+/**
+ * Where the worker remembers when each game was last opened, so it knows which to drop first
+ * when the browser runs out of room.
+ *
+ * A JSON document under a key no route will ever have, inside the runtime cache rather than
+ * anywhere a page could confuse with a page. Two facts about it worth stating: it holds slugs
+ * and timestamps and nothing about a person, and it goes with the cache when the cache goes —
+ * clearing site data removes it, a new deploy renames the cache and starts it again.
+ */
+const LAST_OPENED_KEY = '/__duelbox/last-opened';
 
 /**
  * Two caches, both named for the revision, and that naming is the whole update mechanism.
@@ -240,6 +274,7 @@ async function precache() {
 async function respondToNavigation(event, request) {
   const url = new URL(request.url);
   const key = documentKey(url);
+  event.waitUntil(touchGame(url));
   const hit = await cached(key);
   if (hit !== undefined) return hit;
   try {
@@ -296,6 +331,267 @@ async function respondToAsset(event, request) {
   } catch {
     return new Response('', { status: 504, statusText: 'Not saved to this device' });
   }
+}
+
+/* ------------------------------------------------------------- download all (#196) --- */
+
+/**
+ * The slug a play-route URL names, or null for any other page.
+ *
+ * `/play/<slug>/` with the base path in front of it. Read from the URL rather than looked up
+ * in {@link GAMES} so a game this list does not know about — a build with a game switched off
+ * (#208) — is still touched when it is played and still counts as recently used.
+ */
+function gameSlug(url) {
+  const match = /\/play\/([a-z0-9-]+)\/$/.exec(url.pathname);
+  return match === null ? null : match[1];
+}
+
+/** The last-opened record: `{ [slug]: epoch milliseconds }`, or empty. Never throws. */
+async function readLastOpened() {
+  const hit = await cached(new URL(LAST_OPENED_KEY, self.location.href).href);
+  if (hit === undefined) return {};
+  try {
+    const parsed = await hit.json();
+    return parsed !== null && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeLastOpened(record) {
+  const key = new URL(LAST_OPENED_KEY, self.location.href).href;
+  await save(RUNTIME_CACHE, key, new Response(JSON.stringify(record)));
+}
+
+/**
+ * Note that a game was opened, so the eviction below knows it is one of the wanted ones.
+ *
+ * On every navigation to a play route, hit or miss, because "recently used" is about the
+ * player and not about the network. Swallowed on failure like every other write here: a
+ * record that could not be updated costs one game its place in the queue, not the page.
+ */
+async function touchGame(url) {
+  const slug = gameSlug(url);
+  if (slug === null) return;
+  try {
+    const record = await readLastOpened();
+    record[slug] = Date.now();
+    await writeLastOpened(record);
+  } catch {
+    // Nothing to do: the navigation this rode along with has already been answered.
+  }
+}
+
+/**
+ * Which games to drop first when the browser refuses a write: the ones nobody has opened,
+ * then the ones opened longest ago.
+ *
+ * Pure, and tested as a pure function by `lib/download-all.test.ts`, which evaluates this
+ * file's source and calls it — the only way to test a worker's logic without a browser and
+ * without a second copy of it in a module the worker cannot import.
+ *
+ * A game never opened sorts first and ties sort by slug, so two runs over the same record
+ * give the same order and a test can say which game goes rather than "one of them".
+ */
+function evictionOrder(lastOpened, slugs) {
+  return [...slugs].sort((a, b) => {
+    const ta = typeof lastOpened[a] === 'number' ? lastOpened[a] : 0;
+    const tb = typeof lastOpened[b] === 'number' ? lastOpened[b] : 0;
+    if (ta !== tb) return ta - tb;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+}
+
+/** The absolute cache key for a URL from {@link DOWNLOAD}: the document rule, applied to all. */
+function gameKey(url) {
+  return documentKey(new URL(url, self.location.href));
+}
+
+/** The games in the list, or an empty array on the source file where the placeholder still stands. */
+function games() {
+  return Array.isArray(DOWNLOAD.games) ? DOWNLOAD.games : [];
+}
+
+/** The two files that are one game's own: its play document and its chunk. */
+function ownUrls(game) {
+  const route = OFFLINE_URL.replace(/\/offline\/$/, `/play/${game.slug}/`);
+  return [route, `${DOWNLOAD.prefix}${game.chunk}`];
+}
+
+async function allCached(urls) {
+  for (const url of urls) {
+    if ((await cached(gameKey(url))) === undefined) return false;
+  }
+  return true;
+}
+
+/** Whether every file a game needs — its own two and the shared route — is on this device. */
+async function gameIsSaved(game) {
+  return (await allCached(ownUrls(game))) && (await allCached(DOWNLOAD.shared));
+}
+
+/**
+ * Drop one game's own files from the runtime cache. The shared route chunks stay: they are
+ * every game's, and a played game needs them too. Deleting is idempotent and never throws.
+ */
+async function evictGame(game) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  for (const url of ownUrls(game)) {
+    await cache.delete(gameKey(url)).catch(() => undefined);
+  }
+}
+
+/**
+ * The download in progress, if there is one. One at a time: a second "Download all" while
+ * the first is running is answered with the first's progress rather than a second loop.
+ */
+let running = null;
+let cancelled = false;
+const progress = { done: 0, bytesDone: 0, saving: null, stopped: null };
+
+/** Tell every open page where the download has got to. */
+async function broadcast() {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  const message = await status();
+  for (const client of clients) client.postMessage(message);
+}
+
+/** What the settings page shows: totals from the list, progress from the counters. */
+async function status() {
+  return {
+    type: 'DOWNLOAD_PROGRESS',
+    games: games().length,
+    bytesTotal: DOWNLOAD.sharedBytes + games().reduce((sum, game) => sum + game.bytes, 0),
+    done: progress.done,
+    bytesDone: progress.bytesDone,
+    saving: progress.saving,
+    running: running !== null,
+    stopped: progress.stopped,
+  };
+}
+
+/**
+ * Count what is already here, so a page that opens mid-way — or after a cancel, or after the
+ * browser ended a long download — reads the truth rather than zero.
+ */
+async function recount() {
+  let done = 0;
+  let bytesDone = (await allCached(DOWNLOAD.shared)) ? DOWNLOAD.sharedBytes : 0;
+  for (const game of games()) {
+    if (await gameIsSaved(game)) {
+      done += 1;
+      bytesDone += game.bytes;
+    }
+  }
+  progress.done = done;
+  progress.bytesDone = bytesDone;
+}
+
+/**
+ * Save one file, and make room for it if the browser refuses.
+ *
+ * `cache.put` is atomic per entry: a write the browser refuses leaves nothing behind, so
+ * "quota pressure never corrupts the cache" is a property of the API rather than of this
+ * code, and what this code decides is only *which entries go* to make the write fit. It
+ * evicts the least recently used game that is not the one being saved, retries, and repeats
+ * while there is still something to evict — bounded by the length of the list, and stopping
+ * the download honestly when nothing is left to give up.
+ */
+async function saveOne(cache, game, url) {
+  const response = await fetch(new Request(url, { cache: 'reload' }));
+  if (!response.ok || response.type !== 'basic' || response.redirected) {
+    throw new Error(`could not fetch ${url}`);
+  }
+  const key = gameKey(url);
+  const candidates = evictionOrder(
+    await readLastOpened(),
+    games()
+      .filter((other) => other.slug !== game.slug)
+      .map((other) => other.slug),
+  );
+  for (;;) {
+    try {
+      await cache.put(key, response.clone());
+      return;
+    } catch (error) {
+      const victim = candidates.shift();
+      if (victim === undefined) throw error;
+      const evicted = games().find((other) => other.slug === victim);
+      if (evicted !== undefined && (await gameIsSaved(evicted))) {
+        await evictGame(evicted);
+        progress.done -= 1;
+        progress.bytesDone -= evicted.bytes;
+      }
+    }
+  }
+}
+
+/**
+ * Save every game this device does not already hold, one file at a time (#196).
+ *
+ * The one request this worker originates outside install, and it is bounded the same way
+ * precaching is: a fixed list built into the file, same origin by construction, run only
+ * because a page asked. It takes no argument — the message that starts it says nothing but
+ * "start" — and `check-zero-cost.mjs` holds it to that.
+ *
+ * Resumable by construction: a game whose files are all already cached is skipped, so a
+ * download stopped by a cancel, a closed browser or a quota picks up where it left off the
+ * next time somebody presses the button. Cancel is checked between files; the file in
+ * flight finishes, and since a put is atomic that never leaves half a game.
+ *
+ * It runs inside the message event's `waitUntil`, so the browser keeps this worker alive for
+ * it after the settings page has gone. That lifetime is the browser's to grant and it is not
+ * unlimited — Chromium ends a worker that has been extended for about five minutes — which
+ * is the honest reason "resumable" is not optional: a slow connection may need two presses.
+ */
+async function downloadGames() {
+  cancelled = false;
+  progress.stopped = null;
+  await recount();
+  await broadcast();
+  const cache = await caches.open(RUNTIME_CACHE);
+  try {
+    // The play route's own chunks first, once. `saveOne` is handed the first game only so its
+    // eviction leaves the shared files alone; there is nothing to evict for them but games.
+    const first = games()[0];
+    if (first !== undefined && !(await allCached(DOWNLOAD.shared))) {
+      for (const url of DOWNLOAD.shared) {
+        if (cancelled) break;
+        if ((await cached(gameKey(url))) !== undefined) continue;
+        await saveOne(cache, first, url);
+      }
+      if (await allCached(DOWNLOAD.shared)) progress.bytesDone += DOWNLOAD.sharedBytes;
+    }
+    for (const game of games()) {
+      if (cancelled) {
+        progress.stopped = 'cancelled';
+        break;
+      }
+      if (await gameIsSaved(game)) continue;
+      progress.saving = game.slug;
+      await broadcast();
+      for (const url of ownUrls(game)) {
+        if (cancelled) break;
+        if ((await cached(gameKey(url))) !== undefined) continue;
+        await saveOne(cache, game, url);
+      }
+      if (cancelled) {
+        progress.stopped = 'cancelled';
+        break;
+      }
+      progress.done += 1;
+      progress.bytesDone += game.bytes;
+    }
+  } catch (error) {
+    // A network that went away, or a quota nothing more can be evicted for. Both are
+    // reported in one word the page can turn into a sentence; both leave the cache in a
+    // state a later press can continue from.
+    progress.stopped = /quota/i.test(String(error && error.name)) ? 'quota' : 'network';
+  }
+  progress.saving = null;
+  running = null;
+  await broadcast();
 }
 
 self.addEventListener('install', (event) => {
@@ -373,5 +669,25 @@ self.addEventListener('message', (event) => {
   // CacheStorage directly rather than by asking this.
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  // #196. Three more words, and none of them carries anything: start, stop, and "where are
+  // you". The download reads the list built into this file and nothing from the message —
+  // `downloadGames()` is called with no argument, which `check-zero-cost.mjs` insists on —
+  // so a page that has been got at can waste a device's bandwidth on this site's own files
+  // and nothing else. `waitUntil` is what keeps the worker alive once the page has gone.
+  if (event.data?.type === 'DOWNLOAD_ALL') {
+    if (running === null) running = downloadGames();
+    event.waitUntil(running);
+  }
+  if (event.data?.type === 'DOWNLOAD_CANCEL') {
+    cancelled = true;
+  }
+  if (event.data?.type === 'DOWNLOAD_STATUS') {
+    event.waitUntil(
+      (async () => {
+        if (running === null) await recount();
+        event.source?.postMessage(await status());
+      })(),
+    );
   }
 });

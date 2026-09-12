@@ -686,6 +686,17 @@ async function checkNoNetworkInGameplay() {
  * it is the thing that makes a cold offline start possible at all. Anything after that is
  * the worker spending somebody's bandwidth on its own initiative.
  *
+ * **Three, the second half (#196): a page may ask for the games, and may say nothing about
+ * which.** The settings page's "Download all games" is the one request the worker originates
+ * outside install, and the exemption for it is granted the same way install's is — to a helper
+ * the `message` handler names — with three more conditions that together mean a page can
+ * *start* the download and cannot *steer* it. The helper is reached from the message handler
+ * and from no other handler, so a fetch cannot be re-routed through it into the request path.
+ * Every call to it inside the message handler passes no arguments, so nothing a page posted
+ * reaches it. And nothing it reaches reads `event` or `.data`, so it cannot pick the message
+ * up off the floor either. What it fetches is therefore what the file says it fetches: a list
+ * substituted at build time, same-origin by property one, and only ever on a press.
+ *
  * What these three cannot do is prove the worker's *caching strategy* is right — that the
  * shell is cache-first and a navigation falls back to `/offline/`. That is behaviour, it is
  * what `e2e/offline.spec.ts` exists for, and no reading of the file can replace it. These
@@ -894,9 +905,82 @@ async function checkTheWorkerOnlyAnswers() {
       return true;
     };
 
+    /**
+     * The one helper a page may start, held to the three conditions the docstring names.
+     *
+     * Found rather than named: any top-level declaration the message handler mentions and
+     * that itself calls `fetch` is treated as a download helper and held to all three, so a
+     * second such helper cannot arrive under a different name and inherit nothing.
+     */
+    const message = handlerOf('message');
+    const otherReach = [
+      reachedBy(fetchHandler),
+      reachedBy(install),
+      reachedBy(handlerOf('activate')),
+    ].join('\n');
+    const downloadHelpers = new Set();
+    if (message !== null) {
+      for (const declaration of declarations) {
+        if (!new RegExp(`\\b${escapeRegExp(declaration.name)}\\b`).test(message.text)) continue;
+        const reach = reachedBy({ text: declaration.body, open: 0, end: 0 });
+        if (!/\bfetch\s*\(/.test(reach)) continue;
+        downloadHelpers.add(declaration.name);
+        if (new RegExp(`\\b${escapeRegExp(declaration.name)}\\b`).test(otherReach)) {
+          fail(
+            property,
+            `${where} reaches ${declaration.name}() from its fetch, install or activate handler` +
+              ' as well as from message. A helper the page may start is exempt only because it' +
+              ' runs on a press; reached from the request path it would run on a navigation',
+          );
+        }
+        const calls = [
+          ...message.text.matchAll(
+            new RegExp(`\\b${escapeRegExp(declaration.name)}\\s*\\(([^)]*)\\)`, 'g'),
+          ),
+        ];
+        for (const call of calls) {
+          if ((call[1] ?? '').trim() !== '') {
+            fail(
+              property,
+              `${where} calls ${declaration.name}(${(call[1] ?? '').trim().slice(0, 40)}) from its` +
+                ' message handler with an argument. A page may say "start" and nothing else:' +
+                ' anything it passes is a URL, a slug or a count it chose, fetched on its say-so',
+            );
+          }
+        }
+        if (/\bevent\b|\.data\b/.test(reach)) {
+          fail(
+            property,
+            `${where}'s ${declaration.name}() reaches "event" or ".data". The download reads the` +
+              ' list built into the file and nothing a page posted; a helper that can see the' +
+              ' message can be steered by it',
+          );
+        }
+      }
+    }
+    const namedByMessageDownload = (at) => {
+      const declaration = enclosingDeclaration(code, at);
+      if (declaration === null) return false;
+      // The helper itself, or anything only it reaches — `saveOne` under `downloadGames`.
+      for (const name of downloadHelpers) {
+        if (name === declaration) return true;
+        const reach = reachedBy({
+          text: declarations.find((d) => d.name === name)?.body ?? '',
+          open: 0,
+          end: 0,
+        });
+        if (new RegExp(`\\b${escapeRegExp(declaration)}\\b`).test(reach)) {
+          // Reached by the download helper — and it must be reached by nothing on the request
+          // path either, or the exemption has leaked back into a navigation.
+          return !new RegExp(`\\b${escapeRegExp(declaration)}\\b`).test(otherReach);
+        }
+      }
+      return false;
+    };
+
     for (const match of code.matchAll(/\bfetch\s*\(/g)) {
       const at = code.indexOf('(', match.index);
-      if (inInstall(at) || namedByInstall(at)) continue;
+      if (inInstall(at) || namedByInstall(at) || namedByMessageDownload(at)) continue;
       const span = callArguments(code, at);
       // Decided on `code`, where a string's contents are blanked, so `fetch('/request')`
       // cannot pass by containing the word. Reported from `bare`, where they are not, so the
