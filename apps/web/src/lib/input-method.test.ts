@@ -280,6 +280,8 @@ describe('the prompt this drives (components/Controls.tsx)', () => {
     // The keyboard hint is unconditional. The touch hint's ONLY condition is whether the game
     // declares a pointer mapping — a fact about the game, not about the device or about what
     // the player last touched. Nothing here is disabled, hidden or made inert by a detection.
+    // The hint's text goes through `t()` since #220 — the manifest string is the msgid — so
+    // this matches the lookup rather than the bare expression it used to be.
     expect(tsx).toMatch(
       /label=\{t\(messages, 'Keys'\)\}\s*\n?\s*text=\{t\(messages, manifest\.controls\.keyboard\)\}/,
     );

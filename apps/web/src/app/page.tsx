@@ -144,7 +144,7 @@ export default function HomePage() {
               {/* A `div` and a `p`, not the `span` and `span` this was: a heading is flow
                   content and cannot live inside phrasing content, and the body is a
                   sentence. */}
-              <div>
+              <div className={styles.wayText}>
                 <h3 className={styles.wayTitle}>
                   <T id={way.title} />
                 </h3>

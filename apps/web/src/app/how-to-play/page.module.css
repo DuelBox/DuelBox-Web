@@ -33,7 +33,13 @@
 .cards {
   display: grid;
   gap: var(--db-space-4);
-  grid-template-columns: 1fr;
+  /* `minmax(0, 1fr)` and not `1fr`, which is `minmax(auto, 1fr)` and therefore floors the
+     track at the item's min-content width — its longest unbreakable word. On a locale half
+     again as long as the English that word is wide enough to push the one-column phone
+     layout to 610px inside a 320px window (#223). The two-column rule below already spells
+     it this way; this is the same decision for the narrow case, and it changes nothing in
+     English, where no word in these cards comes near the column. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (min-width: 40rem) {
