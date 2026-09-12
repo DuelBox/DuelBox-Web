@@ -96,8 +96,67 @@
      behind the countdown reads as a blue smudge over a green pitch. */
   --db-shadow-text: 0 4px 24px rgb(0 0 0 / 45%);
 
+  /**
+   * The stacking order, top to bottom of this list being bottom to top of the page (#70).
+   *
+   * These are one ladder and not two, because the shell has only one stacking context to
+   * be a ladder in. `PlaySurface` is `position: relative` with no `z-index`, no
+   * `isolation`, no `transform` and no `opacity`, so it is *not* a stacking context — the
+   * overlays inside it and the bars fixed to the viewport are painted against each other,
+   * not each within its own world. A scale per component would therefore be a scale that
+   * does not describe what happens.
+   *
+   * Layer zero has no token on purpose: it is the flow — the board, the HUD, the page —
+   * and everything there is ordered by the document rather than by a number. An element
+   * that wants to say "below the others" is almost always saying something else.
+   *
+   * Ten apart, so a layer can be slipped between two without renumbering the ladder.
+   */
+  /* Pause and result, laid over the board it just decided. The first thing that has to
+     cover the game rather than sit beside it. */
+  --db-z-overlay: 10;
+  /* The exit control, pinned to the play surface's corner. Above the pause panel because
+     it is chrome that stays reachable while a panel is up. */
+  --db-z-control: 20;
+  /* The pass-through layers: the rotate suggestion and the two seat hints. Above the
+     control so a hint is never half-hidden behind it; they take no pointer, so being
+     above costs nothing. */
+  --db-z-hint: 30;
+  /* A cover the player is meant to read and nothing else: the hand-off blackout, whose
+     whole job (#134) is that not one frame of the previous seat shows through, so it must
+     be over every hint and panel above the board.
+     The trace read-out shares this rung, and it looks accidental rather than argued — a
+     corner debugging aid has no reason to be level with a full blackout. It is left where
+     it is: the two are never on screen together, so nothing today can tell, and moving it
+     would be a paint change smuggled into a renaming. */
+  --db-z-cover: 40;
+  /* "Leave the match?" — a question asked over the board, and over the blackout, because
+     it is the one thing that can be raised while a hand-off is on screen. */
+  --db-z-confirm: 50;
+  /* The crash screen. Above everything a running match can put up, since none of what is
+     below is still trustworthy once the game has thrown. */
+  --db-z-recovery: 60;
+  /* Fixed to the viewport rather than to the surface, and above it: the offline and
+     update bar belongs to the site, not to whatever the page is showing. */
+  --db-z-bar: 70;
+  /* The way out of the page, above the page's own chrome: the skip link a keyboard lands
+     on first, and the debug read-out, which must stay legible over anything it measures.
+     They share a rung today, and can: the read-out is bottom-start and the skip link
+     top-start, so the two have never overlapped. */
+  --db-z-escape: 80;
+  /* The framed-page notice, and the only thing that outranks the crash screen. It is half
+     of the clickjacking defence (#2545): if it can be covered, it can be lied about. */
+  --db-z-frame-notice: 90;
+
   /* Motion. Informative motion becomes an instant state change under reduced-motion;
-     decorative motion is removed entirely. */
+     decorative motion is removed entirely.
+
+     These four values are not decided here. They are `MOTION` in `@duelbox/engine`, which is
+     the only end both halves of the product can read: a game's tweens run on the fixed
+     timestep in a package with no DOM, so they cannot reach a custom property, and the engine
+     cannot import this app — but this app imports the engine. `tokens.test.ts` parses this
+     block and fails the moment a duration or the curve here stops matching that table, so
+     changing a number means changing it there and watching this agree. */
   --db-duration-fast: 120ms;
   --db-duration: 200ms;
   --db-duration-slow: 380ms;
