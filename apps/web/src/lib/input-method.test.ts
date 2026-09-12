@@ -281,7 +281,7 @@ describe('the prompt this drives (components/Controls.tsx)', () => {
     // declares a pointer mapping — a fact about the game, not about the device or about what
     // the player last touched. Nothing here is disabled, hidden or made inert by a detection.
     expect(tsx).toMatch(
-      /label=\{t\(messages, 'Keys'\)\}\s*\n?\s*text=\{manifest\.controls\.keyboard\}/,
+      /label=\{t\(messages, 'Keys'\)\}\s*\n?\s*text=\{t\(messages, manifest\.controls\.keyboard\)\}/,
     );
     expect(tsx).toMatch(/\{manifest\.controls\.pointer \? \(/);
     expect(tsx).not.toMatch(/\bdisabled\b|aria-disabled|pointer-events/);
