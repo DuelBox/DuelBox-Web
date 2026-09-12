@@ -7,6 +7,7 @@ import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
 import { BEST_SCORES_KEY, recordRunScore } from './best-scores';
 import { CATALOGUE_KEY, writeSortPreference } from './catalogue-filter';
 import { HINTS_SEEN_KEY, markHintsSeen } from './control-hints';
+import { t } from './i18n/messages';
 import { INSTALL_KEY, rememberDismissed } from './install-prompt';
 import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
@@ -51,9 +52,18 @@ function install(storage: Storage | undefined): void {
   });
 }
 
-/** The reason an import was refused, or the empty string if it was not. */
+/**
+ * The reason an import was refused as the settings page shows it, or the empty string if it
+ * was not refused.
+ *
+ * The refusal is a message id and the values that fill it rather than a finished sentence
+ * (#220): a sentence with a version number baked into it cannot be a catalogue key, so the
+ * number travels beside the id and `t()` puts it wherever the translation wants it. Filling it
+ * through the empty catalogue here is what a player on English is shown, which is the thing
+ * these tests are about.
+ */
 function errorOf(result: ReturnType<typeof importPlayerData>): string {
-  return 'error' in result ? result.error : '';
+  return 'error' in result ? t({}, result.error, result.values) : '';
 }
 
 /** A browser with something in every store. */
