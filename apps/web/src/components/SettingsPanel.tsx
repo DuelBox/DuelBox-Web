@@ -422,15 +422,17 @@ export function SettingsPanel() {
             a third palette, and colour only: the shapes and the names stay with their seats
             (rule 7 — a shape that followed the colour would stop telling the seats apart). */}
         <Switch
-          label="Swap the seat colours"
+          label={t(messages, 'Swap the seat colours')}
           checked={settings.seatSwap}
           onChange={(seatSwap) => {
             change({ seatSwap });
           }}
         />
         <p className={styles.note}>
-          Gives the near seat the far seat&apos;s colour and the far seat the near seat&apos;s, on
-          the scoreboard and on the board. The shapes and your names stay where they are.
+          {t(
+            messages,
+            "Gives the near seat the far seat's colour and the far seat the near seat's, on the scoreboard and on the board. The shapes and your names stay where they are.",
+          )}
         </p>
 
         {/* #179. Assist mode. The value is a wall-clock multiplier the loop applies to the
