@@ -280,7 +280,9 @@ describe('the prompt this drives (components/Controls.tsx)', () => {
     // The keyboard hint is unconditional. The touch hint's ONLY condition is whether the game
     // declares a pointer mapping — a fact about the game, not about the device or about what
     // the player last touched. Nothing here is disabled, hidden or made inert by a detection.
-    expect(tsx).toMatch(/<Hint label="Keys" text=\{manifest\.controls\.keyboard\}/);
+    expect(tsx).toMatch(
+      /label=\{t\(messages, 'Keys'\)\}\s*\n?\s*text=\{manifest\.controls\.keyboard\}/,
+    );
     expect(tsx).toMatch(/\{manifest\.controls\.pointer \? \(/);
     expect(tsx).not.toMatch(/\bdisabled\b|aria-disabled|pointer-events/);
     expect(css).not.toContain('pointer-events');
@@ -289,7 +291,7 @@ describe('the prompt this drives (components/Controls.tsx)', () => {
   it('marks the used hint with a word, not with colour alone (rule 7)', () => {
     expect(tsx).toContain("marked={used === 'keyboard'}");
     expect(tsx).toContain("marked={used === 'pointer'}");
-    expect(tsx).toMatch(/<span className=\{styles\.mark\}>in use<\/span>/);
+    expect(tsx).toMatch(/<span className=\{styles\.mark\}>\{t\(messages, 'in use'\)\}<\/span>/);
   });
 
   it('reserves the mark in every row, so the mark moving cannot move anything else', () => {

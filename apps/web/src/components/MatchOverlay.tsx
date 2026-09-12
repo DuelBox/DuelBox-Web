@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
+import { t } from '@/lib/i18n/messages';
+import { T } from '@/lib/i18n/T';
+import { useMessages } from '@/lib/i18n/use-messages';
 import type { Tally } from '@/lib/head-to-head';
 import type { SeatNames } from '@/lib/seats';
 import { resultAnnouncement, soloAnnouncement } from '@/lib/match-announcement';
@@ -108,6 +111,7 @@ export interface Changing {
 
 export function MatchOverlay(props: MatchOverlayProps) {
   const { state, rounds, seatNames, solo } = props;
+  const messages = useMessages();
   return (
     <>
       {/*
@@ -127,8 +131,8 @@ export function MatchOverlay(props: MatchOverlayProps) {
       */}
       <p className="db-visually-hidden" role="status" aria-live="assertive" aria-atomic="true">
         {solo === undefined
-          ? resultAnnouncement(state, rounds, seatNames)
-          : soloAnnouncement(state, solo)}
+          ? resultAnnouncement(messages, state, rounds, seatNames)
+          : soloAnnouncement(messages, state, solo)}
       </p>
       <Phase {...props} />
     </>
@@ -155,36 +159,41 @@ function Phase({
   changing,
   unrecorded = false,
 }: MatchOverlayProps) {
+  const messages = useMessages();
+  // Every rendered player name is wrapped in `<bdi>` (#222): a name in another script must
+  // isolate itself rather than reorder the sentence it sits in.
+  const p1 = <bdi>{seatNames.p1}</bdi>;
+  const p2 = <bdi>{seatNames.p2}</bdi>;
   switch (state.phase) {
     case 'countdown':
       return <Countdown remaining={state.countdownRemaining} presentation={presentation} />;
 
     case 'paused':
       return (
-        <Panel heading="Paused" role="dialog">
+        <Panel heading={t(messages, 'Paused')} role="dialog">
           {/* The controller sentence first, because when it is present it is the reason the
               board stopped, and "exactly where you left it" is then the second thing to know. */}
           {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
-          <p className={styles.detail}>The board is exactly where you left it.</p>
+          <p className={styles.detail}>{t(messages, 'The board is exactly where you left it.')}</p>
           {/* Why the pause menu offers no change of seat, bot or length: a round is running,
               and `lib/match-changes.ts` says so in one sentence (#2351). A solo run has no
               far seat to ask about. */}
           {changing === undefined || changing.mode === 'solo' ? null : (
-            <p className={styles.detail}>{changing.changes.seat.reason}</p>
+            <p className={styles.detail}>{t(messages, changing.changes.seat.reason)}</p>
           )}
           {/* On demand during a match, as the issue asks: a player who has forgotten
               which keys are theirs should not have to quit to find out. */}
           <Controls manifest={manifest} />
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onResume} autoFocus>
-              Resume
+              {t(messages, 'Resume')}
             </button>
             {/* Restart and Settings join Resume and Quit (#145). Restart starts the match
                 over cleanly; Settings opens the shell's settings surface. Both are ordinary
                 stops in the pause dialog's focus trap, so either seat operates them with a
                 keyboard as well as a tap. */}
             <button type="button" className={styles.secondary} onClick={onRestart}>
-              Restart
+              {t(messages, 'Restart')}
             </button>
             {/* The manual half of "connection order plus manual reassignment" (#130): the
                 pair who were handed the wrong pads swap without re-plugging. Only offered
@@ -192,18 +201,18 @@ function Phase({
                 button about a thing they do not have. */}
             {onSwapControllers === undefined ? null : (
               <button type="button" className={styles.secondary} onClick={onSwapControllers}>
-                Swap controllers
+                {t(messages, 'Swap controllers')}
               </button>
             )}
             <Link className={styles.secondary} href="/settings/" prefetch={false}>
-              Settings
+              {t(messages, 'Settings')}
             </Link>
             {/* The product's only sound control. Here because pause is already where a
                 pair stops to change something, and because a control beside the score is
                 one either player can hit reaching across a shared device. */}
             <SoundToggle className={styles.secondary} />
             <button type="button" className={styles.secondary} onClick={onQuit}>
-              Quit match
+              {t(messages, 'Quit match')}
             </button>
           </div>
         </Panel>
@@ -211,19 +220,27 @@ function Phase({
 
     case 'round-over':
       return (
-        <Panel heading={`Round ${state.round}`} role="group">
+        <Panel heading={t(messages, 'Round {round}', { round: state.round })} role="group">
           <Winner outcome={state.roundOutcome} seatNames={seatNames} />
           <p className={styles.detail}>
-            {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2} · first to{' '}
-            {Math.ceil(rounds / 2)} takes it
+            <T
+              id="{p1} {wins1} — {wins2} {p2} · first to {target} takes it"
+              values={{
+                p1,
+                wins1: state.roundWins.p1,
+                wins2: state.roundWins.p2,
+                p2,
+                target: Math.ceil(rounds / 2),
+              }}
+            />
           </p>
           {changing === undefined ? null : <NextRound rounds={rounds} {...changing} />}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onNextRound} autoFocus>
-              Next round
+              {t(messages, 'Next round')}
             </button>
             <button type="button" className={styles.secondary} onClick={onQuit}>
-              Quit match
+              {t(messages, 'Quit match')}
             </button>
           </div>
         </Panel>
@@ -235,35 +252,39 @@ function Phase({
         // machine settled the run with a seat in `matchOutcome` because that is its only
         // vocabulary, and which seat it named is not a result anybody is shown.
         return (
-          <Panel heading="Game over" role="group">
-            <p className={styles.winner}>Score {solo.score}</p>
+          <Panel heading={t(messages, 'Game over')} role="group">
+            <p className={styles.winner}>{t(messages, 'Score {score}', { score: solo.score })}</p>
             <p className={styles.detail}>
               {solo.isNewBest
-                ? 'A new best on this device.'
-                : `Best on this device: ${String(solo.best)}.`}
+                ? t(messages, 'A new best on this device.')
+                : t(messages, 'Best on this device: {best}.', { best: solo.best })}
             </p>
             <div className={styles.actions}>
               <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
-                Go again
+                {t(messages, 'Go again')}
               </button>
               {nextGame ? (
                 <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
-                  Play {nextGame.name}
+                  {/* The game's own name is never translated (`docs/i18n.md`); the verb is. */}
+                  {t(messages, 'Play {game}', { game: nextGame.name })}
                 </Link>
               ) : null}
             </div>
             <Link className={styles.back} href="/games" prefetch={false}>
-              Back to all games
+              {t(messages, 'Back to all games')}
             </Link>
           </Panel>
         );
       }
       return (
-        <Panel heading={rounds > 1 ? 'Match over' : 'Game over'} role="group">
+        <Panel heading={t(messages, rounds > 1 ? 'Match over' : 'Game over')} role="group">
           <Winner outcome={state.matchOutcome} seatNames={seatNames} />
           {rounds > 1 ? (
             <p className={styles.detail}>
-              {seatNames.p1} {state.roundWins.p1} — {state.roundWins.p2} {seatNames.p2}
+              <T
+                id="{p1} {wins1} — {wins2} {p2}"
+                values={{ p1, wins1: state.roundWins.p1, wins2: state.roundWins.p2, p2 }}
+              />
             </p>
           ) : null}
           {/* From the first finished match rather than the second: the number is worth
@@ -273,17 +294,24 @@ function Phase({
               cannot appear a frame after the buttons it sits above. */}
           {unrecorded ? (
             <p className={styles.record}>
-              Not added to the record: the far seat changed hands during this match.
+              {t(
+                messages,
+                'Not added to the record: the far seat changed hands during this match.',
+              )}
             </p>
           ) : record && record.p1 + record.p2 + record.draws > 0 ? (
             <p className={styles.record}>
-              All time in {manifest.name}: {seatNames.p1} {record.p1} — {record.p2} {seatNames.p2}
-              {record.draws > 0 ? `, ${record.draws} drawn` : ''}
+              <T
+                id="All time in {game}: {p1} {wins1} — {wins2} {p2}"
+                values={{ game: manifest.name, p1, wins1: record.p1, wins2: record.p2, p2 }}
+              />
+              {/* The drawn clause is its own id rather than a second copy of the whole line. */}
+              {record.draws > 0 ? t(messages, ', {drawn} drawn', { drawn: record.draws }) : ''}
             </p>
           ) : null}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
-              Rematch
+              {t(messages, 'Rematch')}
             </button>
             {state.matchOutcome !== null ? (
               <ShareResult
@@ -303,12 +331,12 @@ function Phase({
                 which is how this was found. */}
             {nextGame ? (
               <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
-                Play {nextGame.name}
+                {t(messages, 'Play {game}', { game: nextGame.name })}
               </Link>
             ) : null}
           </div>
           <Link className={styles.back} href="/games" prefetch={false}>
-            Back to all games
+            {t(messages, 'Back to all games')}
           </Link>
         </Panel>
       );
@@ -339,11 +367,14 @@ function NextRound({
   onRounds,
 }: Changing & { rounds: number }) {
   // The tier's refusal in a match with no bot is not news to anybody, so it is not said.
+  const messages = useMessages();
   const refused = [changes.seat, changes.rounds, ...(mode === 'bot' ? [changes.difficulty] : [])];
   const reasons = [...new Set(refused.filter((v) => !v.allowed).map((v) => v.reason))];
   return (
     <details className={styles.changes}>
-      <summary className={styles.summary}>Change something for the next round</summary>
+      <summary className={styles.summary}>
+        {t(messages, 'Change something for the next round')}
+      </summary>
       <div className={styles.changeBody}>
         {changes.seat.allowed ? (
           <button
@@ -353,7 +384,10 @@ function NextRound({
               onHandSeat(mode === 'bot' ? 'friend' : 'bot');
             }}
           >
-            {mode === 'bot' ? 'Hand the far seat to a person' : 'Let the bot take the far seat'}
+            {t(
+              messages,
+              mode === 'bot' ? 'Hand the far seat to a person' : 'Let the bot take the far seat',
+            )}
           </button>
         ) : null}
         {changes.difficulty.allowed || changes.rounds.allowed ? (
@@ -366,21 +400,24 @@ function NextRound({
             lengths={changes.rounds.allowed ? changes.rounds.choices : []}
           />
         ) : null}
+        {/* The reasons are `lib/match-changes.ts`'s own sentences, registered for the
+            extractor in `lib/i18n/sources.ts` because the id arrives here as a variable. */}
         {reasons.map((reason) => (
           <p key={reason} className={styles.detail}>
-            {reason}
+            {t(messages, reason)}
           </p>
         ))}
-        <p className={styles.detail}>{changes.device.reason}</p>
+        <p className={styles.detail}>{t(messages, changes.device.reason)}</p>
       </div>
     </details>
   );
 }
 
 function Countdown({ remaining, presentation }: { remaining: number; presentation: Presentation }) {
+  const messages = useMessages();
   // Ceiling, so the first frame of a three-second countdown reads "3" rather than "2".
   const count = Math.ceil(remaining);
-  const label = count <= 0 ? 'Go' : String(count);
+  const label = count <= 0 ? t(messages, 'Go') : String(count);
   // One copy per seat that has to read it: in shared-screen two, the far one turned to face
   // the player at the top of the device with the same rotate-180 the scoreboard uses; in
   // single-seat one, upright (#142). Rotated copies first, so they sit at the top of the
@@ -601,6 +638,7 @@ function ShareResult({
   outcome: SeatId | 'draw';
   score: Readonly<Record<SeatId, number>>;
 }) {
+  const messages = useMessages();
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const share = () => {
@@ -613,14 +651,14 @@ function ShareResult({
         const result = await card.shareOrDownload(blob, data);
         setStatus(
           result === 'downloaded'
-            ? `Saved as ${card.shareCardFilename(data)}.`
+            ? t(messages, 'Saved as {file}.', { file: card.shareCardFilename(data) })
             : result === 'shared'
-              ? 'Shared.'
+              ? t(messages, 'Shared.')
               : null,
         );
       })
       .catch(() => {
-        setStatus('The picture could not be made. Try again.');
+        setStatus(t(messages, 'The picture could not be made. Try again.'));
       })
       .finally(() => {
         setBusy(false);
@@ -629,7 +667,7 @@ function ShareResult({
   return (
     <>
       <button type="button" className={styles.secondary} onClick={share} disabled={busy}>
-        Share result
+        {t(messages, 'Share result')}
       </button>
       <p className={styles.shareStatus} aria-live="polite">
         {status}
@@ -639,12 +677,13 @@ function ShareResult({
 }
 
 function Winner({ outcome, seatNames }: { outcome: SeatId | 'draw' | null; seatNames: SeatNames }) {
+  const messages = useMessages();
   if (outcome === null) return null;
-  if (outcome === 'draw') return <p className={styles.winner}>A draw</p>;
+  if (outcome === 'draw') return <p className={styles.winner}>{t(messages, 'A draw')}</p>;
   return (
     <p className={styles.winner}>
       <SeatGlyph seat={outcome} size={28} />
-      {seatNames[outcome]} wins
+      <T id="{name} wins" values={{ name: <bdi>{seatNames[outcome]}</bdi> }} />
     </p>
   );
 }
