@@ -5,14 +5,152 @@
 const catalogue = {
   locale: 'ar-XB',
   messages: {
+    'A short buzz when a round ends and a longer one when the match does. Off unless you turn it on, and it does nothing on a device without the Vibration API — which includes every iPhone.':
+      '‮A‬ ‮short‬ ‮buzz‬ ‮when‬ ‮a‬ ‮round‬ ‮ends‬ ‮and‬ ‮a‬ ‮longer‬ ‮one‬ ‮when‬ ‮the‬ ‮match‬ ‮does.‬ ‮Off‬ ‮unless‬ ‮you‬ ‮turn‬ ‮it‬ ‮on,‬ ‮and‬ ‮it‬ ‮does‬ ‮nothing‬ ‮on‬ ‮a‬ ‮device‬ ‮without‬ ‮the‬ ‮Vibration‬ ‮API‬ ‮—‬ ‮which‬ ‮includes‬ ‮every‬ ‮iPhone.‬',
+    Action: '‮Action‬',
+    'Add it': '‮Add‬ ‮it‬',
+    'Between the two of you': '‮Between‬ ‮the‬ ‮two‬ ‮of‬ ‮you‬',
+    Changed: '‮Changed‬',
+    'Clear favourites': '‮Clear‬ ‮favourites‬',
+    'Clear recently played': '‮Clear‬ ‮recently‬ ‮played‬',
+    'Clear the record': '‮Clear‬ ‮the‬ ‮record‬',
+    'Colour-blind friendly (amber and blue)': '‮Colour-blind‬ ‮friendly‬ ‮(amber‬ ‮and‬ ‮blue)‬',
+    Dark: '‮Dark‬',
+    Defaults: '‮Defaults‬',
+    'Display and play': '‮Display‬ ‮and‬ ‮play‬',
+    Down: '‮Down‬',
+    "Every game added up. Matches against the bot are not in it: a bot's wins belong to nobody.":
+      "‮Every‬ ‮game‬ ‮added‬ ‮up.‬ ‮Matches‬ ‮against‬ ‮the‬ ‮bot‬ ‮are‬ ‮not‬ ‮in‬ ‮it:‬ ‮a‬ ‮bot's‬ ‮wins‬ ‮belong‬ ‮to‬ ‮nobody.‬",
+    "Everything DuelBox keeps, all of it in this browser's storage and none of it sent anywhere. Export it to carry it to another device, import it there, or erase it here.":
+      "‮Everything‬ ‮DuelBox‬ ‮keeps,‬ ‮all‬ ‮of‬ ‮it‬ ‮in‬ ‮this‬ ‮browser's‬ ‮storage‬ ‮and‬ ‮none‬ ‮of‬ ‮it‬ ‮sent‬ ‮anywhere.‬ ‮Export‬ ‮it‬ ‮to‬ ‮carry‬ ‮it‬ ‮to‬ ‮another‬ ‮device,‬ ‮import‬ ‮it‬ ‮there,‬ ‮or‬ ‮erase‬ ‮it‬ ‮here.‬",
+    'Everything DuelBox kept on this device has been erased.':
+      '‮Everything‬ ‮DuelBox‬ ‮kept‬ ‮on‬ ‮this‬ ‮device‬ ‮has‬ ‮been‬ ‮erased.‬',
+    Export: '‮Export‬',
+    Favourites: '‮Favourites‬',
+    'Favourites cleared.': '‮Favourites‬ ‮cleared.‬',
+    'First-play hints': '‮First-play‬ ‮hints‬',
+    'Full speed': '‮Full‬ ‮speed‬',
+    'Game speed': '‮Game‬ ‮speed‬',
+    'Games with a remembered setup': '‮Games‬ ‮with‬ ‮a‬ ‮remembered‬ ‮setup‬',
+    'Hints will show again': '‮Hints‬ ‮will‬ ‮show‬ ‮again‬',
+    Import: '‮Import‬',
+    'Imported {what}.': '‮Imported‬ {what}‮.‬',
+    'Keep DuelBox on your home screen? It opens straight to the games, offline too.':
+      '‮Keep‬ ‮DuelBox‬ ‮on‬ ‮your‬ ‮home‬ ‮screen?‬ ‮It‬ ‮opens‬ ‮straight‬ ‮to‬ ‮the‬ ‮games,‬ ‮offline‬ ‮too.‬',
+    Keys: '‮Keys‬',
     Language: '‮Language‬',
+    Left: '‮Left‬',
+    Light: '‮Light‬',
+    'Match my device': '‮Match‬ ‮my‬ ‮device‬',
+    'Matches recorded': '‮Matches‬ ‮recorded‬',
+    'Most played': '‮Most‬ ‮played‬',
+    Mute: '‮Mute‬',
     'Mute sound': '‮Mute‬ ‮sound‬',
+    'Name for the far seat': '‮Name‬ ‮for‬ ‮the‬ ‮far‬ ‮seat‬',
+    'Name for the near seat': '‮Name‬ ‮for‬ ‮the‬ ‮near‬ ‮seat‬',
+    'Not now': '‮Not‬ ‮now‬',
+    'Nothing to import: that file holds nothing this version of DuelBox keeps.':
+      '‮Nothing‬ ‮to‬ ‮import:‬ ‮that‬ ‮file‬ ‮holds‬ ‮nothing‬ ‮this‬ ‮version‬ ‮of‬ ‮DuelBox‬ ‮keeps.‬',
+    'Nothing yet. Finish a match and it appears here.':
+      '‮Nothing‬ ‮yet.‬ ‮Finish‬ ‮a‬ ‮match‬ ‮and‬ ‮it‬ ‮appears‬ ‮here.‬',
+    Off: '‮Off‬',
+    On: '‮On‬',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '‮Only‬ ‮the‬ ‮language‬ ‮you‬ ‮choose‬ ‮is‬ ‮downloaded,‬ ‮and‬ ‮it‬ ‮applies‬ ‮straight‬ ‮away.‬ ‮Nothing‬ ‮is‬ ‮translated‬ ‮yet:‬ ‮the‬ ‮two‬ ‮pseudo‬ ‮languages‬ ‮are‬ ‮the‬ ‮English‬ ‮made‬ ‮deliberately‬ ‮strange,‬ ‮so‬ ‮that‬ ‮anything‬ ‮still‬ ‮in‬ ‮plain‬ ‮English‬ ‮is‬ ‮a‬ ‮string‬ ‮the‬ ‮translation‬ ‮work‬ ‮has‬ ‮not‬ ‮reached.‬',
+    'Press a key': '‮Press‬ ‮a‬ ‮key‬',
+    'Press a key box, then press the key you want. Escape cancels.':
+      '‮Press‬ ‮a‬ ‮key‬ ‮box,‬ ‮then‬ ‮press‬ ‮the‬ ‮key‬ ‮you‬ ‮want.‬ ‮Escape‬ ‮cancels.‬',
+    'Press again to clear favourites': '‮Press‬ ‮again‬ ‮to‬ ‮clear‬ ‮favourites‬',
+    'Press again to clear recently played': '‮Press‬ ‮again‬ ‮to‬ ‮clear‬ ‮recently‬ ‮played‬',
+    'Press again to clear the record': '‮Press‬ ‮again‬ ‮to‬ ‮clear‬ ‮the‬ ‮record‬',
+    'Press again to reset everything': '‮Press‬ ‮again‬ ‮to‬ ‮reset‬ ‮everything‬',
+    'Recently played': '‮Recently‬ ‮played‬',
+    'Recently played cleared.': '‮Recently‬ ‮played‬ ‮cleared.‬',
+    'Relaxed (three-quarter speed)': '‮Relaxed‬ ‮(three-quarter‬ ‮speed)‬',
+    'Reset everything': '‮Reset‬ ‮everything‬',
+    "Reset {seat}'s keys": "‮Reset‬ {seat}‮'s‬ ‮keys‬",
+    Right: '‮Right‬',
+    'Saved as {file}.': '‮Saved‬ ‮as‬ {file}‮.‬',
+    'Seat colours': '‮Seat‬ ‮colours‬',
     Settings: '‮Settings‬',
+    'Show the hints again': '‮Show‬ ‮the‬ ‮hints‬ ‮again‬',
+    'Slow (half speed)': '‮Slow‬ ‮(half‬ ‮speed)‬',
+    'Slows every real-time game down so there is more time to react. Turn-based games are untouched, and a change takes effect on the next match you start.':
+      '‮Slows‬ ‮every‬ ‮real-time‬ ‮game‬ ‮down‬ ‮so‬ ‮there‬ ‮is‬ ‮more‬ ‮time‬ ‮to‬ ‮react.‬ ‮Turn-based‬ ‮games‬ ‮are‬ ‮untouched,‬ ‮and‬ ‮a‬ ‮change‬ ‮takes‬ ‮effect‬ ‮on‬ ‮the‬ ‮next‬ ‮match‬ ‮you‬ ‮start.‬',
+    Sound: '‮Sound‬',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '‮Sound,‬ ‮vibration,‬ ‮and‬ ‮what‬ ‮this‬ ‮device‬ ‮remembers‬ ‮about‬ ‮how‬ ‮you‬ ‮play.‬ ‮Every‬ ‮change‬ ‮applies‬ ‮straight‬ ‮away‬ ‮and‬ ‮is‬ ‮kept‬ ‮in‬ ‮this‬ ‮browser‬ ‮only‬ ‮—‬ ‮nothing‬ ‮here‬ ‮is‬ ‮sent‬ ‮anywhere.‬',
+    'Standard (red and blue)': '‮Standard‬ ‮(red‬ ‮and‬ ‮blue)‬',
+    'That export has no data in it.': '‮That‬ ‮export‬ ‮has‬ ‮no‬ ‮data‬ ‮in‬ ‮it.‬',
+    'That export was written by a different version of DuelBox ({version}) and this one cannot read it.':
+      '‮That‬ ‮export‬ ‮was‬ ‮written‬ ‮by‬ ‮a‬ ‮different‬ ‮version‬ ‮of‬ ‮DuelBox‬ ‮(‬{version}‮)‬ ‮and‬ ‮this‬ ‮one‬ ‮cannot‬ ‮read‬ ‮it.‬',
+    'That file could not be read.': '‮That‬ ‮file‬ ‮could‬ ‮not‬ ‮be‬ ‮read.‬',
+    'That file is not a DuelBox player-data export.':
+      '‮That‬ ‮file‬ ‮is‬ ‮not‬ ‮a‬ ‮DuelBox‬ ‮player-data‬ ‮export.‬',
+    'That file is not valid JSON.': '‮That‬ ‮file‬ ‮is‬ ‮not‬ ‮valid‬ ‮JSON.‬',
+    'That was a tap.': '‮That‬ ‮was‬ ‮a‬ ‮tap.‬',
+    'The far seat': '‮The‬ ‮far‬ ‮seat‬',
+    'The first time you open a game, each half of the screen says whose it is until that player moves. Ask for them again and every game shows them once more.':
+      '‮The‬ ‮first‬ ‮time‬ ‮you‬ ‮open‬ ‮a‬ ‮game,‬ ‮each‬ ‮half‬ ‮of‬ ‮the‬ ‮screen‬ ‮says‬ ‮whose‬ ‮it‬ ‮is‬ ‮until‬ ‮that‬ ‮player‬ ‮moves.‬ ‮Ask‬ ‮for‬ ‮them‬ ‮again‬ ‮and‬ ‮every‬ ‮game‬ ‮shows‬ ‮them‬ ‮once‬ ‮more.‬',
+    'The head-to-head record is cleared. Both of you are back on nothing.':
+      '‮The‬ ‮head-to-head‬ ‮record‬ ‮is‬ ‮cleared.‬ ‮Both‬ ‮of‬ ‮you‬ ‮are‬ ‮back‬ ‮on‬ ‮nothing.‬',
+    'The names on the scoreboard during a match, on this device and nowhere else. Leave one empty and that seat keeps its own name.':
+      '‮The‬ ‮names‬ ‮on‬ ‮the‬ ‮scoreboard‬ ‮during‬ ‮a‬ ‮match,‬ ‮on‬ ‮this‬ ‮device‬ ‮and‬ ‮nowhere‬ ‮else.‬ ‮Leave‬ ‮one‬ ‮empty‬ ‮and‬ ‮that‬ ‮seat‬ ‮keeps‬ ‮its‬ ‮own‬ ‮name.‬',
+    'The near seat': '‮The‬ ‮near‬ ‮seat‬',
+    'The near seat has won {won}, the far seat {lost}, and {drawn} ended level.':
+      '‮The‬ ‮near‬ ‮seat‬ ‮has‬ ‮won‬ {won}‮,‬ ‮the‬ ‮far‬ ‮seat‬ {lost}‮,‬ ‮and‬ {drawn} ‮ended‬ ‮level.‬',
+    'The standard red and blue are hard to tell apart with red–green colour blindness. The alternative keeps the two seats far apart in colour as well as in shape.':
+      '‮The‬ ‮standard‬ ‮red‬ ‮and‬ ‮blue‬ ‮are‬ ‮hard‬ ‮to‬ ‮tell‬ ‮apart‬ ‮with‬ ‮red–green‬ ‮colour‬ ‮blindness.‬ ‮The‬ ‮alternative‬ ‮keeps‬ ‮the‬ ‮two‬ ‮seats‬ ‮far‬ ‮apart‬ ‮in‬ ‮colour‬ ‮as‬ ‮well‬ ‮as‬ ‮in‬ ‮shape.‬',
+    Theme: '‮Theme‬',
+    'This device did not vibrate.': '‮This‬ ‮device‬ ‮did‬ ‮not‬ ‮vibrate.‬',
+    'Try it': '‮Try‬ ‮it‬',
+    'Turn vibration on first, then try again.':
+      '‮Turn‬ ‮vibration‬ ‮on‬ ‮first,‬ ‮then‬ ‮try‬ ‮again.‬',
     'Unmute sound': '‮Unmute‬ ‮sound‬',
+    Up: '‮Up‬',
+    Vibration: '‮Vibration‬',
+    Volume: '‮Volume‬',
+    'What you are called': '‮What‬ ‮you‬ ‮are‬ ‮called‬',
+    'Which keys drive each seat, on this device. The two seats cannot share a key, and the keys the page itself needs — Escape, Tab and the modifiers — cannot be taken.':
+      '‮Which‬ ‮keys‬ ‮drive‬ ‮each‬ ‮seat,‬ ‮on‬ ‮this‬ ‮device.‬ ‮The‬ ‮two‬ ‮seats‬ ‮cannot‬ ‮share‬ ‮a‬ ‮key,‬ ‮and‬ ‮the‬ ‮keys‬ ‮the‬ ‮page‬ ‮itself‬ ‮needs‬ ‮—‬ ‮Escape,‬ ‮Tab‬ ‮and‬ ‮the‬ ‮modifiers‬ ‮—‬ ‮cannot‬ ‮be‬ ‮taken.‬',
+    "Wins, losses and draws are the near seat's, bot matches included.":
+      "‮Wins,‬ ‮losses‬ ‮and‬ ‮draws‬ ‮are‬ ‮the‬ ‮near‬ ‮seat's,‬ ‮bot‬ ‮matches‬ ‮included.‬",
+    'Your browser would not save the data. Storage may be full or disabled.':
+      '‮Your‬ ‮browser‬ ‮would‬ ‮not‬ ‮save‬ ‮the‬ ‮data.‬ ‮Storage‬ ‮may‬ ‮be‬ ‮full‬ ‮or‬ ‮disabled.‬',
+    'Your data': '‮Your‬ ‮data‬',
+    action: '‮action‬',
+    down: '‮down‬',
+    left: '‮left‬',
+    right: '‮right‬',
+    'the far seat': '‮the‬ ‮far‬ ‮seat‬',
+    'the keys you chose for the two seats': '‮the‬ ‮keys‬ ‮you‬ ‮chose‬ ‮for‬ ‮the‬ ‮two‬ ‮seats‬',
+    'the names you chose for the two seats':
+      '‮the‬ ‮names‬ ‮you‬ ‮chose‬ ‮for‬ ‮the‬ ‮two‬ ‮seats‬',
+    'the near seat': '‮the‬ ‮near‬ ‮seat‬',
+    'the near seat has won {won}, lost {lost} and drawn {drawn}':
+      '‮the‬ ‮near‬ ‮seat‬ ‮has‬ ‮won‬ {won}‮,‬ ‮lost‬ {lost} ‮and‬ ‮drawn‬ {drawn}',
+    'the setup you last used for each game':
+      '‮the‬ ‮setup‬ ‮you‬ ‮last‬ ‮used‬ ‮for‬ ‮each‬ ‮game‬',
+    up: '‮up‬',
+    'which games have shown you their first-play hints':
+      '‮which‬ ‮games‬ ‮have‬ ‮shown‬ ‮you‬ ‮their‬ ‮first-play‬ ‮hints‬',
+    'your favourites': '‮your‬ ‮favourites‬',
+    'your head-to-head record': '‮your‬ ‮head-to-head‬ ‮record‬',
+    'your recently played games': '‮your‬ ‮recently‬ ‮played‬ ‮games‬',
+    'your settings': '‮your‬ ‮settings‬',
+    '{action} for {seat}': '{action} ‮for‬ {seat}',
+    '{items} and {last}': '{items} ‮and‬ {last}',
+    '{key} already belongs to {seat}. One key cannot drive both.':
+      '{key} ‮already‬ ‮belongs‬ ‮to‬ {seat}‮.‬ ‮One‬ ‮key‬ ‮cannot‬ ‮drive‬ ‮both.‬',
+    '{key} cannot be used here.': '{key} ‮cannot‬ ‮be‬ ‮used‬ ‮here.‬',
+    "{key} is already this seat's {slot}.": "{key} ‮is‬ ‮already‬ ‮this‬ ‮seat's‬ {slot}‮.‬",
+    '{key} is one DuelBox needs for the page itself. Pick another.':
+      '{key} ‮is‬ ‮one‬ ‮DuelBox‬ ‮needs‬ ‮for‬ ‮the‬ ‮page‬ ‮itself.‬ ‮Pick‬ ‮another.‬',
+    '{near} {nearWins}, {far} {farWins}, {draws} drawn':
+      '{near} {nearWins}‮,‬ {far} {farWins}‮,‬ {draws} ‮drawn‬',
+    '{won}W {lost}L {drawn}D': '{won}‮W‬ {lost}‮L‬ {drawn}‮D‬',
+    "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.":
+      "‮“Match‬ ‮my‬ ‮device”‬ ‮follows‬ ‮your‬ ‮system's‬ ‮light‬ ‮or‬ ‮dark‬ ‮setting‬ ‮and‬ ‮changes‬ ‮with‬ ‮it.‬ ‮Light‬ ‮and‬ ‮Dark‬ ‮override‬ ‮it.‬",
   },
 } as const;
 

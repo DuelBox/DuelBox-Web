@@ -5,14 +5,153 @@
 const catalogue = {
   locale: 'en-XA',
   messages: {
+    'A short buzz when a round ends and a longer one when the match does. Off unless you turn it on, and it does nothing on a device without the Vibration API — which includes every iPhone.':
+      '⟦Å šĥöŕŧ ƀûžž ŵĥéñ å ŕöûñð éñðš åñð å łöñĝéŕ öñé ŵĥéñ ŧĥé ɱåŧçĥ ðöéš. Öƒƒ ûñłéšš ýöû ŧûŕñ ïŧ öñ, åñð ïŧ ðöéš ñöŧĥïñĝ öñ å ðéṽïçé ŵïŧĥöûŧ ŧĥé Ṽïƀŕåŧïöñ ÅÞÏ — ŵĥïçĥ ïñçłûðéš éṽéŕý ïÞĥöñé. ·································································⟧',
+    Action: '⟦Åçŧïöñ ···⟧',
+    'Add it': '⟦Åðð ïŧ ···⟧',
+    'Between the two of you': '⟦Ɓéŧŵééñ ŧĥé ŧŵö öƒ ýöû ········⟧',
+    Changed: '⟦Çĥåñĝéð ···⟧',
+    'Clear favourites': '⟦Çłéåŕ ƒåṽöûŕïŧéš ······⟧',
+    'Clear recently played': '⟦Çłéåŕ ŕéçéñŧłý þłåýéð ········⟧',
+    'Clear the record': '⟦Çłéåŕ ŧĥé ŕéçöŕð ······⟧',
+    'Colour-blind friendly (amber and blue)':
+      '⟦Çöłöûŕ-ƀłïñð ƒŕïéñðłý (åɱƀéŕ åñð ƀłûé) ··············⟧',
+    Dark: '⟦Ðåŕķ ··⟧',
+    Defaults: '⟦Ðéƒåûłŧš ···⟧',
+    'Display and play': '⟦Ðïšþłåý åñð þłåý ······⟧',
+    Down: '⟦Ðöŵñ ··⟧',
+    "Every game added up. Matches against the bot are not in it: a bot's wins belong to nobody.":
+      "⟦Éṽéŕý ĝåɱé åððéð ûþ. Ṁåŧçĥéš åĝåïñšŧ ŧĥé ƀöŧ åŕé ñöŧ ïñ ïŧ: å ƀöŧ'š ŵïñš ƀéłöñĝ ŧö ñöƀöðý. ································⟧",
+    "Everything DuelBox keeps, all of it in this browser's storage and none of it sent anywhere. Export it to carry it to another device, import it there, or erase it here.":
+      "⟦Éṽéŕýŧĥïñĝ ÐûéłƁöẋ ķééþš, åłł öƒ ïŧ ïñ ŧĥïš ƀŕöŵšéŕ'š šŧöŕåĝé åñð ñöñé öƒ ïŧ šéñŧ åñýŵĥéŕé. Éẋþöŕŧ ïŧ ŧö çåŕŕý ïŧ ŧö åñöŧĥéŕ ðéṽïçé, ïɱþöŕŧ ïŧ ŧĥéŕé, öŕ éŕåšé ïŧ ĥéŕé. ···························································⟧",
+    'Everything DuelBox kept on this device has been erased.':
+      '⟦Éṽéŕýŧĥïñĝ ÐûéłƁöẋ ķéþŧ öñ ŧĥïš ðéṽïçé ĥåš ƀééñ éŕåšéð. ····················⟧',
+    Export: '⟦Éẋþöŕŧ ···⟧',
+    Favourites: '⟦Ƒåṽöûŕïŧéš ····⟧',
+    'Favourites cleared.': '⟦Ƒåṽöûŕïŧéš çłéåŕéð. ·······⟧',
+    'First-play hints': '⟦Ƒïŕšŧ-þłåý ĥïñŧš ······⟧',
+    'Full speed': '⟦Ƒûłł šþééð ····⟧',
+    'Game speed': '⟦Ĝåɱé šþééð ····⟧',
+    'Games with a remembered setup': '⟦Ĝåɱéš ŵïŧĥ å ŕéɱéɱƀéŕéð šéŧûþ ···········⟧',
+    'Hints will show again': '⟦Ĥïñŧš ŵïłł šĥöŵ åĝåïñ ········⟧',
+    Import: '⟦Ïɱþöŕŧ ···⟧',
+    'Imported {what}.': '⟦Ïɱþöŕŧéð {what}. ······⟧',
+    'Keep DuelBox on your home screen? It opens straight to the games, offline too.':
+      '⟦Ķééþ ÐûéłƁöẋ öñ ýöûŕ ĥöɱé šçŕééñ? Ïŧ öþéñš šŧŕåïĝĥŧ ŧö ŧĥé ĝåɱéš, öƒƒłïñé ŧöö. ····························⟧',
+    Keys: '⟦Ķéýš ··⟧',
     Language: '⟦Łåñĝûåĝé ···⟧',
+    Left: '⟦Łéƒŧ ··⟧',
+    Light: '⟦Łïĝĥŧ ··⟧',
+    'Match my device': '⟦Ṁåŧçĥ ɱý ðéṽïçé ······⟧',
+    'Matches recorded': '⟦Ṁåŧçĥéš ŕéçöŕðéð ······⟧',
+    'Most played': '⟦Ṁöšŧ þłåýéð ····⟧',
+    Mute: '⟦Ṁûŧé ··⟧',
     'Mute sound': '⟦Ṁûŧé šöûñð ····⟧',
+    'Name for the far seat': '⟦Ñåɱé ƒöŕ ŧĥé ƒåŕ šéåŧ ········⟧',
+    'Name for the near seat': '⟦Ñåɱé ƒöŕ ŧĥé ñéåŕ šéåŧ ········⟧',
+    'Not now': '⟦Ñöŧ ñöŵ ···⟧',
+    'Nothing to import: that file holds nothing this version of DuelBox keeps.':
+      '⟦Ñöŧĥïñĝ ŧö ïɱþöŕŧ: ŧĥåŧ ƒïłé ĥöłðš ñöŧĥïñĝ ŧĥïš ṽéŕšïöñ öƒ ÐûéłƁöẋ ķééþš. ··························⟧',
+    'Nothing yet. Finish a match and it appears here.':
+      '⟦Ñöŧĥïñĝ ýéŧ. Ƒïñïšĥ å ɱåŧçĥ åñð ïŧ åþþéåŕš ĥéŕé. ·················⟧',
+    Off: '⟦Öƒƒ ··⟧',
+    On: '⟦Öñ ·⟧',
     'Only the language you choose is downloaded, and it applies straight away. Nothing is translated yet: the two pseudo languages are the English made deliberately strange, so that anything still in plain English is a string the translation work has not reached.':
       '⟦Öñłý ŧĥé łåñĝûåĝé ýöû çĥööšé ïš ðöŵñłöåðéð, åñð ïŧ åþþłïéš šŧŕåïĝĥŧ åŵåý. Ñöŧĥïñĝ ïš ŧŕåñšłåŧéð ýéŧ: ŧĥé ŧŵö þšéûðö łåñĝûåĝéš åŕé ŧĥé Éñĝłïšĥ ɱåðé ðéłïƀéŕåŧéłý šŧŕåñĝé, šö ŧĥåŧ åñýŧĥïñĝ šŧïłł ïñ þłåïñ Éñĝłïšĥ ïš å šŧŕïñĝ ŧĥé ŧŕåñšłåŧïöñ ŵöŕķ ĥåš ñöŧ ŕéåçĥéð. ···························································································⟧',
+    'Press a key': '⟦Þŕéšš å ķéý ····⟧',
+    'Press a key box, then press the key you want. Escape cancels.':
+      '⟦Þŕéšš å ķéý ƀöẋ, ŧĥéñ þŕéšš ŧĥé ķéý ýöû ŵåñŧ. Éšçåþé çåñçéłš. ······················⟧',
+    'Press again to clear favourites': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ƒåṽöûŕïŧéš ···········⟧',
+    'Press again to clear recently played': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ŕéçéñŧłý þłåýéð ·············⟧',
+    'Press again to clear the record': '⟦Þŕéšš åĝåïñ ŧö çłéåŕ ŧĥé ŕéçöŕð ···········⟧',
+    'Press again to reset everything': '⟦Þŕéšš åĝåïñ ŧö ŕéšéŧ éṽéŕýŧĥïñĝ ···········⟧',
+    'Recently played': '⟦Ŕéçéñŧłý þłåýéð ······⟧',
+    'Recently played cleared.': '⟦Ŕéçéñŧłý þłåýéð çłéåŕéð. ·········⟧',
+    'Relaxed (three-quarter speed)': '⟦Ŕéłåẋéð (ŧĥŕéé-ɋûåŕŧéŕ šþééð) ···········⟧',
+    'Reset everything': '⟦Ŕéšéŧ éṽéŕýŧĥïñĝ ······⟧',
+    "Reset {seat}'s keys": "⟦Ŕéšéŧ {seat}'š ķéýš ·······⟧",
+    Right: '⟦Ŕïĝĥŧ ··⟧',
+    'Saved as {file}.': '⟦Šåṽéð åš {file}. ······⟧',
+    'Seat colours': '⟦Šéåŧ çöłöûŕš ·····⟧',
     Settings: '⟦Šéŧŧïñĝš ···⟧',
+    'Show the hints again': '⟦Šĥöŵ ŧĥé ĥïñŧš åĝåïñ ·······⟧',
+    'Slow (half speed)': '⟦Šłöŵ (ĥåłƒ šþééð) ······⟧',
+    'Slows every real-time game down so there is more time to react. Turn-based games are untouched, and a change takes effect on the next match you start.':
+      '⟦Šłöŵš éṽéŕý ŕéåł-ŧïɱé ĝåɱé ðöŵñ šö ŧĥéŕé ïš ɱöŕé ŧïɱé ŧö ŕéåçŧ. Ŧûŕñ-ƀåšéð ĝåɱéš åŕé ûñŧöûçĥéð, åñð å çĥåñĝé ŧåķéš éƒƒéçŧ öñ ŧĥé ñéẋŧ ɱåŧçĥ ýöû šŧåŕŧ. ·····················································⟧',
+    Sound: '⟦Šöûñð ··⟧',
     'Sound, vibration, and what this device remembers about how you play. Every change applies straight away and is kept in this browser only — nothing here is sent anywhere.':
       '⟦Šöûñð, ṽïƀŕåŧïöñ, åñð ŵĥåŧ ŧĥïš ðéṽïçé ŕéɱéɱƀéŕš åƀöûŧ ĥöŵ ýöû þłåý. Éṽéŕý çĥåñĝé åþþłïéš šŧŕåïĝĥŧ åŵåý åñð ïš ķéþŧ ïñ ŧĥïš ƀŕöŵšéŕ öñłý — ñöŧĥïñĝ ĥéŕé ïš šéñŧ åñýŵĥéŕé. ····························································⟧',
+    'Standard (red and blue)': '⟦Šŧåñðåŕð (ŕéð åñð ƀłûé) ·········⟧',
+    'That export has no data in it.': '⟦Ŧĥåŧ éẋþöŕŧ ĥåš ñö ðåŧå ïñ ïŧ. ···········⟧',
+    'That export was written by a different version of DuelBox ({version}) and this one cannot read it.':
+      '⟦Ŧĥåŧ éẋþöŕŧ ŵåš ŵŕïŧŧéñ ƀý å ðïƒƒéŕéñŧ ṽéŕšïöñ öƒ ÐûéłƁöẋ ({version}) åñð ŧĥïš öñé çåññöŧ ŕéåð ïŧ. ···································⟧',
+    'That file could not be read.': '⟦Ŧĥåŧ ƒïłé çöûłð ñöŧ ƀé ŕéåð. ··········⟧',
+    'That file is not a DuelBox player-data export.':
+      '⟦Ŧĥåŧ ƒïłé ïš ñöŧ å ÐûéłƁöẋ þłåýéŕ-ðåŧå éẋþöŕŧ. ·················⟧',
+    'That file is not valid JSON.': '⟦Ŧĥåŧ ƒïłé ïš ñöŧ ṽåłïð ĴŠÖÑ. ··········⟧',
+    'That was a tap.': '⟦Ŧĥåŧ ŵåš å ŧåþ. ······⟧',
+    'The far seat': '⟦Ŧĥé ƒåŕ šéåŧ ·····⟧',
+    'The first time you open a game, each half of the screen says whose it is until that player moves. Ask for them again and every game shows them once more.':
+      '⟦Ŧĥé ƒïŕšŧ ŧïɱé ýöû öþéñ å ĝåɱé, éåçĥ ĥåłƒ öƒ ŧĥé šçŕééñ šåýš ŵĥöšé ïŧ ïš ûñŧïł ŧĥåŧ þłåýéŕ ɱöṽéš. Åšķ ƒöŕ ŧĥéɱ åĝåïñ åñð éṽéŕý ĝåɱé šĥöŵš ŧĥéɱ öñçé ɱöŕé. ······················································⟧',
+    'The head-to-head record is cleared. Both of you are back on nothing.':
+      '⟦Ŧĥé ĥéåð-ŧö-ĥéåð ŕéçöŕð ïš çłéåŕéð. Ɓöŧĥ öƒ ýöû åŕé ƀåçķ öñ ñöŧĥïñĝ. ························⟧',
+    'The names on the scoreboard during a match, on this device and nowhere else. Leave one empty and that seat keeps its own name.':
+      '⟦Ŧĥé ñåɱéš öñ ŧĥé šçöŕéƀöåŕð ðûŕïñĝ å ɱåŧçĥ, öñ ŧĥïš ðéṽïçé åñð ñöŵĥéŕé éłšé. Łéåṽé öñé éɱþŧý åñð ŧĥåŧ šéåŧ ķééþš ïŧš öŵñ ñåɱé. ·············································⟧',
+    'The near seat': '⟦Ŧĥé ñéåŕ šéåŧ ·····⟧',
+    'The near seat has won {won}, the far seat {lost}, and {drawn} ended level.':
+      '⟦Ŧĥé ñéåŕ šéåŧ ĥåš ŵöñ {won}, ŧĥé ƒåŕ šéåŧ {lost}, åñð {drawn} éñðéð łéṽéł. ··························⟧',
+    'The standard red and blue are hard to tell apart with red–green colour blindness. The alternative keeps the two seats far apart in colour as well as in shape.':
+      '⟦Ŧĥé šŧåñðåŕð ŕéð åñð ƀłûé åŕé ĥåŕð ŧö ŧéłł åþåŕŧ ŵïŧĥ ŕéð–ĝŕééñ çöłöûŕ ƀłïñðñéšš. Ŧĥé åłŧéŕñåŧïṽé ķééþš ŧĥé ŧŵö šéåŧš ƒåŕ åþåŕŧ ïñ çöłöûŕ åš ŵéłł åš ïñ šĥåþé. ························································⟧',
+    Theme: '⟦Ŧĥéɱé ··⟧',
+    'This device did not vibrate.': '⟦Ŧĥïš ðéṽïçé ðïð ñöŧ ṽïƀŕåŧé. ··········⟧',
+    'Try it': '⟦Ŧŕý ïŧ ···⟧',
+    'Turn vibration on first, then try again.':
+      '⟦Ŧûŕñ ṽïƀŕåŧïöñ öñ ƒïŕšŧ, ŧĥéñ ŧŕý åĝåïñ. ··············⟧',
     'Unmute sound': '⟦Ûñɱûŧé šöûñð ·····⟧',
+    Up: '⟦Ûþ ·⟧',
+    Vibration: '⟦Ṽïƀŕåŧïöñ ····⟧',
+    Volume: '⟦Ṽöłûɱé ···⟧',
+    'What you are called': '⟦Ŵĥåŧ ýöû åŕé çåłłéð ·······⟧',
+    'Which keys drive each seat, on this device. The two seats cannot share a key, and the keys the page itself needs — Escape, Tab and the modifiers — cannot be taken.':
+      '⟦Ŵĥïçĥ ķéýš ðŕïṽé éåçĥ šéåŧ, öñ ŧĥïš ðéṽïçé. Ŧĥé ŧŵö šéåŧš çåññöŧ šĥåŕé å ķéý, åñð ŧĥé ķéýš ŧĥé þåĝé ïŧšéłƒ ñééðš — Éšçåþé, Ŧåƀ åñð ŧĥé ɱöðïƒïéŕš — çåññöŧ ƀé ŧåķéñ. ··························································⟧',
+    "Wins, losses and draws are the near seat's, bot matches included.":
+      "⟦Ŵïñš, łöššéš åñð ðŕåŵš åŕé ŧĥé ñéåŕ šéåŧ'š, ƀöŧ ɱåŧçĥéš ïñçłûðéð. ·······················⟧",
+    'Your browser would not save the data. Storage may be full or disabled.':
+      '⟦Ýöûŕ ƀŕöŵšéŕ ŵöûłð ñöŧ šåṽé ŧĥé ðåŧå. Šŧöŕåĝé ɱåý ƀé ƒûłł öŕ ðïšåƀłéð. ·························⟧',
+    'Your data': '⟦Ýöûŕ ðåŧå ····⟧',
+    action: '⟦åçŧïöñ ···⟧',
+    down: '⟦ðöŵñ ··⟧',
+    left: '⟦łéƒŧ ··⟧',
+    right: '⟦ŕïĝĥŧ ··⟧',
+    'the far seat': '⟦ŧĥé ƒåŕ šéåŧ ·····⟧',
+    'the keys you chose for the two seats': '⟦ŧĥé ķéýš ýöû çĥöšé ƒöŕ ŧĥé ŧŵö šéåŧš ·············⟧',
+    'the names you chose for the two seats':
+      '⟦ŧĥé ñåɱéš ýöû çĥöšé ƒöŕ ŧĥé ŧŵö šéåŧš ·············⟧',
+    'the near seat': '⟦ŧĥé ñéåŕ šéåŧ ·····⟧',
+    'the near seat has won {won}, lost {lost} and drawn {drawn}':
+      '⟦ŧĥé ñéåŕ šéåŧ ĥåš ŵöñ {won}, łöšŧ {lost} åñð ðŕåŵñ {drawn} ·····················⟧',
+    'the setup you last used for each game':
+      '⟦ŧĥé šéŧûþ ýöû łåšŧ ûšéð ƒöŕ éåçĥ ĝåɱé ·············⟧',
+    up: '⟦ûþ ·⟧',
+    'which games have shown you their first-play hints':
+      '⟦ŵĥïçĥ ĝåɱéš ĥåṽé šĥöŵñ ýöû ŧĥéïŕ ƒïŕšŧ-þłåý ĥïñŧš ··················⟧',
+    'your favourites': '⟦ýöûŕ ƒåṽöûŕïŧéš ······⟧',
+    'your head-to-head record': '⟦ýöûŕ ĥéåð-ŧö-ĥéåð ŕéçöŕð ·········⟧',
+    'your recently played games': '⟦ýöûŕ ŕéçéñŧłý þłåýéð ĝåɱéš ··········⟧',
+    'your settings': '⟦ýöûŕ šéŧŧïñĝš ·····⟧',
+    '{action} for {seat}': '⟦{action} ƒöŕ {seat} ·······⟧',
+    '{items} and {last}': '⟦{items} åñð {last} ·······⟧',
+    '{key} already belongs to {seat}. One key cannot drive both.':
+      '⟦{key} åłŕéåðý ƀéłöñĝš ŧö {seat}. Öñé ķéý çåññöŧ ðŕïṽé ƀöŧĥ. ·····················⟧',
+    '{key} cannot be used here.': '⟦{key} çåññöŧ ƀé ûšéð ĥéŕé. ··········⟧',
+    "{key} is already this seat's {slot}.": "⟦{key} ïš åłŕéåðý ŧĥïš šéåŧ'š {slot}. ·············⟧",
+    '{key} is one DuelBox needs for the page itself. Pick another.':
+      '⟦{key} ïš öñé ÐûéłƁöẋ ñééðš ƒöŕ ŧĥé þåĝé ïŧšéłƒ. Þïçķ åñöŧĥéŕ. ······················⟧',
+    '{near} {nearWins}, {far} {farWins}, {draws} drawn':
+      '⟦{near} {nearWins}, {far} {farWins}, {draws} ðŕåŵñ ··················⟧',
+    '{won}W {lost}L {drawn}D': '⟦{won}Ŵ {lost}Ł {drawn}Ð ·········⟧',
+    "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.":
+      "⟦“Ṁåŧçĥ ɱý ðéṽïçé” ƒöłłöŵš ýöûŕ šýšŧéɱ'š łïĝĥŧ öŕ ðåŕķ šéŧŧïñĝ åñð çĥåñĝéš ŵïŧĥ ïŧ. Łïĝĥŧ åñð Ðåŕķ öṽéŕŕïðé ïŧ. ·······································⟧",
   },
 } as const;
 
