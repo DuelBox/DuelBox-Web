@@ -343,13 +343,14 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
             {/*
               Two ids rather than one with a `{more}` in it: "More" and "All" are the whole
               difference between the two headings, and a conditional between two literals is a
-              shape the extractor reads. The category itself is a data string this batch does
-              not own — `lib/categories.ts` and the catalogue pages are another territory — so
-              it travels as a value and stays English for now.
+              shape the extractor reads. The category travels as a value and is translated on
+              its own, in the lower-case spelling this sentence puts it in — registered beside
+              the capitalised names in `lib/i18n/sources.ts`, because case belongs to the
+              position in a sentence and a locale may not lower-case the way English does.
             */}
             <T
               id={related.length > 0 ? 'More {category} games' : 'All {category} games'}
-              values={{ category: game.category.toLowerCase() }}
+              values={{ category: <T id={game.category.toLowerCase()} /> }}
             />
           </Link>
         </h2>

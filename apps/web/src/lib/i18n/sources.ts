@@ -163,6 +163,14 @@ export const DYNAMIC_SOURCES: readonly {
     strings: () => [...new Set(CATALOGUE.map((game) => game.category))],
   },
   {
+    // The same names as a game page says them mid-sentence — "More board games" — through
+    // `<T id={game.category.toLowerCase()} />` as the value. A second spelling rather than a
+    // lower-casing at the render site, because case is a property of a language: a locale that
+    // capitalises its nouns keeps the capital, and one with no case gets the same word twice.
+    name: 'catalogue category names, said mid-sentence',
+    strings: () => [...new Set(CATALOGUE.map((game) => game.category.toLowerCase()))],
+  },
+  {
     // "about 90 seconds", on every card, and inside the two sentences that quote the shortest
     // and the longest a category holds. Fourteen distinct ones across the 108 games.
     name: 'catalogue round lengths',
