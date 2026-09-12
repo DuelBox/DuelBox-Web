@@ -132,7 +132,7 @@
 .keys kbd {
   font-family: var(--db-font-mono);
   font-size: var(--db-text-sm);
-  padding: 2px 6px;
+  padding: 2px 6px; /* off-scale: a key cap hugs its glyph, between two grid steps */
   border: 1px solid var(--db-border);
   border-bottom-width: 2px;
   border-radius: 4px;
