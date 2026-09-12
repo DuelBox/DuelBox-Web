@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { MIRROR_CLASS } from '../lib/icons';
 
 /**
  * The shell mirrors for a right-to-left reader through logical properties alone (#222).
@@ -39,10 +40,29 @@ import { describe, expect, it } from 'vitest';
  * `border-radius` where the left corners differ from the right, at a `translateX` that is
  * not multiplied by `--db-inline-sign` (CSS has no logical translate, so travel along the
  * line is signed by that token, which `[dir='rtl']` in tokens.css turns to -1), and at a
- * `scaleX(-1)` that is not under a `[dir='rtl']` selector, since a flip that does not
- * depend on the reading direction is a flip for some other reason and wants saying.
- * Comments are blanked before any of that, with their newlines kept so a report's line
- * number is the file's line number.
+ * `scaleX(-1)` written as a literal, since the only flip that follows the reading direction
+ * *and* respects the play surface's island is `scaleX(var(--db-inline-sign))` — see
+ * `.db-mirror` in globals.css — and a literal -1 is a flip for some other reason that wants
+ * saying. Comments are blanked before any of that, with their newlines kept so a report's
+ * line number is the file's line number.
+ *
+ * The argument of a `translate…()` is found by walking to its balanced close paren, not by
+ * a regex. The first version of this file used a pattern that allowed one nested `(…)`, and
+ * `calc(1rem * var(--db-inline-sign))` is two levels deep, so the tree's only signed travel
+ * (the settings switch's thumb) was never read at all: with its sign token swapped for
+ * `var(--db-space-4)` the check stayed green. The fixture below now carries a two-level
+ * *unsigned* travel that must be reported, so the signed one is known to pass because the
+ * sign was seen rather than because nothing was.
+ *
+ * ## `[dir=…]` belongs to tokens.css alone
+ *
+ * The shell mirrors through logical properties and the island un-mirrors through
+ * `direction: ltr` plus `dir="ltr"`; the only rules keyed on the attribute are the three
+ * token swaps in tokens.css. A `[dir='rtl'] .board { transform: scaleX(-1) }` in a module
+ * would match from `<html>` straight through the island — an ancestor selector cannot see
+ * `direction` — which is exactly the mirrored board rule 9 forbids, and the first version of
+ * this file *exempted* a literal flip under that selector. So every block whose selector
+ * names `[dir=` or `:dir(` outside `styles/tokens.css` fails, whatever it declares.
  *
  * ## The controls
  *
@@ -62,7 +82,12 @@ import { describe, expect, it } from 'vitest';
  * play surface's `direction: ltr` line deleted it named that line instead. The stale-marker
  * check was watched with the marker moved one line up onto `padding-bottom`. The island
  * check was watched with `--db-inline-sign: 1` removed from the `[dir='ltr']` block, and the
- * `dir` check with the attribute removed from `PlaySurface.tsx`.
+ * `dir` check with the attribute removed from `PlaySurface.tsx`. After review: the travel
+ * check with `SettingsPanel.module.css:92` signed by `--db-space-4` instead of the sign token
+ * (named by file and line, where the first version reported nothing); the `[dir=…]` check
+ * and the literal-flip check together with `[dir='rtl'] canvas { transform: scaleX(-1) }`
+ * appended to `PlaySurface.module.css`; and the mirror-class check with `MIRROR_CLASS`
+ * renamed to `db-mirrored` while globals.css still said `.db-mirror`.
  */
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
@@ -119,7 +144,7 @@ const FOUR_SIDED_SHORTHAND =
 const SIDE_WORD = /\b(?:left|right)\b/;
 
 /** Why a declaration is physical, or null when it is not. */
-function physicalReason(property: string, value: string, selector: string): string | null {
+function physicalReason(property: string, value: string): string | null {
   if (PHYSICAL_PROPERTY.test(property)) return 'names a side of the device';
   if (SIDED_KEYWORD_PROPERTY.test(property) && SIDE_WORD.test(value)) {
     return 'picks a side by keyword';
@@ -139,23 +164,45 @@ function physicalReason(property: string, value: string, selector: string): stri
     if (asymmetric) return 'rounds the left corners differently from the right';
   }
   if (property === 'transform' || property === 'translate') {
-    for (const travel of value.matchAll(/translate(?:X|3d)?\(([^()]*(?:\([^()]*\))?[^()]*)\)/g)) {
-      const x = (travel[1] ?? '').split(',')[0]?.trim() ?? '';
+    // The individual `translate` property is a bare value list; `transform` is a list of
+    // function calls whose x arguments are walked out of their parens.
+    const xs = property === 'translate' ? [values(value)[0] ?? ''] : travels(value);
+    for (const x of xs) {
       if (/^0(?:px|rem|em|%)?$/.test(x)) continue;
       if (x.includes('var(--db-inline-sign)')) continue;
       return 'travels along the line without --db-inline-sign';
     }
-    if (property === 'translate') {
-      const x = values(value)[0] ?? '';
-      if (!/^0(?:px|rem|em|%)?$/.test(x) && !x.includes('var(--db-inline-sign)')) {
-        return 'travels along the line without --db-inline-sign';
-      }
-    }
-    if (/scale(?:X\(\s*-1|\(\s*-1\s*[,)])/.test(value) && !/\[dir=['"]rtl['"]\]/.test(selector)) {
-      return 'mirrors without depending on the reading direction';
+    if (/scale(?:X\(\s*-1|\(\s*-1\s*[,)])/.test(value)) {
+      return 'mirrors by a literal -1 rather than scaleX(var(--db-inline-sign))';
     }
   }
   return null;
+}
+
+/**
+ * The x argument of every `translate()`, `translateX()` and `translate3d()` in a transform
+ * list, read to the balanced close paren — so `translateX(calc(1rem * var(--x)))` yields
+ * `calc(1rem * var(--x))` whole, however deep the nesting. `translateY`/`translateZ` are not
+ * matched: they do not travel along the line.
+ */
+function travels(value: string): string[] {
+  const found: string[] = [];
+  for (const call of value.matchAll(/translate(?:X|3d)?\(/g)) {
+    const start = call.index + call[0].length;
+    let depth = 1;
+    let firstComma = -1;
+    let i = start;
+    for (; i < value.length && depth > 0; i += 1) {
+      const char = value[i];
+      if (char === '(') depth += 1;
+      else if (char === ')') depth -= 1;
+      else if (char === ',' && depth === 1 && firstComma === -1) firstComma = i;
+    }
+    // `i - 1` is the close paren when the parens balance; an unbalanced value runs to its end.
+    const close = depth === 0 ? i - 1 : value.length;
+    found.push(value.slice(start, firstComma === -1 ? close : firstComma).trim());
+  }
+  return found;
 }
 
 export interface Hit {
@@ -175,6 +222,11 @@ export interface Scan {
   readonly staleMarkers: number[];
   /** Every block whose selector is scoped to `[dir='rtl']`, with its declarations. */
   readonly rtlBlocks: { selector: string; declarations: Record<string, string> }[];
+  /**
+   * Every block keyed on the reading direction at all — `[dir=…]` or `:dir(…)` — whichever
+   * value it names. Only tokens.css may have any (see the header).
+   */
+  readonly dirBlocks: { selector: string; declarations: Record<string, string> }[];
   /** Every block, keyed by its selector's last line, with its declarations. */
   readonly blocks: Map<string, Record<string, string>>;
   readonly declarations: number;
@@ -189,6 +241,7 @@ export function scanCss(source: string, file: string): Scan {
   const hits: Hit[] = [];
   const used = new Set<number>();
   const rtlBlocks: Scan['rtlBlocks'] = [];
+  const dirBlocks: Scan['dirBlocks'] = [];
   const blocks = new Map<string, Record<string, string>>();
   let declarations = 0;
 
@@ -211,7 +264,7 @@ export function scanCss(source: string, file: string): Scan {
       if (!property) continue;
       declarations += 1;
       found[property] = value;
-      const why = physicalReason(property, value, selector);
+      const why = physicalReason(property, value);
       if (why === null) continue;
       const line = lineAt(css, start + raw.indexOf(property));
       // A declaration may wrap (a four-value padding of `max()` calls does), and its marker
@@ -226,6 +279,7 @@ export function scanCss(source: string, file: string): Scan {
     // query — and a lookup by selector wants everything it declares.
     blocks.set(selector, { ...(blocks.get(selector) ?? {}), ...found });
     if (/\[dir=['"]rtl['"]\]/.test(selector)) rtlBlocks.push({ selector, declarations: found });
+    if (/\[dir=|:dir\(/.test(selector)) dirBlocks.push({ selector, declarations: found });
   }
 
   const markers = [...markerLines].sort((a, b) => a - b);
@@ -234,6 +288,7 @@ export function scanCss(source: string, file: string): Scan {
     markers: markers.filter((line) => used.has(line)),
     staleMarkers: markers.filter((line) => !used.has(line)),
     rtlBlocks,
+    dirBlocks,
     blocks,
     declarations,
   };
@@ -248,7 +303,9 @@ const STYLE_KEY =
  * Only the `style={{…}}` objects are read, so a `left` in ordinary code is not a hit; inside
  * one, a key that names a side is a hit unless its line carries the marker. A `dir`
  * attribute is reported separately: it pins a whole subtree against the reading direction,
- * and the tree check below allows exactly one.
+ * and the tree check below allows exactly one. `dir="auto"` is not reported — it pins
+ * nothing, it asks the bidi algorithm to read the text's own first strong character, and it
+ * is what a name input wants (docs/rtl.md, "What is open").
  */
 export function scanTsx(
   source: string,
@@ -261,7 +318,8 @@ export function scanTsx(
   // follows whitespace, so a `https://` inside a string survives.
   const code = blankComments(source).replace(/(^|\s)\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, ' '));
 
-  for (const attribute of code.matchAll(/\bdir=(?:"[^"]*"|\{[^}]*\})/g)) {
+  for (const attribute of code.matchAll(/\bdir=(?:"([^"]*)"|\{[^}]*\})/g)) {
+    if (attribute[1] === 'auto') continue;
     dirAttributes.push({ file, line: lineAt(source, attribute.index), text: attribute[0] });
   }
 
@@ -327,17 +385,25 @@ describe('the scanner, on input it must report', () => {
     '  border-radius: 8px 8px 0 0;',
     '  transform: translateX(1rem);',
     '  transform: translateX(calc(1rem * var(--db-inline-sign)));',
+    // Two levels of parens and no sign: the shape the one-level regex could not see at all.
+    '  transform: translateX(calc(1rem * var(--db-space-4)));',
+    '  transform: translate3d(calc(1rem * 1), 0, 0);',
+    '  transform: translate3d(calc(var(--db-space-4) * var(--db-inline-sign)), 0, 0);',
     '  transform: translate(-50%, -50%);',
     '  transform: translate(0, -50%);',
     '  transform: scaleX(-1);',
+    '  transform: scaleX(var(--db-inline-sign));',
     '  color: red; /* physical: a marker with nothing to excuse */',
     '}',
     "[dir='rtl'] .b {",
     '  transform: scaleX(-1);',
     '  --db-inline-sign: -1;',
     '}',
+    '.c:dir(rtl) {',
+    '  order: 1;',
+    '}',
     '@media (max-width: 40rem) {',
-    '  .c {',
+    '  .d {',
     '    float: left;',
     '  }',
     '}',
@@ -351,15 +417,34 @@ describe('the scanner, on input it must report', () => {
       [8, 'margin: 0 0 0 auto'],
       [10, 'border-radius: 8px 0 0 8px'],
       [12, 'transform: translateX(1rem)'],
-      [14, 'transform: translate(-50%, -50%)'],
-      [16, 'transform: scaleX(-1)'],
-      [25, 'float: left'],
+      [14, 'transform: translateX(calc(1rem * var(--db-space-4)))'],
+      [15, 'transform: translate3d(calc(1rem * 1), 0, 0)'],
+      [17, 'transform: translate(-50%, -50%)'],
+      [19, 'transform: scaleX(-1)'],
+      // A literal flip is a hit under `[dir='rtl']` too: the selector is no excuse, because
+      // it cannot see the play surface's `direction: ltr` (see the header).
+      [24, 'transform: scaleX(-1)'],
+      [32, 'float: left'],
     ]);
+  });
+
+  it('reads a travel to its balanced close paren, however deep', () => {
+    expect(travels('translateX(calc(1rem * var(--db-inline-sign))) rotate(1deg)')).toEqual([
+      'calc(1rem * var(--db-inline-sign))',
+    ]);
+    expect(travels('translate3d(calc(max(1px, 2px) * -1), 0, 0)')).toEqual([
+      'calc(max(1px, 2px) * -1)',
+    ]);
+    expect(travels('translate(-50%, -50%) translateX(0)')).toEqual(['-50%', '0']);
+    expect(travels('translateY(-25%) scale(1.04)')).toEqual([]);
+    // Unbalanced: still reported rather than silently dropped, which is how the first
+    // version of this check lost the only real travel in the tree.
+    expect(travels('translateX(calc(1rem')).toEqual(['calc(1rem']);
   });
 
   it('honours a marker on the line it is on, and only there', () => {
     expect(scan.markers).toEqual([5]);
-    expect(scan.staleMarkers).toEqual([17]);
+    expect(scan.staleMarkers).toEqual([21]);
   });
 
   it('finds the [dir=rtl] block and what it declares', () => {
@@ -371,6 +456,10 @@ describe('the scanner, on input it must report', () => {
     ]);
   });
 
+  it('finds every block keyed on the reading direction, whichever way it spells it', () => {
+    expect(scan.dirBlocks.map((b) => b.selector)).toEqual(["[dir='rtl'] .b", '.c:dir(rtl)']);
+  });
+
   it('reads an inline style object and a dir attribute the same way', () => {
     const tsx = [
       '<div style={{ marginLeft: 4, textAlign: "center" }} />',
@@ -378,10 +467,15 @@ describe('the scanner, on input it must report', () => {
       '<div style={{ right: 0 /* physical: seat two */, textAlign: "right" }} />',
       '<div dir="ltr" />',
       "const left = 'not a style';",
+      '<input dir="auto" />',
+      '<div dir={direction} />',
     ].join('\n');
     const result = scanTsx(tsx, 'Fixture.tsx');
     expect(result.hits.map((h) => [h.line, h.declaration])).toEqual([[1, 'marginLeft: 4']]);
-    expect(result.dirAttributes).toEqual([{ file: 'Fixture.tsx', line: 4, text: 'dir="ltr"' }]);
+    expect(result.dirAttributes).toEqual([
+      { file: 'Fixture.tsx', line: 4, text: 'dir="ltr"' },
+      { file: 'Fixture.tsx', line: 7, text: 'dir={direction}' },
+    ]);
   });
 });
 
@@ -456,6 +550,39 @@ describe('the shell (#222)', () => {
   it('has exactly the markers docs/rtl.md accounts for', () => {
     const markers = stylesheets.flatMap((s) => s.markers.map((l) => `${s.file}:${String(l)}`));
     expect(markers, markers.join('\n')).toHaveLength(MARKERS_IN_THE_TREE);
+  });
+
+  it('keys nothing on [dir=…] outside tokens.css, where a rule can only turn a token round', () => {
+    // A `[dir='rtl'] .x { … }` in a module matches from `<html>` straight through the play
+    // surface, whose `direction: ltr` no ancestor selector can see — so a board flipped
+    // that way is flipped on one device and not the other, which is rule 9's forbidden
+    // case, and every guard that measures boxes stays green because a flip moves none.
+    // The shell mirrors through logical properties; the attribute is for tokens.css alone.
+    const scoped = stylesheets
+      .filter((s) => s.file !== 'styles/tokens.css')
+      .flatMap((s) => s.dirBlocks.map((b) => `${s.file}  ${b.selector}`));
+    expect(
+      scoped,
+      'say it with a logical property, or with var(--db-inline-sign), which the island resets',
+    ).toEqual([]);
+    const tokens = stylesheets.find((s) => s.file === 'styles/tokens.css');
+    expect(tokens?.dirBlocks.map((b) => b.selector).sort()).toEqual(["[dir='ltr']", "[dir='rtl']"]);
+  });
+
+  it('flips the class the directional icons wear, by the sign token, under that exact name', () => {
+    // `Icon.tsx` emits `MIRROR_CLASS`; globals.css flips a class by name; nothing else in the
+    // tree ties the two strings together, and no route renders an `<Icon>` for a browser to
+    // notice a drift (the landing page's text arrow wears the class directly, see page.tsx).
+    // `display: inline-block` is held too: a non-replaced inline box is not transformable,
+    // so a span wearing the class in running text needs it. (Not the landing arrow — that
+    // is a blockified flex item and turns round either way; `e2e/rtl.spec.ts` photographs
+    // a span in a paragraph, where the declaration is the difference.)
+    const rule = stylesheets
+      .find((s) => s.file === 'app/globals.css')
+      ?.blocks.get(`.${MIRROR_CLASS}`);
+    expect(rule, `.${MIRROR_CLASS} in app/globals.css`).toBeDefined();
+    expect(rule?.['transform']).toBe('scaleX(var(--db-inline-sign))');
+    expect(rule?.['display']).toBe('inline-block');
   });
 
   it('pins the play surface, and only the play surface, against the reading direction', () => {

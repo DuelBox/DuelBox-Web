@@ -12,8 +12,8 @@ the device.**
 
 Everything a visitor reads: the header, the navigation, the footer, the
 catalogue and its cards, the game pages, the settings page, the prose pages, the
-pre-match lobby with its mode buttons, the tournament track, and every panel the
-shell draws outside a match. All of it is written in logical properties —
+pre-match lobby with its mode buttons and its copy of the tournament track, and
+every panel the shell draws outside a match. All of it is written in logical properties —
 `margin-inline-start`, `inset-inline-end`, `padding-inline`, `text-align: start`,
 `border-inline-start-width`, `border-start-start-radius` — so a browser told
 `<html dir="rtl">` lays it out from the right without a second stylesheet.
@@ -22,9 +22,9 @@ Three things CSS cannot say logically have a token each in `styles/tokens.css`:
 
 | Token                    | `:root`               | `[dir='rtl']`         | For                                                                          |
 | ------------------------ | --------------------- | --------------------- | ---------------------------------------------------------------------------- |
-| `--db-safe-inline-start` | `var(--db-safe-left)` | `var(--db-safe-right)`| chrome at the _start_ of a line that must also clear the cutout (skip link)  |
-| `--db-safe-inline-end`   | `var(--db-safe-right)`| `var(--db-safe-left)` | chrome at the _end_ of a line (exit control, trace panel)                    |
-| `--db-inline-sign`       | `1`                   | `-1`                  | a `translateX` that travels along the line (the settings switch's thumb)     |
+| `--db-safe-inline-start` | `var(--db-safe-left)` | `var(--db-safe-right)`| chrome at the _start_ of a line that must also clear the cutout (skip link, debug overlay) |
+| `--db-safe-inline-end`   | `var(--db-safe-right)`| `var(--db-safe-left)` | reserved: **no consumer today**. The exit control is deliberately physical (below) and the trace panel sits inside the island with no cutout clearance. Kept because the swap has to be a pair, and `direction.test.ts` holds both `[dir]` blocks key for key |
+| `--db-inline-sign`       | `1`                   | `-1`                  | a `translateX` that travels along the line (the settings switch's thumb), and the icons' `scaleX` |
 
 A transform that moves something towards the end of the line is written
 `translateX(calc(1rem * var(--db-inline-sign)))`; CSS has logical insets and
@@ -114,18 +114,61 @@ against the `max(` on its own line; the reasons are here. Twenty-one today:
 | `components/GameErrorBoundary.module.css`      | 2     | recovery screen, symmetric safe-area pair                              |
 | `components/MatchHud.module.css`               | 1     | seat two's `text-align: right`                                         |
 
-A second `dir` attribute anywhere in `apps/web/src` also fails the test: the play
-surface is the only island, and another wants its reason written here first.
+A second `dir="ltr"`/`dir="rtl"` attribute anywhere in `apps/web/src` also fails
+the test: the play surface is the only island, and another wants its reason
+written here first. `dir="auto"` is not an island and is allowed — it is what
+the name inputs want (see "What is open").
+
+**No `[dir=…]` or `:dir()` selector outside `tokens.css`.** The shell mirrors
+through logical properties and the island un-mirrors through `direction: ltr`;
+the only rules keyed on the attribute are the three token swaps. A
+`[dir='rtl'] .board { transform: scaleX(-1) }` in a module would match from
+`<html>` straight through the island — an ancestor selector cannot see
+`direction` — and that is precisely the mirrored board rule 9 forbids, which no
+box measurement can notice because a flip about the centre moves no edge.
+`direction.test.ts` fails any such block by file and selector, and a literal
+`scaleX(-1)` is a hit wherever it is written: the only flip that follows the
+reading direction _and_ respects the island is `scaleX(var(--db-inline-sign))`.
+The review that found the gap planted exactly that rule in
+`PlaySurface.module.css` and in the built export, and both guards were green.
 
 ## Icons
 
-`lib/icons.ts` has `MIRRORED_ICONS`, `Icon.tsx` puts the global class `db-mirror`
-on exactly those names, and `globals.css` scales that class by the sign token —
-`transform: scaleX(var(--db-inline-sign))` — rather than under a `[dir='rtl']`
-ancestor selector, because an ancestor selector cannot see the island: `<html
-dir="rtl">` matches from outside it, and an arrow drawn inside a match would flip
-while everything around it stayed. The token is -1 in the shell and 1 in the
-island, which is exactly the question the glyph is asking.
+`lib/icons.ts` has `MIRRORED_ICONS`, `Icon.tsx` puts the global class
+`MIRROR_CLASS` (`db-mirror`) on exactly those names, and `globals.css` scales
+that class by the sign token — `transform: scaleX(var(--db-inline-sign))` —
+rather than under a `[dir='rtl']` ancestor selector, because an ancestor
+selector cannot see the island: `<html dir="rtl">` matches from outside it, and
+an arrow drawn inside a match would flip while everything around it stayed. The
+token is -1 in the shell and 1 in the island, which is exactly the question the
+glyph is asking. The rule also sets `display: inline-block`, because `transform`
+applies only to a transformable element and a non-replaced inline box is not
+one: a `<span>` wearing the class in running text would not turn round without
+it. That is not what turns the landing page's arrow — it is a flex item of an
+`inline-flex` link, blockified, and with the declaration removed from the built
+rule it still read `scaleX(-1)` — so `e2e/rtl.spec.ts` measures the declaration
+where it is load-bearing: a span with the class drawn into a paragraph is
+photographed against the same span with its transform cancelled (the pixels must
+differ), and the same pair forced back to `inline` must not differ. A computed
+`transform` cannot make that distinction — it serialises the matrix on the
+inline span too — and a flip about the centre moves no box, which is why it is
+pixels.
+
+The one directional glyph a route renders today is not an `<Icon>` at all: the
+landing page's "See all 108 →" (`app/page.tsx`) is U+2192, which is not
+Bidi_Mirrored, so under an Arabic shell it kept pointing right — towards the
+_start_ of the line. It is now a `<span className={MIRROR_CLASS}>` (hidden from
+assistive technology, since the words already say where the link goes), and
+`e2e/rtl.spec.ts` measures it: identity at the right end of the link in a
+left-to-right load, `scaleX(-1)` at the left end under `rtl`. It is a span and
+not `<Icon name="forward" />` because the sprite is not mounted in the layout
+(#74) and mounting it on one page for one glyph would put fourteen symbols in
+the document every visitor loads.
+
+`direction.test.ts` holds the `.db-mirror` rule in `globals.css` to
+`MIRROR_CLASS` by name, in both its declarations. Nothing else ties the two
+strings together: the component emits one and the stylesheet flips the other,
+and a rename of either used to pass every guard.
 
 | Icon          | Mirrors | Why                                                        |
 | ------------- | ------- | ---------------------------------------------------------- |
@@ -149,10 +192,15 @@ island, which is exactly the question the glyph is asking.
 one line of `Icon.tsx`, because Vitest cannot import a `.tsx` under this
 repository's `jsx: preserve` (the test says so rather than claiming a render).
 `e2e/rtl.spec.ts` measures the rule in a browser: `matrix(-1, 0, 0, 1, 0, 0)` on
-a `db-mirror` element in the shell, `matrix(1, 0, 0, 1, 0, 0)` on one inside the
-island, `none` on a glyph without the class. No route renders an `<Icon>` today
-(#74 left the sprite unmounted), so the spec synthesises the element; the day a
-route draws one, locate it there instead.
+the landing page's arrow and on a synthesised `MIRROR_CLASS` element in the
+shell, `matrix(1, 0, 0, 1, 0, 0)` on one inside the island, `none` on a glyph
+without the class. No route renders an `<Icon>` today (#74 left the sprite
+unmounted), so the island half is synthesised; the day a route draws an `<Icon>`
+inside a match, locate it there instead. On the play route the spec also compares
+the computed `transform` and `direction` of both scoreboards, the board, the
+pause button and the exit control against a left-to-right load of the same page,
+and walks every element inside the island for one that does not compute `ltr` —
+a box comparison alone could not see a mirrored board.
 
 ## Text direction
 
@@ -225,3 +273,10 @@ a person reading Arabic should open the build on a phone and a laptop and check:
   translated build should decide whether those panels want
   `unicode-bidi: plaintext` on their text; the boards under them do not move
   either way.
+- The tournament track is rendered twice: in the lobby, outside the island,
+  where it mirrors with the rest of the shell; and on the match-over result
+  screen, inside the `dir="ltr"` surface (`PlaySurface.tsx`), where it inherits
+  `ltr` and lays its Arabic copy out left-to-right like the overlays above. The
+  same translated-build decision applies to it.
+- `--db-safe-inline-end` has no consumer. If debug chrome ever leaves the island
+  or a lone end-of-line inset appears in the shell, it is the token to reach for.

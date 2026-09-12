@@ -160,8 +160,10 @@ describe('rendering a primitive', () => {
  * calling it by reading the source. So `iconClassName` is called for every name, and
  * `Icon.tsx` is read for the one line that hands its result to the `<svg>` — a read, and
  * said so here rather than in a sentence claiming a render. The other end of the seam, the
- * `[dir='rtl'] .db-mirror` rule in the built stylesheet, is measured in a browser by
- * `e2e/rtl.spec.ts`. Watched failing with `'play'` added to the set (the list check), with
+ * `.db-mirror` rule in `globals.css` — `scaleX(var(--db-inline-sign))`, not a `[dir='rtl']`
+ * selector, which could not see the play surface's `ltr` island — is held to `MIRROR_CLASS`
+ * by name in `styles/direction.test.ts` and measured in a browser by `e2e/rtl.spec.ts`.
+ * Watched failing with `'play'` added to the set (the list check), with
  * `iconClassName` made to return the caller's class alone (the class check named `back`),
  * and with `Icon.tsx` handed `className` directly again (the source check).
  */
