@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./motion": {
+      "types": "./dist/motion.d.ts",
+      "default": "./dist/motion.js"
+    },
     "./webgl": {
       "types": "./dist/webgl-renderer.d.ts",
       "default": "./dist/webgl-renderer.js"

@@ -97,7 +97,14 @@
   --db-shadow-text: 0 4px 24px rgb(0 0 0 / 45%);
 
   /* Motion. Informative motion becomes an instant state change under reduced-motion;
-     decorative motion is removed entirely. */
+     decorative motion is removed entirely.
+
+     These four values are not decided here. They are `MOTION` in `@duelbox/engine`, which is
+     the only end both halves of the product can read: a game's tweens run on the fixed
+     timestep in a package with no DOM, so they cannot reach a custom property, and the engine
+     cannot import this app — but this app imports the engine. `tokens.test.ts` parses this
+     block and fails the moment a duration or the curve here stops matching that table, so
+     changing a number means changing it there and watching this agree. */
   --db-duration-fast: 120ms;
   --db-duration: 200ms;
   --db-duration-slow: 380ms;
