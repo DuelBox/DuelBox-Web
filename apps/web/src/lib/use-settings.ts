@@ -59,6 +59,22 @@ export function notifySettingsChanged(settings: Settings = readSettings()): void
  * it is applied by the provider rather than here, because it has to be applied on a plain page
  * load where nothing has changed — see `lib/i18n/provider.tsx`.
  *
+ * ## The third element: whether storage has been read yet
+ *
+ * The defaults are what the first render holds, and for one render they are indistinguishable from
+ * a stored choice that happens to equal them. The provider needs to tell the two apart: it stamps
+ * `lang` and `dir` on `<html>` from the locale, and stamping the *default* over a stored
+ * right-to-left choice flips the shell the inline script in `layout.tsx` had already put the right
+ * way round. That is not a hypothetical — it was measured on the built export with a
+ * `MutationObserver` on `<html>`, ar-XB stored: on every route, on Chromium and WebKit, the
+ * document went `ar-XB/rtl → en/ltr → ar-XB/rtl` within 40 ms of `load`, WebKit held the wrong
+ * values for 10–44 ms, and on two of the four routes probed it painted a frame that way. So the
+ * tuple carries a `loaded` flag that turns true in the same effect that reads storage, and the
+ * provider applies nothing until it does. The theme has never needed one because `applyTheme` is
+ * called only from the change listener, never on mount; the locale has to be applied on a plain
+ * load, which is what makes the distinction load-bearing here. Controls that only render the
+ * settings ignore the flag, as `SoundToggle` and `SettingsPanel` do.
+ *
  * **The audio module is reached by `import()` rather than by an import at the top.** This hook
  * runs in the site header, which is on every page, and `lib/audio` pulls `AudioSystem` — the
  * whole synthesiser — out of the engine, which belongs to the play route and not to a visitor
@@ -71,11 +87,13 @@ export function notifySettingsChanged(settings: Settings = readSettings()): void
  * the module is usually loaded already. It is insurance, not a saving, and `size-budget.json`
  * records it as insurance.
  */
-export function useSettings(): readonly [Settings, (patch: Partial<Settings>) => void] {
+export function useSettings(): readonly [Settings, (patch: Partial<Settings>) => void, boolean] {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setSettings(readSettings());
+    setLoaded(true);
     const listener: Listener = (next) => {
       setSettings(next);
       // The colour scheme and the shell's seat palette are put into effect here as well as
@@ -105,5 +123,5 @@ export function useSettings(): readonly [Settings, (patch: Partial<Settings>) =>
     notifySettingsChanged(writeSettings(patch));
   }, []);
 
-  return [settings, update];
+  return [settings, update, loaded];
 }

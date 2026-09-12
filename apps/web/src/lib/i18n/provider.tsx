@@ -28,6 +28,23 @@ import type { Catalogue } from './messages';
  * uses for the stored settings and `PlaySurface` for everything it reads from storage, and it
  * is why a visitor on the default locale never sees a flash: their catalogue *is* the empty one.
  *
+ * ## Nothing is stamped until the stored settings have been read
+ *
+ * The first render's locale is the default, and `useSettings` replaces it with the stored one in
+ * an effect. An effect here that applied the locale on every change *including the first* would
+ * apply `en` once, before storage had been read, and for a player whose stored locale is
+ * right-to-left that is a flip: the inline script in `layout.tsx` had stamped `ar-XB`/`rtl` before
+ * paint, the provider's first effect put `en`/`ltr` back over it, and the next render restored the
+ * choice. Measured on the built export, that is what shipped in the first draft of this file — a
+ * `MutationObserver` on `<html>` saw `ar-XB/rtl → en/ltr → ar-XB/rtl` within 40 ms of `load` on
+ * every route on both engines; WebKit held the wrong values for 10–44 ms and painted a frame the
+ * wrong way round on two of the four routes probed (`/settings/`, `/games/`), on every load, for
+ * exactly the visitor the before-paint stamp was added for. The end state was correct, which is
+ * why the first version of the reload test did not see it. So the effect waits for the `loaded`
+ * flag `useSettings` raises in the same effect that reads storage, and the reload test in
+ * `e2e/i18n.spec.ts` now watches every change to `lang` and `dir` after `DOMContentLoaded` rather
+ * than sampling the end.
+ *
  * ## The switch-before-arrival race
  *
  * A player who picks `en-XA` and then `ar-XB` before the first chunk has landed must end up
@@ -63,7 +80,7 @@ export const LocaleContext = createContext<LocaleState>({
 });
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [settings, update] = useSettings();
+  const [settings, update, loaded] = useSettings();
   const { locale } = settings;
   const [catalogue, setCatalogue] = useState<Catalogue>(EMPTY_CATALOGUE);
 
@@ -73,6 +90,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   useEffect(() => {
+    // Before storage has been read, `locale` is the default and not the player's: applying it
+    // would undo the before-paint stamp. See the header.
+    if (!loaded) return;
     applyLocale(locale);
     if (locale === DEFAULT_LOCALE) {
       setCatalogue(EMPTY_CATALOGUE);
@@ -85,7 +105,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [locale]);
+  }, [locale, loaded]);
 
   // One object per change, not per render: every `useMessages()` consumer re-renders when the
   // context value's identity changes, and a fresh literal on each render of the root layout

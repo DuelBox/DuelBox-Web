@@ -127,17 +127,54 @@ test.describe('choosing a language', () => {
     await expect(language(page)).toHaveValue('ar-XB');
   });
 
-  test('a reload keeps the choice, with lang and dir on <html> before DOMContentLoaded', async ({
+  test('a reload keeps the choice, with lang and dir on <html> before DOMContentLoaded and never off it afterwards', async ({
     page,
   }) => {
-    // Recorded at DOMContentLoaded — before hydration, before any chunk — so what this sees
-    // is the inline script in the layout and nothing else.
+    // Two recorders, both installed before any of the page's own scripts run. The first
+    // samples at DOMContentLoaded — before hydration, before any chunk — so what it sees is
+    // the inline script in the layout and nothing else. The second is a MutationObserver
+    // attached at that same moment, which records every later change to `lang` or `dir`
+    // with the value it replaced: the flash the inline script exists to prevent is not a
+    // wrong value at the end, it is a wrong value in between, and the end state was green
+    // while the provider was re-stamping `en`/`ltr` over the stored choice on every load
+    // (measured before the fix: `ar-XB/rtl → en/ltr → ar-XB/rtl` within 40 ms of `load`
+    // on every route, on both engines, WebKit holding the wrong values for 10–44 ms and
+    // painting a frame that way on two of four routes). A record's old value is kept as well as the
+    // new one so that two changes batched into one callback still show the value in between.
     await page.addInitScript(() => {
+      type Change = { attr: string | null; was: string | null; now: string };
+      const w = window as Window & {
+        __duelboxAtReady?: { lang: string; dir: string };
+        __duelboxAfterReady?: Change[];
+      };
       document.addEventListener('DOMContentLoaded', () => {
-        (window as Window & { __duelboxAtReady?: { lang: string; dir: string } }).__duelboxAtReady =
-          { lang: document.documentElement.lang, dir: document.documentElement.dir };
+        const root = document.documentElement;
+        w.__duelboxAtReady = { lang: root.lang, dir: root.dir };
+        const after: Change[] = [];
+        w.__duelboxAfterReady = after;
+        new MutationObserver((records) => {
+          for (const record of records) {
+            after.push({
+              attr: record.attributeName,
+              was: record.oldValue,
+              now: root.getAttribute(record.attributeName ?? '') ?? '',
+            });
+          }
+        }).observe(root, {
+          attributes: true,
+          attributeOldValue: true,
+          attributeFilter: ['lang', 'dir'],
+        });
       });
     });
+    const recorded = () =>
+      page.evaluate(() => {
+        const w = window as Window & {
+          __duelboxAtReady?: { lang: string; dir: string };
+          __duelboxAfterReady?: { attr: string | null; was: string | null; now: string }[];
+        };
+        return { atReady: w.__duelboxAtReady, afterReady: w.__duelboxAfterReady ?? [] };
+      });
     await page.goto('/settings/?lang=ar-XB');
     await expect(html(page)).toHaveAttribute('dir', 'rtl');
 
@@ -146,12 +183,24 @@ test.describe('choosing a language', () => {
     await expect(html(page)).toHaveAttribute('lang', 'ar-XB');
     await expect(html(page)).toHaveAttribute('dir', 'rtl');
     await expect(language(page)).toHaveValue('ar-XB');
+    const { atReady, afterReady } = await recorded();
+    expect(atReady).toEqual({ lang: 'ar-XB', dir: 'rtl' });
+    // Nothing that happened after parsing ever put another value on <html>, not even for a
+    // moment: every change seen replaced the stored choice with the stored choice.
+    const stored = new Set(['ar-XB', 'rtl']);
     expect(
-      await page.evaluate(
-        () =>
-          (window as Window & { __duelboxAtReady?: { lang: string; dir: string } })
-            .__duelboxAtReady,
-      ),
-    ).toEqual({ lang: 'ar-XB', dir: 'rtl' });
+      afterReady.filter((change) => !stored.has(change.now) || !stored.has(change.was ?? '')),
+      'lang/dir left the stored choice after DOMContentLoaded',
+    ).toEqual([]);
+
+    // The control: the observer is live and this assertion can fail. Switching to English
+    // is exactly the change it must have seen had the provider made it uninvited.
+    const seen = afterReady.length;
+    await language(page).selectOption('en');
+    await expect(html(page)).toHaveAttribute('dir', 'ltr');
+    const { afterReady: afterSwitch } = await recorded();
+    expect(afterSwitch.slice(seen).map((change) => change.now)).toEqual(
+      expect.arrayContaining(['en', 'ltr']),
+    );
   });
 });

@@ -145,6 +145,9 @@ export function localeFromSearch(search: string): LocaleCode | null {
  * The inline script in `layout.tsx` makes the same two stamps before the first paint from the
  * stored settings, so a right-to-left choice never flashes left-to-right; it cannot import this
  * module and carries its own copy of the codes, which `i18n.test.ts` holds to this registry.
+ * The other half of that promise is the provider's: it calls this only once the stored settings
+ * have been read, because calling it with the default first would undo the script's stamp for
+ * one frame — `provider.tsx` records the measurement.
  */
 export function applyLocale(locale: LocaleCode): void {
   if (typeof document === 'undefined') return;
