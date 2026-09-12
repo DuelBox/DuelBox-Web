@@ -1,4 +1,4 @@
-import { iconId, type IconName } from '@/lib/icons';
+import { iconClassName, iconId, type IconName } from '@/lib/icons';
 
 /**
  * One interface glyph, referenced from the sprite (#74).
@@ -13,6 +13,11 @@ import { iconId, type IconName } from '@/lib/icons';
  * in a control — a bare mute button — carries the meaning, so pass a `label` and it becomes
  * an `img` with that accessible name. This is CLAUDE.md rule 7 in miniature: the glyph is
  * never the only signal unless a name rides with it.
+ *
+ * Under a right-to-left shell the glyphs that point along the line of reading turn round
+ * and the rest do not (#222): `MIRRORED_ICONS` in `lib/icons.ts` says which, this adds the
+ * `db-mirror` class for those, and `globals.css` flips it under `[dir='rtl']`. The decision
+ * is per name and not per use — an arrow that means "back" means it wherever it is drawn.
  */
 export function Icon({
   name,
@@ -28,7 +33,7 @@ export function Icon({
   const decorative = label === undefined;
   return (
     <svg
-      className={className}
+      className={iconClassName(name, className)}
       width={size}
       height={size}
       viewBox="0 0 24 24"
