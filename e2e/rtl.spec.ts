@@ -14,16 +14,15 @@ import { MIRROR_CLASS } from '../apps/web/src/lib/icons';
  *
  * ## How the direction is set
  *
- * The locale registry (`lib/i18n`, being built in parallel) stamps `dir` on `<html>` from the
- * locale's own direction, alongside `lang`. It has not landed on this branch, so each page
- * here is given the same attribute by an init script before any of the site's own script
- * runs. That is the same DOM the registry will produce and a smaller claim: it proves the
- * shell mirrors when told to, not that the registry tells it.
- *
- * TODO(#222, lib/i18n): when the registry lands, drop `forceRtl` and open the pseudo-locale
- * instead, so the attribute under test is the one the product sets:
- *
- *     await page.goto(`${route}?lang=ar-XB`);
+ * The locale registry (`lib/i18n`, #219) stamps `dir` on `<html>` from the locale's own
+ * direction, alongside `lang`: before paint from the stored choice, and again once the
+ * provider has read storage. The measurements below still set the attribute themselves, with
+ * an init script, for a reason worth keeping: the right-to-left pseudo-locale `ar-XB` also
+ * rewrites every string with bidi overrides, which changes the width of every label, and a
+ * layout comparison against the English shell is only a comparison if the text is the same.
+ * So the geometry is measured with the attribute alone, and the last test in the file opens
+ * the pseudo-locale through `?lang=ar-XB` and checks that the product's own stamp produces
+ * the same mirrored header — which is the one claim the init script cannot make.
  *
  * ## What is measured
  *
@@ -92,9 +91,20 @@ async function forceRtl(page: Page): Promise<void> {
   await page.addInitScript(() => {
     // The DOM types say the root is never null; at document creation it is.
     const root = (): HTMLElement | null => document.documentElement;
+    let watched: HTMLElement | null = null;
     const stamp = () => {
       const el = root();
-      if (el !== null && el.getAttribute('dir') !== 'rtl') el.setAttribute('dir', 'rtl');
+      if (el === null) return;
+      if (el.getAttribute('dir') !== 'rtl') el.setAttribute('dir', 'rtl');
+      // The product stamps `dir` itself, twice: the before-paint script in `layout.tsx`
+      // from the stored locale, and `LocaleProvider` once it has read storage — and the
+      // stored locale here is English, whose direction is `ltr`. Both would undo a stamp
+      // made once. So the attribute is watched as well as the tree, and put back the moment
+      // anything else writes it; the measurements below run after that has settled.
+      if (watched !== el) {
+        watched = el;
+        new MutationObserver(stamp).observe(el, { attributes: true, attributeFilter: ['dir'] });
+      }
     };
     stamp();
     new MutationObserver(stamp).observe(document, { childList: true });
@@ -373,5 +383,41 @@ test.describe('a right-to-left shell', () => {
     const inlineStill = await shot(true, false);
     expect(ruled.equals(ruledStill), 'the class turns a glyph in running text round').toBe(false);
     expect(inline.equals(inlineStill), 'an inline box ignores the transform (control)').toBe(true);
+  });
+
+  test("mirrors through the product's own locale switch, not only when told to", async ({
+    page,
+  }) => {
+    // The registry's half of #222: `?lang=ar-XB` is read by the provider, stored, and put on
+    // `<html>` as `dir="rtl"` (e2e/i18n.spec.ts holds the timing of that stamp). What this
+    // adds is the layout: the same header measurement as above, on a document nothing but the
+    // product has turned round. The text is the pseudo-locale's, so only the header is read —
+    // the overflow and skip-link checks belong to the forced runs, where the copy is English.
+    await page.goto('/?lang=ar-XB');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar-XB');
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).direction)).toBe(
+      'rtl',
+    );
+    const width = await page.evaluate(() => document.documentElement.clientWidth);
+    const header = await page
+      .locator('header > div')
+      .first()
+      .evaluate((inner) => {
+        const rect = inner.getBoundingClientRect();
+        const style = getComputedStyle(inner);
+        return { contentRight: Math.round(rect.right - parseFloat(style.paddingRight)) };
+      });
+    const brand = await box(page, 'header a[aria-label="DuelBox home"]');
+    const nav = await box(page, 'header nav[aria-label="Main"]');
+    expect(Math.abs(brand.right - header.contentRight), 'brand flush right').toBeLessThanOrEqual(1);
+    expect(brand.left, 'brand on the right half').toBeGreaterThan(width / 2);
+    expect(nav.right, 'nav to the left of the brand').toBeLessThanOrEqual(brand.left);
+
+    // And back: choosing English on the same stored settings turns the shell round again.
+    await page.goto('/?lang=en');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+    const brandLtr = await box(page, 'header a[aria-label="DuelBox home"]');
+    expect(brandLtr.right, 'brand back on the left half').toBeLessThan(width / 2);
   });
 });
