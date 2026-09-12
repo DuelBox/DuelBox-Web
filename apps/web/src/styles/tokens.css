@@ -54,15 +54,25 @@
   --db-danger: #d93a31;
   --db-success: #1a7a4d;
 
-  /* Type */
+  /* Type.
+
+     Second in every stack is the primary's metric-matched stand-in from `fonts.css` (#187):
+     a `local()` face, no download, that draws the device's Arial or Courier New at the
+     primary's proportions and line box, so the swap when the real file lands moves nothing.
+     It sits ahead of the two script faces on purpose and takes nothing from them — a face
+     without a glyph is passed over whether or not it declares a `unicode-range`, and neither
+     Arial nor Courier New has a Devanagari or Arabic glyph to take. Where `local()` finds
+     nothing (Android has neither name) the family resolves to nothing and the stack carries
+     on to the next entry exactly as it did before. */
   --db-font-display:
-    Fredoka, 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-rounded, system-ui, sans-serif;
-  --db-font-body:
-    'Plus Jakarta Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-sans-serif, system-ui,
+    Fredoka, 'Fredoka Fallback', 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-rounded, system-ui,
     sans-serif;
+  --db-font-body:
+    'Plus Jakarta Sans', 'Plus Jakarta Sans Fallback', 'Noto Sans Devanagari', 'Noto Sans Arabic',
+    ui-sans-serif, system-ui, sans-serif;
   --db-font-mono:
-    'JetBrains Mono', 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-monospace, SFMono-Regular,
-    monospace;
+    'JetBrains Mono', 'JetBrains Mono Fallback', 'Noto Sans Devanagari', 'Noto Sans Arabic',
+    ui-monospace, SFMono-Regular, monospace;
 
   --db-text-xs: 0.75rem;
   --db-text-sm: 0.8125rem;
