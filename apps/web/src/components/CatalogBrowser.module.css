@@ -184,7 +184,7 @@
   background: var(--db-surface);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-pill);
-  padding: 2px 8px;
+  padding: 2px var(--db-space-2); /* off-scale: 2px, so the pill does not grow its line */
 }
 
 /* A row heading with an action beside it: "Recently played" and its Clear button. */

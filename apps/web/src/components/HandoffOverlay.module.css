@@ -9,7 +9,7 @@
 .blackout {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: var(--db-z-cover);
   display: grid;
   place-items: center;
   padding-top: max(var(--db-space-4), var(--db-safe-top));

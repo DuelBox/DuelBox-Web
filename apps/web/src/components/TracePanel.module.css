@@ -4,7 +4,7 @@
   position: absolute;
   top: var(--db-space-2);
   inset-inline-end: var(--db-space-2);
-  z-index: 5;
+  z-index: var(--db-z-cover);
   display: flex;
   align-items: center;
   gap: var(--db-space-2);
@@ -30,7 +30,7 @@
 
 .copy {
   font: inherit;
-  padding: 2px 8px;
+  padding: 2px var(--db-space-2); /* off-scale: 2px, a hairline pad on a debug button */
   border: 1px solid var(--db-border);
   border-radius: 4px;
   background: transparent;

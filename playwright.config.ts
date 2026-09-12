@@ -129,6 +129,16 @@ const CONTENT_ONLY = [
  * runtime `test.skip`, two of them real WebKit — on a job this file has already been split
  * twice to keep inside its budget. The skip and this line were always meant to be one
  * decision, and the spec's header said so; this is that decision.
+ *
+ * `tournament.spec.ts`, `game-record.spec.ts` and `share-card.spec.ts` are Chromium-only
+ * for the per-push budget reason argued above, and that argument does not weaken on the
+ * nightly run — it never runs on a push at all, so cost is not the constraint there. What
+ * a per-push exclusion cannot do is prove the journeys these three specs cover — the full
+ * tournament run in particular — on WebKit and Firefox on any cadence, which is exactly
+ * what #226 asks for. So on `ALL_ENGINES` these three stand down from this list and run on
+ * every project; the other eight stay Chromium-only always, because their reason is that a
+ * second engine would answer a question already settled, not that a second engine is too
+ * expensive to ask.
  */
 const CHROMIUM_ONLY = [
   '**/axe.spec.ts',
@@ -160,6 +170,21 @@ const CHROMIUM_ONLY = [
   // would re-run the catalogue's idle timer to learn nothing.
   '**/attract-mode.spec.ts',
 ];
+
+/**
+ * The three `CHROMIUM_ONLY` specs whose reason is the per-push budget rather than engine
+ * irrelevance — see the paragraph above `CHROMIUM_ONLY`. On the nightly run these are the
+ * ones let back onto every engine; the rest of the list stands regardless of `ALL_ENGINES`.
+ */
+const NIGHTLY_EVERY_ENGINE = [
+  '**/tournament.spec.ts',
+  '**/game-record.spec.ts',
+  '**/share-card.spec.ts',
+];
+
+const chromiumOnly = ALL_ENGINES
+  ? CHROMIUM_ONLY.filter((pattern) => !NIGHTLY_EVERY_ENGINE.includes(pattern))
+  : CHROMIUM_ONLY;
 
 /**
  * Specs that set their own viewport and therefore want one project *per engine*, not four.
@@ -299,7 +324,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+      testIgnore: [...CONTENT_ONLY, ...chromiumOnly, ...ONE_PER_ENGINE],
     },
     // A notched phone in both orientations. The insets differ between them — portrait
     // puts the cutout on the top edge, landscape on one side — so a layout that clears
@@ -307,12 +332,12 @@ export default defineConfig({
     {
       name: 'notched-portrait',
       use: { ...devices['iPhone 14 Pro'] },
-      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY],
+      testIgnore: [...CONTENT_ONLY, ...chromiumOnly],
     },
     {
       name: 'notched-landscape',
       use: { ...devices['iPhone 14 Pro landscape'] },
-      testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+      testIgnore: [...CONTENT_ONLY, ...chromiumOnly, ...ONE_PER_ENGINE],
     },
     // A third engine, nightly only. See the note above the export.
     ...(ALL_ENGINES
@@ -320,7 +345,7 @@ export default defineConfig({
           {
             name: 'firefox',
             use: { ...devices['Desktop Firefox'] },
-            testIgnore: [...CONTENT_ONLY, ...CHROMIUM_ONLY, ...ONE_PER_ENGINE],
+            testIgnore: [...CONTENT_ONLY, ...chromiumOnly, ...ONE_PER_ENGINE],
           },
         ]
       : []),
