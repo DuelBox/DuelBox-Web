@@ -2,7 +2,7 @@ name: Nightly
 
 # Everything that is too slow to pay for on every push.
 #
-# Four things now. The third browser engine: the whole suite passes on Firefox and has done
+# Five things now. The third browser engine: the whole suite passes on Firefox and has done
 # since it was first tried, so running it per-push would spend install and run time to
 # re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
 #
@@ -42,7 +42,23 @@ name: Nightly
 # flakiest assertion in the suite, and a flaky test on the push gate teaches everybody to re-run
 # the job rather than to read it.
 #
-# Half of what that job runs is a control that installs a deliberate leak and requires the
+# And the responsive sweep (#1891). Checking 107 games by hand at eight viewports is 856
+# manual checks, so nobody ever did it and the responsive state of the collection has only
+# ever been known one game at a time. `e2e/responsive-sweep.spec.ts` opens every playable
+# lobby at 320px portrait and landscape and asks the two questions that are bugs rather than
+# preferences: does the page scroll sideways, and is any control outside the viewport or
+# inside a phone's inset band. It is here rather than on the push gate for this file's usual
+# reason and one of its own — it is 107 navigations a project, which is more than the whole
+# push suite, to re-ask on every commit a question that only moves when somebody edits the
+# shell or adds a game.
+#
+# **It starts no match, and that is what keeps it inside its quarter hour.** The lobby is the
+# layout that actually differs per game; a running match is the shell's furniture around a
+# letterboxed canvas, which `resize.spec.ts` and `safe-area.spec.ts` already hold on every
+# push. `pnpm responsive <slug>` photographs the running match, both orientations and every
+# named class, when somebody is looking at one game.
+#
+# Half of what the soak job runs is a control that installs a deliberate leak and requires the
 # measurement to catch it, because a threshold nobody has watched fail is not a threshold — the
 # habit CLAUDE.md records after five guards in this repository turned out to be enforcing
 # nothing. Measured on a development machine, both at a hundred cycles: **0.73MB of growth
@@ -198,6 +214,44 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  responsive-sweep:
+    name: every lobby at 320px, both ways up
+    runs-on: ubuntu-latest
+    # 107 games, two orientations each, one browser context per game and no match started —
+    # measured at about four minutes a project on a development machine, and this file's other
+    # jobs record CI running this kind of work four to five times slower. Fifteen minutes is
+    # the budget #1891 was written to, and a run that approaches it is a finding rather than a
+    # number to raise: the answer would be to drop a cell, not to buy more runner.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The real static artefact rather than a dev server, like every other e2e job here.
+      - run: pnpm build
+      - run: npx playwright install --with-deps chromium webkit
+      # Two projects, one per engine, which is what `ONE_PER_ENGINE` in `playwright.config.ts`
+      # leaves for a spec that sets its own viewport: `mobile` and `notched-landscape` would
+      # be the same two engines measuring the same two viewports a second time.
+      # `notched-portrait` is real WebKit, and where a `<select>`, a radio and a search field
+      # land is drawn by the browser rather than by the stylesheet. No `--` before the flags:
+      # pnpm 9 consumes that itself and they never reach Playwright.
+      - run: pnpm e2e e2e/responsive-sweep.spec.ts --project=chromium --project=notched-portrait
+        env:
+          DUELBOX_RESPONSIVE_SWEEP: '1'
+      # The failure names the game, the viewport and the control, so the log is the record.
+      # The report is for the run where a trace is wanted.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: responsive-sweep-report
+          path: playwright-report/
+          retention-days: 7
 
   soak:
     name: memory soak, a hundred load-unload cycles

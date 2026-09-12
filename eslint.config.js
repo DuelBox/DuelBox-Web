@@ -164,6 +164,17 @@ export default tseslint.config(
     rules: { 'no-console': 'off' },
   },
   {
+    // ...except the half of `responsive-matrix.mjs` that is not Node. The bodies it hands to
+    // `page.evaluate` are serialised and run inside the page, where `document`, `window` and
+    // `getComputedStyle` are the ambient globals. `e2e/responsive.ts` states the same
+    // measurements and escapes this rule only by being TypeScript, where `no-undef` is off and
+    // the DOM lib supplies the names; the matrix is a Node script and cannot import TypeScript,
+    // so it says them again in plain JavaScript and needs the globals named here. The Node
+    // globals above still apply — the file is a Node script either side of those callbacks.
+    files: ['scripts/responsive-matrix.mjs'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
     files: ['**/*.test.ts'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
