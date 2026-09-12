@@ -81,7 +81,15 @@ describe('links that name a page', () => {
     // page would make the other test enforce a page that does not exist.
     for (const [route, heading] of Object.entries(NAMED_ROUTES)) {
       const page = join(web, 'app', route.replaceAll('/', ''), 'page.tsx');
-      expect(readFileSync(page, 'utf8'), route).toContain(`<h1>${heading}</h1>`);
+      // A heading is either the literal or the same English rendered through the i18n
+      // lookup (#219): `<h1><T id="Settings" /></h1>` puts exactly "Settings" in the
+      // exported HTML, which is what a link's label has to match. Whitespace collapsed,
+      // because prettier breaks the element onto its own line.
+      const source = readFileSync(page, 'utf8').replace(/\s+/g, ' ').replace(/> </g, '><');
+      expect(
+        source.includes(`<h1>${heading}</h1>`) || source.includes(`<h1><T id="${heading}" /></h1>`),
+        `${route} renders no <h1>${heading}</h1>, literally or through <T>`,
+      ).toBe(true);
     }
   });
 });

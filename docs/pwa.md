@@ -561,13 +561,16 @@ version of what changed:
    instead, which prints a bare `duelbox-shell-` for every build and cannot tell two deploys
    apart — a check that reads as the most important line in the release and can never fail. Use
    the command above until that block is corrected.
-3. **`Cache-Control` on `/sw.js` is short, on any host that lets you set it.** This repository
-   ships no cache directive of any kind, so the lifetime is whatever the host defaults to — ten
-   minutes on GitHub Pages today, and silently something else the day the site moves. Two things
-   bound the damage and neither is a reason to relax: the specification caps the worker script's
-   own HTTP cache at 24 hours during an update check, and the registration's default
-   `updateViaCache: 'imports'` bypasses that cache for the top-level script. See
-   `docs/deploy.md`, which is blunter about this than this document needs to be.
+3. **`Cache-Control` on `/sw.js` is short, on any host that lets you set it.** Since #188 the
+   artefact says so itself: `_headers` and `vercel.json` both carry
+   `/sw.js → public, max-age=0, must-revalidate`, a rule of its own rather than an inherited
+   default, and `check-headers.mjs` fails the build if it stops resolving that way. On a host
+   that reads neither — GitHub Pages, which is this one — the lifetime is still whatever that
+   host defaults to, ten minutes today. Two things bound the damage and neither is a reason to
+   relax: the specification caps the worker script's own HTTP cache at 24 hours during an update
+   check, and the registration's default `updateViaCache: 'imports'` bypasses that cache for the
+   top-level script. See `docs/deploy.md`, which is blunter about this than this document needs
+   to be.
 4. **On the live origin, with DevTools open**: one worker, *activated and is running*, nothing
    stuck at *waiting* that nothing offered you; `await caches.keys()` answering with exactly one
    `duelbox-shell-` name, matching the one the release runbook's `curl` printed. Two names means

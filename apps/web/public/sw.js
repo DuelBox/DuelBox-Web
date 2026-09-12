@@ -78,6 +78,12 @@ const REVISION = '__REVISION__';
  * indication and a way to say no — and it is #196. A game a player has actually opened
  * gets saved by the runtime path below, which is the honest version of the same promise:
  * what you played is what you keep.
+ *
+ * Nor the faces a first visit never asks for: a `@font-face` whose `unicode-range` excludes
+ * printable ASCII — the three `latin-ext` faces and the two script faces of #224, 318 KB
+ * between them — is left out by `scripts/emit-service-worker.mjs` and left to the same
+ * runtime path, saved the first time a page draws a glyph in its range; `docs/fonts.md`
+ * records what that costs a device that is offline the first time it needs one.
  */
 const PRECACHE = ['__PRECACHE__'];
 

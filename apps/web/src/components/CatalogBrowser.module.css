@@ -60,13 +60,15 @@
  * `--db-ink`, which keeps the colour a token rather than the hex a background-image SVG
  * would have forced (a data URI cannot read a custom property). `pointer-events: none` so
  * the triangle never swallows a tap meant for the control underneath it, and the select's
- * right padding is what leaves room for it.
+ * end padding is what leaves room for it — the same end the triangle sits at, so both turn
+ * round together under a right-to-left shell (#222).
  */
 .select {
   appearance: none;
   -webkit-appearance: none;
   min-height: var(--db-touch-target);
-  padding: 0 var(--db-space-6) 0 var(--db-space-3);
+  padding-block: 0;
+  padding-inline: var(--db-space-3) var(--db-space-6);
   border: 2px solid var(--db-border);
   border-radius: var(--db-radius);
   background: var(--db-paper);
@@ -77,13 +79,13 @@
 .sort::after {
   content: '';
   position: absolute;
-  right: var(--db-space-3);
+  inset-inline-end: var(--db-space-3);
   top: 50%;
   transform: translateY(-25%);
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
+  border-inline-start: 5px solid transparent;
+  border-inline-end: 5px solid transparent;
   border-top: 6px solid var(--db-ink);
   pointer-events: none;
 }
@@ -125,7 +127,7 @@
    Hidden rather than absent when the chip is off, so pressing one does not change its
    width and the row of chips never reflows under a thumb. */
 .tick {
-  margin-right: var(--db-space-1);
+  margin-inline-end: var(--db-space-1);
 }
 
 .chip[aria-pressed='false'] .tick {
@@ -228,7 +230,7 @@
    button in the corner of a tile that is often 136px wide would be a third of the art. */
 .star {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   bottom: 0;
   width: var(--db-touch-target);
   height: var(--db-touch-target);
@@ -289,5 +291,5 @@
 .empty .grid {
   max-width: 32rem;
   margin-inline: auto;
-  text-align: left;
+  text-align: start;
 }

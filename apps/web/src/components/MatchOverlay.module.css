@@ -6,9 +6,9 @@
   /* The result and pause panels are the only full-bleed surfaces in the product, so
      they are the only place a button can land under a cutout or the home indicator. */
   padding-top: max(var(--db-space-4), var(--db-safe-top));
-  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
-  padding-left: max(var(--db-space-4), var(--db-safe-left));
+  padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
   text-align: center;
   /* The board stays visible behind a pause or a result: players want to see the position
      that decided it, and a full-cover panel makes a rematch feel like a new app. */

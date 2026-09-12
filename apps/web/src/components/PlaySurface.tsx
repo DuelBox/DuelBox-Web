@@ -91,6 +91,22 @@ type Mode = PlayMode;
  * None of it belongs to a game. Games supply a simulation and an outcome; the countdown,
  * the HUD, the pause menu, the result screen and the rematch all come from here, so the
  * hundred-and-eighth game inherits them for free and the first seven cannot drift apart.
+ *
+ * ## The surface never mirrors (#222)
+ *
+ * The shell follows the reading direction; the element this returns during a match does
+ * not, and that is a decision rather than a per-game setting. #222 asks to "let each game
+ * declare whether its canvas mirrors", and the answer is that none may: rule 9 says neither
+ * player ever sees more of the play area than the other, and a board mirrored on one device
+ * is a different play area from the un-mirrored one on the other device the moment two
+ * devices play the same match. The seats make the same argument on one device — player
+ * one's zone is a side of the phone, not a side of a sentence, and the two people holding
+ * it have not moved because the menus changed language. A manifest field no game could
+ * legitimately set would be a guard that enforces nothing, and this repository counts
+ * those (CLAUDE.md), so there is no field. The root carries `dir="ltr"` and its stylesheet
+ * pins `direction: ltr` with the three direction tokens; `e2e/rtl.spec.ts` measures that
+ * nothing on it moves when `<html>` turns round, and `styles/direction.test.ts` holds the
+ * attribute and the stylesheet to each other. docs/rtl.md has the whole of it.
  */
 export function PlaySurface({ slug }: { slug: string }) {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -1020,6 +1036,12 @@ export function PlaySurface({ slug }: { slug: string }) {
   return (
     <div
       className={styles.surface}
+      // Never mirrored, whatever direction the shell reads in (#222, rule 9): the seats are
+      // sides of the device and the board is the same play area on every device. The
+      // stylesheet pins `direction: ltr` for the box model; this is the same decision for
+      // the bidi algorithm, and it is what tokens.css keys the island's own direction
+      // tokens on (`[dir='ltr']`). `direction.test.ts` fails if either half goes missing.
+      dir="ltr"
       // The physical gameplay target (#1889), published as a custom property the play
       // controls read. Computed from the device's pixel ratio in the presentation layer, so
       // a control jabbed at across a table holds its size in millimetres rather than in a

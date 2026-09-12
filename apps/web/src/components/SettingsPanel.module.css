@@ -74,7 +74,7 @@
 .thumb {
   position: absolute;
   top: 0.125rem;
-  left: 0.125rem;
+  inset-inline-start: 0.125rem;
   width: 1.25rem;
   height: 1.25rem;
   border-radius: var(--db-radius-pill);
@@ -87,13 +87,15 @@
 }
 
 .switch[aria-checked='true'] .thumb {
-  transform: translateX(1rem);
+  /* Towards the inline end: a switch that is on sits at the end of its track in either
+     reading direction, and `--db-inline-sign` (tokens.css) is what turns the travel round. */
+  transform: translateX(calc(1rem * var(--db-inline-sign)));
 }
 
 /* Wide enough for either word, so the button does not change width when it is pressed. */
 .word {
   min-width: 2.2em;
-  text-align: left;
+  text-align: start;
 }
 
 .slider {
@@ -114,7 +116,7 @@
 
 .value {
   min-width: 3.5ch;
-  text-align: right;
+  text-align: end;
   font-family: var(--db-font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -275,13 +277,13 @@
 .row:has(> .select)::after {
   content: '';
   position: absolute;
-  right: var(--db-space-3);
+  inset-inline-end: var(--db-space-3);
   top: 50%;
   transform: translateY(-25%);
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
+  border-inline-start: 5px solid transparent;
+  border-inline-end: 5px solid transparent;
   border-top: 6px solid var(--db-ink);
   pointer-events: none;
 }

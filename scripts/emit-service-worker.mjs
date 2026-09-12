@@ -74,6 +74,25 @@
  * a real file rather than a route (the manifest and the icons; a link to `/games/` is a
  * directory and is skipped), and the `icons[].src` entries inside the manifest itself.
  *
+ * **Except the faces a first visit does not fetch.** A `@font-face` whose `unicode-range`
+ * excludes printable ASCII is a face the browser requests only when a page renders a glyph
+ * in that range — a diacritic in a player's name, or the Hindi and Arabic that #224 added
+ * faces for — and no English page does. Precaching it would install, on every first visit,
+ * a file the visit is never going to draw: the two script faces alone are 287,340 bytes
+ * (281 KB) against a shell precache that was 411 KB over the wire before them. So
+ * `referencesInCss` leaves those faces out, and the worker's runtime path (`respondToAsset`
+ * in `sw.js`) saves one the first time a page needs it, which is the same promise the play
+ * documents get: what you have drawn is what you keep. The same rule, applied to the same
+ * stylesheet, also takes the three `latin-ext` faces out of the precache — they were in it
+ * until #224, 37 KB of a first install that an English page never draws either — so the
+ * precache went from 52 URLs and 411 KB over the wire to 49 and 375 KB on the build that
+ * added the two script faces, and the summary line at the end reports five faces left to
+ * the runtime path rather than two. The cost of that promise is honest and recorded in `docs/fonts.md` — a page
+ * in one of those scripts has to have been drawn once while connected before its face is on
+ * the device, and the runtime cache is renamed on every deploy, so that is once per deploy.
+ * The rule is the one `scripts/check-size.mjs` classifies fonts by, function for function,
+ * and that script reads the worker this one emits and fails the build if the two disagree.
+ *
  * Every URL is checked against the export before it is written. A precache list with one
  * bad URL in it is worse than no worker at all: `cache.addAll` rejects as a unit, install
  * fails, and the site has a worker that can never activate — so the failure belongs here,
@@ -154,6 +173,9 @@ const MINIMUM_ENTRIES = 21;
 
 const failures = [];
 
+/** The faces left out of the precache by the range rule, URL → path, for the summary. */
+const rangeGated = new Map();
+
 function fail(detail) {
   failures.push(detail);
 }
@@ -218,11 +240,57 @@ function referencesIn(html) {
   return found;
 }
 
-/** References out of one stylesheet — which is where the typefaces are, and only there. */
+/**
+ * The code points a `unicode-range` descriptor covers, as `[first, last]` pairs, or `null` if
+ * a token cannot be read. The same function as in `scripts/check-size.mjs`, for the reason
+ * given there: both files are programs, so neither can import the other, and the emitted
+ * worker is checked against the classification by that script on every build.
+ */
+function parseUnicodeRange(descriptor) {
+  const ranges = [];
+  for (const token of descriptor.split(',')) {
+    const match = /^u\+([0-9a-f?]{1,6})(?:-([0-9a-f]{1,6}))?$/i.exec(token.trim());
+    if (match === null) return null;
+    const [, first, last] = match;
+    if (first.includes('?')) {
+      if (last !== undefined) return null;
+      ranges.push([
+        parseInt(first.replaceAll('?', '0'), 16),
+        parseInt(first.replaceAll('?', 'f'), 16),
+      ]);
+    } else {
+      ranges.push([parseInt(first, 16), parseInt(last ?? first, 16)]);
+    }
+  }
+  return ranges;
+}
+
+/** Does the range reach printable ASCII (U+0020–U+007E), the code points every English page renders? */
+const coversBasicLatin = (ranges) => ranges.some(([first, last]) => first <= 0x7e && last >= 0x20);
+
+const CSS_URL = /url\(\s*["']?(\/[^)"']+?)["']?\s*\)/g;
+
+/**
+ * References out of one stylesheet — which is where the typefaces are, and only there —
+ * minus the faces a first visit never fetches, which the header explains.
+ *
+ * A face with no `unicode-range`, or one this cannot read, is kept: precaching a file that
+ * was not needed costs bytes, leaving out one that was costs a return visit its typeface,
+ * and `check-size.mjs` fails the build on an unreadable range anyway. The excluded URLs are
+ * returned beside the kept ones so the summary at the end can say what was left out.
+ */
 function referencesInCss(css) {
+  const left = new Set();
+  for (const [, block] of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+    const descriptor = /unicode-range\s*:\s*([^;}]+)/i.exec(block);
+    if (descriptor === null) continue;
+    const ranges = parseUnicodeRange(descriptor[1]);
+    if (ranges === null || coversBasicLatin(ranges)) continue;
+    for (const [, url] of block.matchAll(CSS_URL)) left.add(url);
+  }
   const found = new Set();
-  for (const [, url] of css.matchAll(/url\(\s*["']?(\/[^)"']+?)["']?\s*\)/g)) found.add(url);
-  return found;
+  for (const [, url] of css.matchAll(CSS_URL)) if (!left.has(url)) found.add(url);
+  return { found, left };
 }
 
 /**
@@ -270,8 +338,17 @@ async function precacheList(out) {
   // to any amount of reading of the HTML.
   for (const [url, path] of [...entries]) {
     if (!url.endsWith('.css')) continue;
-    for (const asset of referencesInCss(await readFile(path, 'utf8'))) {
+    const { found, left } = referencesInCss(await readFile(path, 'utf8'));
+    for (const asset of found) {
       if (!(await add(asset))) fail(`${url} references ${asset}, which the build did not emit`);
+    }
+    for (const asset of left) {
+      // Left to the runtime path, but it still has to exist: a face the stylesheet names and
+      // the build did not emit is a broken export whichever cache it was going to land in.
+      const onDisk = diskPath(out, asset);
+      if (onDisk === null || !(await isFile(onDisk)))
+        fail(`${url} references ${asset}, which the build did not emit`);
+      else rangeGated.set(asset, onDisk);
     }
   }
 
@@ -541,7 +618,18 @@ async function emit(out) {
   const wire = contents.reduce((sum, body) => sum + gzipSync(body).length, 0);
   const gamesWire =
     download.sharedBytes + download.games.reduce((sum, game) => sum + game.bytes, 0);
-  return { revision, entries: urls.length, raw, wire, games: download.games.length, gamesWire };
+  let gatedBytes = 0;
+  for (const path of rangeGated.values()) gatedBytes += (await stat(path)).size;
+  return {
+    revision,
+    entries: urls.length,
+    raw,
+    wire,
+    games: download.games.length,
+    gamesWire,
+    gated: rangeGated.size,
+    gatedBytes,
+  };
 }
 
 const out =
@@ -568,5 +656,9 @@ if (emitted === null) {
   console.log(
     `  download all: ${String(emitted.games)} game(s), ${kb(emitted.gamesWire)} over the wire` +
       ' — what the settings page offers to save (#196)',
+  );
+  console.log(
+    `  left to the runtime path: ${String(emitted.gated)} range-gated face(s),` +
+      ` ${kb(emitted.gatedBytes)} — saved the first time a page draws a glyph in their range`,
   );
 }

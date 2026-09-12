@@ -96,6 +96,12 @@ CI failed on it for every commit until 20 August 2026 while local runs of the ot
 five passed, so the repository looked green and was not. `pnpm build` runs
 `pnpm size` at the end, so the size budget is checked as part of it.
 
+`pnpm i18n:extract` regenerates the message list and the pseudo-locale catalogues under
+`apps/web/src/lib/i18n/` after any string is converted to `t()` / `<T>`; the same test that
+writes them fails CI when they are stale. The framework, the budget reasoning behind keying
+messages on the English string, what is deliberately not translated, and how #220–#224 plug in
+are in `docs/i18n.md`.
+
 `pnpm e2e` runs Chromium and real WebKit. `pnpm e2e:all` adds Firefox and is what
 the nightly workflow runs — the suite passes on Firefox and has since it was first
 tried, so paying for a third engine on every push buys nothing. If a nightly ever

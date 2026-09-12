@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { CATEGORY_HUBS } from '@/lib/categories';
+import { MIRROR_CLASS } from '@/lib/icons';
 import {
   CATEGORIES_SECTION,
   FEATURED_SECTION,
@@ -127,7 +128,21 @@ export default function HomePage() {
           <h2 id={FEATURED_SECTION.id} className={styles.sectionTitle}>
             {FEATURED_SECTION.heading}
           </h2>
-          <Link href="/games/">See all {CATALOGUE.length} →</Link>
+          <Link href="/games/">
+            See all {CATALOGUE.length}
+            {/* A text arrow, not an `<Icon name="forward" />`: the sprite is not mounted in
+                the layout (#74) and mounting it here alone would put fourteen symbols in the
+                document every visitor loads for one glyph. U+2192 is not Bidi_Mirrored, so
+                under `dir="rtl"` it would keep pointing right — towards the *start* of the
+                line — and the class is what turns it round (#222): `globals.css` scales
+                `MIRROR_CLASS` by `--db-inline-sign`. The link is `inline-flex`, so the span
+                is a flex item and the space between the words and it is the `gap` in
+                page.module.css. Hidden from assistive technology because the link's words
+                already say where it goes; "rightwards arrow" read aloud after them is noise. */}
+            <span className={MIRROR_CLASS} aria-hidden="true">
+              →
+            </span>
+          </Link>
         </div>
         {FEATURED_SECTION.paragraphs.map((text) => (
           <p key={text} className={styles.prose}>

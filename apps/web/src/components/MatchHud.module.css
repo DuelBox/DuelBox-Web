@@ -24,10 +24,14 @@
     background-color var(--db-duration-fast) var(--db-ease);
 }
 
+/* Seat two, on its own side of the device. `text-align: right` rather than `end` on purpose,
+   and it is the one place in the shell where the physical word is the honest one: the seat
+   sits inside the play surface, which pins `direction: ltr` (PlaySurface.module.css, rule 9),
+   so `end` would resolve to the same edge — but it would say the wrong thing about why. */
 .right {
   flex-direction: row-reverse;
   justify-self: end;
-  text-align: right;
+  text-align: right; /* physical: seat two's side of the device, not the end of a sentence */
 }
 
 /* The active seat is marked by a border, a tint and the word "turn" — three signals, so
@@ -44,11 +48,18 @@
   border-color: var(--db-p2);
 }
 
+/* A name is typed by the person it belongs to (#161, settings), so it can be in any script.
+   `plaintext` is `dir="auto"` in CSS: the box takes its base direction from the name's own
+   first strong character rather than from the surface's pinned `ltr`, so an Arabic name in
+   an English shell — or the reverse — keeps its letters in order and its ellipsis at its
+   own end. Set here rather than as an attribute because the stylesheet is the one file in
+   this pair that #222 owns; the `<span>` itself is unchanged. */
 .name {
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  unicode-bidi: plaintext;
 }
 
 .score {

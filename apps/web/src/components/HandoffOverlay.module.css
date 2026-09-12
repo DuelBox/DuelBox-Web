@@ -13,9 +13,9 @@
   display: grid;
   place-items: center;
   padding-top: max(var(--db-space-4), var(--db-safe-top));
-  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
-  padding-left: max(var(--db-space-4), var(--db-safe-left));
+  padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
   text-align: center;
   background: var(--db-ink);
 }
