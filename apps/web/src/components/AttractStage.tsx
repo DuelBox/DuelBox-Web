@@ -23,6 +23,7 @@ import {
   nextAttractSeed,
   type BatteryReading,
 } from '@/lib/attract-mode';
+import { T } from '@/lib/i18n/T';
 import { pickQuickPlay } from '@/lib/quick-play';
 import { readRecent } from '@/lib/recent';
 import { SEAT_CHARACTERS } from '@/lib/seats';
@@ -228,8 +229,17 @@ export default function AttractStage({
       </div>
       {loaded === null ? null : (
         <p className="db-attract-caption">
-          {SEAT_CHARACTERS.p1} and {SEAT_CHARACTERS.p2} are playing{' '}
-          <Link href={`/play/${loaded.slug}/`}>{loaded.manifest.name}</Link> — move to stop.
+          {/* One sentence with three values in it, two seat names and a link, so a translator
+              gets the whole line and can put the link where their grammar wants it (#220).
+              The names themselves are characters rather than words and are not translated. */}
+          <T
+            id="{one} and {two} are playing {game} — move to stop."
+            values={{
+              one: SEAT_CHARACTERS.p1,
+              two: SEAT_CHARACTERS.p2,
+              game: <Link href={`/play/${loaded.slug}/`}>{loaded.manifest.name}</Link>,
+            }}
+          />
         </p>
       )}
     </div>

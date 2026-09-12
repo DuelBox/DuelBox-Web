@@ -116,6 +116,21 @@
  * footer down. A fallback without it would raise a footer for as long as it was up and drop
  * it again when the page arrived.
  *
+ * ## Why its two lines are still English (#220)
+ *
+ * Every other file in this territory had its copy extracted into the locale catalogues. This
+ * one is the exception, and the reason is the paragraph above rather than an oversight. The
+ * only way to reach the catalogue is to import something — `<T>` for a server component —
+ * and `loading-states.test.ts` holds this file to importing *nothing*, in those words,
+ * because the import is what makes Next emit the segment chunk this file already paid 231
+ * bytes to shrink. So the choice here is not "a wrapper costs a few bytes" but "a translated
+ * loading line reopens the budget this file exists to defend", and the two sentences are
+ * short, seen by almost nobody (#2539 could not make this fallback paint at all) and carry
+ * no information the route does not repeat a moment later in the player's language.
+ *
+ * Translating them needs the framework to reach a server component without an import, which
+ * it cannot today; #220 records it as open rather than closed.
+ *
  * A server component, and it has to stay one. The shell budget has about two kilobytes of
  * headroom, and a fallback that shipped a component would bill every visitor for the
  * moment before somebody else's game.

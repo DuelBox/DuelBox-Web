@@ -38,6 +38,18 @@ const I18N_CLEAN = [
   'apps/web/src/components/MatchOverlay.tsx',
   'apps/web/src/components/RotatePrompt.tsx',
   'apps/web/src/components/TournamentTrack.tsx',
+  'apps/web/src/components/PlaySurface.tsx',
+  'apps/web/src/components/GameHost.tsx',
+  'apps/web/src/components/GameErrorBoundary.tsx',
+  'apps/web/src/components/AttractStage.tsx',
+  'apps/web/src/components/AttractIdle.tsx',
+  'apps/web/src/components/TracePanel.tsx',
+  'apps/web/src/components/ServiceWorkerBridge.tsx',
+  'apps/web/src/components/FavouriteButton.tsx',
+  'apps/web/src/components/QuickPlay.tsx',
+  'apps/web/src/app/error.tsx',
+  'apps/web/src/app/embed/[slug]/EmbedFrame.tsx',
+  'apps/web/src/app/play/[slug]/page.tsx',
 ];
 
 export default tseslint.config(

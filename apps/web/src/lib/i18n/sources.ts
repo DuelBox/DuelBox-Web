@@ -35,6 +35,8 @@ import { IMPORT_ERRORS, PLAYER_DATA_KEY_NAMES } from '../player-data';
 import { healthLevelLabel } from '../../components/health-bar';
 import { CHANGE_REASONS } from '../match-changes';
 import { BOT_DIFFICULTIES, DIFFICULTY_LABELS, ROUND_LABELS } from '../match-setup';
+import { errorMessage } from '@duelbox/game-sdk';
+import { OFFLINE_NOTICE, RELOAD_LABEL, UPDATE_NOTICE } from '../offline-state';
 
 /** Every registered source: a name for the failure message, and the strings it contributes. */
 export const DYNAMIC_SOURCES: readonly {
@@ -84,6 +86,29 @@ export const DYNAMIC_SOURCES: readonly {
     /** The health bar's state word, beside the bar and inside its `aria-label`. */
     name: 'the health-bar level words (components/health-bar.ts)',
     strings: () => (['ok', 'low', 'critical'] as const).map(healthLevelLabel),
+  },
+  {
+    /*
+     * The three sentences the offline and update bar says (#192, #194), which
+     * `components/ServiceWorkerBridge.tsx` renders as `t(messages, OFFLINE_NOTICE)` and so on.
+     * They are constants rather than literals because `offline-state.test.ts` holds them
+     * against the substrings `e2e/offline.spec.ts` greps for — the reason the module gives for
+     * naming them — so the call sites have nothing for the extractor to read.
+     */
+    name: 'lib/offline-state.ts — the connection and update bar',
+    strings: () => [OFFLINE_NOTICE, UPDATE_NOTICE, RELOAD_LABEL],
+  },
+  {
+    /*
+     * What `components/GameErrorBoundary.tsx` shows when a game threw something with no
+     * message of its own: `errorMessage` in the SDK supplies the sentence, and the boundary
+     * renders `<T id={errorMessage(error)} />` — an id no call site spells out. Taken from the
+     * function rather than copied, so a reworded fallback cannot leave this behind. The two
+     * sentences the shell itself throws are `t()` calls in `PlaySurface` and `GameHost` and
+     * need no entry here; a message a game threw is that game's own string and is not a msgid.
+     */
+    name: '@duelbox/game-sdk errorMessage — the fallback the recovery screen shows',
+    strings: () => [errorMessage(undefined)],
   },
 ];
 

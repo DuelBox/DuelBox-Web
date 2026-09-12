@@ -2,6 +2,8 @@
 
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BASE_PATH } from '@/app/base-path';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import {
   OFFLINE_NOTICE,
   RELOAD_LABEL,
@@ -78,6 +80,13 @@ import styles from './ServiceWorkerBridge.module.css';
  * there is a module here at all and why it has exactly one rule in it.
  */
 export function ServiceWorkerBridge() {
+  /*
+   * The three sentences this bar can say live in `lib/offline-state.ts`, where the unit suite
+   * and the e2e spec both read them, so they arrive here as constants rather than as literals
+   * (#220). `t()` takes them as its id all the same — English is the key — and the module is
+   * registered in `lib/i18n/sources.ts` so the extractor sees strings it cannot read here.
+   */
+  const messages = useMessages();
   const [online, setOnline] = useState(true);
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const [announced, setAnnounced] = useState(false);
@@ -291,7 +300,7 @@ export function ServiceWorkerBridge() {
   if (!announced) return <div className="db-visually-hidden" role="status" />;
   return (
     <div className="db-net-bar" role="status">
-      {online ? null : <span>{OFFLINE_NOTICE}</span>}
+      {online ? null : <span>{t(messages, OFFLINE_NOTICE)}</span>}
       {offer === null ? null : (
         <Suspense fallback={null}>
           <InstallOffer
@@ -306,7 +315,7 @@ export function ServiceWorkerBridge() {
       )}
       {waiting === null ? null : (
         <>
-          <span>{UPDATE_NOTICE}</span>
+          <span>{t(messages, UPDATE_NOTICE)}</span>
           <button
             type="button"
             className={`db-net-do ${styles.reload}`}
@@ -314,7 +323,7 @@ export function ServiceWorkerBridge() {
               takeUpdate(waiting);
             }}
           >
-            {RELOAD_LABEL}
+            {t(messages, RELOAD_LABEL)}
           </button>
         </>
       )}
