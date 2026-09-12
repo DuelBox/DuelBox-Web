@@ -2,36 +2,29 @@
 
 import { useCallback, useEffect, useId, useState, type ChangeEvent } from 'react';
 import type { SeatId } from '@duelbox/engine';
-import { clearFavourites, FAVOURITES_KEY } from '@/lib/favourites';
+import { clearFavourites } from '@/lib/favourites';
 import { hapticsSupported, vibrate } from '@/lib/haptics';
 import {
   clearRecord,
-  HEAD_TO_HEAD_KEY,
   mostPlayed,
   readRecord,
   type GameRecord,
   type Tally,
 } from '@/lib/head-to-head';
-import { LAST_MODE_KEY } from '@/lib/last-mode';
 import {
   exportPlayerData,
   importPlayerData,
   playerDataSummary,
+  PLAYER_DATA_KEY_NAMES,
   resetPlayerData,
 } from '@/lib/player-data';
-import {
-  MAX_NAME_LENGTH,
-  PLAYER_NAMES_KEY,
-  readPlayerNames,
-  writePlayerName,
-} from '@/lib/player-names';
-import { HINTS_SEEN_KEY, resetHints } from '@/lib/control-hints';
+import { MAX_NAME_LENGTH, readPlayerNames, writePlayerName } from '@/lib/player-names';
+import { resetHints } from '@/lib/control-hints';
 import { LOCALE_CODES, LOCALES } from '@/lib/i18n/locales';
-import { t } from '@/lib/i18n/messages';
+import { t, type Catalogue } from '@/lib/i18n/messages';
 import { useMessages } from '@/lib/i18n/use-messages';
-import { KEY_BINDINGS_KEY } from '@/lib/key-bindings-key';
-import { clearRecent, RECENT_KEY } from '@/lib/recent';
-import { SETTINGS_KEY, type Settings } from '@/lib/settings';
+import { clearRecent } from '@/lib/recent';
+import type { Settings } from '@/lib/settings';
 import { KeyBindings } from './KeyBindings';
 import { notifySettingsChanged, useSettings } from './SoundToggle';
 import styles from './SettingsPanel.module.css';
@@ -111,30 +104,33 @@ const EXPORT_FILENAME = 'duelbox-player-data.json';
  */
 const REVOKE_DELAY_MS = 1000;
 
-/** What each stored key is called to a player, for the line that says what an import restored. */
-const KEY_NAMES: Readonly<Record<string, string>> = {
-  [LAST_MODE_KEY]: 'the setup you last used for each game',
-  [FAVOURITES_KEY]: 'your favourites',
-  [RECENT_KEY]: 'your recently played games',
-  [SETTINGS_KEY]: 'your settings',
-  [HEAD_TO_HEAD_KEY]: 'your head-to-head record',
-  [PLAYER_NAMES_KEY]: 'the names you chose for the two seats',
-  [KEY_BINDINGS_KEY]: 'the keys you chose for the two seats',
-  [HINTS_SEEN_KEY]: 'which games have shown you their first-play hints',
-};
-
-/** "a, b and c" — a sentence, because the status line is read aloud as one. */
-function listed(items: readonly string[]): string {
+/**
+ * "a, b and c" — a sentence, because the status line is read aloud as one.
+ *
+ * The word between the last two is copy, so the join is a message with the two halves as
+ * values (#220) rather than a template literal a translator can never reach. The commas are
+ * left as punctuation: a locale that separates a list differently is a job for
+ * `Intl.ListFormat`, which is a kilobyte of shell for a line one press in ten shows.
+ */
+function listed(messages: Catalogue, items: readonly string[]): string {
   if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] ?? ''}`;
+  return t(messages, '{items} and {last}', {
+    items: items.slice(0, -1).join(', '),
+    last: items[items.length - 1] ?? '',
+  });
 }
 
-function describeImport(imported: readonly string[]): string {
-  const names = imported.map((key) => KEY_NAMES[key] ?? key);
+function describeImport(messages: Catalogue, imported: readonly string[]): string {
+  const names = imported.map((key) => {
+    // A key this build has no name for shows as the key. `lib/player-data.ts` says which
+    // four those are and why they are not being invented here.
+    const name = PLAYER_DATA_KEY_NAMES[key];
+    return name === undefined ? key : t(messages, name);
+  });
   if (names.length === 0) {
-    return 'Nothing to import: that file holds nothing this version of DuelBox keeps.';
+    return t(messages, 'Nothing to import: that file holds nothing this version of DuelBox keeps.');
   }
-  return `Imported ${listed(names)}.`;
+  return t(messages, 'Imported {what}.', { what: listed(messages, names) });
 }
 
 export function SettingsPanel() {
@@ -180,28 +176,28 @@ export function SettingsPanel() {
   );
 
   const tryHaptics = useCallback(() => {
-    if (vibrate('tap')) setStatus('That was a tap.');
-    else if (!settings.haptics) setStatus('Turn vibration on first, then try again.');
-    else setStatus('This device did not vibrate.');
-  }, [settings.haptics]);
+    if (vibrate('tap')) setStatus(t(messages, 'That was a tap.'));
+    else if (!settings.haptics) setStatus(t(messages, 'Turn vibration on first, then try again.'));
+    else setStatus(t(messages, 'This device did not vibrate.'));
+  }, [settings.haptics, messages]);
 
   const clearRecentPlayed = useCallback(() => {
     clearRecent();
     refresh();
-    setStatus('Recently played cleared.');
-  }, [refresh]);
+    setStatus(t(messages, 'Recently played cleared.'));
+  }, [refresh, messages]);
 
   const clearFavs = useCallback(() => {
     clearFavourites();
     refresh();
-    setStatus('Favourites cleared.');
-  }, [refresh]);
+    setStatus(t(messages, 'Favourites cleared.'));
+  }, [refresh, messages]);
 
   const clearHeadToHead = useCallback(() => {
     clearRecord();
     refresh();
-    setStatus('The head-to-head record is cleared. Both of you are back on nothing.');
-  }, [refresh]);
+    setStatus(t(messages, 'The head-to-head record is cleared. Both of you are back on nothing.'));
+  }, [refresh, messages]);
 
   /**
    * A name, written on every keystroke and settled on blur.
@@ -235,8 +231,8 @@ export function SettingsPanel() {
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, REVOKE_DELAY_MS);
-    setStatus(`Saved as ${EXPORT_FILENAME}.`);
-  }, []);
+    setStatus(t(messages, 'Saved as {file}.', { file: EXPORT_FILENAME }));
+  }, [messages]);
 
   const importData = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -252,28 +248,30 @@ export function SettingsPanel() {
         .then((text) => {
           const result = importPlayerData(text);
           if ('error' in result) {
-            setStatus(result.error);
+            // The id is a variable here — one of `IMPORT_ERRORS`, registered in
+            // `lib/i18n/sources.ts` because the extractor reads call sites by shape.
+            setStatus(t(messages, result.error, result.values));
             return;
           }
           // Imported values are written raw and read back sanitised, so every control on
           // the page re-reads rather than trusting what the file said.
           notifySettingsChanged();
           refresh();
-          setStatus(describeImport(result.imported));
+          setStatus(describeImport(messages, result.imported));
         })
         .catch(() => {
-          setStatus('That file could not be read.');
+          setStatus(t(messages, 'That file could not be read.'));
         });
     },
-    [refresh],
+    [refresh, messages],
   );
 
   const resetAll = useCallback(() => {
     resetPlayerData();
     notifySettingsChanged();
     refresh();
-    setStatus('Everything DuelBox kept on this device has been erased.');
-  }, [refresh]);
+    setStatus(t(messages, 'Everything DuelBox kept on this device has been erased.'));
+  }, [refresh, messages]);
 
   /**
    * Which destructive button is waiting for its second press, by label.
@@ -296,9 +294,9 @@ export function SettingsPanel() {
   return (
     <div className={styles.panel}>
       <section className={styles.section} aria-labelledby={`${id}-sound`}>
-        <h2 id={`${id}-sound`}>Sound</h2>
+        <h2 id={`${id}-sound`}>{t(messages, 'Sound')}</h2>
         <Switch
-          label="Mute"
+          label={t(messages, 'Mute')}
           checked={settings.muted}
           onChange={(muted) => {
             change({ muted });
@@ -306,7 +304,7 @@ export function SettingsPanel() {
         />
         <div className={styles.row}>
           <label htmlFor={volumeId} className={styles.label}>
-            Volume
+            {t(messages, 'Volume')}
           </label>
           <div className={styles.slider}>
             {/* Written straight through as the thumb moves. The level is handed to the
@@ -340,18 +338,19 @@ export function SettingsPanel() {
       </section>
 
       <section className={styles.section} aria-labelledby={`${id}-vibration`}>
-        <h2 id={`${id}-vibration`}>Vibration</h2>
+        <h2 id={`${id}-vibration`}>{t(messages, 'Vibration')}</h2>
         <Switch
-          label="Vibration"
+          label={t(messages, 'Vibration')}
           checked={settings.haptics}
           onChange={(haptics) => {
             change({ haptics });
           }}
         />
         <p className={styles.note}>
-          A short buzz when a round ends and a longer one when the match does. Off unless you turn
-          it on, and it does nothing on a device without the Vibration API — which includes every
-          iPhone.
+          {t(
+            messages,
+            'A short buzz when a round ends and a longer one when the match does. Off unless you turn it on, and it does nothing on a device without the Vibration API — which includes every iPhone.',
+          )}
         </p>
         <div className={styles.actions}>
           {/* Disabled from the effect above rather than from render: the build machine has
@@ -363,33 +362,35 @@ export function SettingsPanel() {
             disabled={!supported}
             onClick={tryHaptics}
           >
-            Try it
+            {t(messages, 'Try it')}
           </button>
         </div>
       </section>
 
       <section className={styles.section} aria-labelledby={`${id}-display`}>
-        <h2 id={`${id}-display`}>Display and play</h2>
+        <h2 id={`${id}-display`}>{t(messages, 'Display and play')}</h2>
 
         {/* #76. Applied the instant it changes through the shared settings listener, and
             the inline script in the page head applies the saved choice before the first
             paint, so switching here never flashes the other ground. */}
         <SelectRow
           id={`${id}-theme`}
-          label="Theme"
+          label={t(messages, 'Theme')}
           value={settings.theme}
           onChange={(theme) => {
             change({ theme: theme as Settings['theme'] });
           }}
           options={[
-            { value: 'system', label: 'Match my device' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
+            { value: 'system', label: t(messages, 'Match my device') },
+            { value: 'light', label: t(messages, 'Light') },
+            { value: 'dark', label: t(messages, 'Dark') },
           ]}
         />
         <p className={styles.note}>
-          &ldquo;Match my device&rdquo; follows your system&apos;s light or dark setting and changes
-          with it. Light and Dark override it.
+          {t(
+            messages,
+            "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.",
+          )}
         </p>
 
         {/* #174. Flows to the shell here and to the games through the engine's seat palette,
@@ -397,19 +398,24 @@ export function SettingsPanel() {
             whichever palette is on — this only widens the colour gap. */}
         <SelectRow
           id={`${id}-seats`}
-          label="Seat colours"
+          label={t(messages, 'Seat colours')}
           value={settings.seatPalette}
           onChange={(seatPalette) => {
             change({ seatPalette: seatPalette as Settings['seatPalette'] });
           }}
           options={[
-            { value: 'default', label: 'Standard (red and blue)' },
-            { value: 'colourblind', label: 'Colour-blind friendly (amber and blue)' },
+            { value: 'default', label: t(messages, 'Standard (red and blue)') },
+            {
+              value: 'colourblind',
+              label: t(messages, 'Colour-blind friendly (amber and blue)'),
+            },
           ]}
         />
         <p className={styles.note}>
-          The standard red and blue are hard to tell apart with red–green colour blindness. The
-          alternative keeps the two seats far apart in colour as well as in shape.
+          {t(
+            messages,
+            'The standard red and blue are hard to tell apart with red–green colour blindness. The alternative keeps the two seats far apart in colour as well as in shape.',
+          )}
         </p>
 
         {/* #179. Assist mode. The value is a wall-clock multiplier the loop applies to the
@@ -417,20 +423,22 @@ export function SettingsPanel() {
             the same game, more time to read it and to react. Never faster than full. */}
         <SelectRow
           id={`${id}-speed`}
-          label="Game speed"
+          label={t(messages, 'Game speed')}
           value={String(settings.gameSpeed)}
           onChange={(speed) => {
             change({ gameSpeed: Number(speed) });
           }}
           options={[
-            { value: '1', label: 'Full speed' },
-            { value: '0.75', label: 'Relaxed (three-quarter speed)' },
-            { value: '0.5', label: 'Slow (half speed)' },
+            { value: '1', label: t(messages, 'Full speed') },
+            { value: '0.75', label: t(messages, 'Relaxed (three-quarter speed)') },
+            { value: '0.5', label: t(messages, 'Slow (half speed)') },
           ]}
         />
         <p className={styles.note}>
-          Slows every real-time game down so there is more time to react. Turn-based games are
-          untouched, and a change takes effect on the next match you start.
+          {t(
+            messages,
+            'Slows every real-time game down so there is more time to react. Turn-based games are untouched, and a change takes effect on the next match you start.',
+          )}
         </p>
 
         {/* #219. Only the language chosen here is downloaded — every locale but English is an
@@ -468,10 +476,12 @@ export function SettingsPanel() {
         rebind independently and that needs room for two groups.
       */}
       <section className={styles.section} aria-labelledby={`${id}-keys`}>
-        <h2 id={`${id}-keys`}>Keys</h2>
+        <h2 id={`${id}-keys`}>{t(messages, 'Keys')}</h2>
         <p className={styles.note}>
-          Which keys drive each seat, on this device. The two seats cannot share a key, and the keys
-          the page itself needs — Escape, Tab and the modifiers — cannot be taken.
+          {t(
+            messages,
+            'Which keys drive each seat, on this device. The two seats cannot share a key, and the keys the page itself needs — Escape, Tab and the modifiers — cannot be taken.',
+          )}
         </p>
         <KeyBindings id={`${id}-keys`} />
 
@@ -480,10 +490,12 @@ export function SettingsPanel() {
           then never again, which is right for the pair who have played and wrong for the pair
           who hand the device to somebody new — so there has to be a way back, and this is it.
         */}
-        <h3 className={styles.subhead}>First-play hints</h3>
+        <h3 className={styles.subhead}>{t(messages, 'First-play hints')}</h3>
         <p className={styles.note}>
-          The first time you open a game, each half of the screen says whose it is until that player
-          moves. Ask for them again and every game shows them once more.
+          {t(
+            messages,
+            'The first time you open a game, each half of the screen says whose it is until that player moves. Ask for them again and every game shows them once more.',
+          )}
         </p>
         <div className={styles.actions}>
           <button
@@ -494,51 +506,57 @@ export function SettingsPanel() {
               setHintsReset(true);
             }}
           >
-            {hintsReset ? 'Hints will show again' : 'Show the hints again'}
+            {hintsReset
+              ? t(messages, 'Hints will show again')
+              : t(messages, 'Show the hints again')}
           </button>
         </div>
       </section>
 
       <section className={styles.section} aria-labelledby={`${id}-data`}>
-        <h2 id={`${id}-data`}>Your data</h2>
+        <h2 id={`${id}-data`}>{t(messages, 'Your data')}</h2>
         <p className={styles.note}>
-          Everything DuelBox keeps, all of it in this browser&apos;s storage and none of it sent
-          anywhere. Export it to carry it to another device, import it there, or erase it here.
+          {t(
+            messages,
+            "Everything DuelBox keeps, all of it in this browser's storage and none of it sent anywhere. Export it to carry it to another device, import it there, or erase it here.",
+          )}
         </p>
         <dl className={styles.counts}>
           <div className={styles.count}>
-            <dt>Favourites</dt>
+            <dt>{t(messages, 'Favourites')}</dt>
             <dd>{summary.favourites}</dd>
           </div>
           <div className={styles.count}>
-            <dt>Recently played</dt>
+            <dt>{t(messages, 'Recently played')}</dt>
             <dd>{summary.recent}</dd>
           </div>
           <div className={styles.count}>
-            <dt>Games with a remembered setup</dt>
+            <dt>{t(messages, 'Games with a remembered setup')}</dt>
             <dd>{summary.games}</dd>
           </div>
           <div className={styles.count}>
-            <dt>Matches recorded</dt>
+            <dt>{t(messages, 'Matches recorded')}</dt>
             <dd>{summary.matches}</dd>
           </div>
           <div className={styles.count}>
-            <dt>Settings</dt>
-            <dd>{summary.hasSettings ? 'Changed' : 'Defaults'}</dd>
+            <dt>{t(messages, 'Settings')}</dt>
+            <dd>{summary.hasSettings ? t(messages, 'Changed') : t(messages, 'Defaults')}</dd>
           </div>
         </dl>
 
         {/* #161. Two fields rather than a screen of their own: naming yourselves is
             something a pair do once, on the page that already holds everything else this
             device remembers about them. */}
-        <h3 className={styles.subhead}>What you are called</h3>
+        <h3 className={styles.subhead}>{t(messages, 'What you are called')}</h3>
         <p className={styles.note}>
-          The names on the scoreboard during a match, on this device and nowhere else. Leave one
-          empty and that seat keeps its own name.
+          {t(
+            messages,
+            'The names on the scoreboard during a match, on this device and nowhere else. Leave one empty and that seat keeps its own name.',
+          )}
         </p>
         <NameField
           id={`${id}-p1`}
-          label="Name for the near seat"
+          label={t(messages, 'Name for the near seat')}
           value={names.p1 ?? ''}
           onChange={changeName}
           onSettle={settleNames}
@@ -546,7 +564,7 @@ export function SettingsPanel() {
         />
         <NameField
           id={`${id}-p2`}
-          label="Name for the far seat"
+          label={t(messages, 'Name for the far seat')}
           value={names.p2 ?? ''}
           onChange={changeName}
           onSettle={settleNames}
@@ -555,25 +573,33 @@ export function SettingsPanel() {
 
         <div className={styles.actions}>
           <Confirm
-            label="Clear recently played"
+            label={t(messages, 'Clear recently played')}
+            armedLabel={t(messages, 'Press again to clear recently played')}
             armed={armed}
             onArm={setArmed}
             onConfirm={clearRecentPlayed}
           />
-          <Confirm label="Clear favourites" armed={armed} onArm={setArmed} onConfirm={clearFavs} />
           <Confirm
-            label="Clear the record"
+            label={t(messages, 'Clear favourites')}
+            armedLabel={t(messages, 'Press again to clear favourites')}
+            armed={armed}
+            onArm={setArmed}
+            onConfirm={clearFavs}
+          />
+          <Confirm
+            label={t(messages, 'Clear the record')}
+            armedLabel={t(messages, 'Press again to clear the record')}
             armed={armed}
             onArm={setArmed}
             onConfirm={clearHeadToHead}
           />
           <button type="button" className={styles.button} onClick={exportData}>
-            Export
+            {t(messages, 'Export')}
           </button>
         </div>
         <div className={styles.row}>
           <label htmlFor={importId} className={styles.label}>
-            Import
+            {t(messages, 'Import')}
           </label>
           <input
             id={importId}
@@ -585,7 +611,8 @@ export function SettingsPanel() {
         </div>
         <div className={styles.actions}>
           <Confirm
-            label="Reset everything"
+            label={t(messages, 'Reset everything')}
+            armedLabel={t(messages, 'Press again to reset everything')}
             className={styles.danger}
             armed={armed}
             onArm={setArmed}
@@ -606,12 +633,12 @@ export function SettingsPanel() {
           are in the exported HTML either way, so what arrives after hydration is rows
           rather than structure.
         */}
-        <h3 className={styles.subhead}>Most played</h3>
+        <h3 className={styles.subhead}>{t(messages, 'Most played')}</h3>
         {/* The convention, on screen rather than only in the markup: the visible tally is
             `aria-hidden`, so without this line the sighted reader was the one who could not
             tell whose three wins those were, between two fields named for the two seats. */}
         <p className={styles.note}>
-          Wins, losses and draws are the near seat&apos;s, bot matches included.
+          {t(messages, "Wins, losses and draws are the near seat's, bot matches included.")}
         </p>
         {played.length > 0 ? (
           <ul className={styles.games}>
@@ -621,17 +648,26 @@ export function SettingsPanel() {
                 {/* Spelled out for a screen reader, which would otherwise be handed
                     "3W 2L 1D" to say aloud. */}
                 <span className={styles.tally} aria-hidden="true">
-                  {entry.record.p1}W {entry.record.p2}L {entry.record.draws}D
+                  {t(messages, '{won}W {lost}L {drawn}D', {
+                    won: entry.record.p1,
+                    lost: entry.record.p2,
+                    drawn: entry.record.draws,
+                  })}
                 </span>
                 <span className="db-visually-hidden">
-                  the near seat has won {entry.record.p1}, lost {entry.record.p2} and drawn{' '}
-                  {entry.record.draws}
+                  {t(messages, 'the near seat has won {won}, lost {lost} and drawn {drawn}', {
+                    won: entry.record.p1,
+                    lost: entry.record.p2,
+                    drawn: entry.record.draws,
+                  })}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className={styles.note}>Nothing yet. Finish a match and it appears here.</p>
+          <p className={styles.note}>
+            {t(messages, 'Nothing yet. Finish a match and it appears here.')}
+          </p>
         )}
 
         {/*
@@ -652,14 +688,23 @@ export function SettingsPanel() {
           with digits, so nothing here adds structure after hydration — but the list above
           does grow rows, and a block it pushes down is better than a block that pushes it.
         */}
-        <h3 className={styles.subhead}>Between the two of you</h3>
+        <h3 className={styles.subhead}>{t(messages, 'Between the two of you')}</h3>
         <p className={styles.overall}>
-          The near seat has won {record.p1}, the far seat {record.p2}, and {record.draws} ended
-          level.
+          {t(
+            messages,
+            'The near seat has won {won}, the far seat {lost}, and {drawn} ended level.',
+            {
+              won: record.p1,
+              lost: record.p2,
+              drawn: record.draws,
+            },
+          )}
         </p>
         <p className={styles.note}>
-          Every game added up. Matches against the bot are not in it: a bot&apos;s wins belong to
-          nobody.
+          {t(
+            messages,
+            "Every game added up. Matches against the bot are not in it: a bot's wins belong to nobody.",
+          )}
         </p>
       </section>
 
@@ -680,6 +725,14 @@ export function SettingsPanel() {
  * silently dropping it on the way to storage. Autocomplete and spellcheck are off — a
  * browser offering a saved postal address here, or underlining a nickname in red, is
  * answering a question nobody asked.
+ *
+ * `dir="auto"` because a name is the one thing on this page the *player* writes (#222). The
+ * rest of the shell lays out in the direction of the chosen language, which is right for copy
+ * this product ships; a name is not ours, and a player who types Arabic while the site is in
+ * English — or the reverse — should see their own name read the way their own script reads.
+ * `auto` asks the browser to decide per field from the first strong character, which is the
+ * only signal there is: the store holds twelve characters and no language tag, and nothing
+ * about the site's locale says what script the two people at this device call each other in.
  */
 function NameField({
   id,
@@ -705,6 +758,7 @@ function NameField({
         id={id}
         type="text"
         className={styles.text}
+        dir="auto"
         value={value}
         maxLength={MAX_NAME_LENGTH}
         autoComplete="off"
@@ -734,18 +788,26 @@ function NameField({
  * says what the next press does, it is the same control the player is already pointing at,
  * and it cannot be dismissed by accident because the only thing that arms it is a press.
  *
+ * Both labels are passed in (#220). The armed one was built as
+ * `` `Press again to ${label.toLowerCase()}` ``, which is a sentence no translator can reach
+ * and a lower-casing no language but this one would accept — the four English pairs read the
+ * same as they always did, and a locale gets eight strings it can write as its own grammar
+ * requires.
+ *
  * `aria-live` on the label means a screen reader hears the label change rather than
  * silently arming, and moving focus away disarms — so a player who tabs off and comes
  * back does not find a button that is still one press from erasing their evening.
  */
 function Confirm({
   label,
+  armedLabel,
   className,
   armed,
   onArm,
   onConfirm,
 }: {
   label: string;
+  armedLabel: string;
   className?: string | undefined;
   armed: string;
   onArm: (label: string) => void;
@@ -769,7 +831,7 @@ function Confirm({
         onConfirm();
       }}
     >
-      {isArmed ? `Press again to ${label.toLowerCase()}` : label}
+      {isArmed ? armedLabel : label}
     </button>
   );
 }
@@ -791,6 +853,7 @@ function Switch({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const messages = useMessages();
   const labelId = useId();
   return (
     <div className={styles.row}>
@@ -810,7 +873,7 @@ function Switch({
         <span className={styles.track} aria-hidden="true">
           <span className={styles.thumb} />
         </span>
-        <span className={styles.word}>{checked ? 'On' : 'Off'}</span>
+        <span className={styles.word}>{checked ? t(messages, 'On') : t(messages, 'Off')}</span>
       </button>
     </div>
   );

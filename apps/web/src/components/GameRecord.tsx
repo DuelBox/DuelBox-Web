@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { readGameRecord, type Opponent, type Tally } from '@/lib/head-to-head';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 
 /**
  * One line of what this device has recorded for one game (#162).
@@ -45,6 +47,14 @@ import { readGameRecord, type Opponent, type Tally } from '@/lib/head-to-head';
  * it is why the two names arrive as props rather than being read here: `lib/seats.ts` is
  * the only file allowed to spell them, the page already imports it, and importing it here
  * would drag `@duelbox/engine` onto a shell route for two words.
+ *
+ * ## The sentence is one message, not five pieces
+ *
+ * The line was a template literal, which is a shape the lint rule cannot see and a
+ * translator cannot reorder: a language that puts the count before the name, or the word for
+ * "drawn" first, has to be able to move the whole sentence around its four values. So it is
+ * one `t()` id with four placeholders (#220), and the two names stay as they arrive — they
+ * are seat names, not copy, and `lib/seats.ts` spells them.
  */
 
 /** What each count reads as before storage has been read, and with no scripting at all. */
@@ -62,6 +72,7 @@ export function GameRecord({
   near: string;
   far: string;
 }) {
+  const messages = useMessages();
   const [tally, setTally] = useState<Tally | null>(null);
   useEffect(() => {
     setTally(readGameRecord(slug, opponent));
@@ -70,5 +81,11 @@ export function GameRecord({
   // Words rather than a colour or a glyph, so a win and a loss are the same two facts in
   // greyscale that they are on a colour screen (rule 7) — and so a screen reader is handed
   // a sentence rather than "3W 2L 1D" to spell out.
-  return `${near} ${shown.p1}, ${far} ${shown.p2}, ${shown.draws} drawn`;
+  return t(messages, '{near} {nearWins}, {far} {farWins}, {draws} drawn', {
+    near,
+    nearWins: shown.p1,
+    far,
+    farWins: shown.p2,
+    draws: shown.draws,
+  });
 }

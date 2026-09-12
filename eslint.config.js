@@ -22,6 +22,10 @@ const I18N_CLEAN = [
   'apps/web/src/lib/i18n/T.tsx',
   'apps/web/src/lib/i18n/provider.tsx',
   'apps/web/src/app/settings/page.tsx',
+  'apps/web/src/components/SettingsPanel.tsx',
+  'apps/web/src/components/KeyBindings.tsx',
+  'apps/web/src/components/GameRecord.tsx',
+  'apps/web/src/components/InstallOffer.tsx',
 ];
 
 export default tseslint.config(
