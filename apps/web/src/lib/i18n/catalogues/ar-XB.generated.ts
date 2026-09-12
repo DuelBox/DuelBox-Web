@@ -391,9 +391,21 @@ const catalogue = {
     'In games played turn by turn the board turns to face whoever is to move, so you always read it the right way up — and while it is your turn the whole screen is yours to reach. In games played at the same time, the screen stays put and each of you has your own half.':
       '‮In‬ ‮games‬ ‮played‬ ‮turn‬ ‮by‬ ‮turn‬ ‮the‬ ‮board‬ ‮turns‬ ‮to‬ ‮face‬ ‮whoever‬ ‮is‬ ‮to‬ ‮move,‬ ‮so‬ ‮you‬ ‮always‬ ‮read‬ ‮it‬ ‮the‬ ‮right‬ ‮way‬ ‮up‬ ‮—‬ ‮and‬ ‮while‬ ‮it‬ ‮is‬ ‮your‬ ‮turn‬ ‮the‬ ‮whole‬ ‮screen‬ ‮is‬ ‮yours‬ ‮to‬ ‮reach.‬ ‮In‬ ‮games‬ ‮played‬ ‮at‬ ‮the‬ ‮same‬ ‮time,‬ ‮the‬ ‮screen‬ ‮stays‬ ‮put‬ ‮and‬ ‮each‬ ‮of‬ ‮you‬ ‮has‬ ‮your‬ ‮own‬ ‮half.‬',
     'Input trace': '‮Input‬ ‮trace‬',
+    'It cannot answer questions about the screen, so the board could not be laid out.':
+      '‮It‬ ‮cannot‬ ‮answer‬ ‮questions‬ ‮about‬ ‮the‬ ‮screen,‬ ‮so‬ ‮the‬ ‮board‬ ‮could‬ ‮not‬ ‮be‬ ‮laid‬ ‮out.‬',
+    'It cannot schedule animation frames, so nothing could be drawn in time.':
+      '‮It‬ ‮cannot‬ ‮schedule‬ ‮animation‬ ‮frames,‬ ‮so‬ ‮nothing‬ ‮could‬ ‮be‬ ‮drawn‬ ‮in‬ ‮time.‬',
+    'It cannot watch the board for size changes, so it could not be fitted to the screen.':
+      '‮It‬ ‮cannot‬ ‮watch‬ ‮the‬ ‮board‬ ‮for‬ ‮size‬ ‮changes,‬ ‮so‬ ‮it‬ ‮could‬ ‮not‬ ‮be‬ ‮fitted‬ ‮to‬ ‮the‬ ‮screen.‬',
+    'It has no high-resolution clock, so a match could not be timed.':
+      '‮It‬ ‮has‬ ‮no‬ ‮high-resolution‬ ‮clock,‬ ‮so‬ ‮a‬ ‮match‬ ‮could‬ ‮not‬ ‮be‬ ‮timed.‬',
     'It has not arrived here yet, like the one you just asked for.':
       '‮It‬ ‮has‬ ‮not‬ ‮arrived‬ ‮here‬ ‮yet,‬ ‮like‬ ‮the‬ ‮one‬ ‮you‬ ‮just‬ ‮asked‬ ‮for.‬',
     'It is here. Open it and play.': '‮It‬ ‮is‬ ‮here.‬ ‮Open‬ ‮it‬ ‮and‬ ‮play.‬',
+    'It sends no pointer events, so a tap or a click would never reach the board.':
+      '‮It‬ ‮sends‬ ‮no‬ ‮pointer‬ ‮events,‬ ‮so‬ ‮a‬ ‮tap‬ ‮or‬ ‮a‬ ‮click‬ ‮would‬ ‮never‬ ‮reach‬ ‮the‬ ‮board.‬',
+    'It will not give this page a drawing surface, and every game is drawn on one.':
+      '‮It‬ ‮will‬ ‮not‬ ‮give‬ ‮this‬ ‮page‬ ‮a‬ ‮drawing‬ ‮surface,‬ ‮and‬ ‮every‬ ‮game‬ ‮is‬ ‮drawn‬ ‮on‬ ‮one.‬',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '‮Its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮are‬ ‮settled,‬ ‮but‬ ‮the‬ ‮build‬ ‮has‬ ‮not‬ ‮landed.‬ ‮Try‬ ‮another‬ ‮game.‬',
     'Keep DuelBox on your home screen? It opens straight to the games, offline too.':
@@ -1022,6 +1034,8 @@ const catalogue = {
       '‮The‬ ‮pages‬ ‮and‬ ‮games‬ ‮are‬ ‮static‬ ‮files,‬ ‮hosted‬ ‮on‬ ‮GitHub‬ ‮Pages.‬ ‮Your‬ ‮browser‬ ‮downloads‬ ‮them‬ ‮from‬ ‮GitHub‬ ‮the‬ ‮same‬ ‮way‬ ‮it‬ ‮downloads‬ ‮any‬ ‮web‬ ‮page,‬ ‮and‬ ‮GitHub‬ ‮keeps‬ ‮its‬ ‮own‬ ‮ordinary‬ ‮server‬ ‮logs‬ ‮—‬ ‮the‬ ‮sort‬ ‮every‬ ‮web‬ ‮host‬ ‮keeps‬ ‮—‬ ‮which‬ ‮are‬ ‮outside‬ ‮our‬ ‮control‬ ‮and‬ ‮are‬ ‮not‬ ‮used‬ ‮by‬ ‮us‬ ‮to‬ ‮identify‬ ‮or‬ ‮profile‬ ‮anyone.‬',
     'The picture could not be made. Try again.':
       '‮The‬ ‮picture‬ ‮could‬ ‮not‬ ‮be‬ ‮made.‬ ‮Try‬ ‮again.‬',
+    'The rest of the site works. {game} has its rules and controls written out, and {guide} explains how a match goes.':
+      '‮The‬ ‮rest‬ ‮of‬ ‮the‬ ‮site‬ ‮works.‬ {game} ‮has‬ ‮its‬ ‮rules‬ ‮and‬ ‮controls‬ ‮written‬ ‮out,‬ ‮and‬ {guide} ‮explains‬ ‮how‬ ‮a‬ ‮match‬ ‮goes.‬',
     'The roll is all of the luck, and the decision is what to spend it on. Dice Yatzy gives you five dice, three rolls and thirteen boxes that each take exactly one hand, so the skill is in spending a bad roll cheaply; Shut the Box is the shorter one, closing numbered tiles until nothing adds up any more. Yatzy is the longest game in the catalogue at about seven minutes.':
       '‮The‬ ‮roll‬ ‮is‬ ‮all‬ ‮of‬ ‮the‬ ‮luck,‬ ‮and‬ ‮the‬ ‮decision‬ ‮is‬ ‮what‬ ‮to‬ ‮spend‬ ‮it‬ ‮on.‬ ‮Dice‬ ‮Yatzy‬ ‮gives‬ ‮you‬ ‮five‬ ‮dice,‬ ‮three‬ ‮rolls‬ ‮and‬ ‮thirteen‬ ‮boxes‬ ‮that‬ ‮each‬ ‮take‬ ‮exactly‬ ‮one‬ ‮hand,‬ ‮so‬ ‮the‬ ‮skill‬ ‮is‬ ‮in‬ ‮spending‬ ‮a‬ ‮bad‬ ‮roll‬ ‮cheaply;‬ ‮Shut‬ ‮the‬ ‮Box‬ ‮is‬ ‮the‬ ‮shorter‬ ‮one,‬ ‮closing‬ ‮numbered‬ ‮tiles‬ ‮until‬ ‮nothing‬ ‮adds‬ ‮up‬ ‮any‬ ‮more.‬ ‮Yatzy‬ ‮is‬ ‮the‬ ‮longest‬ ‮game‬ ‮in‬ ‮the‬ ‮catalogue‬ ‮at‬ ‮about‬ ‮seven‬ ‮minutes.‬',
     'The rules of Checkers, Reversi and Tic Tac Toe belong to nobody, and that is exactly why we can build them. Game {mechanics} are not protected and never have been. The code, artwork, names and layouts here are ours, written from scratch, and are not copied from any other product.':
@@ -1050,6 +1064,7 @@ const catalogue = {
       '‮Thirty‬ ‮characters,‬ ‮and‬ ‮each‬ ‮player‬ ‮is‬ ‮hunting‬ ‮a‬ ‮different‬ ‮one.‬ ‮Spend‬ ‮your‬ ‮turn‬ ‮on‬ ‮a‬ ‮question‬ ‮that‬ ‮splits‬ ‮the‬ ‮field,‬ ‮or‬ ‮on‬ ‮naming‬ ‮a‬ ‮character‬ ‮outright.‬ ‮Name‬ ‮yours‬ ‮first‬ ‮to‬ ‮take‬ ‮the‬ ‮deal;‬ ‮best‬ ‮of‬ ‮three.‬',
     'This DuelBox game cannot be embedded here.':
       '‮This‬ ‮DuelBox‬ ‮game‬ ‮cannot‬ ‮be‬ ‮embedded‬ ‮here.‬',
+    'This browser cannot run the games': '‮This‬ ‮browser‬ ‮cannot‬ ‮run‬ ‮the‬ ‮games‬',
     'This device did not vibrate.': '‮This‬ ‮device‬ ‮did‬ ‮not‬ ‮vibrate.‬',
     'This game hit a snag': '‮This‬ ‮game‬ ‮hit‬ ‮a‬ ‮snag‬',
     'This game is not playable yet': '‮This‬ ‮game‬ ‮is‬ ‮not‬ ‮playable‬ ‮yet‬',

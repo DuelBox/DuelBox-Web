@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { setActiveSeatPalette, type GamepadEvent, type SeatId } from '@duelbox/engine';
 import {
@@ -21,6 +22,12 @@ import {
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
 import { recordRunScore, type RunResult } from '@/lib/best-scores';
+import {
+  REASON_TEXT,
+  browserEngineEnvironment,
+  unsupportedReason,
+  type UnsupportedReason,
+} from '@/lib/engine-support';
 import { T } from '@/lib/i18n/T';
 import { t } from '@/lib/i18n/messages';
 import { useMessages } from '@/lib/i18n/use-messages';
@@ -114,6 +121,16 @@ type Mode = PlayMode;
 export function PlaySurface({ slug }: { slug: string }) {
   const messages = useMessages();
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  /**
+   * Why this browser cannot run a game, or null while nothing says it cannot (#225).
+   *
+   * Set from the same effect that fetches the game, and set *instead* of fetching it — see
+   * there. A state rather than a value computed during render, and deliberately: this route
+   * is statically exported, so a probe that ran while rendering would ask a build machine
+   * whether a browser can draw, put the answer in the HTML of all 108 play routes, and then
+   * disagree with the browser on hydration.
+   */
+  const [unsupported, setUnsupported] = useState<UnsupportedReason | null>(null);
   const [manifest, setManifest] = useState<GameManifest | null>(null);
   const [create, setCreate] = useState<(() => Game) | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
@@ -358,6 +375,20 @@ export function PlaySurface({ slug }: { slug: string }) {
     // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
     // has already been read. It is a no-op on the default and cheap either way.
     setActiveSeatPalette(readSettings().seatPalette);
+    /*
+     * The capability probe, and this is the earliest place it can run (#225).
+     *
+     * Before `loadGame`, so a browser that cannot draw never fetches the game chunk — there
+     * is nothing it could do with it, and the panel below is the whole of what it gets.
+     * `e2e/engine-support.spec.ts` watches the network to hold that. It cannot run earlier
+     * than an effect for the reason the state's comment gives, and it should not run later:
+     * `GameHost` is where the dead canvas is, and by then the player has pressed Play.
+     */
+    const reason = unsupportedReason(browserEngineEnvironment());
+    if (reason !== null) {
+      setUnsupported(reason);
+      return;
+    }
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;
@@ -837,6 +868,47 @@ export function PlaySurface({ slug }: { slug: string }) {
     waiting === undefined || waiting === slug
       ? suggested
       : { slug: waiting, name: nameOf(waiting) };
+
+  /**
+   * What a browser too old to run a game is told, in place of the lobby (#225).
+   *
+   * The same `db-panel` geometry the loading and not-playable states use, because this is the
+   * third answer to the same question and a fourth box would be the bespoke copy of a shell
+   * screen CLAUDE.md calls a bug. Three sentences and no more: that the games will not run
+   * here, why in words a visitor can act on, and where the rest of the site is — this game's
+   * own page has its rules and controls written out as plain HTML, which is the thing a
+   * browser in Tier 3 can still read. `docs/support-matrix.md` owes them exactly this.
+   *
+   * No Start button is rendered, so no lobby and no countdown can begin from here.
+   */
+  if (unsupported !== null) {
+    return (
+      <div className="db-panel" role="alert">
+        <h2>{t(messages, 'This browser cannot run the games')}</h2>
+        <p>{t(messages, REASON_TEXT[unsupported])}</p>
+        <p>
+          <T
+            id="The rest of the site works. {game} has its rules and controls written out, and {guide} explains how a match goes."
+            values={{
+              // `prefetch={false}` on both, as everywhere else on this route: speculating a
+              // payload for a browser that has just been told it cannot play is a download
+              // nobody asked for.
+              game: (
+                <Link href={`/games/${slug}/`} prefetch={false}>
+                  {nameOf(slug)}
+                </Link>
+              ),
+              guide: (
+                <Link href="/how-to-play/" prefetch={false}>
+                  {t(messages, 'How to play')}
+                </Link>
+              ),
+            }}
+          />
+        </p>
+      </div>
+    );
+  }
 
   if (loadState === 'error') {
     return (

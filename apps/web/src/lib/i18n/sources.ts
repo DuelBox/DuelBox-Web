@@ -47,6 +47,7 @@
 import { IMPORT_ERRORS, PLAYER_DATA_KEY_NAMES } from '../player-data';
 import { healthLevelLabel } from '../../components/health-bar';
 import { CHANGE_REASONS } from '../match-changes';
+import { REASON_TEXT } from '../engine-support';
 import { BOT_DIFFICULTIES, DIFFICULTY_LABELS, ROUND_LABELS } from '../match-setup';
 import { errorMessage } from '@duelbox/game-sdk';
 import { OFFLINE_NOTICE, RELOAD_LABEL, UPDATE_NOTICE } from '../offline-state';
@@ -125,6 +126,15 @@ export const DYNAMIC_SOURCES: readonly {
      */
     name: 'the reasons a match refuses a change (lib/match-changes.ts)',
     strings: () => CHANGE_REASONS,
+  },
+  {
+    /**
+     * Why this browser cannot run a game at all (#225). `PlaySurface` renders
+     * `t(messages, REASON_TEXT[unsupported])` in the panel it draws instead of the lobby,
+     * so the six sentences arrive here rather than at a call site.
+     */
+    name: 'the reasons a browser cannot run the games (lib/engine-support.ts)',
+    strings: () => Object.values(REASON_TEXT),
   },
   {
     /** The health bar's state word, beside the bar and inside its `aria-label`. */
