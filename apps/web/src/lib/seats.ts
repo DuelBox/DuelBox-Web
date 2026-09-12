@@ -49,7 +49,7 @@ export const SEAT_CHARACTERS: SeatNames = { p1: 'Pip', p2: 'Bo' };
  * the name; the extractor reads the literal here, and nothing is registered for it (#220).
  */
 function botLabel(messages: Catalogue, name: string): string {
-  return t(messages, "{name} (bot)", { name });
+  return t(messages, '{name} (bot)', { name });
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
  * The user-facing strings the extractor cannot see by reading call sites: data that reaches a
- * `t()` as a variable rather than as a literal (#219, filled in by #220).
+ * `t()` as a variable rather than as a literal (#219; #220 filled it).
  *
  * `extract.ts` finds a message by its shape at the call site — `t(messages, 'Mute sound')`,
  * `<T id="…" />`, a `plural()` forms object — and a string that arrives through a variable has
