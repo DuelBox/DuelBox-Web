@@ -36,7 +36,7 @@ describe('handoff gating (#134)', () => {
   });
 
   it('names the incoming player in the prompt', () => {
-    expect(handoffPrompt('Robin')).toBe('Pass to Robin');
+    expect(handoffPrompt({}, 'Robin')).toBe('Pass to Robin');
   });
 });
 

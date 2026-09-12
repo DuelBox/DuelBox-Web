@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE, type CatalogueEntry } from '@/data/catalogue.generated';
-import { CATEGORY_HUBS, hubFor } from '@/lib/categories';
-import { formatRound } from '@/lib/format';
+import { CATEGORY_HUBS, gridHeading, hubFor, roundLine } from '@/lib/categories';
+import { T } from '@/lib/i18n/T';
 import { SITE_SHARE_IMAGE } from '@/lib/share-image';
 import { absoluteUrl } from '@/lib/site';
 import { collectionPageJsonLd, serialiseJsonLd } from '@/lib/structured-data';
@@ -22,10 +22,22 @@ import styles from './page.module.css';
  * **This route ships no JavaScript of its own, and that is a requirement rather than a
  * happy result.** The shell budget has about two kilobytes of headroom, and eighteen new
  * routes are worth nothing if they cost every visitor to `/` a browser component. So there
- * is no client directive here and nothing imported that carries one: `GameCard` and
- * `TileSprite` are server components, and the copy is a module of strings. What reaches the
- * browser is finished HTML — which is also what a crawler reads, so the two goals are the
- * same goal.
+ * is no client directive here and nothing imported that carries one **except the locale
+ * lookup**: `GameCard` and `TileSprite` are server components, and the copy is a module of
+ * strings. What reaches the browser is finished HTML — which is also what a crawler reads,
+ * so the two goals are the same goal.
+ *
+ * The exception is `<T>` (#220), which is a client component because a server one cannot
+ * read the chosen locale. It costs this route no chunk it would not already have: the
+ * provider is mounted in the root layout, so the i18n modules are in the shell on every
+ * page. With no values it renders the English string itself, so the eighteen exported
+ * documents are byte for byte what they were.
+ *
+ * Everything a reader sees comes from `lib/categories.ts` and is registered for the
+ * extractor there; the `metadata` below, including the JSON-LD block, stays English,
+ * because a crawler renders no client component and follows no `?lang=`
+ * (`docs/i18n.md`). That is why `hub.intent` — which only the description uses — is not
+ * registered, and why the description still calls `countLine` and `roundLine` directly.
  */
 export function generateStaticParams() {
   return CATEGORY_HUBS.map((hub) => ({ slug: hub.slug }));
@@ -36,34 +48,22 @@ function gamesIn(category: string): CatalogueEntry[] {
 }
 
 /**
- * The heading that names the games grid.
+ * The id that names the games grid.
  *
- * A constant rather than a generated id: this is a server component rendered once per
+ * A constant rather than a generated one: this is a server component rendered once per
  * route, so there is exactly one of these per page and nothing to collide with.
  */
 const GRID_HEADING_ID = 'category-games';
 
-/** "20 games" — the plural is spelled out because 4 of the 18 categories hold one game. */
+/**
+ * "20 games" — the plural is spelled out because 4 of the 18 categories hold one game.
+ *
+ * The `description` above is the only thing left that uses it. What the *page* renders goes
+ * through the i18n lookup with the number as a value, so that a locale's own plural rule
+ * decides the form rather than English's (#220).
+ */
 function countLine(count: number): string {
   return `${String(count)} ${count === 1 ? 'game' : 'games'}`;
-}
-
-/**
- * How long a round takes, from the real `roundSeconds` of the games on the page.
- *
- * Compared as *rendered* strings rather than as seconds, which is the difference between a
- * useful line and a silly one: Memory holds a 60-second game and a 75-second one, and both
- * render as "about 1 minute", so comparing the numbers would produce "Rounds run from about
- * 1 minute to about 1 minute". `formatRound` is the one place that decides how a length
- * reads, so it is the thing to ask.
- */
-function roundLine(games: readonly CatalogueEntry[]): string {
-  const seconds = games.map((game) => game.roundSeconds);
-  const shortest = formatRound(Math.min(...seconds));
-  const longest = formatRound(Math.max(...seconds));
-  return shortest === longest
-    ? `A round takes ${shortest}.`
-    : `Rounds run from ${shortest} to ${longest}.`;
 }
 
 export async function generateMetadata({
@@ -131,17 +131,35 @@ export default async function CategoryHubPage({ params }: { params: Promise<{ sl
       />
       <TileSprite games={games} />
 
+      {/* eslint-disable-next-line duelbox/no-untranslated-text -- the landmark's name is an
+          attribute, and an attribute in a server component cannot render an element; noted
+          with the other untranslated names in the pull request. */}
       <nav className={styles.crumbs} aria-label="Breadcrumb">
-        <Link href="/games/">All games</Link>
+        <Link href="/games/">
+          <T id="All games" />
+        </Link>
         <span aria-hidden="true">/</span>
-        <span>{hub.category}</span>
+        <span>
+          <T id={hub.category} />
+        </span>
       </nav>
 
       <header className={styles.head}>
-        <h1 className={styles.title}>{hub.title}</h1>
-        <p className={styles.blurb}>{hub.blurb}</p>
+        <h1 className={styles.title}>
+          <T id={hub.title} />
+        </h1>
+        <p className={styles.blurb}>
+          <T id={hub.blurb} />
+        </p>
         <p className={styles.count}>
-          {countLine(games.length)}, played by two people on one device.
+          <T
+            id={
+              games.length === 1
+                ? '{count} game, played by two people on one device.'
+                : '{count} games, played by two people on one device.'
+            }
+            values={{ count: games.length }}
+          />
         </p>
       </header>
 
@@ -158,9 +176,11 @@ export default async function CategoryHubPage({ params }: { params: Promise<{ sl
       */}
       <section aria-labelledby={GRID_HEADING_ID}>
         <h2 id={GRID_HEADING_ID} className={styles.gridTitle}>
-          {hub.category} games
+          <T id={gridHeading(hub.category)} />
         </h2>
-        <p className={styles.rounds}>{roundLine(games)}</p>
+        <p className={styles.rounds}>
+          <T id={roundLine(games)} />
+        </p>
         <div className={styles.grid}>
           {games.map((game) => (
             <GameCard key={game.id} game={game} />
@@ -170,7 +190,7 @@ export default async function CategoryHubPage({ params }: { params: Promise<{ sl
 
       <p className={styles.back}>
         <Link href="/games/" className={styles.backLink}>
-          All {CATALOGUE.length} games
+          <T id="All {count} games" values={{ count: CATALOGUE.length }} />
         </Link>
       </p>
     </div>

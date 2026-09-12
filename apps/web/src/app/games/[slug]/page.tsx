@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CATALOGUE } from '@/data/catalogue.generated';
@@ -7,6 +8,7 @@ import { offeredModes } from '@/lib/match-setup';
 import { killSwitchFor } from '@/lib/flags';
 import { formatRound } from '@/lib/format';
 import type { Opponent } from '@/lib/head-to-head';
+import { T } from '@/lib/i18n/T';
 import { SEAT_CHARACTERS } from '@/lib/seats';
 import { SITE_SHARE_IMAGE, shareImageFor } from '@/lib/share-image';
 import { absoluteUrl } from '@/lib/site';
@@ -60,19 +62,30 @@ export async function generateMetadata({
   };
 }
 
-const MODE_COPY: Record<string, { title: string; body: string }> = {
+/**
+ * The three offers, as elements rather than strings since #220.
+ *
+ * A `<T>` per line, because the id has to be a literal the extractor can read by shape — a
+ * table of English strings rendered through one `<T id={copy.title} />` would need this module
+ * registered in `sources.ts`, and a page is not a data module. The elements are built once at
+ * module scope, exactly as the strings were, and render the same text they always did.
+ */
+const MODE_COPY: Record<string, { title: ReactNode; body: ReactNode }> = {
   friend: {
-    title: 'Play together here',
-    body: 'Two of you on this device, sharing the screen.',
+    title: <T id="Play together here" />,
+    body: <T id="Two of you on this device, sharing the screen." />,
   },
   bot: {
-    title: 'Play against a bot',
-    // Seat two, always: `botSeatsFor()` hands the bot `p2` and nothing else.
-    body: `${SEAT_CHARACTERS.p2} takes the other seat, at three levels.`,
+    title: <T id="Play against a bot" />,
+    // Seat two, always: `botSeatsFor()` hands the bot `p2` and nothing else. The name is a
+    // value rather than part of the sentence: `lib/seats.ts` owns it and it is not translated.
+    body: (
+      <T id="{seat} takes the other seat, at three levels." values={{ seat: SEAT_CHARACTERS.p2 }} />
+    ),
   },
   solo: {
-    title: 'Play solo',
-    body: 'Chase your own best score, no opponent needed.',
+    title: <T id="Play solo" />,
+    body: <T id="Chase your own best score, no opponent needed." />,
   },
 };
 
@@ -88,9 +101,15 @@ const MODE_COPY: Record<string, { title: string; body: string }> = {
  * the bot seat two and nothing else. The near side is the near seat in both rows for the
  * same reason.
  */
-const RECORD_ROWS: Record<string, { title: string; opponent: Opponent; far: string }> = {
-  friend: { title: 'Between the two of you', opponent: 'friend', far: SEAT_CHARACTERS.p2 },
-  bot: { title: 'Against the bot', opponent: 'bot', far: 'the bot' },
+const RECORD_ROWS: Record<string, { title: ReactNode; opponent: Opponent; far: ReactNode }> = {
+  friend: {
+    title: <T id="Between the two of you" />,
+    opponent: 'friend',
+    far: SEAT_CHARACTERS.p2,
+  },
+  // `far` is a node: `GameRecord` puts it into its sentence through `<T values>`, so the
+  // page can hand it a translated word where the friend row hands it a name (#220).
+  bot: { title: <T id="Against the bot" />, opponent: 'bot', far: <T id="the bot" /> },
 };
 
 export default async function GamePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -137,8 +156,23 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
         }}
       />
       <TileSprite games={[game, ...related]} />
+      {/*
+        The one string on this page still in English, and it is an attribute. A server
+        component cannot call `t()` — the catalogue lives in a context only a client component
+        can read — and `<T>` renders an element, which an `aria-label` cannot hold. The choices
+        were to lift this `<nav>` into a client component, which puts a client boundary and its
+        payload on all 108 of these pages for one word, or to leave it and say so. It is left,
+        and `/games/category/[slug]/page.tsx` has the identical line; both want one small
+        client wrapper, or a server-side lookup, which is a change to the framework rather than
+        to this page.
+      */}
+      {/* eslint-disable-next-line duelbox/no-untranslated-text -- the landmark's name is an
+          attribute, and an attribute in a server component cannot render an element; noted
+          in docs/i18n.md and named in e2e/pseudo-allowlist.ts. */}
       <nav className={styles.crumbs} aria-label="Breadcrumb">
-        <Link href="/games/">All games</Link>
+        <Link href="/games/">
+          <T id="All games" />
+        </Link>
         <span aria-hidden="true">/</span>
         <span>{game.name}</span>
       </nav>
@@ -150,10 +184,19 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
         <div className={styles.detail}>
           <p className={styles.eyebrow}>
-            {game.category} · {formatRound(game.roundSeconds)}
+            <T id={game.category} /> · <T id={formatRound(game.roundSeconds)} />
           </p>
           <h1 className={styles.title}>{game.name}</h1>
-          {game.rule ? <p className={styles.rule}>{game.rule}</p> : null}
+          {/*
+            The rule is copy that lives in a data module, so the id is the variable and the 108
+            sentences it can resolve to are registered in `lib/i18n/sources.ts` — the shape
+            `docs/i18n.md` prescribes for a string the extractor cannot see at the call site.
+          */}
+          {game.rule ? (
+            <p className={styles.rule}>
+              <T id={game.rule} />
+            </p>
+          ) : null}
 
           {/*
             `offeredModes`, not `game.modes`, and the difference is six live broken promises.
@@ -197,22 +240,39 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
           {switchedOff ? (
             <p className={styles.soon}>
-              {game.name} is switched off at the moment. {switchedOff.reason} It comes back on here
-              as soon as that is put right, and nothing else in the catalogue is affected.
+              <T
+                id="{game} is switched off at the moment. {reason} It comes back on here as soon as that is put right, and nothing else in the catalogue is affected."
+                values={{
+                  // The name is a name; the reason is a sentence somebody wrote for a player,
+                  // so it goes through the lookup like the rule above and is registered in
+                  // `sources.ts`. The list is empty in a healthy build, which is why nothing
+                  // it contributes appears in the catalogues today.
+                  game: game.name,
+                  reason: <T id={switchedOff.reason} />,
+                }}
+              />
             </p>
           ) : controls ? (
             <>
               <Link href={`/play/${game.slug}/`} className={styles.play}>
-                Play {game.name}
+                <T id="Play {game}" values={{ game: game.name }} />
               </Link>
               <FavouriteButton slug={game.slug} name={game.name} className={styles.favourite} />
               <dl className={styles.controls}>
-                <dt>On a keyboard</dt>
-                <dd>{controls.keyboard}</dd>
+                <dt>
+                  <T id="On a keyboard" />
+                </dt>
+                <dd>
+                  <T id={controls.keyboard} />
+                </dd>
                 {controls.pointer ? (
                   <>
-                    <dt>By touch</dt>
-                    <dd>{controls.pointer}</dd>
+                    <dt>
+                      <T id="By touch" />
+                    </dt>
+                    <dd>
+                      <T id={controls.pointer} />
+                    </dd>
                   </>
                 ) : null}
               </dl>
@@ -232,7 +292,9 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                 better below the controls than above them.
               */}
               <section className={styles.record}>
-                <h2 className={styles.recordTitle}>Your record here</h2>
+                <h2 className={styles.recordTitle}>
+                  <T id="Your record here" />
+                </h2>
                 <dl className={styles.tallies}>
                   {game.modes.map((mode) => {
                     const row = RECORD_ROWS[mode];
@@ -253,15 +315,13 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                   })}
                 </dl>
                 <p className={styles.recordNote}>
-                  Counted on this device only, kept in this browser and sent nowhere. The settings
-                  page clears it.
+                  <T id="Counted on this device only, kept in this browser and sent nowhere. The settings page clears it." />
                 </p>
               </section>
             </>
           ) : (
             <p className={styles.soon}>
-              This game is still being built. Its rules and controls are settled; the playable build
-              lands with its milestone.
+              <T id="This game is still being built. Its rules and controls are settled; the playable build lands with its milestone." />
             </p>
           )}
         </div>
@@ -282,7 +342,18 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
       <section className={styles.related}>
         <h2 className={styles.relatedTitle}>
           <Link href={`/games/category/${categorySlug(game.category)}/`}>
-            {related.length > 0 ? 'More' : 'All'} {game.category.toLowerCase()} games
+            {/*
+              Two ids rather than one with a `{more}` in it: "More" and "All" are the whole
+              difference between the two headings, and a conditional between two literals is a
+              shape the extractor reads. The category travels as a value and is translated on
+              its own, in the lower-case spelling this sentence puts it in — registered beside
+              the capitalised names in `lib/i18n/sources.ts`, because case belongs to the
+              position in a sentence and a locale may not lower-case the way English does.
+            */}
+            <T
+              id={related.length > 0 ? 'More {category} games' : 'All {category} games'}
+              values={{ category: <T id={game.category.toLowerCase()} /> }}
+            />
           </Link>
         </h2>
         {related.length > 0 ? (

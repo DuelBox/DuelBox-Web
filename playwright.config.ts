@@ -214,6 +214,13 @@ const ONE_PER_ENGINE = [
   // four projects would be four copies of two measurements, and the two that matter are one
   // per engine.
   '**/rotate-prompt.spec.ts',
+  // `text-expansion.spec.ts` (#223) sets its own two viewports — 320 and 1280 — per test,
+  // because a layout that has to survive 150% string length fails differently at each: a
+  // padded label wraps into a taller card on a phone and out of a one-line row on a desktop.
+  // Four projects would be four copies of those same two measurements. Both engines, though,
+  // and not Chromium alone: line breaking, `overflow-wrap` and the intrinsic width of a native
+  // `select` are engine decisions, and this spec is made of exactly those.
+  '**/text-expansion.spec.ts',
   // `responsive-sweep.spec.ts` (#1891) walks every playable lobby at 320px portrait and
   // landscape, both of which it sets itself, so a project that has already chosen a viewport
   // contributes nothing but its engine. Both engines are wanted: what it measures is where a

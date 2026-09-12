@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { KeyBinding, SeatId } from '@duelbox/engine';
+import { t, type Catalogue } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import type { BindingSlot, SeatBindings } from '@/lib/key-bindings';
 import styles from './KeyBindings.module.css';
 
@@ -67,28 +69,72 @@ interface Capture {
  * too. Position is also the more useful label in front of a keyboard: the question a player
  * is answering is which side of the device they are sitting on.
  */
-const SEAT_LABELS: Record<SeatId, string> = {
-  p1: 'The near seat',
-  p2: 'The far seat',
-};
-
-const SLOT_LABELS: Record<BindingSlot, string> = {
-  up: 'Up',
-  down: 'Down',
-  left: 'Left',
-  right: 'Right',
-  action: 'Action',
-};
+function seatLabel(messages: Catalogue, seat: SeatId): string {
+  return t(messages, seat === 'p1' ? 'The near seat' : 'The far seat');
+}
 
 /**
- * The order the boxes are listed in, taken from the labels above rather than from the store.
+ * The same two seats as they read inside a sentence, and a second pair of ids rather than
+ * `toLowerCase()` on the labels above (#220).
+ *
+ * Case is a property of a language, not of a string: German capitalises every noun, a script
+ * with no case at all is handed a transformation that does nothing, and on the pseudo-locale
+ * screens `toLowerCase()` was visibly mangling the accents of a string it had no business
+ * rewriting. A translator is given both forms and decides what each one is.
+ */
+function seatInSentence(messages: Catalogue, seat: SeatId): string {
+  return t(messages, seat === 'p1' ? 'the near seat' : 'the far seat');
+}
+
+/**
+ * One slot's name, as five literal ids rather than a lookup table.
+ *
+ * The table this replaced was five English strings a `t()` could only have reached through a
+ * variable, which the extractor cannot see by shape (`lib/i18n/extract.ts`) and which would
+ * have had to be registered in `sources.ts` — and `sources.ts` cannot import a `.tsx` file at
+ * all, because this repository's `jsx: preserve` leaves Vitest unable to transform one. Five
+ * literals cost the same bytes and are read by the extractor with nothing registered.
+ */
+function slotLabel(messages: Catalogue, slot: BindingSlot): string {
+  switch (slot) {
+    case 'up':
+      return t(messages, 'Up');
+    case 'down':
+      return t(messages, 'Down');
+    case 'left':
+      return t(messages, 'Left');
+    case 'right':
+      return t(messages, 'Right');
+    case 'action':
+      return t(messages, 'Action');
+  }
+}
+
+/** The same five as they read inside a sentence, for the reason `seatInSentence` gives. */
+function slotInSentence(messages: Catalogue, slot: BindingSlot): string {
+  switch (slot) {
+    case 'up':
+      return t(messages, 'up');
+    case 'down':
+      return t(messages, 'down');
+    case 'left':
+      return t(messages, 'left');
+    case 'right':
+      return t(messages, 'right');
+    case 'action':
+      return t(messages, 'action');
+  }
+}
+
+/**
+ * The order the boxes are listed in, written out here rather than read from the store.
  *
  * `BINDING_SLOTS` is the store's order and is the same five names; it is not read here because
  * reading it would mean a top-level import of the module this component deliberately fetches.
  * `key-bindings.test.ts` holds the two lists to each other, so a sixth slot cannot appear in
  * one and not the other.
  */
-const SLOT_ORDER = Object.keys(SLOT_LABELS) as readonly BindingSlot[];
+const SLOT_ORDER: readonly BindingSlot[] = ['up', 'down', 'left', 'right', 'action'];
 
 /**
  * Why a refusal happened, said to a player rather than to a reader of `key-bindings.ts`.
@@ -102,6 +148,7 @@ const SLOT_ORDER = Object.keys(SLOT_LABELS) as readonly BindingSlot[];
  * store about the reason, the store's answer is still the one that decided.
  */
 function refusalWords(
+  messages: Catalogue,
   store: Store,
   bindings: SeatBindings,
   capture: Capture,
@@ -109,21 +156,28 @@ function refusalWords(
 ): string {
   const key = store.keyLabel(code);
   if (store.RESERVED_KEYS.has(code)) {
-    return `${key} is one DuelBox needs for the page itself. Pick another.`;
+    return t(messages, '{key} is one DuelBox needs for the page itself. Pick another.', { key });
   }
   const other = capture.seat === 'p1' ? 'p2' : 'p1';
   if (SLOT_ORDER.some((slot) => bindings[other][slot] === code)) {
-    return `${key} already belongs to ${SEAT_LABELS[other].toLowerCase()}. One key cannot drive both.`;
+    return t(messages, '{key} already belongs to {seat}. One key cannot drive both.', {
+      key,
+      seat: seatInSentence(messages, other),
+    });
   }
   const clash = SLOT_ORDER.find(
     (slot) => slot !== capture.slot && bindings[capture.seat][slot] === code,
   );
   return clash === undefined
-    ? `${key} cannot be used here.`
-    : `${key} is already this seat's ${SLOT_LABELS[clash].toLowerCase()}.`;
+    ? t(messages, '{key} cannot be used here.', { key })
+    : t(messages, "{key} is already this seat's {slot}.", {
+        key,
+        slot: slotInSentence(messages, clash),
+      });
 }
 
 export function KeyBindings({ id }: { id: string }) {
+  const messages = useMessages();
   const [store, setStore] = useState<Store | null>(null);
   const [bindings, setBindings] = useState<SeatBindings | null>(null);
   const [capture, setCapture] = useState<Capture | null>(null);
@@ -155,14 +209,14 @@ export function KeyBindings({ id }: { id: string }) {
       const next: KeyBinding = { ...bindings[capture.seat], [capture.slot]: event.code };
       const result = store.writeSeatBinding(capture.seat, next);
       setBindings(result.bindings);
-      setRefusal(result.ok ? null : refusalWords(store, bindings, capture, event.code));
+      setRefusal(result.ok ? null : refusalWords(messages, store, bindings, capture, event.code));
       setCapture(null);
     };
     window.addEventListener('keydown', onKey, { capture: true });
     return () => {
       window.removeEventListener('keydown', onKey, { capture: true });
     };
-  }, [capture, bindings, store]);
+  }, [capture, bindings, store, messages]);
 
   const reset = useCallback(
     (seat: SeatId) => {
@@ -178,7 +232,7 @@ export function KeyBindings({ id }: { id: string }) {
       {(['p1', 'p2'] as const).map((seat) => (
         <div key={seat} className={styles.seat}>
           <h3 className={styles.subhead} id={`${id}-${seat}`}>
-            {SEAT_LABELS[seat]}
+            {seatLabel(messages, seat)}
           </h3>
           <div className={styles.slots} role="group" aria-labelledby={`${id}-${seat}`}>
             {SLOT_ORDER.map((slot) => {
@@ -188,16 +242,19 @@ export function KeyBindings({ id }: { id: string }) {
                   key={slot}
                   type="button"
                   className={styles.slot}
-                  aria-label={`${SLOT_LABELS[slot]} for ${SEAT_LABELS[seat]}`}
+                  aria-label={t(messages, '{action} for {seat}', {
+                    action: slotLabel(messages, slot),
+                    seat: seatLabel(messages, seat),
+                  })}
                   onClick={() => {
                     setRefusal(null);
                     setCapture(armed ? null : { seat, slot });
                   }}
                 >
-                  <span className={styles.slotName}>{SLOT_LABELS[slot]}</span>
+                  <span className={styles.slotName}>{slotLabel(messages, slot)}</span>
                   <span className={styles.slotKey}>
                     {armed
-                      ? 'Press a key'
+                      ? t(messages, 'Press a key')
                       : bindings === null || store === null
                         ? '–'
                         : store.keyLabel(bindings[seat][slot])}
@@ -213,7 +270,7 @@ export function KeyBindings({ id }: { id: string }) {
               reset(seat);
             }}
           >
-            Reset {SEAT_LABELS[seat].toLowerCase()}&apos;s keys
+            {t(messages, "Reset {seat}'s keys", { seat: seatInSentence(messages, seat) })}
           </button>
         </div>
       ))}
@@ -231,7 +288,7 @@ export function KeyBindings({ id }: { id: string }) {
         pressed a key and is looking at the box that changed.
       */}
       <p className={styles.note} aria-live="polite">
-        {refusal ?? 'Press a key box, then press the key you want. Escape cancels.'}
+        {refusal ?? t(messages, 'Press a key box, then press the key you want. Escape cancels.')}
       </p>
     </div>
   );

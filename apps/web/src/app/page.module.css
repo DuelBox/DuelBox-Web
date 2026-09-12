@@ -154,6 +154,18 @@
   background: var(--db-p2-tint);
 }
 
+/* The column beside the badge, and the reason it needs a rule of its own is a flex default
+   (#223): a flex item's `min-width` is `auto`, which is its longest unbreakable word, so a
+   card whose heading held one word wider than the track pushed the whole grid past the
+   viewport instead of wrapping — 1324px of document in a 1280px window, and 553 in a 320 one,
+   on a locale whose strings are half again as long. `min-width: 0` lets the column take the
+   width it is given; `overflow-wrap` on `body` then breaks the word inside it. Nothing about
+   English moves: the floor only ever bound a word wider than the column, and no English word
+   in this copy is. */
+.wayText {
+  min-width: 0;
+}
+
 .wayTitle {
   font-size: var(--db-text-base);
   font-weight: 700;
