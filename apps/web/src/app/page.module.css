@@ -186,6 +186,12 @@
   display: inline-flex;
   flex: none;
   align-items: center;
+  /* The arrow is its own `<span>` now (#222, so it can turn round under an Arabic shell),
+     which makes it a flex item of its own, and a flex container drops the space that used
+     to sit between the words and the arrow in one text run. The gap puts one back — 4px,
+     where the space it replaces measured 2.27px in this 13px face on the previous export,
+     so the arrow sits 1.7px further from the number; the link's 48px box is unchanged. */
+  gap: var(--db-space-1);
   min-height: var(--db-touch-target);
   font-size: var(--db-text-sm);
   font-weight: 600;

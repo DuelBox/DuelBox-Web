@@ -42,12 +42,19 @@ export type IconName = (typeof ICONS)[number];
  *
  * A `Set` of names rather than a flag on the art, so `icons.test.ts` can hold it to `ICONS`
  * in both directions: every member is a real glyph, and every glyph that points along the
- * line is a member. `Icon.tsx` reads it and puts `db-mirror` on exactly these; the flip
- * itself is one rule in `globals.css` under `[dir='rtl']`.
+ * line is a member. `Icon.tsx` reads it and puts `MIRROR_CLASS` on exactly these; the flip
+ * itself is one rule in `globals.css`, `scaleX(var(--db-inline-sign))`, which is -1 under
+ * the shell's `[dir='rtl']` and set back to 1 inside the play surface's `ltr` island — not
+ * a `[dir='rtl']` selector, which would flip an arrow drawn inside a match (docs/rtl.md).
  */
 export const MIRRORED_ICONS: ReadonlySet<IconName> = new Set<IconName>(['back', 'forward']);
 
-/** The global class `globals.css` flips under `[dir='rtl']`. */
+/**
+ * The global class `globals.css` scales by `--db-inline-sign`. Also worn directly by the
+ * landing page's text arrow (`page.tsx`), the one directional glyph a route renders today.
+ * `styles/direction.test.ts` holds the rule in globals.css to this name, so the two strings
+ * cannot drift apart with every guard green.
+ */
 export const MIRROR_CLASS = 'db-mirror';
 
 /**

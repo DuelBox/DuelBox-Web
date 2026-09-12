@@ -15,9 +15,11 @@ import { iconClassName, iconId, type IconName } from '@/lib/icons';
  * never the only signal unless a name rides with it.
  *
  * Under a right-to-left shell the glyphs that point along the line of reading turn round
- * and the rest do not (#222): `MIRRORED_ICONS` in `lib/icons.ts` says which, this adds the
- * `db-mirror` class for those, and `globals.css` flips it under `[dir='rtl']`. The decision
- * is per name and not per use — an arrow that means "back" means it wherever it is drawn.
+ * and the rest do not (#222): `MIRRORED_ICONS` in `lib/icons.ts` says which, this adds
+ * `MIRROR_CLASS` for those, and `globals.css` scales that class by `--db-inline-sign` — -1
+ * in the shell, 1 again inside the play surface's `ltr` island, so an arrow drawn inside a
+ * match stays put. The decision is per name and not per use — an arrow that means "back"
+ * means it wherever it is drawn.
  */
 export function Icon({
   name,

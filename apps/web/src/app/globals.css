@@ -343,8 +343,24 @@ html[data-framed] #db-framed {
  * inside a match would flip while everything around it stayed. `--db-inline-sign` is -1
  * under the shell's `[dir='rtl']` and set back to 1 inside the island, which is exactly the
  * question this glyph is asking. In a left-to-right shell it is `scaleX(1)`, an identity.
+ * `direction.test.ts` fails any `[dir=…]` rule outside tokens.css for the same reason.
+ *
+ * `inline-block` is for the class worn by text, not by an `<svg>`: `transform` applies only
+ * to a transformable element, and a non-replaced inline box is not one, so a `<span>` with
+ * this class in running text would not turn round without it. It is *not* what turns the
+ * one text arrow a route renders today — the landing page's "See all 108 →" (page.tsx) is
+ * a flex item of an `inline-flex` link, which blockifies it (`display` computes to `block`
+ * on it), and measured against the built export with this declaration removed from the
+ * rule, that arrow still read `matrix(-1, 0, 0, 1, 0, 0)`. The declaration is measured
+ * where it is load-bearing instead: `e2e/rtl.spec.ts` draws a span with the class in a
+ * paragraph and photographs it, because a computed `transform` serialises the matrix on a
+ * span forced back to `inline` too (measured) and a flip about the centre moves no box.
+ * A 24px `<svg>` appended to a landing-page paragraph read the same box and the same
+ * paragraph height with and without the class (measured), so the icons lose nothing.
+ * `direction.test.ts` holds this rule to `MIRROR_CLASS` in `lib/icons.ts` by name.
  */
 .db-mirror {
+  display: inline-block;
   transform: scaleX(var(--db-inline-sign));
 }
 
