@@ -19,6 +19,10 @@ covered by the `latin` and `latin-ext` subsets.
 | Noto Sans Devanagari | `noto-sans-devanagari-devanagari.woff2` | devanagari | 121,188 | 400–700 | all three, second |
 | Noto Sans Arabic | `noto-sans-arabic-arabic.woff2` | arabic | 166,152 | 400–700 | all three, third |
 
+Beside those eight there are three more `@font-face` blocks that ship no file at all — the
+metric-matched stand-ins of #187, `src: local(…)` and four descriptors, listed second in each
+stack. They have a section of their own below.
+
 Every file is one of Google's own subsetted variable builds, fetched from the Google Fonts
 CSS2 API with the weight axis clipped to the range the site sets, and redistributed
 unmodified under the OFL. The licence text and the five copyright lines are in
@@ -82,6 +86,169 @@ term of the session lines, 11.4 KB to 11.7 KB, which took the first-session line
 links rather than in a per-locale one, and there is no per-locale stylesheet to put them in
 until there is a per-locale page. The range was kept verbatim rather than trimmed to save 198
 bytes, for the reason in the section after next.
+
+## The metric-matched stand-ins, and what they are actually worth (#187)
+
+`font-display: swap` means text is never invisible: the browser draws it in whatever the stack
+reaches next and redraws it when the real file lands. #187 is the price of that — "a
+late-swapping display face reflows the hero exactly when the visitor is deciding whether to
+stay" — and the answer is a fallback that is already the right size.
+
+Each Latin family has a companion face in `fonts.css` whose `src` is `local()`: no `url()`, so
+no file, no request and no byte on the wire, naming the face the stack would have fallen
+through to anyway, with four descriptors that bend it onto the primary's metrics.
+
+| Stand-in | Asks the device for | size-adjust | ascent | descent | line-gap |
+|---|---|---|---|---|---|
+| Fredoka Fallback | Arial, then Helvetica | 101.50% | 95.96% | 23.25% | 0% |
+| Plus Jakarta Sans Fallback | Arial, then Helvetica | 104.08% | 99.73% | 21.33% | 0% |
+| JetBrains Mono Fallback | Courier New, then Menlo | 99.98% | 102.02% | 30.00% | 0% |
+
+All three carry the same `unicode-range`, the union of the `latin` and `latin-ext` ranges
+their primaries declare.
+
+Each also carries a `unicode-range`: the union of the two ranges its own primary declares,
+which is the same union for all three because all three declare Google's same `latin` and
+`latin-ext`. That is not tidiness, and the section after next is what it cost to learn. On
+Android, which has none of these four font names, `local()` matches nothing, the family
+resolves to nothing, and the stack carries on exactly as it did before.
+
+`tokens.css` lists each one immediately after its primary, ahead of the two script faces and
+the generics.
+
+The formula is Capsize's, which is what `next/font`'s `adjustFontFallback` computes:
+`size-adjust` is the ratio of the two faces' mean advance, and each vertical override is the
+primary's own metric over its upm divided by `size-adjust` (divided, because the browser
+applies `size-adjust` first, so an override is a fraction of the adjusted em). The raw inputs,
+the fontkit reading that produced them and the four things about the table that decided the
+numbers are in `fonts.css`'s header; two of them are worth repeating here.
+
+**OS/2 `xAvgCharWidth` cannot be used.** Arial's is 0.4414 em by the legacy weighted-lowercase
+formula and Fredoka's is 0.532 em by the modern mean-of-all-advances formula. The ratio of
+those two is 1.205 — a `size-adjust` of 120%, every heading a fifth too large. A file does not
+say which formula it used, so every average here is computed from the advances with the same
+code over the same characters.
+
+**The characters averaged are the ones the site renders, weighted by how often it renders
+them — not the 52 letters**, and that is the correction that changed all three numbers. A
+space is 16.5% of the printable ASCII in 24,098 characters of this site's own rendered text,
+and the faces disagree about the space far more than about any letter: Arial 0.2778 em, Plus
+Jakarta Sans 0.1700 em, Fredoka 0.2412 em. A letters-only mean is blind to one character in
+six.
+
+### Why each one carries a range, which is the expensive thing this change learned
+
+The stand-ins were written without a `unicode-range` first. A `local()` face has no cmap this
+repository can read, so claiming nothing looked like the honest default, and the note in
+`tokens.css` said in as many words that they took nothing from the script faces because
+"neither Arial nor Courier New has a Devanagari or Arabic glyph to take."
+
+That sentence was wrong, and `e2e/fonts.spec.ts` — a guard written for #224, about a different
+question — failed on all four browser projects with `Noto Sans Arabic was not requested for
+العربية`. **Arial and Courier New both have Arabic**, and Hebrew, Greek and Cyrillic besides;
+checked with fontkit against the files on this machine rather than assumed, and Devanagari is
+genuinely absent from both, which is why only the Arabic half went red. A face with no
+`unicode-range` claims every code point, so `'Plus Jakarta Sans Fallback'` sat between Plus
+Jakarta Sans and Noto Sans Arabic in the body stack and drew Arabic out of the device's Arial.
+Noto Sans Arabic was never fetched at all. That is #224 undone — one Arabic face everywhere,
+replaced by whatever the device happens to have — by a face added to stop a reflow.
+
+So the rule the range encodes: **a stand-in claims what the face it stands in for claims, and
+not one code point more.** `font-coverage.test.ts` derives the union from the primary's own
+`@font-face` blocks and fails if the two ever differ, in either direction, so neither side can
+be edited without the other; a `local()` face with no range at all is refused by the parse.
+Both were watched failing, with the Arabic block added to one stand-in's range and with a
+range deleted.
+
+### What it is worth, and where it is worth less than nothing
+
+Measured, not assumed: the woff2 files held back four seconds, the page left to hydrate and
+settle in the stand-in, and `document.documentElement.scrollHeight` read before and after the
+real faces land. Five routes at four viewport widths, twenty pairs, stable across repeats.
+Total absolute movement:
+
+| | total movement over the twenty pairs |
+|---|---|
+| No stand-in at all — the site before #187 | 507 px |
+| Stand-in, descriptors from the 52-letter mean | 589 px |
+| Stand-in, descriptors from the frequency-weighted mean | **412 px** |
+
+Nineteen percent better than nothing — and the letters-only mean, which is the textbook one,
+is **sixteen percent worse than nothing**. Against no stand-in the shipped set is better on
+nine pairs, identical on eight and worse on three: `/` at 320px (60 px against 0), `/games/`
+at 390px (80 px against 0) and `/settings/` at 320px (26 px against 0).
+
+Those three are the mechanism rather than a defect, and they mean **#187's "no visible layout
+shift on font swap" is not met and cannot be met this way.** A line wraps or it does not — it
+is a threshold on one line's width, and `size-adjust` matches a mean. With the mean exactly
+right an individual line is still up to a percent out either way, so a paragraph whose last
+word sits near the edge wraps one way in the stand-in and the other in the real face, at a
+cost of a whole line each time. Only a fallback carrying the primary's own per-glyph advances
+would remove that, and a face with the primary's advances is the primary.
+
+The three vertical overrides are **inert on this site today** and are set anyway. Every block
+that holds text sets an explicit `line-height` — `globals.css` sets 1.55 on `body`, the
+modules set their own — so a line box is the stylesheet's number and not the face's, and every
+pixel measured above is a paragraph rewrapping rather than a line box changing height. They
+are correct, they cost about forty bytes gzipped, and the first element given
+`line-height: normal` is the one that needs them.
+
+Two guards hold this. `apps/web/src/styles/font-coverage.test.ts` parses the `local()` faces
+into a list of their own that contributes **no coverage** — a `local()` face borrows the
+device's glyphs, which is exactly what this repository cannot see, the same unknown as
+`system-ui`; counting a face with no `unicode-range` as covering everything would have made
+the Bengali and Thai control come back empty from every stack and gutted the guard — and holds
+that one exists per primary, that all four descriptors are present and are percentages, that
+none names a file or takes a licence entry, and that each sits second in its stack ahead of
+the generics. `e2e/font-swap.spec.ts` holds the line box exactly, the width loosely and for
+the reason above, and re-runs four of the twenty pairs — three the stand-ins win and the one
+they lose worst. Both were watched failing: the unit guard with a descriptor deleted, a
+stand-in moved behind the script faces, one given a `url()`, one given a wider range and one
+given no range; the e2e with every descriptor stripped out of the built stylesheet, which
+failed both of its tests.
+
+The cost on the wire is **+183 bytes gzipped**, all of it in the one global stylesheet every
+page links — 165 bytes on the three blocks and 18 on the three stacks, measured by stripping
+each back out of the built file at level 9, the same way #224's numbers were taken, rather
+than by differencing two builds (the speculated line alone moves a few hundred bytes between
+builds of identical source, which is what `size-budget.json`'s headroom note is about). The
+fonts line is unchanged at 86.2 KB, because there is no new file; the first session measures
+326,540 bytes against the 333,824 allowed, and nothing in `size-budget.json` was raised.
+
+### Preloading the display face: measured, and not done
+
+#187's second action item asks for a `<link rel="preload">` on the display face. It is not
+here, and this is the measurement that decided it rather than an omission.
+
+**Cost**, measured by injecting the three tags into all 353 documents of a built export and
+re-running `check-size.mjs` against the same export: **+100 gzipped bytes on the landing
+document** (323,947 → 324,047 on the first-session line), the same on the catalogue, and no
+change at all to the 506,032-byte speculated line, because tags injected after the build never
+reach the route payloads.
+
+**Benefit**, measured in Chromium with the document served identically in both arms and only
+the tags differing, under CDP network emulation, median of three:
+
+| Link | Real face arrives | All shell JS arrives |
+|---|---|---|
+| 4G — 40 ms, 10 Mbps | 73 ms earlier | 48 ms later |
+| Fast 3G — 150 ms, 1.6 Mbps | 383 ms earlier | 83 ms later |
+| Slow 3G — 300 ms, 0.4 Mbps | 1080 ms earlier | 1 ms later |
+
+So a preload is a reordering, not a saving: on a bandwidth-limited link 86 KB of faces jump
+the queue ahead of 129 KB of shell script, and the total is the same.
+
+Not done, for four reasons in that order of weight. It does not reduce the reflow #187 asks
+about — the swap still happens and still rewraps whatever it rewraps, only sooner, and the
+stand-ins have already made what is on screen before it the right size, so what a preload buys
+is a cosmetic difference seen for a shorter time. It delays the shell on exactly the links
+where it helps, and `size-budget.json` calls the shell "the number worth defending". The URLs
+are webpack-hashed, so it needs a post-build injection step in `package.json`'s build chain and
+a new failure mode — a stale hash preloads a 404 that nothing would notice. And the 100 bytes
+are paid by every visitor on every document, while the benefit is a first visit only.
+
+What would change the decision: wanting the real face at first paint, which is a
+`font-display` question before it is a preload one; or the shell leaving the critical path.
 
 ## What the precache does with them, and the limitation that implies
 

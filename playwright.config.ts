@@ -151,6 +151,12 @@ const CHROMIUM_ONLY = [
   // stub rather than the product — and it did: the frames-per-second ratio the spec holds
   // read outside its window on a loaded runner's WebKit twice, for a path no WebKit user runs.
   '**/adaptive-quality.spec.ts',
+  // `font-swap.spec.ts` (#187) measures what `local('Arial')` resolves to on this machine,
+  // and that is a different face on every platform — so the size of the win it reports is a
+  // property of the runner rather than of the site, and four projects would be four numbers
+  // for one claim. The thing that does not vary, that the stand-ins are declared and listed
+  // where they must be, is held by `font-coverage.test.ts` on every push without a browser.
+  '**/font-swap.spec.ts',
   // `beforeinstallprompt` is Chromium's; WebKit never fires it and the feature is rightly a
   // no-op there, so a second engine would be four copies of a hidden button (#195).
   '**/install-prompt.spec.ts',

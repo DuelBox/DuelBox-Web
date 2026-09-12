@@ -85,10 +85,12 @@
  * `font-display: swap`, as on every face above, for the same reason: text is never
  * invisible while a face arrives. For these two the cost of that is a reflow from the
  * system's Devanagari or Arabic face into Noto once the file lands, on a page written in
- * that script. No `size-adjust`, `ascent-override` or `descent-override` is set on any face
- * in this file, and none is set here: an override is a per-platform measurement of the
- * fallback face's metrics, nothing in this repository has measured one, and a number written
- * without a measurement is what CLAUDE.md's tally is about.
+ * that script. No `size-adjust`, `ascent-override` or `descent-override` is set on either of
+ * them, and none should be. An override is measured against one *named* fallback face, and
+ * the face a device reaches for Devanagari or Arabic has no name this stylesheet can write:
+ * `local()` asks for a face by name, and there is no way to say "whatever this platform draws
+ * Hindi in". The three Latin families are the case where the fallback does have a name on
+ * every platform that has one at all, and the section below is the measurement that uses it.
  *
  * ### Provenance, so the bytes can be reproduced
  *
@@ -142,6 +144,187 @@
  * face's range and outside every base face's. None today, across 353 documents and 108 route
  * payloads. `e2e/fonts.spec.ts` opens `/` and only `/`, so it is the build check, not the
  * e2e, that covers the other 352.
+ *
+ * ## The metric-matched fallback faces (#187)
+ *
+ * `font-display: swap` buys visible text at the price of a reflow. The browser draws the run
+ * in whatever the stack reaches next, then redraws it in the real face when the file lands,
+ * and everything below the swapped text moves by the difference between the two faces' line
+ * boxes. That reflow is #187: "a late-swapping display face reflows the hero exactly when the
+ * visitor is deciding whether to stay."
+ *
+ * The answer is not to stop swapping — invisible text is worse — but to make the face that
+ * draws first already the right size. Each of the three Latin families below has a companion
+ * `@font-face` whose `src` is `local()`: no `url()`, so no file, no request and no byte on the
+ * wire, naming the face the stack would have fallen through to anyway, with four descriptors
+ * that bend that face's metrics onto the primary's. `tokens.css` lists each one immediately
+ * after its primary, so the swap is from an Arial already scaled and re-boxed to Fredoka's
+ * proportions into Fredoka, rather than from Arial into Fredoka.
+ *
+ * ### The formula
+ *
+ * Capsize's, which is what `next/font`'s `adjustFontFallback` computes:
+ *
+ *     size-adjust       = avgWidth(primary) / avgWidth(fallback)     (both as a fraction of em)
+ *     ascent-override   = ascent(primary)   / upm(primary) / size-adjust
+ *     descent-override  = |descent(primary)| / upm(primary) / size-adjust
+ *     line-gap-override = lineGap(primary)  / upm(primary) / size-adjust
+ *
+ * `size-adjust` makes a line of the fallback as long as the same line of the primary, so text
+ * wraps in the same places; the three vertical overrides then give the fallback the line box
+ * the primary will have, so a wrapped paragraph occupies the same block and nothing under it
+ * moves. The vertical three are divided by `size-adjust` because the browser applies
+ * `size-adjust` first — an override is a fraction of the *adjusted* em, not of the original.
+ *
+ * ### The raw inputs, in font units, read with fontkit on 2026-09-12
+ *
+ * Each primary was instanced to the weight the site actually sets before reading, because a
+ * variable font's metrics and advances are per-instance. The `latin` woff2 files were
+ * decompressed to TTF with `wawoff2` first: this fontkit build loses the `cmap` when
+ * `getVariation()` is called on a woff2-decoded font, so per-weight advances cannot be read
+ * out of the woff2 directly. `letters` is the mean advance over the 52 unaccented ASCII
+ * letters, `A`–`Z` and `a`–`z` — the set Capsize uses, kept here because the section after
+ * next is about why it was not enough; `descent` is negative as the tables store it.
+ *
+ *   face                          upm   ascent  descent  lineGap  cap   x-ht  letters     xAvg
+ *   Fredoka @ wght 600           1000      974     -236        0  700    500   580.957    532
+ *   Plus Jakarta Sans @ wght 400 1000     1038     -222        0  745    536   603.846    585
+ *   JetBrains Mono @ 500-700     1000     1020     -300        0  730    550   600.000    600
+ *   Arial (ArialMT)              2048     1854     -434       67 1467   1062  1194.962    904
+ *   Helvetica                    2048     1577     -471        0 1469   1071  1194.962    904
+ *   Courier New (CourierNewPSMT) 2048     1705     -615        0 1170    866  1229.000   1229
+ *   Menlo-Regular                2048     1901     -483        0 1493   1120  1233.000   1233
+ *
+ * Five things decided the numbers, and none of them is a guess.
+ *
+ * **Not OS/2 `xAvgCharWidth`.** The last column is the trap, and it is the reason every
+ * average in this comment is computed here rather than read out of a table. Arial's
+ * `xAvgCharWidth` is 904/2048 = 0.4414 em, computed by the legacy weighted-lowercase formula;
+ * Fredoka's is 532/1000 = 0.532 em, computed by the modern mean-of-all-advances formula. Their
+ * ratio is 1.205 — a `size-adjust` of 120%, which would draw every heading a fifth too large
+ * and call it a fallback metric. The two fields do not measure the same thing, no version of
+ * the formula can reconcile them, and a file does not say which one it used. Averaging the
+ * same glyphs out of both files with the same code removes the question entirely.
+ *
+ * **The weight was instanced, and it matters.** Fredoka's variable default is wght 300
+ * (`FredokaLight-Regular`), but the `@font-face` below clips the axis to 500-700 and
+ * `globals.css` sets `font-weight: 600` on h1-h3, so 600 is the instance to read; across
+ * 500-700 the average advance moves only 0.32%, so one number serves the clipped range. Plus
+ * Jakarta Sans spans 3.0% from 400 to 700 and 400 is the `body` default in `globals.css`, so
+ * 400 is the instance that matters for the metric that reflows a paragraph. JetBrains Mono is
+ * monospaced: 600/1000 at every weight.
+ *
+ * **There is no hhea-versus-typo ambiguity on the primaries.** All three have identical `hhea`
+ * and OS/2 `sTypo` vertical metrics, so the numbers above are not a choice between two tables.
+ * The fallbacks' do differ sharply — Arial's `hhea` is 1854/-434/67 against a `sTypo` of
+ * 1491/-431/307 — but the formula never reads a fallback's vertical metrics, only its average
+ * width, so which table Arial prefers cannot move any override below.
+ *
+ * **One descriptor set covers both names in each `src`.** Arial and Helvetica are
+ * metric-compatible, and every average here comes out identical for the two of them — 0.583477
+ * em over the letters, 0.461974 em frequency-weighted — so listing Helvetica second costs
+ * nothing in accuracy. Menlo is 0.32% wider than Courier New
+ * (1233 against 1229 per 2048), so the mono pair is served to within a third of a percent by
+ * one number; Menlo's own `size-adjust` would be 99.66% against the 99.98% written below,
+ * and being monospaced it is the same number weighted or not.
+ * Courier New is the mono name that resolves on both macOS and Windows and Menlo is macOS
+ * only, which is the order they are listed in. Android has neither, so `local()` misses
+ * entirely there, the family resolves to nothing, and the stack falls straight through to
+ * `ui-monospace` exactly as it did before these faces existed — a fallback face that does not
+ * resolve is skipped, not empty.
+ *
+ * ### And the fifth thing, which is the one that changed the numbers: the space
+ *
+ * The mean of the 52 letters is Capsize's set and `next/font`'s, and shipping it here would
+ * have made this site's font swap **worse than having no fallback face at all**. It is blind
+ * to the single most frequent character on the page. A space is 16.5% of the printable ASCII
+ * this site renders — measured over 24,098 characters of its own rendered text, seven routes
+ * — and the two faces disagree about it more than about any letter: Arial's space is 0.2778
+ * em, Plus Jakarta Sans' is 0.1700 em and Fredoka's is 0.2412 em. Sixty-three percent apart,
+ * on one character in six. Punctuation and digits pull the same way and the 52 letters see
+ * none of it.
+ *
+ * So `avgWidth` above is the mean advance over **every printable-ASCII character the site
+ * renders, weighted by how often it renders it** — the same formula, the same fontkit read of
+ * the same instanced faces, over a set that includes the space. It is the modern
+ * `xAvgCharWidth` definition, computed identically for both faces, which is the part the OS/2
+ * field could not be trusted for. Both means, for comparison:
+ *
+ *   face                          52 letters   frequency-weighted   space
+ *   Fredoka @ wght 600              0.580957             0.468914  0.2412
+ *   Plus Jakarta Sans @ wght 400    0.603846             0.480837  0.1700
+ *   JetBrains Mono @ 500-700        0.600000             0.600000  0.6000
+ *   Arial, and Helvetica exactly    0.583477             0.461974  0.2778
+ *   Courier New                     0.600098             0.600098  0.6001
+ *   Menlo                           0.602051             0.602051  0.6021
+ *
+ * ### What those inputs produce
+ *
+ *   Fredoka Fallback            size-adjust 101.50%  ascent 95.96%   descent 23.25%  gap 0%
+ *   Plus Jakarta Sans Fallback  size-adjust 104.08%  ascent 99.73%   descent 21.33%  gap 0%
+ *   JetBrains Mono Fallback     size-adjust 99.98%   ascent 102.02%  descent 30.00%  gap 0%
+ *
+ * ### The range is not decoration, and this is what it cost to learn
+ *
+ * Each stand-in carries a `unicode-range`: the union of the two ranges its primary declares,
+ * which is the same union for all three because all three declare Google's same `latin` and
+ * `latin-ext`. Written without one — a `local()` face has no cmap this stylesheet can read,
+ * so claiming nothing looked like the honest default — and `e2e/fonts.spec.ts` failed on all
+ * four browser projects with `Noto Sans Arabic was not requested for العربية`.
+ *
+ * The reason is a fact about the fallback faces that no amount of reading `fonts.css` would
+ * have produced: **Arial and Courier New both have Arabic**, and Hebrew, Greek and Cyrillic
+ * besides. Checked with fontkit against the files on this machine rather than assumed —
+ * `hasGlyphForCodePoint(0x0627)` is true for both, and 0x0939 (Devanagari) is false for both,
+ * which is why only the Arabic half of that spec went red. A face with no `unicode-range`
+ * claims every code point, so `'Plus Jakarta Sans Fallback'` sat between Plus Jakarta Sans
+ * and Noto Sans Arabic in the body stack and drew Arabic out of the device's Arial. Noto Sans
+ * Arabic was never fetched. That is #224 undone — one Arabic face on every platform, replaced
+ * by whatever the device happens to have — by a face added to stop a reflow.
+ *
+ * So the rule the range encodes: a stand-in claims what the face it stands in for claims and
+ * not one code point more. `font-coverage.test.ts` derives the union from the primary's own
+ * faces and fails if the two ever differ, so this cannot come back by hand-editing either
+ * side, and `e2e/fonts.spec.ts` is the browser that found it.
+ *
+ * ### What it is worth, measured, including where it is worth less than nothing
+ *
+ * The number that matters is not a ratio, it is how far the page moves when the real face
+ * lands. Measured by holding the woff2 files back four seconds, letting the page hydrate and
+ * settle in the stand-in, and reading `document.documentElement.scrollHeight` before and
+ * after `document.fonts.ready` — five routes at four viewport widths, twenty pairs, each
+ * stable across repeats. Total absolute movement over the twenty:
+ *
+ *   no stand-in at all (the site before this change)   507 px
+ *   stand-in, 52-letter mean                           589 px
+ *   stand-in, frequency-weighted mean                  412 px
+ *
+ * Nineteen percent better than nothing, and the letters-only mean is **sixteen percent worse
+ * than nothing** — which is why that row is in this comment rather than in a deleted draft.
+ * Broken down against no stand-in, the frequency-weighted set is better on nine of the twenty
+ * pairs, identical on eight, and worse on three: `/` at 320px (60 px against 0), `/games/` at
+ * 390px (80 px against 0) and `/settings/` at 320px (26 px against 0).
+ *
+ * Those three are not a bug to fix, they are the shape of the mechanism, and #187's "no
+ * visible layout shift on font swap" cannot be fully met by it. A line wraps or it does not:
+ * it is a threshold on one line's width, and `size-adjust` matches a *mean*. Get the mean
+ * exactly right and individual lines are still up to a percent out either way, so a paragraph
+ * whose last word sits near the edge can wrap one way in the stand-in and the other in the
+ * real face, and each such paragraph costs a whole line. Nothing short of a fallback with the
+ * primary's own per-glyph advances removes that, and a face with the primary's advances is
+ * the primary.
+ *
+ * The vertical three are inert on this site today and are set anyway. Every block that holds
+ * text sets an explicit `line-height` — `globals.css` sets 1.55 on `body` and the modules set
+ * their own — so the line box is the stylesheet's number rather than the face's, and every
+ * pixel of movement measured above is a paragraph rewrapping rather than a line box changing
+ * height. They are correct, they cost about forty bytes gzipped, and the first element to be
+ * given `line-height: normal` is the one that would need them.
+ *
+ * `e2e/font-swap.spec.ts` is the half that watches a browser act on all of this: it holds the
+ * line box exactly, the width loosely and for the reason above, and it re-runs four of the
+ * twenty pairs — three where the stand-ins win and the worst one where they lose — against
+ * the same page with them stripped out of the stacks. `docs/fonts.md` carries the numbers.
  */
 
 /* Fredoka — display. Weight axis clipped to 500–700, the range the headings use. */
@@ -170,6 +353,34 @@
     U+A720-A7FF;
 }
 
+/* Fredoka's stand-in until Fredoka arrives (#187). Arial, or Helvetica on a device without
+   it, scaled and re-boxed to Fredoka at wght 600 by the measurement in the header. No
+   `url()`, so no file and no request; no `font-display`, which would have nothing to delay.
+
+   The `unicode-range` is the union of the two ranges Fredoka itself declares, and it is load
+   bearing rather than tidy: see "the range is not decoration" in the header. A stand-in must
+   claim what the face it stands in for claims and not one code point more, or it draws a
+   script the primary never had and takes it from the face that was put in the stack to draw
+   it. Every stand-in here carries the same union, because all three families declare the same
+   `latin` and `latin-ext` ranges.
+
+   No `font-weight`, and deliberately: one face in a family is matched for every requested
+   weight, and a range there would make a weight outside it miss the family and lose the
+   metrics — a synthetically emboldened Arial at the right size shifts less than a correctly
+   weighted one at the wrong size. */
+@font-face {
+  font-family: 'Fredoka Fallback';
+  src: local('Arial'), local('Helvetica');
+  size-adjust: 101.5%;
+  ascent-override: 95.96%;
+  descent-override: 23.25%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
 /* Plus Jakarta Sans — body. 400 is the page default; 500/600/700 are used for emphasis. */
 @font-face {
   font-family: 'Plus Jakarta Sans';
@@ -192,6 +403,23 @@
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
+}
+
+/* Plus Jakarta Sans' stand-in, measured at wght 400 — the weight `globals.css` sets on
+   `body`, and so the one that decides where a paragraph wraps. The widest `size-adjust` of
+   the three: over the characters this site renders, Plus Jakarta Sans is 4.1% wider than
+   Arial, which is the reflow a body paragraph would otherwise carry on every line. */
+@font-face {
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial'), local('Helvetica');
+  size-adjust: 104.08%;
+  ascent-override: 99.73%;
+  descent-override: 21.33%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
 /* JetBrains Mono — scores, timers, key caps. Tabular figures that do not jitter as they
@@ -217,6 +445,22 @@
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
+}
+
+/* JetBrains Mono's stand-in. Monospaced against monospaced, so the widths already agree to
+   0.02% and all the work is vertical: Courier New's line box is far shallower than JetBrains
+   Mono's, and a score line that grows taller when the face lands moves the HUD under it. */
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src: local('Courier New'), local('Menlo');
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
 /* Noto Sans Devanagari — Hindi (#221). Listed after the primary face in every stack; weight
