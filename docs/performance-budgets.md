@@ -76,9 +76,13 @@ not aspirational. All figures are **gzipped bytes, because that is what crosses 
 | **Catalogue on screen** | `catalogueBytes` — **260.0 KB** (266,240 B) | What the grid costs before any card comes near the viewport: document, stylesheets, faces, shell. There is no `<img>` in the export — every tile is inline SVG through one sprite — so this is the catalogue's whole asset budget (#2419). |
 
 **The three session lines are wire bytes, not JavaScript.** Fonts count at file size (a woff2
-is compressed internally; gzip adds 0.1%), and only the base subsets — `unicode-range` means a
-`-latin-ext` face is fetched only when a glyph in that range renders, which no English page
-does. **The first session is not held to ADR 0001's 182 KB**, and the reason is written in
+is compressed internally; gzip adds 0.1%), and only the base faces — `unicode-range` means a
+face is fetched only when a glyph in its range renders, and a face whose range excludes
+printable ASCII (the three `latin-ext` faces, and since #224 the Devanagari and Arabic faces)
+is one no English page fetches. `check-size.mjs` reads the range out of the built stylesheet
+to decide, reports those faces beside the totals rather than in them, and holds the service
+worker's precache to the same rule; `docs/fonts.md` has the numbers. **The first session is
+not held to ADR 0001's 182 KB**, and the reason is written in
 `size-budget.json` → `_set_2026_09_08_sessions`: that figure was measured on 20 August over
 eleven files, before the faces were self-hosted (86 KB of today's 313) and before the service
 worker existed, and the hosting decision it justified is unchanged by the session being larger.

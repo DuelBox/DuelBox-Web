@@ -1,5 +1,6 @@
 /**
- * The three faces the site is drawn in, served from this origin.
+ * The faces the site is drawn in, served from this origin: three families for the Latin
+ * script the site is written in, and one each for Devanagari and Arabic (#224).
  *
  * They used to come from `fonts.googleapis.com`, linked out of `layout.tsx` — and every
  * visitor got system fonts instead, because the site's own Content-Security-Policy says
@@ -34,6 +35,96 @@
  *
  * Source, licence and author for each file are recorded in `apps/web/assets.license.json`,
  * as rule 3 requires; the licence text itself is in `fonts/OFL.txt`.
+ *
+ * ## The two script faces, and why they are range-gated rather than merged (#224)
+ *
+ * None of the three families above has a single Devanagari or Arabic glyph, so a Hindi or
+ * Arabic string in any of the site's stacks (#221, #222) fell straight through to whatever
+ * the device had — a different face on every platform, and on a device with no face for
+ * the script at all, tofu. The two `@font-face` blocks at the bottom of this file are the
+ * answer: Noto Sans Devanagari and Noto Sans Arabic, Google's OFL Noto builds, one variable
+ * file each covering weights 400–700 so the same file serves the body stack at 400 and the
+ * display and mono stacks at 500–700. `tokens.css` lists each of them after the primary
+ * face in all three `--db-font-*` stacks, so a character the primary face lacks reaches a
+ * face that has it before it reaches the system.
+ *
+ * Range-gated on exactly the mechanism the paragraph above describes. The Devanagari file is
+ * 121,188 bytes and the Arabic file 166,152 — together more than the three base Latin faces
+ * put together — and `unicode-range` is what keeps them off the wire for the English pages
+ * that are every page this site exports today: a browser fetches a face only when a run of
+ * text needs a code point inside its range, and neither range touches printable ASCII.
+ * Measured, not assumed: `e2e/fonts.spec.ts` opens `/` with request logging and fails if
+ * either file is requested, then injects Hindi and Arabic text and fails if they are not.
+ * `scripts/check-size.mjs` classifies a face as range-gated by reading its `unicode-range`
+ * out of the built stylesheet — any face whose range excludes printable ASCII is fetched
+ * only for a glyph in that range and is reported beside the session totals rather than in
+ * them — and `scripts/emit-service-worker.mjs` applies the same rule to keep them out of the
+ * shell precache. A first visit therefore installs the same fonts it did before these two
+ * faces existed, and an Arabic page opened later is saved to the device by the worker's
+ * runtime path on the first draw. `docs/fonts.md` records the limitation that implies.
+ *
+ * Noto rather than a rounded face to match Fredoka's voice, and the alternative was measured
+ * rather than dismissed. Baloo 2 and Baloo Bhaijaan 2 (Ek Type, OFL) are the rounded
+ * Devanagari and Arabic faces on Google Fonts nearest Fredoka's voice, and their subsets were
+ * sized through the same API on the same day, `wght@400..700`, by `Content-Length` of the
+ * file each block names: Baloo 2's `devanagari` block is 115,276 bytes against Noto Sans
+ * Devanagari's 121,188 — five percent smaller, not larger — and Baloo Bhaijaan 2's `arabic`
+ * block is 38,588 bytes against Noto Sans Arabic's 166,152, under a quarter, with the
+ * identical `unicode-range` on both. Google's ranges are per subset, not per face, so that
+ * gap is glyphs the smaller file does not carry, and this repository has no font parser to
+ * count them with. Noto still, for two reasons that are not about bytes. One face per script
+ * serves all three stacks, so a reader of that script fetches one file; a rounded face in the
+ * display stack alone would be a second Arabic file on the wire for the same reader, and
+ * 38 KB on top of 166 is more, not less. And the body stack is the one a Hindi or Arabic
+ * reader spends the match in: a heavy rounded display face drawing body copy is the wrong
+ * voice for the body stack, which is the same reason Fredoka is not the Latin body face. If
+ * a display-only rounded face is ever wanted for Arabic headings, Baloo Bhaijaan 2 is the
+ * measured candidate, and `font-coverage.test.ts` would need to learn a stack that lists
+ * different script faces from the others.
+ *
+ * `font-display: swap`, as on every face above, for the same reason: text is never
+ * invisible while a face arrives. For these two the cost of that is a reflow from the
+ * system's Devanagari or Arabic face into Noto once the file lands, on a page written in
+ * that script. No `size-adjust`, `ascent-override` or `descent-override` is set on any face
+ * in this file, and none is set here: an override is a per-platform measurement of the
+ * fallback face's metrics, nothing in this repository has measured one, and a number written
+ * without a measurement is what CLAUDE.md's tally is about.
+ *
+ * ### Provenance, so the bytes can be reproduced
+ *
+ * Both files were fetched on 2026-09-12 from the Google Fonts CSS2 API, exactly as the
+ * three families above were, with the weight axis clipped to `400..700` and a desktop Chrome
+ * User-Agent so the API answers with woff2 and per-subset `unicode-range` (the API serves
+ * TTF with no ranges to a client it does not recognise). The request URLs, the User-Agent,
+ * and the response's `unicode-range` for the subset taken:
+ *
+ *   https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400..700&display=swap
+ *   https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400..700&display=swap
+ *   User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
+ *               (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
+ *
+ * The API answered with several `@font-face` blocks per family — `devanagari`, `latin-ext`
+ * and `latin` for the first; `arabic`, `math`, `symbols`, `latin-ext` and `latin` for the
+ * second. Only the `devanagari` and `arabic` blocks were taken: the Latin subsets of a Noto
+ * face would never be reached behind the primary faces, and the `math` and `symbols` blocks
+ * are a different question from #224. The `src` URL of each block taken, the file it was
+ * saved as, and its `unicode-range` copied verbatim into the block below:
+ *
+ *   https://fonts.gstatic.com/s/notosansdevanagari/v30/TuG7UUFzXI5FBtUq5a8bjKYTZjtRU6Sgv3NaV_SNmI0b8QQCQmHN5TV_5Kl4-GIB.woff2
+ *     → fonts/noto-sans-devanagari-devanagari.woff2 (121,188 bytes,
+ *       sha256 12223f2beeb4752c6fe7662550978ee22be4d56e49a8f937c324b015ac5ef77a)
+ *   https://fonts.gstatic.com/s/notosansarabic/v33/nwpCtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlj4wv4rqxzLIhjE.woff2
+ *     → fonts/noto-sans-arabic-arabic.woff2 (166,152 bytes,
+ *       sha256 69cdf0bf005fdc9cc13fb5a8581697eb9ba8f761aeaf255fc717d14c62c38891)
+ *
+ * The `unicode-range` is Google's, unchanged, because it is the range the browser trusts:
+ * a browser never opens a woff2 to find out what it covers, it believes the range in the
+ * stylesheet, so a range edited by hand would either fetch the file for a glyph it does not
+ * have or fail to fetch it for one it does. Both ranges include a few General Punctuation
+ * code points (U+200C–200D, U+2010–2011, U+204F, U+25CC) that the primary faces' `latin`
+ * ranges also claim; a page using one of those that Fredoka lacks a glyph for would fetch a
+ * script face for it. No exported page contains any of them today — measured across all
+ * 353 documents — and the e2e assertion above is what notices the day one does.
  */
 
 /* Fredoka — display. Weight axis clipped to 500–700, the range the headings use. */
@@ -109,4 +200,39 @@
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
+}
+
+/* Noto Sans Devanagari — Hindi (#221). Listed after the primary face in every stack; weight
+   axis 400–700 so the one file serves body, display and mono. Fetched only for a glyph in
+   this range, which is Google's `devanagari` subset range verbatim — see the header. */
+@font-face {
+  font-family: 'Noto Sans Devanagari';
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('./fonts/noto-sans-devanagari-devanagari.woff2') format('woff2');
+  unicode-range:
+    U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+    U+11B00-11B09;
+}
+
+/* Noto Sans Arabic — Arabic (#222). Same arrangement; Google's `arabic` subset range
+   verbatim. The Arabic Presentation Forms and Arabic Mathematical Alphabetic Symbols blocks
+   are in the range because Google puts them there, not because the shell renders them. */
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('./fonts/noto-sans-arabic-arabic.woff2') format('woff2');
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22,
+    U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49,
+    U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F,
+    U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E,
+    U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
 }

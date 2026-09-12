@@ -55,9 +55,14 @@
   --db-success: #1a7a4d;
 
   /* Type */
-  --db-font-display: Fredoka, ui-rounded, system-ui, sans-serif;
-  --db-font-body: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --db-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --db-font-display:
+    Fredoka, 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-rounded, system-ui, sans-serif;
+  --db-font-body:
+    'Plus Jakarta Sans', 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-sans-serif, system-ui,
+    sans-serif;
+  --db-font-mono:
+    'JetBrains Mono', 'Noto Sans Devanagari', 'Noto Sans Arabic', ui-monospace, SFMono-Regular,
+    monospace;
 
   --db-text-xs: 0.75rem;
   --db-text-sm: 0.8125rem;

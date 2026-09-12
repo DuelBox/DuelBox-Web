@@ -455,12 +455,18 @@ console.log(`check-size: service worker (paid once, and again on every deploy) $
 //
 // Fonts are counted at their file size, not re-gzipped: a woff2 is Brotli-compressed
 // internally and gzip adds about 0.1% to it, so the file size is the wire size. Only the
-// base subsets are counted as fetched — `unicode-range` on each `@font-face` means the
-// `-latin-ext` faces are requested only when a glyph in that range is rendered, which no
-// English page does; they are reported beside the total rather than hidden in it.
+// base faces are counted as fetched — `unicode-range` on each `@font-face` means a face is
+// requested only when a glyph in its range is rendered, and a face whose range excludes
+// printable ASCII is one no English page ever asks for; those are reported beside the total
+// rather than hidden in it. Until #224 the rule was the literal filename suffix `-latin-ext`,
+// which was the only such face there was. The two script faces (Noto Sans Devanagari and
+// Noto Sans Arabic, 287,340 bytes between them) are the same kind of face under a different name,
+// and a rule that read the name would have counted them against every English visitor's
+// first session — or, renamed, would have hidden a base face. So the rule is now the one
+// the browser applies: the range, read out of the built stylesheet.
 //
 // Not counted, and why: the share image (`/og/…png`) is fetched by link unfurlers, never by
-// a browser rendering the page; the `latin-ext` faces, for the reason above; and the dozen
+// a browser rendering the page; the range-gated faces, for the reason above; and the dozen
 // route payloads the landing page's own cards prefetch, which are the browsing line's
 // concern and are already inside `speculatedBytes`.
 function documentAt(route) {
@@ -480,10 +486,64 @@ function stylesheetsOf(html) {
   );
 }
 
-/** The font files a set of stylesheets declares, split into base subsets and conditional ones. */
+/**
+ * The code points a `unicode-range` descriptor covers, as `[first, last]` pairs — or `null`
+ * if a token in it cannot be read.
+ *
+ * Three forms, all of which the built stylesheet uses: a range `U+0900-097F`, a single code
+ * point `U+20B9`, and the wildcard `u+00??` that the minifier writes `U+0000-00FF` as.
+ * Case-insensitive because the source writes `U+` and the minifier writes `u+`. An
+ * unreadable token is `null` rather than skipped so the caller fails the build: a face this
+ * cannot classify is a face it is not measuring, and the whole point of #2516 is that an
+ * unmeasured file is where the bytes go to hide.
+ *
+ * `scripts/emit-service-worker.mjs` carries the same function and the same rule below it,
+ * and the two are held together at the bottom of this script rather than by sharing a
+ * module: both files are programs that run on import, so neither can export to the other,
+ * and a check that reads the emitted worker is the check that would catch the two drifting.
+ */
+function parseUnicodeRange(descriptor) {
+  const ranges = [];
+  for (const token of descriptor.split(',')) {
+    const match = /^u\+([0-9a-f?]{1,6})(?:-([0-9a-f]{1,6}))?$/i.exec(token.trim());
+    if (match === null) return null;
+    const [, first, last] = match;
+    if (first.includes('?')) {
+      if (last !== undefined) return null;
+      ranges.push([
+        parseInt(first.replaceAll('?', '0'), 16),
+        parseInt(first.replaceAll('?', 'f'), 16),
+      ]);
+    } else {
+      ranges.push([parseInt(first, 16), parseInt(last ?? first, 16)]);
+    }
+  }
+  return ranges;
+}
+
+/**
+ * Does this face's range reach any printable ASCII code point (U+0020–U+007E)?
+ *
+ * That is the test for "an English page fetches it". A face covering none of them can only
+ * be requested for a glyph outside the Latin this site is written in — a diacritic in a
+ * player's name, a Hindi or Arabic string — and is a face a first visit never downloads.
+ * The boundary is printable ASCII rather than the whole Basic Latin block because the
+ * controls in U+0000–U+001F render nothing and Google's `symbols` subsets claim them.
+ */
+const coversBasicLatin = (ranges) => ranges.some(([first, last]) => first <= 0x7e && last >= 0x20);
+
+/**
+ * The font files a set of stylesheets declares, split into the base faces an English page
+ * fetches and the range-gated ones it never does — by each `@font-face`'s `unicode-range`,
+ * read from the built stylesheet, which is what the browser reads. A face with no
+ * `unicode-range` at all is base: nothing gates it. Each entry carries the URL as the
+ * stylesheet wrote it, because that is the string the service worker's precache list has
+ * to be compared against.
+ */
 function fontsOf(stylesheets) {
-  const base = new Set();
-  const conditional = new Set();
+  const base = new Map();
+  const conditional = new Map();
+  let declared = 0;
   for (const sheet of stylesheets) {
     let css;
     try {
@@ -491,13 +551,39 @@ function fontsOf(stylesheets) {
     } catch {
       continue;
     }
-    for (const match of css.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
-      const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
-      const file = join(OUT, url.replace(/^\//, ''));
-      (url.includes('-latin-ext') ? conditional : base).add(file);
+    declared += [...css.matchAll(/url\(([^)]+?\.woff2)\)/g)].length;
+    for (const [, block] of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+      const descriptor = /unicode-range\s*:\s*([^;}]+)/i.exec(block);
+      const ranges = descriptor === null ? [] : parseUnicodeRange(descriptor[1]);
+      for (const match of block.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
+        const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
+        const file = join(OUT, url.replace(/^\//, ''));
+        if (ranges === null) {
+          failures.push(
+            `${relative(OUT, file)} has a unicode-range this script cannot read` +
+              ` (${(descriptor?.[1] ?? '').trim().slice(0, 60)}), so it cannot say whether an` +
+              ' English page fetches it',
+          );
+          base.set(file, url);
+        } else {
+          (descriptor === null || coversBasicLatin(ranges) ? base : conditional).set(file, url);
+        }
+      }
     }
   }
-  return { base: [...base], conditional: [...conditional] };
+  // Every woff2 the stylesheet mentions must have been seen inside an `@font-face`, or the
+  // block parse has stopped matching and a face is being neither counted nor reported.
+  if (declared !== base.size + conditional.size) {
+    failures.push(
+      `${String(declared)} woff2 url(s) in the stylesheets and ${String(base.size + conditional.size)}` +
+        ' inside @font-face blocks — the font-face parse has stopped matching',
+    );
+  }
+  return {
+    base: [...base.keys()],
+    conditional: [...conditional.keys()],
+    urls: new Map([...base, ...conditional]),
+  };
 }
 
 const fileBytes = (file) => {
@@ -569,11 +655,60 @@ console.log(
     ` document ${kb(catalogueDocument)} + css ${kb(catalogueCss)} + fonts ${kb(catalogueFontBytes)}` +
     ` + shell ${kb(shellBytes)} + speculated ${kb(speculatedBytes)} + worker ${kb(workerBytes)}`,
 );
+// `fredoka-latin-ext.bb36247b.woff2` → `fredoka-latin-ext`: the name a reader can match to
+// a `@font-face` in `fonts.css`, without the hash that changes on every rebuild of the file.
+const faceName = (file) => basename(file).replace(/\.[0-9a-f]+\.woff2$/, '');
 console.log(
   `check-size: catalogue on screen (before any prefetch) ${kb(catalogueBytes)};` +
-    ` ${String(landingFonts.conditional.length)} latin-ext face(s) fetched only for a glyph in that range,` +
+    ` ${String(landingFonts.conditional.length)} range-gated face(s) fetched only for a glyph` +
+    ` outside basic Latin (${landingFonts.conditional.map(faceName).sort().join(', ')}),` +
     ` ${kb(sum(landingFonts.conditional, fileBytes))} not counted`,
 );
+
+// ---------------------------------------------------------------------------------
+// The precache and the fonts line must describe the same first visit.
+// ---------------------------------------------------------------------------------
+// `emit-service-worker.mjs` decides which faces a first visit installs by the same rule the
+// classification above uses — a face whose `unicode-range` excludes printable ASCII is left
+// to the worker's runtime path, to be saved the first time a page in that script is drawn.
+// The two scripts cannot share the function (each is a program that runs on import), so this
+// reads the worker the build just emitted and holds it to the rule instead. Both directions:
+// a base face missing from the list is a first visit that renders in the system face on its
+// second, offline visit; a range-gated face in it is the shell precache grown by a hundred
+// kilobytes and more of faces nobody on an English page uses (#224).
+const worker = workerFiles[0];
+if (worker !== undefined) {
+  const workerSource = readFileSync(worker, 'utf8');
+  const start = workerSource.indexOf('const PRECACHE = [');
+  const end = start === -1 ? -1 : workerSource.indexOf(']', start);
+  const precached = new Set(
+    start === -1
+      ? []
+      : [...workerSource.slice(start, end).matchAll(/"([^"]+)"/g)].map((match) => match[1]),
+  );
+  if (precached.size === 0) {
+    failures.push(
+      `${relative(OUT, worker)} has no readable precache list, so it cannot be held to the font rule`,
+    );
+  }
+  const fonts = new Map([...landingFonts.urls, ...catalogueFonts.urls]);
+  const conditional = new Set([...landingFonts.conditional, ...catalogueFonts.conditional]);
+  for (const [file, url] of fonts) {
+    const inList = precached.has(url);
+    if (conditional.has(file) && inList) {
+      failures.push(
+        `${relative(OUT, file)} is range-gated — no English page fetches it — and the service` +
+          ` worker precaches it, so a first visit installs ${kb(fileBytes(file))} of a face it` +
+          ' will not draw; emit-service-worker.mjs has stopped applying the rule this script applies',
+      );
+    } else if (!conditional.has(file) && !inList && precached.size > 0) {
+      failures.push(
+        `${relative(OUT, file)} is a base face every English page fetches and the service worker` +
+          ' does not precache it, so a return visit with no connection renders in the system face',
+      );
+    }
+  }
+}
 
 // Nothing may fall between the buckets. A chunk this script cannot place is a chunk it is
 // not measuring, and the whole point of #2516 is that an unmeasured chunk is where the

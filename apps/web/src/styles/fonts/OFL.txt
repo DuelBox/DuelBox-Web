@@ -1,11 +1,21 @@
-The three font files in this directory are redistributed under the SIL Open Font
+The font files in this directory are redistributed under the SIL Open Font
 License, Version 1.1. The OFL requires that this notice and licence text travel
 with the fonts, so it lives here beside them. Provenance for each file — where it
 came from, and in what form — is recorded in apps/web/assets.license.json.
 
+Five families, one notice: the licence text each family ships with is the same
+OFL 1.1 text word for word, compared line by line on 2026-09-12 against the
+OFL.txt in each Noto repository. The only difference is the URL on the line
+after "This license is copied below": the text below gives
+http://scripts.sil.org/OFL, the Devanagari copy https://scripts.sil.org/OFL and
+the Arabic copy https://openfontlicense.org. So the copyright lines are
+collected here rather than the whole text repeated five times.
+
 Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)
 Copyright 2020 The Plus Jakarta Sans Project Authors (https://github.com/tokotype/PlusJakartaSans)
 Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/devanagari)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
