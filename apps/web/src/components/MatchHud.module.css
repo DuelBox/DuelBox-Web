@@ -170,13 +170,48 @@
   gap: var(--db-space-2);
 }
 
+/*
+ * The narrowest class, where the HUD is squeezed from both ends (#2586).
+ *
+ * The stacked pair above costs the bottom HUD a whole control's height, and on a notched
+ * 320x568 that is height the column no longer has. The play surface is a flex column of
+ * two HUDs and the board, and once the notch (59), the home indicator (34), the two gaps
+ * and the board area's 9rem floor have taken theirs, 191px are left for the two HUDs. They
+ * wanted 202. A column that wants more than it is given does not scroll here — `.db-main`
+ * is exactly one viewport tall and the surface fills it — it overflows, and the overflow is
+ * drawn in the one strip of the surface that was already spoken for: the
+ * `padding-bottom: max(--db-space-2, --db-safe-bottom)` that reserves the home indicator.
+ * The pause button came out at 536 against a 534 limit. A safe-area gutter is a reserve,
+ * not a floor: it moves the content box's edge, and nothing about it stops an overflowing
+ * child from being painted past that edge and into the band.
+ *
+ * The landscape rule below missed this cell twice over: it sits in a media query 320x568
+ * does not match, and padding on an overflowing column would not have lifted the button
+ * even if it had.
+ *
+ * So the one-step trim the short landscape class already makes: space-2 down to space-1 on
+ * the HUD's and the seats' block axis, and on the gap between the two stacked controls. The
+ * two HUDs now want 174 of their 191, the column fits, and the 17px left over go to the
+ * board — 161px tall where it had been pinned at its 144px floor. The inline padding stays,
+ * width not being the axis in trouble, and so do the 48px mute and the 53px pause that
+ * `e2e/touch-targets.spec.ts` holds.
+ */
 @media (max-width: 30rem) {
   .name {
     display: none;
   }
 
+  .hud {
+    padding-block: var(--db-space-1);
+  }
+
+  .seat {
+    padding: var(--db-space-1);
+  }
+
   .controls {
     flex-direction: column;
+    gap: var(--db-space-1);
   }
 }
 
@@ -203,16 +238,27 @@
     gap: var(--db-space-1);
     padding: var(--db-space-1);
     /*
-     * And the cutout, which the line above does not cover. In landscape the home
-     * indicator runs along the bottom edge the pause button sits on, and the button
-     * only reached it once the round indicator arrived and made this column taller —
-     * measured at a bottom edge of 331 in a 343-tall window against a 322 limit.
+     * The cutout is not this column's to reserve, and reserving it twice is what put the
+     * pause button inside it (#2586).
      *
-     * `max()` rather than a sum, matching every other use of these tokens: an inset may
-     * only widen a gutter, never narrow one, and on a device with no cutout this is
-     * exactly the padding above.
+     * This line used to read `padding-bottom: max(var(--db-space-1), var(--db-safe-bottom))`.
+     * `PlaySurface`'s `.surface` already pads the same physical edge by
+     * `max(--db-space-2, --db-safe-bottom)` — `styles/safe-area.test.ts` holds it to all
+     * four edges — so this column's bottom border edge is on the safe limit before this rule
+     * says anything, and the 21px asked for here came out of the content box instead. At 320
+     * tall that box is all there is: the four items wanted 229px of the 199px the second
+     * reserve left them, and a flex column that overflows lays out from its start edge and
+     * paints straight through its own end padding, `space-between` collapsing to
+     * `flex-start`. The button was drawn at 307 against a 299 limit with the reserve and at
+     * 307 without it — end padding a column is already overflowing does nothing at all.
+     *
+     * It held where it was measured, in a 343-tall window, because the rule only does
+     * anything while the column still fits: padding moves the content box's end edge in, and
+     * `space-between` sets the last item down on it. At 320 — `compact` landscape, the floor
+     * `docs/responsive.md` names — the column has exactly zero slack before a single pixel
+     * of inset is applied, so there was nothing for a second reserve to do but be overrun.
+     * The fix is to make the content fit; `.score` below is where the room came from.
      */
-    padding-bottom: max(var(--db-space-1), var(--db-safe-bottom));
     min-height: 0;
     overflow: hidden;
   }
@@ -228,6 +274,20 @@
   .right {
     flex-direction: column;
     text-align: center;
+  }
+
+  /*
+   * A score is one tabular figure, and the leading around it is 13px of nothing per seat.
+   *
+   * Those 26px are what this column was short. At 320 tall it has 216px of content box and
+   * its four items — the two seats, the round pips and the controls — wanted 229, so the
+   * pair spilled past the end and the pause button was painted 8px into the home indicator.
+   * Without the leading they want 203, `space-between` has 13px to hand out, and the
+   * controls sit on the box's own edge with the surface's reserve below them. `.clock` is
+   * set to `line-height: 1` for the same reason: these are figures, not prose.
+   */
+  .score {
+    line-height: 1;
   }
 
   .name {
