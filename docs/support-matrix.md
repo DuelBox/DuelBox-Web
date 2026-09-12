@@ -30,7 +30,7 @@ message rather than a broken screen (see the last section); it does not owe a pl
 | **WebKit** (Safari, all iOS browsers) — current & previous major | 1 | `notched-portrait` and `notched-landscape` (iPhone 14 Pro) projects, **real WebKit**, every push | `playwright.config.ts` |
 | **iOS Safari** specifically | 1 | The two WebKit projects above are real WebKit; CLAUDE.md's definition of done names iOS Safari outright | `CLAUDE.md` |
 | **Chrome on Android** | 1 | The `mobile` Pixel 7 project; named in the definition of done | `CLAUDE.md` |
-| **Firefox** (Gecko) — current | 2 | Nightly only, behind `DUELBOX_ALL_ENGINES=1`. The whole suite passes on it and has since first tried, so a third engine per push buys nothing; a nightly failure moves it to Tier 1 | `playwright.config.ts`, `CLAUDE.md` |
+| **Firefox** (Gecko) — current | 2 | Nightly only, behind `DUELBOX_ALL_ENGINES=1`. Runs every spec Chromium and WebKit run except the ones excluded for genuine engine-irrelevance (axe, page-transition, visual, prefetch, and similar) — as of #226 that includes `tournament.spec.ts`, `game-record.spec.ts` and `share-card.spec.ts`, which were Chromium-only only for per-push cost, so the full tournament journey is proven here too. It passes and has since first tried, so a third engine per push buys nothing; a nightly failure moves it to Tier 1 | `playwright.config.ts`, `CLAUDE.md` |
 | Any engine two or more majors behind current | 3 | Not tested | — |
 | Non-evergreen engines (Internet Explorer, legacy EdgeHTML, UC Browser, …) | 3 | Not tested; the build targets modern baseline JS and Canvas | — |
 
