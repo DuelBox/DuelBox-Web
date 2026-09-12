@@ -18,6 +18,26 @@ const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url))
 );
 
 /**
+ * Every rule in the stylesheet as a selector and a body, so a caller can ask for one by name.
+ *
+ * The selector is compared with `===` rather than interpolated into a pattern. The first
+ * version of the swap guard below built its `new RegExp` out of the selector and escaped only
+ * the square brackets in `[data-seat-swap]`; CodeQL reported that as `js/incomplete-sanitization`
+ * (high) because the escape left the backslash alone, so a selector carrying one would have
+ * produced a pattern that no longer said what it appeared to say. No selector here comes from
+ * outside this file, but a half-escape invites the next one that does — parsing the blocks once
+ * with a single fixed pattern removes the question instead of answering it.
+ *
+ * The pattern's `[^{}]` halves mean an at-rule is never a block: `@media …{` cannot match as a
+ * selector because its body holds braces, and the rules nested inside it match on their own,
+ * which is what the guard below wants — a `:root` inside a media query is still a `:root` rule.
+ */
+const BLOCKS = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+  selector: (match[1] ?? '').trim(),
+  body: match[2] ?? '',
+}));
+
+/**
  * The first declaration of `--db-<name>`, with one `var()` hop resolved the same way.
  *
  * The seat colours are aliases since #161: `--db-p1` is `var(--db-seat-a)` and the hex lives on
@@ -68,10 +88,9 @@ describe('design tokens', () => {
    */
   it('exchanges every seat token under data-seat-swap, and only those', () => {
     const rule = (selector: string): Record<string, string> => {
-      const block = new RegExp(`${selector.replace(/[[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'g');
       const found: Record<string, string> = {};
-      for (const match of css.matchAll(block)) {
-        for (const line of (match[1] ?? '').matchAll(/(--db-p[12](?:-deep|-tint)?):\s*([^;]+);/g)) {
+      for (const { body } of BLOCKS.filter((entry) => entry.selector === selector)) {
+        for (const line of body.matchAll(/(--db-p[12](?:-deep|-tint)?):\s*([^;]+);/g)) {
           if (line[1] && line[2]) found[line[1]] = line[2].trim();
         }
       }
