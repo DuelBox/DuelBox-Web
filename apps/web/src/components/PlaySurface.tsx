@@ -891,6 +891,7 @@ export function PlaySurface({ slug }: { slug: string }) {
     const trackNames = seatNamesFor(
       botSeatsFor(tournament.opponent, setup.difficulty),
       chosenNames,
+      messages,
     );
     return (
       <div className="db-panel">
@@ -1026,7 +1027,7 @@ export function PlaySurface({ slug }: { slug: string }) {
    * marks the seat if a bot is in it — so naming the far seat and then playing the bot
    * shows the bot marked rather than the player's name on it.
    */
-  const seatNames = seatNamesFor(botSeats, chosenNames);
+  const seatNames = seatNamesFor(botSeats, chosenNames, messages);
 
   /**
    * The record the result screen shows: what the store held when this match began, plus
@@ -1199,7 +1200,9 @@ export function PlaySurface({ slug }: { slug: string }) {
             slug={slug}
             presentation={solo ? 'single-seat' : 'shared-screen'}
             solo={solo && run !== null ? run : undefined}
-            notice={gamepadEdge === null ? undefined : gamepadNotice(gamepadEdge, seatNames)}
+            notice={
+              gamepadEdge === null ? undefined : gamepadNotice(messages, gamepadEdge, seatNames)
+            }
             onSwapControllers={
               gamepadEdge === null || swapGamepads === null
                 ? undefined

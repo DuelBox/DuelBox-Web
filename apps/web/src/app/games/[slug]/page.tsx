@@ -101,16 +101,15 @@ const MODE_COPY: Record<string, { title: ReactNode; body: ReactNode }> = {
  * the bot seat two and nothing else. The near side is the near seat in both rows for the
  * same reason.
  */
-const RECORD_ROWS: Record<string, { title: ReactNode; opponent: Opponent; far: string }> = {
+const RECORD_ROWS: Record<string, { title: ReactNode; opponent: Opponent; far: ReactNode }> = {
   friend: {
     title: <T id="Between the two of you" />,
     opponent: 'friend',
     far: SEAT_CHARACTERS.p2,
   },
-  // `far` is a prop of `GameRecord`, a client component this batch does not own, and it is a
-  // string rather than an element for that reason. It renders in English in every locale until
-  // that component is converted; #220 records it.
-  bot: { title: <T id="Against the bot" />, opponent: 'bot', far: 'the bot' },
+  // `far` is a node: `GameRecord` puts it into its sentence through `<T values>`, so the
+  // page can hand it a translated word where the friend row hands it a name (#220).
+  bot: { title: <T id="Against the bot" />, opponent: 'bot', far: <T id="the bot" /> },
 };
 
 export default async function GamePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -183,7 +182,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
 
         <div className={styles.detail}>
           <p className={styles.eyebrow}>
-            {game.category} · {formatRound(game.roundSeconds)}
+            <T id={game.category} /> · <T id={formatRound(game.roundSeconds)} />
           </p>
           <h1 className={styles.title}>{game.name}</h1>
           {/*

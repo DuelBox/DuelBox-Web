@@ -30,6 +30,7 @@
  */
 
 import { SEATS, type SeatId } from '@duelbox/engine';
+import { t, type Catalogue } from './i18n/messages';
 
 /** A name for every seat. Total by construction — see the note above. */
 export type SeatNames = Readonly<Record<SeatId, string>>;
@@ -42,9 +43,13 @@ export type SeatNames = Readonly<Record<SeatId, string>>;
  */
 export const SEAT_CHARACTERS: SeatNames = { p1: 'Pip', p2: 'Bo' };
 
-/** How a seat held by a bot is marked. The name is unchanged; the occupant is noted. */
-function botLabel(name: string): string {
-  return `${name} (bot)`;
+/**
+ * How a seat held by a bot is marked. The name is unchanged; the occupant is noted. The mark
+ * is one message with the name as a value, so a locale can put the word on the other side of
+ * the name; the extractor reads the literal here, and nothing is registered for it (#220).
+ */
+function botLabel(messages: Catalogue, name: string): string {
+  return t(messages, "{name} (bot)", { name });
 }
 
 /**
@@ -62,16 +67,20 @@ function botLabel(name: string): string {
  * bot marked rather than their own name handed quietly to it. An absent or empty entry
  * leaves that seat its own name, which is what clearing the field in the settings page
  * amounts to.
+ *
+ * `messages` is the catalogue the bot mark is looked up in; the pure callers and the unit
+ * suites pass nothing and get the English the mark always read.
  */
 export function seatNamesFor(
   bots?: Readonly<Partial<Record<SeatId, unknown>>>,
   chosen?: Readonly<Partial<Record<SeatId, string>>>,
+  messages: Catalogue = {},
 ): SeatNames {
   const names: Partial<Record<SeatId, string>> = {};
   for (const seat of SEATS) {
     const picked = chosen?.[seat];
     const name = picked === undefined || picked.length === 0 ? SEAT_CHARACTERS[seat] : picked;
-    names[seat] = bots?.[seat] === undefined ? name : botLabel(name);
+    names[seat] = bots?.[seat] === undefined ? name : botLabel(messages, name);
   }
   // Built as a partial and asserted once, rather than spelling both seats out: a literal
   // would have to be edited again the day a third seat exists, and the loop cannot leave

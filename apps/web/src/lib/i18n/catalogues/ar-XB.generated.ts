@@ -39,6 +39,12 @@ const catalogue = {
       "‮A‬ ‮ball‬ ‮over‬ ‮a‬ ‮net‬ ‮on‬ ‮sand,‬ ‮one‬ ‮player‬ ‮a‬ ‮side.‬ ‮Get‬ ‮under‬ ‮it‬ ‮and‬ ‮send‬ ‮it‬ ‮back,‬ ‮because‬ ‮whoever's‬ ‮sand‬ ‮it‬ ‮lands‬ ‮on‬ ‮concedes.‬ ‮First‬ ‮to‬ ‮three.‬",
     'A block swings on a rope above your perch, and one action does two things at once, hopping your chicken and cutting the block loose to slide on and stop somewhere. Land on it and it stacks, dead centre pays double. First to thirteen.':
       '‮A‬ ‮block‬ ‮swings‬ ‮on‬ ‮a‬ ‮rope‬ ‮above‬ ‮your‬ ‮perch,‬ ‮and‬ ‮one‬ ‮action‬ ‮does‬ ‮two‬ ‮things‬ ‮at‬ ‮once,‬ ‮hopping‬ ‮your‬ ‮chicken‬ ‮and‬ ‮cutting‬ ‮the‬ ‮block‬ ‮loose‬ ‮to‬ ‮slide‬ ‮on‬ ‮and‬ ‮stop‬ ‮somewhere.‬ ‮Land‬ ‮on‬ ‮it‬ ‮and‬ ‮it‬ ‮stacks,‬ ‮dead‬ ‮centre‬ ‮pays‬ ‮double.‬ ‮First‬ ‮to‬ ‮thirteen.‬',
+    'A controller was plugged in, but both seats already have one. Swap it in below if it should drive a seat.':
+      '‮A‬ ‮controller‬ ‮was‬ ‮plugged‬ ‮in,‬ ‮but‬ ‮both‬ ‮seats‬ ‮already‬ ‮have‬ ‮one.‬ ‮Swap‬ ‮it‬ ‮in‬ ‮below‬ ‮if‬ ‮it‬ ‮should‬ ‮drive‬ ‮a‬ ‮seat.‬',
+    "A controller was plugged in. It will drive {who}'s seat.":
+      "‮A‬ ‮controller‬ ‮was‬ ‮plugged‬ ‮in.‬ ‮It‬ ‮will‬ ‮drive‬ {who}‮'s‬ ‮seat.‬",
+    'A controller was unplugged. It was not driving a seat.':
+      '‮A‬ ‮controller‬ ‮was‬ ‮unplugged.‬ ‮It‬ ‮was‬ ‮not‬ ‮driving‬ ‮a‬ ‮seat.‬',
     'A conveyor carries plates past both counters. Close your chopsticks on what is passing, where a slice of sashimi is worth one and a rice ball three, and closing on bare belt costs you. First to fifteen.':
       '‮A‬ ‮conveyor‬ ‮carries‬ ‮plates‬ ‮past‬ ‮both‬ ‮counters.‬ ‮Close‬ ‮your‬ ‮chopsticks‬ ‮on‬ ‮what‬ ‮is‬ ‮passing,‬ ‮where‬ ‮a‬ ‮slice‬ ‮of‬ ‮sashimi‬ ‮is‬ ‮worth‬ ‮one‬ ‮and‬ ‮a‬ ‮rice‬ ‮ball‬ ‮three,‬ ‮and‬ ‮closing‬ ‮on‬ ‮bare‬ ‮belt‬ ‮costs‬ ‮you.‬ ‮First‬ ‮to‬ ‮fifteen.‬',
     'A crane swings an animal in over your platform. Walk it along, turn it round if it is facing the wrong way, and let it drop onto the tower. If anything comes off the platform, you have lost.':
@@ -977,6 +983,9 @@ const catalogue = {
       '‮The‬ ‮catalogue‬ ‮knows‬ ‮which‬ ‮is‬ ‮which.‬ ‮While‬ ‮you‬ ‮are‬ ‮away‬ ‮from‬ ‮a‬ ‮connection‬ ‮it‬ ‮marks‬ ‮every‬ ‮game‬ ‮in‬ ‮the‬ ‮list‬ ‮as‬ ‮one‬ ‮of‬ ‮two‬ ‮things:‬',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
       "‮The‬ ‮coins‬ ‮you‬ ‮can‬ ‮spend‬ ‮are‬ ‮in‬ ‮the‬ ‮other‬ ‮player's‬ ‮vault,‬ ‮so‬ ‮the‬ ‮only‬ ‮way‬ ‮to‬ ‮score‬ ‮is‬ ‮to‬ ‮leave‬ ‮your‬ ‮own‬ ‮floor,‬ ‮and‬ ‮the‬ ‮moment‬ ‮you‬ ‮do‬ ‮you‬ ‮are‬ ‮the‬ ‮thief‬ ‮and‬ ‮they‬ ‮are‬ ‮the‬ ‮guard.‬ ‮Come‬ ‮home‬ ‮to‬ ‮bank‬ ‮what‬ ‮you‬ ‮carried.‬ ‮Most‬ ‮coins‬ ‮after‬ ‮a‬ ‮minute‬ ‮wins.‬",
+    'The controllers were swapped.': '‮The‬ ‮controllers‬ ‮were‬ ‮swapped.‬',
+    "The controllers were swapped. {who}'s seat now has the other one.":
+      "‮The‬ ‮controllers‬ ‮were‬ ‮swapped.‬ {who}‮'s‬ ‮seat‬ ‮now‬ ‮has‬ ‮the‬ ‮other‬ ‮one.‬",
     'The drawing surface was lost twice, so the match stopped.':
       '‮The‬ ‮drawing‬ ‮surface‬ ‮was‬ ‮lost‬ ‮twice,‬ ‮so‬ ‮the‬ ‮match‬ ‮stopped.‬',
     'The far seat': '‮The‬ ‮far‬ ‮seat‬',
@@ -1276,6 +1285,7 @@ const catalogue = {
     'security advisory process': '‮security‬ ‮advisory‬ ‮process‬',
     'security vulnerability': '‮security‬ ‮vulnerability‬',
     solo: '‮solo‬',
+    'the bot': '‮the‬ ‮bot‬',
     'the far seat': '‮the‬ ‮far‬ ‮seat‬',
     'the keys you chose for the two seats': '‮the‬ ‮keys‬ ‮you‬ ‮chose‬ ‮for‬ ‮the‬ ‮two‬ ‮seats‬',
     'the names you chose for the two seats':
@@ -1318,6 +1328,7 @@ const catalogue = {
       '{key} ‮is‬ ‮one‬ ‮DuelBox‬ ‮needs‬ ‮for‬ ‮the‬ ‮page‬ ‮itself.‬ ‮Pick‬ ‮another.‬',
     '{key} pauses at any time, for either player.':
       '{key} ‮pauses‬ ‮at‬ ‮any‬ ‮time,‬ ‮for‬ ‮either‬ ‮player.‬',
+    '{name} (bot)': '{name} ‮(bot)‬',
     '{name} board': '{name} ‮board‬',
     '{name} has {points}': '{name} ‮has‬ {points}',
     '{name} has {points}, and it is their turn':
@@ -1342,6 +1353,8 @@ const catalogue = {
     '{seat} takes the other seat, at three levels.':
       '{seat} ‮takes‬ ‮the‬ ‮other‬ ‮seat,‬ ‮at‬ ‮three‬ ‮levels.‬',
     '{size} kB': '{size} ‮kB‬',
+    "{who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.":
+      "{who}‮'s‬ ‮controller‬ ‮was‬ ‮unplugged.‬ ‮That‬ ‮seat‬ ‮is‬ ‮back‬ ‮on‬ ‮the‬ ‮keyboard‬ ‮and‬ ‮touch‬ ‮until‬ ‮one‬ ‮is‬ ‮plugged‬ ‮in.‬",
     '{won}W {lost}L {drawn}D': '{won}‮W‬ {lost}‮L‬ {drawn}‮D‬',
     "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.":
       "‮“Match‬ ‮my‬ ‮device”‬ ‮follows‬ ‮your‬ ‮system's‬ ‮light‬ ‮or‬ ‮dark‬ ‮setting‬ ‮and‬ ‮changes‬ ‮with‬ ‮it.‬ ‮Light‬ ‮and‬ ‮Dark‬ ‮override‬ ‮it.‬",

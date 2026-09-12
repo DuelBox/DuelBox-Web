@@ -76,11 +76,12 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
         ))}
       </ul>
 
-      {/* The legend's own words go through `t()`; the hint text beside them is the game's own,
-          from its manifest under `packages/games`, which this pass does not reach (#220). */}
+      {/* The hint text is the game's own, from its manifest under `packages/games` — the same
+          strings the game's page renders, registered once in `lib/i18n/sources.ts` from
+          `data/controls.ts`, so the id is the manifest string and the lookup is the same (#220). */}
       <Hint
         label={t(messages, 'Keys')}
-        text={manifest.controls.keyboard}
+        text={t(messages, manifest.controls.keyboard)}
         marked={used === 'keyboard'}
       />
       {/* The only thing that has ever decided whether a touch hint exists is whether the game
@@ -90,7 +91,7 @@ export function Controls({ manifest }: { manifest: GameManifest }) {
       {manifest.controls.pointer ? (
         <Hint
           label={t(messages, 'Touch')}
-          text={manifest.controls.pointer}
+          text={t(messages, manifest.controls.pointer)}
           marked={used === 'pointer'}
         />
       ) : null}

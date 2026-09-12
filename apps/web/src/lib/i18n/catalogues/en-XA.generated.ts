@@ -39,6 +39,12 @@ const catalogue = {
       "⟦Å ƀåłł öṽéŕ å ñéŧ öñ šåñð, öñé þłåýéŕ å šïðé. Ĝéŧ ûñðéŕ ïŧ åñð šéñð ïŧ ƀåçķ, ƀéçåûšé ŵĥöéṽéŕ'š šåñð ïŧ łåñðš öñ çöñçéðéš. Ƒïŕšŧ ŧö ŧĥŕéé. ················································⟧",
     'A block swings on a rope above your perch, and one action does two things at once, hopping your chicken and cutting the block loose to slide on and stop somewhere. Land on it and it stacks, dead centre pays double. First to thirteen.':
       '⟦Å ƀłöçķ šŵïñĝš öñ å ŕöþé åƀöṽé ýöûŕ þéŕçĥ, åñð öñé åçŧïöñ ðöéš ŧŵö ŧĥïñĝš åŧ öñçé, ĥöþþïñĝ ýöûŕ çĥïçķéñ åñð çûŧŧïñĝ ŧĥé ƀłöçķ łööšé ŧö šłïðé öñ åñð šŧöþ šöɱéŵĥéŕé. Łåñð öñ ïŧ åñð ïŧ šŧåçķš, ðéåð çéñŧŕé þåýš ðöûƀłé. Ƒïŕšŧ ŧö ŧĥïŕŧééñ. ··················································································⟧',
+    'A controller was plugged in, but both seats already have one. Swap it in below if it should drive a seat.':
+      '⟦Å çöñŧŕöłłéŕ ŵåš þłûĝĝéð ïñ, ƀûŧ ƀöŧĥ šéåŧš åłŕéåðý ĥåṽé öñé. Šŵåþ ïŧ ïñ ƀéłöŵ ïƒ ïŧ šĥöûłð ðŕïṽé å šéåŧ. ·····································⟧',
+    "A controller was plugged in. It will drive {who}'s seat.":
+      "⟦Å çöñŧŕöłłéŕ ŵåš þłûĝĝéð ïñ. Ïŧ ŵïłł ðŕïṽé {who}'š šéåŧ. ····················⟧",
+    'A controller was unplugged. It was not driving a seat.':
+      '⟦Å çöñŧŕöłłéŕ ŵåš ûñþłûĝĝéð. Ïŧ ŵåš ñöŧ ðŕïṽïñĝ å šéåŧ. ···················⟧',
     'A conveyor carries plates past both counters. Close your chopsticks on what is passing, where a slice of sashimi is worth one and a rice ball three, and closing on bare belt costs you. First to fifteen.':
       '⟦Å çöñṽéýöŕ çåŕŕïéš þłåŧéš þåšŧ ƀöŧĥ çöûñŧéŕš. Çłöšé ýöûŕ çĥöþšŧïçķš öñ ŵĥåŧ ïš þåššïñĝ, ŵĥéŕé å šłïçé öƒ šåšĥïɱï ïš ŵöŕŧĥ öñé åñð å ŕïçé ƀåłł ŧĥŕéé, åñð çłöšïñĝ öñ ƀåŕé ƀéłŧ çöšŧš ýöû. Ƒïŕšŧ ŧö ƒïƒŧééñ. ·······································································⟧',
     'A crane swings an animal in over your platform. Walk it along, turn it round if it is facing the wrong way, and let it drop onto the tower. If anything comes off the platform, you have lost.':
@@ -980,6 +986,9 @@ const catalogue = {
       '⟦Ŧĥé çåŧåłöĝûé ķñöŵš ŵĥïçĥ ïš ŵĥïçĥ. Ŵĥïłé ýöû åŕé åŵåý ƒŕöɱ å çöññéçŧïöñ ïŧ ɱåŕķš éṽéŕý ĝåɱé ïñ ŧĥé łïšŧ åš öñé öƒ ŧŵö ŧĥïñĝš: ·············································⟧',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
       "⟦Ŧĥé çöïñš ýöû çåñ šþéñð åŕé ïñ ŧĥé öŧĥéŕ þłåýéŕ'š ṽåûłŧ, šö ŧĥé öñłý ŵåý ŧö šçöŕé ïš ŧö łéåṽé ýöûŕ öŵñ ƒłööŕ, åñð ŧĥé ɱöɱéñŧ ýöû ðö ýöû åŕé ŧĥé ŧĥïéƒ åñð ŧĥéý åŕé ŧĥé ĝûåŕð. Çöɱé ĥöɱé ŧö ƀåñķ ŵĥåŧ ýöû çåŕŕïéð. Ṁöšŧ çöïñš åƒŧéŕ å ɱïñûŧé ŵïñš. ·····················································································⟧",
+    'The controllers were swapped.': '⟦Ŧĥé çöñŧŕöłłéŕš ŵéŕé šŵåþþéð. ···········⟧',
+    "The controllers were swapped. {who}'s seat now has the other one.":
+      "⟦Ŧĥé çöñŧŕöłłéŕš ŵéŕé šŵåþþéð. {who}'š šéåŧ ñöŵ ĥåš ŧĥé öŧĥéŕ öñé. ·······················⟧",
     'The drawing surface was lost twice, so the match stopped.':
       '⟦Ŧĥé ðŕåŵïñĝ šûŕƒåçé ŵåš łöšŧ ŧŵïçé, šö ŧĥé ɱåŧçĥ šŧöþþéð. ····················⟧',
     'The far seat': '⟦Ŧĥé ƒåŕ šéåŧ ·····⟧',
@@ -1281,6 +1290,7 @@ const catalogue = {
     'security advisory process': '⟦šéçûŕïŧý åðṽïšöŕý þŕöçéšš ·········⟧',
     'security vulnerability': '⟦šéçûŕïŧý ṽûłñéŕåƀïłïŧý ········⟧',
     solo: '⟦šöłö ··⟧',
+    'the bot': '⟦ŧĥé ƀöŧ ···⟧',
     'the far seat': '⟦ŧĥé ƒåŕ šéåŧ ·····⟧',
     'the keys you chose for the two seats': '⟦ŧĥé ķéýš ýöû çĥöšé ƒöŕ ŧĥé ŧŵö šéåŧš ·············⟧',
     'the names you chose for the two seats':
@@ -1323,6 +1333,7 @@ const catalogue = {
       '⟦{key} ïš öñé ÐûéłƁöẋ ñééðš ƒöŕ ŧĥé þåĝé ïŧšéłƒ. Þïçķ åñöŧĥéŕ. ······················⟧',
     '{key} pauses at any time, for either player.':
       '⟦{key} þåûšéš åŧ åñý ŧïɱé, ƒöŕ éïŧĥéŕ þłåýéŕ. ················⟧',
+    '{name} (bot)': '⟦{name} (ƀöŧ) ·····⟧',
     '{name} board': '⟦{name} ƀöåŕð ·····⟧',
     '{name} has {points}': '⟦{name} ĥåš {points} ·······⟧',
     '{name} has {points}, and it is their turn':
@@ -1348,6 +1359,8 @@ const catalogue = {
     '{seat} takes the other seat, at three levels.':
       '⟦{seat} ŧåķéš ŧĥé öŧĥéŕ šéåŧ, åŧ ŧĥŕéé łéṽéłš. ················⟧',
     '{size} kB': '⟦{size} ķƁ ····⟧',
+    "{who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.":
+      "⟦{who}'š çöñŧŕöłłéŕ ŵåš ûñþłûĝĝéð. Ŧĥåŧ šéåŧ ïš ƀåçķ öñ ŧĥé ķéýƀöåŕð åñð ŧöûçĥ ûñŧïł öñé ïš þłûĝĝéð ïñ. ····································⟧",
     '{won}W {lost}L {drawn}D': '⟦{won}Ŵ {lost}Ł {drawn}Ð ·········⟧',
     "“Match my device” follows your system's light or dark setting and changes with it. Light and Dark override it.":
       "⟦“Ṁåŧçĥ ɱý ðéṽïçé” ƒöłłöŵš ýöûŕ šýšŧéɱ'š łïĝĥŧ öŕ ðåŕķ šéŧŧïñĝ åñð çĥåñĝéš ŵïŧĥ ïŧ. Łïĝĥŧ åñð Ðåŕķ öṽéŕŕïðé ïŧ. ·······································⟧",

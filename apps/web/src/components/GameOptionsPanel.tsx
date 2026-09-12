@@ -64,14 +64,15 @@ export function GameOptionsPanel({ slug, options, onChange }: GameOptionsPanelPr
 
   return (
     /* The panel's own name goes through `t()`. Every label inside it is the game's own, from
-       its manifest under `packages/games`, which this pass does not reach (#220). */
+       its manifest under `packages/games`; `lib/i18n/sources.ts` registers them over
+       `MANIFESTS`, so the id is the manifest string and the lookup is the same (#220). */
     <section className={styles.panel} aria-label={t(messages, 'Game options')}>
       {options.map((option) => {
         const controlId = `${baseId}-${option.id}`;
         return (
           <div key={option.id} className={styles.row}>
             <label className={styles.label} htmlFor={controlId}>
-              {option.label}
+              {t(messages, option.label)}
             </label>
             {option.type === 'select' ? (
               <select
@@ -84,7 +85,7 @@ export function GameOptionsPanel({ slug, options, onChange }: GameOptionsPanelPr
               >
                 {option.choices.map((choice) => (
                   <option key={choice.value} value={choice.value}>
-                    {choice.label}
+                    {t(messages, choice.label)}
                   </option>
                 ))}
               </select>

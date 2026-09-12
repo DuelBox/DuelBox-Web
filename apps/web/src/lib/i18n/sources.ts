@@ -54,7 +54,7 @@ import { CATALOGUE, type CatalogueEntry } from '../../data/catalogue.generated';
 import { CATEGORY_HUBS, gridHeading, roundLine } from '../categories';
 import { formatRound } from '../format';
 import { LANDING_SECTIONS, WAYS_TO_PLAY, roundSpread } from '../landing';
-import { CONTROLS } from '../../data/controls';
+import { CONTROLS, MANIFESTS } from '../../data/controls';
 import { DISABLED_GAMES, killSwitchFor } from '../flags';
 
 /**
@@ -226,6 +226,20 @@ export const DYNAMIC_SOURCES: readonly {
     // site that cannot be translated.
     name: 'the reason a switched-off game gives, on its own page',
     strings: () => DISABLED_GAMES.map((entry) => entry.reason),
+  },
+  {
+    // `components/GameOptionsPanel.tsx` renders `t(messages, option.label)` for every option a
+    // game's manifest declares and `t(messages, choice.label)` for each choice of a select.
+    // Empty today — no manifest declares an option — and registered anyway, so the first game
+    // that does is extracted by the same command as everything else.
+    name: "each game's option labels, on the play route (data/controls.ts)",
+    strings: () =>
+      MANIFESTS.flatMap((manifest) =>
+        (manifest.options ?? []).flatMap((option) => [
+          option.label,
+          ...(option.type === 'select' ? option.choices.map((choice) => choice.label) : []),
+        ]),
+      ),
   },
 ];
 

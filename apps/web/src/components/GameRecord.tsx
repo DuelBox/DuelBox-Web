@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { readGameRecord, type Opponent, type Tally } from '@/lib/head-to-head';
-import { t } from '@/lib/i18n/messages';
-import { useMessages } from '@/lib/i18n/use-messages';
+import { T } from '@/lib/i18n/T';
 
 /**
  * One line of what this device has recorded for one game (#162).
@@ -70,9 +69,8 @@ export function GameRecord({
   opponent: Opponent;
   /** What to call the near seat's wins, and the far seat's. */
   near: string;
-  far: string;
+  far: ReactNode;
 }) {
-  const messages = useMessages();
   const [tally, setTally] = useState<Tally | null>(null);
   useEffect(() => {
     setTally(readGameRecord(slug, opponent));
@@ -81,11 +79,12 @@ export function GameRecord({
   // Words rather than a colour or a glyph, so a win and a loss are the same two facts in
   // greyscale that they are on a colour screen (rule 7) — and so a screen reader is handed
   // a sentence rather than "3W 2L 1D" to spell out.
-  return t(messages, '{near} {nearWins}, {far} {farWins}, {draws} drawn', {
-    near,
-    nearWins: shown.p1,
-    far,
-    farWins: shown.p2,
-    draws: shown.draws,
-  });
+  // `<T>` rather than `t()` because `far` may be an element: the game page hands the bot row
+  // a translated "the bot" and the friend row a name, and a value in `t()` is a string.
+  return (
+    <T
+      id="{near} {nearWins}, {far} {farWins}, {draws} drawn"
+      values={{ near, nearWins: shown.p1, far, farWins: shown.p2, draws: shown.draws }}
+    />
+  );
 }
