@@ -24,7 +24,7 @@ export interface FontAttribution {
 export const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = [
   {
     "name": "next",
-    "version": "15.5.23",
+    "version": "15.5.25",
     "licence": "MIT",
     "homepage": "https://nextjs.org"
   },
