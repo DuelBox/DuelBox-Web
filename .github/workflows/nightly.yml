@@ -254,6 +254,16 @@ jobs:
       # thresholds live in vitest.config.ts and fail this step on their own; there is no
       # separate check, and there must not be, or the number in the config and the number
       # that is enforced can drift apart.
+      #
+      # That flag now also holds `balance-aggregate.test.ts` out of the run, and this step is
+      # why: its `beforeAll` plays every game's bots, which takes 461.7s under v8
+      # instrumentation on a quiet development machine against a 600s hook budget that already
+      # has CI's multiplier inside it — so this step ended `Hook timed out in 600000ms` on
+      # every scheduled run from 9 September 2026. The seat-balance jobs above run that file
+      # three times a night on machines that are not also instrumenting 384 others, and the
+      # thresholds do not need it: without it the run still reports 98.75% of lines and every
+      # game's `rules.ts` at 95.67% or better, against a floor of 70. The measurement, the
+      # alternative that was rejected and how to reproduce both are in vitest.config.ts.
       - run: pnpm test:coverage
       # Published whether or not the thresholds held. A report you can only see when the run
       # is green tells you nothing on the morning you need it: the failure message names the
