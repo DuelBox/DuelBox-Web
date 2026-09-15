@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { seatNamesFor, SEAT_KEYS } from '../lib/seats.js';
@@ -18,11 +18,12 @@ import { seatNamesFor, SEAT_KEYS } from '../lib/seats.js';
  *
  * ## What is held, and against what
  *
- * Every `@font-face` in `fonts.css`: its family, its range, that its file is on disk, and that
- * the file has an entry in `assets.license.json` (rule 3 — `check-asset-licenses.mjs` holds
- * the same thing at build, but that runs after `pnpm test`, and a font added without a
- * licence entry should fail on the machine of whoever added it). Every family declared is
- * listed by at least one stack, because a face nothing lists is a file nothing fetches.
+ * Every `@font-face` in `fonts.css` that names a file: its family, its range, that its file is
+ * on disk, and that the file has an entry in `assets.license.json` (rule 3 —
+ * `check-asset-licenses.mjs` holds the same thing at build, but that runs after `pnpm test`,
+ * and a font added without a licence entry should fail on the machine of whoever added it).
+ * Every family declared is listed by at least one stack, because a face nothing lists is a
+ * file nothing fetches.
  *
  * Then, for each of the three stacks, every code point of every fixture string that is a
  * letter, a combining mark, a digit or a punctuation mark must lie inside the range of some
@@ -33,6 +34,25 @@ import { seatNamesFor, SEAT_KEYS } from '../lib/seats.js';
  * and the key legends. Punctuation is held as well as letters because a comma drawn from a
  * different face than the word beside it is the visible seam — a Latin comma in Arabic text
  * sits at the wrong height — and both script ranges declare their own.
+ *
+ * ## The second list, and why it covers nothing
+ *
+ * Three `@font-face` blocks in `fonts.css` name no file at all. They are the metric-matched
+ * fallbacks of #187: `src: local('Arial')`, four descriptors, no `url()` and no
+ * `unicode-range`, sitting second in each stack so that the face which draws before the real
+ * one arrives is already the right size. They are parsed into `fallbacks` rather than `faces`,
+ * and they contribute **no coverage whatsoever**.
+ *
+ * That is the honest reading, not a convenience. A `local()` face does not ship a glyph; it
+ * borrows the device's, and which glyphs the device has is exactly the thing this file cannot
+ * see — the same unknown as `ui-rounded` or `system-ui`, which the stack lists and this guard
+ * has always treated as no coverage. Counting them as covering everything, which is what a
+ * missing `unicode-range` means to a browser, would make the Bengali and Thai control below
+ * come back empty from every stack and quietly gut the whole guard: a face that covers
+ * everything covers Bengali. Counting them as nothing keeps every assertion here about the
+ * files this repository actually ships, and the assertions about the fallbacks themselves —
+ * that they exist, carry all four descriptors, name no file, and sit immediately after their
+ * primary and ahead of the generics — are held separately below.
  *
  * ## What is exempt, and why
  *
@@ -79,6 +99,40 @@ interface Face {
 }
 
 /**
+ * A face with no file: `src: local(…)` and the descriptors that bend the device's face onto
+ * a primary's metrics. It has no range because it has no cmap this repository can read.
+ */
+interface FallbackFace {
+  readonly family: string;
+  /** The names its `src` asks the device for, in order. */
+  readonly locals: readonly string[];
+  /**
+   * What it is allowed to draw. Not what it *can* draw — that is the device's cmap — but the
+   * ceiling this stylesheet puts on it, which must be its primary's own claim and no more.
+   */
+  readonly ranges: readonly (readonly [number, number])[];
+  /** Every descriptor in the block, by name, as written. */
+  readonly descriptors: Readonly<Record<string, string>>;
+}
+
+/** `[first, last]` pairs sorted and merged, so two spellings of one claim compare equal. */
+function mergeRanges(
+  ranges: readonly (readonly [number, number])[],
+): (readonly [number, number])[] {
+  const merged: [number, number][] = [];
+  for (const [first, last] of [...ranges].sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
+    const previous = merged.at(-1);
+    if (previous !== undefined && first <= previous[1] + 1)
+      previous[1] = Math.max(previous[1], last);
+    else merged.push([first, last]);
+  }
+  return merged;
+}
+
+/** The four descriptors a metric-matched fallback is not a metric match without. */
+const OVERRIDES = ['size-adjust', 'ascent-override', 'descent-override', 'line-gap-override'];
+
+/**
  * The code points a `unicode-range` descriptor covers.
  *
  * The three forms the CSS grammar allows: a range `U+0900-097F`, a single point `U+20B9`,
@@ -100,18 +154,51 @@ function parseUnicodeRange(descriptor: string): (readonly [number, number])[] {
   });
 }
 
-/** Every `@font-face` in a stylesheet's source, comments stripped first so prose cannot match. */
-function facesIn(css: string): Face[] {
+/**
+ * Every `@font-face` in a stylesheet's source, split by whether it ships a file.
+ *
+ * Comments are stripped first so prose cannot match. A block whose `src` is `local()` goes to
+ * `fallbacks` and is held to a different standard — four descriptors and no file, but the same
+ * requirement of a `unicode-range` — while a block that names a file must still carry a
+ * family, a `url()` and a `unicode-range` or this throws,
+ * because a face parsed into neither list is a face no assertion below can see. A block that
+ * mixes the two is refused rather than guessed at: a `local()` in front of a `url()` is a
+ * real pattern elsewhere, it would need a range and a licence entry as well as the
+ * descriptors, and nothing here declares one.
+ */
+function facesIn(css: string): { faces: Face[]; fallbacks: FallbackFace[] } {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  return [...code.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(([, block = '']) => {
+  const faces: Face[] = [];
+  const fallbacks: FallbackFace[] = [];
+  for (const [, block = ''] of code.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
     const family = /font-family:\s*'([^']+)'/.exec(block)?.[1];
+    if (family === undefined) throw new Error(`a @font-face is missing a family:\n${block}`);
+    const locals = [...block.matchAll(/local\('([^']+)'\)/g)].map(([, name = '']) => name);
+    if (locals.length > 0) {
+      if (/url\(/.test(block)) {
+        throw new Error(`a @font-face mixes local() and url(), which this cannot read:\n${block}`);
+      }
+      const descriptors = Object.fromEntries(
+        [...block.matchAll(/([a-z-]+)\s*:\s*([^;]+);/g)].map(([, name = '', value = '']) => [
+          name,
+          value.trim(),
+        ]),
+      );
+      const fallbackRange = /unicode-range:\s*([^;]+);/.exec(block)?.[1];
+      if (fallbackRange === undefined) {
+        throw new Error(`a local() @font-face is missing a unicode-range:\n${block}`);
+      }
+      fallbacks.push({ family, locals, ranges: parseUnicodeRange(fallbackRange), descriptors });
+      continue;
+    }
     const src = /src:\s*url\('([^']+)'\)/.exec(block)?.[1];
     const range = /unicode-range:\s*([^;]+);/.exec(block)?.[1];
-    if (family === undefined || src === undefined || range === undefined) {
-      throw new Error(`a @font-face is missing a family, src or unicode-range:\n${block}`);
+    if (src === undefined || range === undefined) {
+      throw new Error(`a @font-face is missing a src or unicode-range:\n${block}`);
     }
-    return { family, src, ranges: parseUnicodeRange(range) };
-  });
+    faces.push({ family, src, ranges: parseUnicodeRange(range) });
+  }
+  return { faces, fallbacks };
 }
 
 /** The three `--db-font-*` stacks, each as the ordered list of family names it names. */
@@ -160,10 +247,10 @@ function uncovered(text: string, faces: readonly Face[]): string[] {
 const fontsCss = readFileSync(here('./fonts.css'), 'utf8');
 const tokensCss = readFileSync(here('./tokens.css'), 'utf8');
 const manifest = JSON.parse(readFileSync(here('../../assets.license.json'), 'utf8')) as {
-  readonly assets: readonly { readonly file: string }[];
+  readonly assets: readonly { readonly file: string; readonly family?: string }[];
 };
 
-const faces = facesIn(fontsCss);
+const { faces, fallbacks } = facesIn(fontsCss);
 const stacks = stacksIn(tokensCss);
 
 /**
@@ -194,9 +281,10 @@ const SAMPLES: Readonly<Record<string, string>> = {
 
 describe('the faces fonts.css declares', () => {
   it('finds them, with a range each', () => {
-    // The control on the parse: eight `@font-face` blocks over five families today, and a
-    // parse that found none would make every coverage assertion below vacuous. The floor is
-    // the count on the day this was written; a face added raises it, a face lost fails here.
+    // The control on the parse: eight file-bearing `@font-face` blocks over five families
+    // today — the three `local()` blocks of #187 are counted in the describe below, not here
+    // — and a parse that found none would make every coverage assertion below vacuous. The
+    // floor is the count on the day this was written; a face added raises it, one lost fails.
     expect(faces.length).toBeGreaterThanOrEqual(8);
     const families = new Set(faces.map((face) => face.family));
     expect([...families].sort()).toEqual([
@@ -221,10 +309,114 @@ describe('the faces fonts.css declares', () => {
 
   it('are each listed by at least one stack, so every file can be fetched', () => {
     const listed = new Set([...stacks.values()].flat());
-    for (const face of faces) {
+    for (const face of [...faces, ...fallbacks]) {
       expect(listed.has(face.family), `${face.family} is declared and no stack lists it`).toBe(
         true,
       );
+    }
+  });
+
+  it('are the whole of what the fonts directory ships', () => {
+    // Both directions, because the two failures look nothing alike: a face declared and not
+    // on disk 404s in a browser (the assertion above), and a file on disk that no
+    // `@font-face` names is bytes in the repository nothing can ever fetch. The count is what
+    // makes the #187 faces' claim — "no `url()`, so no file" — checkable rather than stated.
+    const shipped = readdirSync(here('./fonts')).filter((name) => name.endsWith('.woff2'));
+    expect(shipped.sort()).toEqual(
+      faces.map((face) => face.src.replace('./fonts/', '')).sort((a, b) => a.localeCompare(b)),
+    );
+  });
+});
+
+/**
+ * The metric-matched fallbacks of #187: what they must be, and where they must sit.
+ *
+ * Each is `src: local(…)` and four descriptors, computed in `fonts.css`'s header from metrics
+ * read out of both faces with fontkit. What is held here is everything about them that can be
+ * held without a browser — that one exists per primary, that all four descriptors are present
+ * and are percentages, that none of them names a file or takes a licence entry, and that each
+ * sits immediately after its primary and ahead of the generics in every stack. That they
+ * actually make the swap shiftless is `e2e/font-swap.spec.ts`, which needs a real face to
+ * measure and so cannot live here.
+ */
+describe('the metric-matched fallback faces (#187)', () => {
+  const primaries = [...new Set(faces.map((face) => face.family))].filter((family) =>
+    [...stacks.values()].some((stack) => stack[0] === family),
+  );
+
+  it('gives every primary family one, and declares nothing else with local()', () => {
+    expect(primaries.sort()).toEqual(['Fredoka', 'JetBrains Mono', 'Plus Jakarta Sans']);
+    expect(fallbacks.map((face) => face.family).sort()).toEqual(
+      primaries.map((family) => `${family} Fallback`).sort(),
+    );
+  });
+
+  it.each(fallbacks.map((face) => [face.family, face] as const))(
+    '%s asks the device for a named face and carries all four descriptors',
+    (family, face) => {
+      expect(face.locals, `${family} asks the device for nothing`).not.toHaveLength(0);
+      for (const descriptor of OVERRIDES) {
+        expect(face.descriptors[descriptor], `${family} has no ${descriptor}`).toMatch(
+          /^\d+(?:\.\d+)?%$/,
+        );
+      }
+      // A fallback face ships no glyph, so rule 3 has nothing to bite on — and an entry for
+      // one would be a licence claim over somebody else's installed font.
+      expect(
+        manifest.assets.filter((asset) => asset.family === family),
+        `${family} has a licence entry for a file it does not ship`,
+      ).toEqual([]);
+    },
+  );
+
+  it('sits immediately after its primary in every stack, and ahead of the generics', () => {
+    for (const [name, stack] of stacks) {
+      const primary = facesOf(stack, faces)[0]?.family ?? '';
+      expect(stack[1], `--db-font-${name} does not put the fallback second`).toBe(
+        `${primary} Fallback`,
+      );
+      const generic = stack.findIndex((family) =>
+        /^(ui-|system-ui$|sans-serif$|monospace$)/.test(family),
+      );
+      expect(generic, `--db-font-${name}: the fallback is after the system`).toBeGreaterThan(1);
+    }
+  });
+
+  it('claims exactly what its primary claims, and not one code point more', () => {
+    // The assertion this file exists for twice over. A `local()` face with no `unicode-range`
+    // claims every code point, and the faces these ask the device for are not Latin-only:
+    // Arial and Courier New both carry Arabic, Hebrew, Greek and Cyrillic. Written without a
+    // range, `'Plus Jakarta Sans Fallback'` sat between Plus Jakarta Sans and Noto Sans Arabic
+    // in the body stack and drew Arabic out of the device's Arial — Noto Sans Arabic was never
+    // fetched, and #224's one-Arabic-face-everywhere was undone by a face added to stop a
+    // reflow. `e2e/fonts.spec.ts` is what caught it, on all four browser projects.
+    //
+    // Derived from the primary's own faces rather than written out, so the two cannot be
+    // edited apart: add a subset to a family and its stand-in's range has to grow with it.
+    for (const fallback of fallbacks) {
+      const primary = fallback.family.replace(/ Fallback$/, '');
+      const declared = faces.filter((face) => face.family === primary);
+      expect(declared.length, `${fallback.family} stands in for no declared face`).toBeGreaterThan(
+        0,
+      );
+      expect(
+        mergeRanges(fallback.ranges),
+        `${fallback.family} does not claim exactly what ${primary} claims`,
+      ).toEqual(mergeRanges(declared.flatMap((face) => face.ranges)));
+    }
+  });
+
+  it('is listed by a stack and still reaches no face, so it covers nothing', () => {
+    // The two halves that have to hold together. The stacks really do list them — otherwise
+    // the descriptors above are decoration — and `facesOf`, which is what every coverage
+    // assertion in this file runs on, still comes back with only the faces that ship a file.
+    const named = new Set(fallbacks.map((face) => face.family));
+    for (const [name, stack] of stacks) {
+      expect(
+        stack.some((family) => named.has(family)),
+        `--db-font-${name}`,
+      ).toBe(true);
+      expect(facesOf(stack, faces).filter((face) => named.has(face.family))).toEqual([]);
     }
   });
 });
@@ -333,6 +525,50 @@ describe('the checker itself', () => {
     expect(uncovered('Español', facesOf(body, noLatin))).toEqual(['U+00F1 "ñ"']);
     expect(uncovered('Português', facesOf(body, noLatin))).toEqual(['U+00EA "ê"']);
     expect(uncovered('हिन्दी', facesOf(body, noLatin))).toEqual([]);
+  });
+
+  it('puts a local() face in the other list, where it covers nothing', () => {
+    // The proof that the split is the split it says it is, on a sheet small enough to read.
+    // The last assertion is the one that matters: were a `local()` face counted as a Face,
+    // its missing `unicode-range` would mean "everything" — the meaning a browser gives it —
+    // and the Bengali control above would come back empty from every stack having checked
+    // nothing at all.
+    const sheet = [
+      "@font-face { font-family: 'Primary';",
+      "  src: url('./fonts/primary.woff2') format('woff2');",
+      '  unicode-range: U+0000-00FF; }',
+      "@font-face { font-family: 'Primary Fallback';",
+      "  src: local('Arial'), local('Helvetica');",
+      '  size-adjust: 99.57%;',
+      '  ascent-override: 97.82%;',
+      '  descent-override: 23.7%;',
+      '  line-gap-override: 0%;',
+      '  unicode-range: U+0000-00FF; }',
+    ].join('\n');
+    const read = facesIn(sheet);
+    expect(read.faces.map((face) => face.family)).toEqual(['Primary']);
+    expect(read.fallbacks.map((face) => face.family)).toEqual(['Primary Fallback']);
+    expect(read.fallbacks[0]?.locals).toEqual(['Arial', 'Helvetica']);
+    expect(read.fallbacks[0]?.descriptors['size-adjust']).toBe('99.57%');
+    expect(uncovered('বাংলা', read.faces)).toHaveLength(4);
+  });
+
+  it('refuses a face it cannot classify rather than dropping it', () => {
+    // A block that reaches neither list is a face no assertion in this file can see, which is
+    // the quietest way a coverage guard stops covering something.
+    expect(() =>
+      facesIn("@font-face { font-family: 'X'; src: local('Arial'), url('./x.woff2'); }"),
+    ).toThrow(/mixes local\(\) and url\(\)/);
+    expect(() => facesIn("@font-face { src: url('./x.woff2'); unicode-range: U+0020; }")).toThrow(
+      /missing a family/,
+    );
+    expect(() => facesIn("@font-face { font-family: 'X'; src: url('./x.woff2'); }")).toThrow(
+      /missing a src or unicode-range/,
+    );
+    // And the one that would give a stand-in the run of every script the device has.
+    expect(() => facesIn("@font-face { font-family: 'X'; src: local('Arial'); }")).toThrow(
+      /local\(\) @font-face is missing a unicode-range/,
+    );
   });
 
   it('reads every form of the unicode-range grammar, and refuses what it cannot read', () => {
