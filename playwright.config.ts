@@ -221,6 +221,14 @@ const ONE_PER_ENGINE = [
   // and not Chromium alone: line breaking, `overflow-wrap` and the intrinsic width of a native
   // `select` are engine decisions, and this spec is made of exactly those.
   '**/text-expansion.spec.ts',
+  // `engine-support.spec.ts` (#225) sets no viewport of its own, and is here for the other
+  // reason this list exists: what it measures is a property of the *engine* — whether the
+  // capability probe refuses a browser that cannot give the page a 2D context, and whether
+  // the panel it draws instead is reachable. Both engines are wanted, because a browser too
+  // old to draw is a WebKit story before it is a Chromium one and the two hydrate different
+  // markup paths; a second Chromium and a second WebKit project would each be the same
+  // verdict a third time at a width this spec does not look at.
+  '**/engine-support.spec.ts',
   // `responsive-sweep.spec.ts` (#1891) walks every playable lobby at 320px portrait and
   // landscape, both of which it sets itself, so a project that has already chosen a viewport
   // contributes nothing but its engine. Both engines are wanted: what it measures is where a
