@@ -18,13 +18,13 @@
   --db-brand-deep: #3a2dd0;
   --db-brand-tint: #f0eeff;
 
-  --db-p1: #ff5a4e;
-  --db-p1-deep: #e0332a;
-  --db-p1-tint: #ffeceb;
+  --db-seat-a: #ff5a4e;
+  --db-seat-a-deep: #e0332a;
+  --db-seat-a-tint: #ffeceb;
 
-  --db-p2: #21b0e8;
-  --db-p2-deep: #118cbd;
-  --db-p2-tint: #e8f6ff;
+  --db-seat-b: #21b0e8;
+  --db-seat-b-deep: #118cbd;
+  --db-seat-b-tint: #e8f6ff;
 
   --db-sun: #ffc53d;
   --db-sun-tint: #fff1cf;
@@ -243,13 +243,13 @@
   --db-brand-deep: #a99dff;
   --db-brand-tint: #20204a;
 
-  --db-p1: #ff6b60;
-  --db-p1-deep: #c9352c;
-  --db-p1-tint: #3a1c1a;
+  --db-seat-a: #ff6b60;
+  --db-seat-a-deep: #c9352c;
+  --db-seat-a-tint: #3a1c1a;
 
-  --db-p2: #3cc0f0;
-  --db-p2-deep: #1687b8;
-  --db-p2-tint: #10303c;
+  --db-seat-b: #3cc0f0;
+  --db-seat-b-deep: #1687b8;
+  --db-seat-b-tint: #10303c;
 
   --db-sun: #ffcf5c;
   --db-sun-tint: #3a2f14;
@@ -284,13 +284,13 @@
     --db-brand-deep: #a99dff;
     --db-brand-tint: #20204a;
 
-    --db-p1: #ff6b60;
-    --db-p1-deep: #c9352c;
-    --db-p1-tint: #3a1c1a;
+    --db-seat-a: #ff6b60;
+    --db-seat-a-deep: #c9352c;
+    --db-seat-a-tint: #3a1c1a;
 
-    --db-p2: #3cc0f0;
-    --db-p2-deep: #1687b8;
-    --db-p2-tint: #10303c;
+    --db-seat-b: #3cc0f0;
+    --db-seat-b-deep: #1687b8;
+    --db-seat-b-tint: #10303c;
 
     --db-sun: #ffcf5c;
     --db-sun-tint: #3a2f14;
@@ -332,18 +332,18 @@
  * colours under either theme by source order at equal specificity.
  */
 :root[data-seat-palette='colourblind'] {
-  --db-p1: #ffc107;
-  --db-p1-deep: #c79705;
-  --db-p1-tint: #fff5d6;
+  --db-seat-a: #ffc107;
+  --db-seat-a-deep: #c79705;
+  --db-seat-a-tint: #fff5d6;
 
-  --db-p2: #0d4ea6;
-  --db-p2-deep: #0a3d81;
-  --db-p2-tint: #e4ecf8;
+  --db-seat-b: #0d4ea6;
+  --db-seat-b-deep: #0a3d81;
+  --db-seat-b-tint: #e4ecf8;
 }
 
 :root[data-theme='dark'][data-seat-palette='colourblind'] {
-  --db-p1-tint: #3a2f14;
-  --db-p2-tint: #10233f;
+  --db-seat-a-tint: #3a2f14;
+  --db-seat-b-tint: #10233f;
 }
 
 /* System theme on a dark device, with the colour-blind palette chosen: the explicit
@@ -351,9 +351,45 @@
    here instead. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light'])[data-seat-palette='colourblind'] {
-    --db-p1-tint: #3a2f14;
-    --db-p2-tint: #10233f;
+    --db-seat-a-tint: #3a2f14;
+    --db-seat-b-tint: #10233f;
   }
+}
+
+/**
+ * Which seat gets which colour (#161).
+ *
+ * Every seat colour above is declared as a *source* — `--db-seat-a` is the warm pair, `--db-seat-b`
+ * the cool one, each in base, deep and tint, in every theme and both palettes — and nothing in
+ * the shell reads a source. The shell reads `--db-p1` and `--db-p2`, which are aliases, and this
+ * is the only place they are defined: normally the near seat is the warm colour, and under
+ * `data-seat-swap` the pair is exchanged. Custom properties cannot be swapped in place —
+ * pointing p1 at p2 while p2 points at p1 is a cycle and both go invalid — which is why the
+ * sources exist at all, and why the swap is a second rule rather than an edit to the palette
+ * blocks.
+ *
+ * `data-seat-swap` is stamped on `<html>` by the same inline script and live applier that
+ * handle the theme and the palette, from the player's stored choice. It is colour only: the
+ * seat glyphs, the HUD pips and the catalogue marks draw a shape per seat and read these tokens,
+ * so a swap recolours a circle and never turns it into a square (rule 7). The engine's live seat
+ * palette is exchanged the same way by `setSeatSwap`, so the board agrees with the scoreboard.
+ */
+:root {
+  --db-p1: var(--db-seat-a);
+  --db-p1-deep: var(--db-seat-a-deep);
+  --db-p1-tint: var(--db-seat-a-tint);
+  --db-p2: var(--db-seat-b);
+  --db-p2-deep: var(--db-seat-b-deep);
+  --db-p2-tint: var(--db-seat-b-tint);
+}
+
+:root[data-seat-swap] {
+  --db-p1: var(--db-seat-b);
+  --db-p1-deep: var(--db-seat-b-deep);
+  --db-p1-tint: var(--db-seat-b-tint);
+  --db-p2: var(--db-seat-a);
+  --db-p2-deep: var(--db-seat-a-deep);
+  --db-p2-tint: var(--db-seat-a-tint);
 }
 
 @media (prefers-reduced-motion: reduce) {

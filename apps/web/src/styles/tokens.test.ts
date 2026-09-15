@@ -16,12 +16,47 @@ import { colour, motion, seatColour } from './tokens.js';
  * test does — a colour changed in one file and not the other fails the build.
  */
 
-const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url)), 'utf8');
+// Comments stripped: a declaration is read as `--name: value;`, and the prose beside the seat
+// aliases quotes one, so the first version of the swap guard matched a sentence.
+const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url)), 'utf8').replace(
+  /\/\*[\s\S]*?\*\//g,
+  '',
+);
 
+/**
+ * Every rule in the stylesheet as a selector and a body, so a caller can ask for one by name.
+ *
+ * The selector is compared with `===` rather than interpolated into a pattern. The first
+ * version of the swap guard below built its `new RegExp` out of the selector and escaped only
+ * the square brackets in `[data-seat-swap]`; CodeQL reported that as `js/incomplete-sanitization`
+ * (high) because the escape left the backslash alone, so a selector carrying one would have
+ * produced a pattern that no longer said what it appeared to say. No selector here comes from
+ * outside this file, but a half-escape invites the next one that does — parsing the blocks once
+ * with a single fixed pattern removes the question instead of answering it.
+ *
+ * The pattern's `[^{}]` halves mean an at-rule is never a block: `@media …{` cannot match as a
+ * selector because its body holds braces, and the rules nested inside it match on their own,
+ * which is what the guard below wants — a `:root` inside a media query is still a `:root` rule.
+ */
+const BLOCKS = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+  selector: (match[1] ?? '').trim(),
+  body: match[2] ?? '',
+}));
+
+/**
+ * The first declaration of `--db-<name>`, with one `var()` hop resolved the same way.
+ *
+ * The seat colours are aliases since #161: `--db-p1` is `var(--db-seat-a)` and the hex lives on
+ * the source, so that a swap can exchange the pair without a cycle. Following the hop keeps
+ * this comparison what it always was — the value a `var(--db-p1)` in the shell actually paints
+ * with, held to the TypeScript palette — rather than a comparison of one alias string.
+ */
 function cssVar(name: string): string {
   const match = new RegExp(`--db-${name}:\\s*([^;]+);`).exec(css);
   if (!match?.[1]) throw new Error(`--db-${name} is not defined in tokens.css`);
-  return match[1].trim();
+  const value = match[1].trim();
+  const hop = /^var\(--db-([a-z0-9-]+)\)$/.exec(value);
+  return hop?.[1] ? cssVar(hop[1]) : value;
 }
 
 /** camelCase in TS maps to kebab-case in CSS. */
@@ -46,6 +81,40 @@ describe('design tokens', () => {
     expect(seatColour.p1.base).toBe(colour.p1);
     expect(seatColour.p2.base).toBe(colour.p2);
     expect(seatColour.p1.base).not.toBe(seatColour.p2.base);
+  });
+
+  /**
+   * The swap (#161) exchanges the whole pair and nothing else.
+   *
+   * Read from the stylesheet rather than from a browser: the two rules that define the seat
+   * aliases are the only two, the plain one maps p1 to the warm source and p2 to the cool,
+   * and the swapped one maps them the other way round — base, deep and tint alike, so a swap
+   * that forgot the tint would leave a seat's fill and its territory wash in different pairs.
+   * Watched failing with the tint line dropped from the swap rule.
+   */
+  it('exchanges every seat token under data-seat-swap, and only those', () => {
+    const rule = (selector: string): Record<string, string> => {
+      const found: Record<string, string> = {};
+      for (const { body } of BLOCKS.filter((entry) => entry.selector === selector)) {
+        for (const line of body.matchAll(/(--db-p[12](?:-deep|-tint)?):\s*([^;]+);/g)) {
+          if (line[1] && line[2]) found[line[1]] = line[2].trim();
+        }
+      }
+      return found;
+    };
+    const plain = rule(':root');
+    const swapped = rule(':root[data-seat-swap]');
+    const parts = ['', '-deep', '-tint'];
+    for (const part of parts) {
+      expect(plain[`--db-p1${part}`]).toBe(`var(--db-seat-a${part})`);
+      expect(plain[`--db-p2${part}`]).toBe(`var(--db-seat-b${part})`);
+      expect(swapped[`--db-p1${part}`]).toBe(`var(--db-seat-b${part})`);
+      expect(swapped[`--db-p2${part}`]).toBe(`var(--db-seat-a${part})`);
+    }
+    // No palette block declares the alias directly any more — a hex on `--db-p1` in the dark
+    // or colour-blind block would win the cascade there and silently un-swap one theme.
+    const direct = [...css.matchAll(/--db-p[12](?:-deep|-tint)?:\s*#/g)];
+    expect(direct).toEqual([]);
   });
 
   it('carries colours and nothing else', () => {

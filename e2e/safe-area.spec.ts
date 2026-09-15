@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { insetsFor, startMatch } from './responsive';
+import { NARROWEST, applyInsets, insetsFor, outsideSafeArea, startMatch } from './responsive';
 
 /**
  * Nothing interactive or informational may sit under a notch, a home indicator, or a
@@ -114,6 +114,54 @@ test.describe('a running match keeps clear of the cutout', () => {
     );
 
     expect(offenders, 'controls inside the cutout band during a match').toEqual([]);
+  });
+
+  /**
+   * The same match at the narrowest class the product supports, both ways up (#2586).
+   *
+   * The test above measures whichever viewport its project chose, and every project is a
+   * real phone: 393x852 and 852x393. Neither is the floor. `docs/responsive.md` puts the
+   * floor at 320px, `scripts/responsive-matrix.mjs` measures there, and that is where the
+   * HUD failed — the pause button 2px inside the home indicator at 320x568 and both
+   * controls 8px inside it at 568x320, on a layout the 393px projects called clean. Forty
+   * pixels of width and thirty-two of height were the whole difference between a passing
+   * gate and a control under a swipe-up gesture, so the gate measures the floor too.
+   *
+   * Same cells, same insets, same reading as the harness: `NARROWEST`, `insetsFor` and
+   * `outsideSafeArea` all come from `./responsive.ts`, which is the point of that module —
+   * a nightly or a per-game failure has to reproduce here, and a check that measured
+   * *nearly* the same thing would be the worst of both.
+   *
+   * Both orientations in one test, as `responsive-sweep.spec.ts` does: the expensive part
+   * is the browser context and the countdown, and turning a viewport is a method call.
+   */
+  test('the HUD clears the cutout at 320px, both ways up', async ({ page }) => {
+    // In the body rather than on the group: this test sets its own viewport, so the second
+    // Chromium project and the second WebKit one would re-measure the same two cells. It is
+    // the rule `playwright.config.ts`'s ONE_PER_ENGINE list applies, applied to one test
+    // rather than the file — the tests around it *are* their project's viewport, and putting
+    // the file in that list would take the match layout's landscape run with it.
+    test.skip(
+      ['mobile', 'notched-landscape'].includes(test.info().project.name),
+      'sets its own viewport; chromium and notched-portrait are one project per engine',
+    );
+
+    await startMatch(page, 'tic-tac-toe');
+
+    // Both cells collected before either is asserted, so one run names every offender the
+    // way the harness table does. Asserting inside the loop hides landscape behind portrait,
+    // and these two fail for different reasons.
+    const offenders: string[] = [];
+    for (const cell of NARROWEST) {
+      await page.setViewportSize({ width: cell.width, height: cell.height });
+      const inset = insetsFor(cell.width, cell.height);
+      await applyInsets(page, inset);
+      for (const offender of await outsideSafeArea(page, inset)) {
+        offenders.push(`${String(cell.width)}x${String(cell.height)}: ${offender}`);
+      }
+    }
+
+    expect(offenders, 'controls in the cutout band at the narrowest class').toEqual([]);
   });
 
   test('the pause dialog keeps clear of the cutout too', async ({ page }) => {

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SEATS } from './seat.js';
-import { SEAT_PALETTE, seatPalette } from './palette.js';
+import {
+  SEAT_PALETTE,
+  SEAT_PALETTES,
+  seatPalette,
+  seatSwapped,
+  setActiveSeatPalette,
+  setSeatSwap,
+} from './palette.js';
 
 describe('the seat palette', () => {
   it('covers every seat', () => {
@@ -33,6 +40,33 @@ describe('the seat palette', () => {
       const entry = seatPalette(seat);
       expect(luminance(entry.deep)).toBeLessThan(luminance(entry.base));
     }
+  });
+
+  /**
+   * The swap (#161) exchanges the two seats' values in place and nothing else.
+   *
+   * In place, because a game that captured `SEAT_PALETTE.p1` at module load must see the
+   * swap the way it sees a palette change — `live.p1` stays the same object and its fields
+   * take the far seat's colours. Remembered across a palette change, so choosing the
+   * colour-blind pair keeps the seats the way round the player put them. Watched failing
+   * with `refresh` reading `seat` instead of `source`.
+   */
+  it('exchanges the two seats in place and remembers it across a palette change', () => {
+    const p1 = SEAT_PALETTE.p1;
+    const before = { p1: { ...SEAT_PALETTE.p1 }, p2: { ...SEAT_PALETTE.p2 } };
+    setSeatSwap(true);
+    expect(seatSwapped()).toBe(true);
+    expect(SEAT_PALETTE.p1).toBe(p1);
+    expect({ ...SEAT_PALETTE.p1 }).toEqual(before.p2);
+    expect({ ...SEAT_PALETTE.p2 }).toEqual(before.p1);
+    setActiveSeatPalette('colourblind');
+    expect({ ...SEAT_PALETTE.p1 }).toEqual(SEAT_PALETTES.colourblind.p2);
+    expect({ ...SEAT_PALETTE.p2 }).toEqual(SEAT_PALETTES.colourblind.p1);
+    setSeatSwap(false);
+    expect({ ...SEAT_PALETTE.p1 }).toEqual(SEAT_PALETTES.colourblind.p1);
+    setActiveSeatPalette('default');
+    expect({ ...SEAT_PALETTE.p1 }).toEqual(before.p1);
+    expect(seatSwapped()).toBe(false);
   });
 
   it('cannot be reassigned through the exported record', () => {
