@@ -161,7 +161,7 @@
   "DuelBox is a collection of small games for two people sharing one screen, and nothing else. There is no feed, no levels to work through and no lobby full of strangers: two of you, one device, and a game that finishes soon enough to play another.",
   "DuelBox is built with a small number of open-source libraries and fonts. This page lists them and the licences they are used under. It is generated, not written by hand, so it cannot drift from what actually ships.",
   "DuelBox keeps a page on your device once you have opened it there, and this address is not one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived here.",
-  "DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art, sounds and names. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.",
+  "DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art and sounds. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.",
   "DuelBox — 108 games for two players. Runs in your browser; nothing to install.",
   "Each player's pieces differ in shape as well as colour, so every game is playable in greyscale and to a colour-blind player.",
   "Easy",
