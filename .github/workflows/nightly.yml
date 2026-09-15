@@ -4,7 +4,11 @@ name: Nightly
 #
 # Five things now. The third browser engine: the whole suite passes on Firefox and has done
 # since it was first tried, so running it per-push would spend install and run time to
-# re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
+# re-confirm a clean result. It runs as **three shards**, the way `ci.yml` runs the same suite
+# and for the same reason — on one runner it could not finish inside its own timeout and was
+# cancelled every night for a month — and it is the run that also lifts `tournament`,
+# `game-record` and `share-card` onto every engine (`NIGHTLY_EVERY_ENGINE`, #2585). And the
+# seat-balance sweep, on two axes the push cannot afford:
 #
 #   - Depth. `balance-aggregate.test.ts` runs fifty seeds a game on every push, which enforces
 #     a 23.8-76.2% band and nothing finer — enough to catch a game that has become grossly
@@ -73,9 +77,41 @@ on:
 
 jobs:
   all-engines:
-    name: every browser engine
+    name: every browser engine (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # ## Sharded, because one runner never once finished this suite
+    #
+    # This job ran the whole suite on five projects in a single runner, and it was **cancelled
+    # by its own thirty-minute cap on every scheduled run from 9 September 2026 onwards**. In
+    # run 34681983965 the `pnpm e2e` step started at 07:59:57Z and was killed at 08:26:22Z,
+    # twenty-six minutes in and still going — so the one job this file exists to run has never
+    # reported what Firefox thinks, and a cancelled job reads as an infrastructure flake rather
+    # than as a budget that ran out. That is the same failure `ci.yml` has now been split twice
+    # to stop, and the second of those splits is the fix applied here.
+    #
+    # `ci.yml` divides the identical suite three ways with Playwright's own sharding, which
+    # splits by test rather than by file and so stays balanced as specs are added — see the
+    # note above its `e2e` job. There is more to divide here than there: four projects on two
+    # engines on a push, five on three tonight, because `firefox` only exists when
+    # `DUELBOX_ALL_ENGINES=1` and that flag also lifts `tournament.spec.ts`,
+    # `game-record.spec.ts` and `share-card.spec.ts` off the Chromium-only list they have been
+    # on since #2585, onto every one of the five.
+    #
+    # **Sixty minutes, and it is headroom rather than an estimate.** `ci.yml` gives a shard of
+    # a two-engine suite twenty; this shard is a third of a suite that exceeded twenty-six
+    # minutes without finishing, on five projects, after installing three engines instead of
+    # two — and nobody can state its real duration, because no run of it has ever completed.
+    # The first green run is what measures that; until then the cap must not be the thing that
+    # decides the result again. A run that approaches sixty is a finding, not a number to
+    # raise.
+    #
+    # `fail-fast: false` so one engine going red still lets the other two shards report. A
+    # suite that stops at the first failure tells you about one broken thing per night.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -84,18 +120,29 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The suite drives the real static artefact rather than a dev server, so it needs the
+      # build. Each shard builds its own: the three run in parallel and share nothing.
       - run: pnpm build
       - run: npx playwright install --with-deps chromium webkit firefox
-      - run: pnpm e2e
+      # No `--` before the flag: pnpm 9 consumes that itself and the argument never reaches
+      # Playwright, which then runs the whole suite on every shard — three full runs that each
+      # look like a pass, and this job back inside the timeout that just killed it. `ci.yml`
+      # records the same trap against the same flag; `npx playwright test --list` is how to
+      # check the three shards still add up to the suite rather than each equalling it.
+      - run: pnpm e2e --shard=${{ matrix.shard }}/3
         env:
           # Also lets tournament.spec.ts, game-record.spec.ts and share-card.spec.ts off
-          # their per-push Chromium-only list, so the catalog-to-rematch and full-tournament
-          # journeys run on WebKit and Firefox too, at least once a day (#226).
+          # their per-push Chromium-only list — `NIGHTLY_EVERY_ENGINE` in
+          # `playwright.config.ts`, since #2585 — so the catalog-to-rematch and
+          # full-tournament journeys run on WebKit and Firefox too, at least once a day
+          # (#226).
           DUELBOX_ALL_ENGINES: '1'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
-          name: playwright-report
+          # Per shard: three jobs uploading one name is a collision, and the shard in the
+          # name is what says which third of the suite the report covers.
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
 
@@ -207,6 +254,16 @@ jobs:
       # thresholds live in vitest.config.ts and fail this step on their own; there is no
       # separate check, and there must not be, or the number in the config and the number
       # that is enforced can drift apart.
+      #
+      # That flag now also holds `balance-aggregate.test.ts` out of the run, and this step is
+      # why: its `beforeAll` plays every game's bots, which takes 461.7s under v8
+      # instrumentation on a quiet development machine against a 600s hook budget that already
+      # has CI's multiplier inside it — so this step ended `Hook timed out in 600000ms` on
+      # every scheduled run from 9 September 2026. The seat-balance jobs above run that file
+      # three times a night on machines that are not also instrumenting 384 others, and the
+      # thresholds do not need it: without it the run still reports 98.75% of lines and every
+      # game's `rules.ts` at 95.67% or better, against a floor of 70. The measurement, the
+      # alternative that was rejected and how to reproduce both are in vitest.config.ts.
       - run: pnpm test:coverage
       # Published whether or not the thresholds held. A report you can only see when the run
       # is green tells you nothing on the morning you need it: the failure message names the
