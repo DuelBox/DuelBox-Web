@@ -13,6 +13,7 @@ import { resultAnnouncement, soloAnnouncement } from '@/lib/match-announcement';
 import type { RunResult } from '@/lib/best-scores';
 import type { MatchChanges } from '@/lib/match-changes';
 import type { BotDifficulty, PlayMode } from '@/lib/match-setup';
+import { bugReportUrl, readBugReportEnvironment } from '@/lib/bug-report-url';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
 import { MatchOptions } from './MatchOptions';
@@ -164,6 +165,33 @@ function Phase({
   // isolate itself rather than reorder the sentence it sits in.
   const p1 = <bdi>{seatNames.p1}</bdi>;
   const p2 = <bdi>{seatNames.p2}</bdi>;
+  /**
+   * A bug report with this match already in it (#233), offered wherever play has stopped:
+   * the pause menu and the two result screens. The footer's link lands on the same form
+   * with nothing filled in, because a server component cannot know the device; this one
+   * can, and `lib/bug-report-url.ts` says what goes in and what stays out — the names the
+   * two of you chose stay out. A plain anchor rather than `next/link`, for the reason the
+   * result links give `prefetch={false}`: a match needs nothing from the network. Built when
+   * a panel renders and not before; none of these panels exist in the exported HTML.
+   */
+  const reportHref = () =>
+    bugReportUrl({
+      slug,
+      ...readBugReportEnvironment(),
+      match: {
+        game: manifest.name,
+        mode: changing?.mode,
+        difficulty: changing?.difficulty,
+        presentation,
+        rounds,
+        state,
+      },
+    });
+  const report = (
+    <a className={styles.secondary} href={reportHref()} target="_blank" rel="noopener noreferrer">
+      {t(messages, 'Report a bug')}
+    </a>
+  );
   switch (state.phase) {
     case 'countdown':
       return <Countdown remaining={state.countdownRemaining} presentation={presentation} />;
@@ -207,6 +235,7 @@ function Phase({
             <Link className={styles.secondary} href="/settings/" prefetch={false}>
               {t(messages, 'Settings')}
             </Link>
+            {report}
             {/* The product's only sound control. Here because pause is already where a
                 pair stops to change something, and because a control beside the score is
                 one either player can hit reaching across a shared device. */}
@@ -269,6 +298,7 @@ function Phase({
                   {t(messages, 'Play {game}', { game: nextGame.name })}
                 </Link>
               ) : null}
+              {report}
             </div>
             <Link className={styles.back} href="/games" prefetch={false}>
               {t(messages, 'Back to all games')}
@@ -334,6 +364,7 @@ function Phase({
                 {t(messages, 'Play {game}', { game: nextGame.name })}
               </Link>
             ) : null}
+            {report}
           </div>
           <Link className={styles.back} href="/games" prefetch={false}>
             {t(messages, 'Back to all games')}
