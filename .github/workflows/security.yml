@@ -33,7 +33,7 @@ jobs:
       # before a single query ran — on every pull request, while push stayed green (#2468).
       # v4 falls back to a full analysis when the PR diff ranges cannot be computed, and v3
       # of the action is deprecated in December 2026 regardless.
-      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+      - uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           languages: javascript-typescript
           # The extended suite adds the security rules that matter for a site handling
