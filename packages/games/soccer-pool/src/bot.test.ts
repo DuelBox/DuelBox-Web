@@ -16,9 +16,15 @@ import type { BotDifficulty } from './rules.js';
  * tuning change that quietly flattens the ladder fails a test rather than aging a document.
  *
  * Every pairing is played from **both seats on the same seed** and the two runs added
- * together, because seat one takes the opening kick-off from the centre spot — the single
- * best shot on the pitch — and a one-sided sample would credit that to whichever tier
- * happened to sit there.
+ * together, because the kick-off from the centre spot is the single best shot on the pitch
+ * and a one-sided sample would credit it to whichever tier happened to take it.
+ *
+ * The sweep also **alternates the opening seat** across seeds, because the shell does
+ * (`GameContext.openingSeat`, #2487). Pinning it to `p1` — which this file used to do —
+ * makes the opener's advantage arrive already stamped with a seat, and there is then no
+ * measurement that can tell the two apart. That is exactly what issue #2500 was: this file
+ * read 57.5% and called it a seat edge, while the product harness, which alternates, read
+ * 50.0%. Both numbers were right about different things.
  */
 
 const STEP = 1 / 60;
@@ -42,13 +48,18 @@ const SILENT: InputState = { seat: (): SeatInput => IDLE };
 
 const TIERS: readonly BotDifficulty[] = ['easy', 'normal', 'hard'];
 
-function contextFor(seed: number, p1: BotDifficulty, p2: BotDifficulty): GameContext {
+function contextFor(
+  seed: number,
+  p1: BotDifficulty,
+  p2: BotDifficulty,
+  openingSeat: SeatId,
+): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty: (seat: SeatId) => (seat === 'p1' ? p1 : p2),
   };
 }
@@ -60,9 +71,9 @@ interface Played {
   readonly shots: number;
 }
 
-function play(seed: number, p1: BotDifficulty, p2: BotDifficulty): Played {
+function play(seed: number, p1: BotDifficulty, p2: BotDifficulty, openingSeat: SeatId): Played {
   const game = new SoccerPoolGame();
-  game.init(contextFor(seed, p1, p2));
+  game.init(contextFor(seed, p1, p2, openingSeat));
   for (let i = 0; i < TEN_MINUTES; i += 1) {
     game.update(STEP, SILENT);
     const score = game.getScore();
@@ -84,8 +95,10 @@ interface Tally {
   losses: number;
   draws: number;
   unfinished: number;
-  /** Decided matches won by whoever struck first, whichever tier that was. */
+  /** Decided matches won by the near seat, whichever tier and whichever opener. */
   seatOne: number;
+  /** Decided matches won by whoever took the kick-off, whichever seat that was. */
+  opener: number;
   goals: number;
   steps: number;
   worst: number;
@@ -98,14 +111,18 @@ function measure(a: BotDifficulty, b: BotDifficulty, seeds = SEEDS): Tally {
     draws: 0,
     unfinished: 0,
     seatOne: 0,
+    opener: 0,
     goals: 0,
     steps: 0,
     worst: 0,
   };
   for (let s = 1; s <= seeds; s += 1) {
     const seed = s * 7919;
+    // Odd seeds open near, even seeds open far. Both tier orders see both openers an
+    // equal number of times, so the sweep costs exactly what it did before.
+    const openingSeat: SeatId = s % 2 === 0 ? 'p2' : 'p1';
     for (const forward of [true, false]) {
-      const result = forward ? play(seed, a, b) : play(seed, b, a);
+      const result = forward ? play(seed, a, b, openingSeat) : play(seed, b, a, openingSeat);
       if (result.winner === null) {
         tally.unfinished += 1;
         continue;
@@ -118,6 +135,7 @@ function measure(a: BotDifficulty, b: BotDifficulty, seeds = SEEDS): Tally {
         continue;
       }
       if (result.winner === 'p1') tally.seatOne += 1;
+      if (result.winner === openingSeat) tally.opener += 1;
       const aSeat: SeatId = forward ? 'p1' : 'p2';
       if (result.winner === aSeat) tally.wins += 1;
       else tally.losses += 1;
@@ -196,10 +214,15 @@ describe('the ladder', () => {
 });
 
 describe('the two chairs', () => {
-  it('gives seat one only the advantage of striking first', () => {
-    // Seat one takes the opening kick-off from the centre spot, which is the best shot on
-    // the pitch — the same first-move advantage Pool's break has. It must stay an edge and
-    // not become the game.
+  it('gives neither seat more than the product band allows', () => {
+    // The criterion the fifty "audit fairness" issues all converge on, and the one
+    // `apps/web/src/data/balance-aggregate.test.ts` enforces across every game:
+    // neither seat wins more than 45-55 percent at equal skill.
+    //
+    // This file used to assert 50-65 percent here and call it "an edge, not the match",
+    // which is a floor at the product's ceiling — a game could not pass both (#2500).
+    // The disagreement was never about the game. It was that this sweep pinned the
+    // opening seat to `p1`, so the kick-off advantage below arrived wearing a seat.
     let decided = 0;
     let seatOne = 0;
     for (const tally of SWEEP.values()) {
@@ -207,19 +230,51 @@ describe('the two chairs', () => {
       seatOne += tally.seatOne;
     }
     expect(decided).toBeGreaterThan(500);
-    expect(seatOne / decided).toBeGreaterThan(0.5);
-    expect(seatOne / decided, 'an edge, not the match').toBeLessThan(0.65);
+    const share = seatOne / decided;
+    expect(share, `seat one won ${(share * 100).toFixed(1)}% of ${decided}`).toBeGreaterThan(0.45);
+    expect(share, `seat one won ${(share * 100).toFixed(1)}% of ${decided}`).toBeLessThan(0.55);
   });
 
-  it('gives the same seat one edge at every tier, not a different game at one of them', () => {
-    for (const tier of TIERS) {
-      const tally = tallyFor(tier, tier);
+  it('gives no tier a seat of its own', () => {
+    // Per pairing rather than in aggregate, because a lean that cancels between tiers is
+    // still a lean. The band is wider than the product's only because each pairing decides
+    // a few hundred matches, where +-5 points is inside the noise; the aggregate above is
+    // what holds the game to 45-55.
+    for (const [pairing, tally] of SWEEP) {
       const decided = tally.wins + tally.losses;
-      expect(decided, `${tier} against itself decided too few`).toBeGreaterThan(40);
+      expect(decided, `${pairing} decided too few`).toBeGreaterThan(40);
       const share = tally.seatOne / decided;
-      expect(share, `${tier}: seat one won ${(share * 100).toFixed(1)}%`).toBeGreaterThan(0.42);
-      expect(share, `${tier}: seat one won ${(share * 100).toFixed(1)}%`).toBeLessThan(0.7);
+      expect(share, `${pairing}: seat one won ${(share * 100).toFixed(1)}%`).toBeGreaterThan(0.42);
+      expect(share, `${pairing}: seat one won ${(share * 100).toFixed(1)}%`).toBeLessThan(0.58);
     }
+  });
+
+  it('does give the kick-off a real advantage, which is the game and not a defect', () => {
+    // Striking first from the centre spot is the best shot on the pitch, the same edge
+    // Pool's break has. It is worth keeping and worth measuring — but it belongs to
+    // whoever opens, not to a chair. The shell alternates the opener between rounds of a
+    // best-of, so across a match the two players get it equally often.
+    let decided = 0;
+    let opener = 0;
+    for (const tally of SWEEP.values()) {
+      decided += tally.wins + tally.losses;
+      opener += tally.opener;
+    }
+    const share = opener / decided;
+    expect(share, `the opener won ${(share * 100).toFixed(1)}% of ${decided}`).toBeGreaterThan(0.5);
+    expect(share, 'an edge, not the match').toBeLessThan(0.65);
+  });
+
+  it('leans on the kick-off hardest when both bots are weakest', () => {
+    // The measurement that made the point: two easy bots, and whoever opens takes about
+    // three quarters of the decided matches, because neither can recover the deficit. Two
+    // hard bots are near the sweep average. So the kick-off edge is a function of how well
+    // the shot is answered, which is what it should be.
+    const shareOf = (a: BotDifficulty, b: BotDifficulty): number => {
+      const tally = tallyFor(a, b);
+      return tally.opener / (tally.wins + tally.losses);
+    };
+    expect(shareOf('easy', 'easy')).toBeGreaterThan(shareOf('hard', 'hard'));
   });
 });
 
@@ -250,8 +305,10 @@ describe('every measured match finished', () => {
 
   it('never spent more than the shots a match has', () => {
     for (const tier of TIERS) {
-      const result = play(4242, tier, tier);
-      expect(result.shots).toBeLessThanOrEqual(MAX_SHOTS);
+      for (const openingSeat of ['p1', 'p2'] as const) {
+        const result = play(4242, tier, tier, openingSeat);
+        expect(result.shots, `${tier}, ${openingSeat} opening`).toBeLessThanOrEqual(MAX_SHOTS);
+      }
     }
   });
 });

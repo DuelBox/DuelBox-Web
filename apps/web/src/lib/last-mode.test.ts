@@ -193,3 +193,66 @@ describe('remembering the whole pre-match setup', () => {
     expect(readSetup('chess')).toEqual({ mode: null, difficulty: 'normal', rounds: 3 });
   });
 });
+
+describe('a hostile value in storage (#2365)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // **These are characterization tests: they passed before the hardening below them, and
+  // they pass after.** That is the finding, and it is worth more than a fix would have been.
+  //
+  // `localStorage` is untrusted input — anything on the origin can write it, as can the
+  // person with the console open — and `JSON.parse` makes `__proto__` an *own enumerable*
+  // property, so `Object.entries` hands it over and `out[slug] = …` replaces the map's
+  // prototype rather than storing a key. That is a real hazard and it is why #2365 named
+  // this function.
+  //
+  // It is not reachable here, for a reason that is easy to lose: **`sanitise()` runs before
+  // the assignment.** Whatever the attacker nested is reduced to a fresh object holding only
+  // known fields, so the prototype does get replaced — and replaced with an inert `{}`.
+  // Traced end to end: with a payload of `{"__proto__": {"chess": {"mode": "bot"}}}`,
+  // `out['chess']` is `undefined` both with the hardening and without it.
+  //
+  // So the protection is an ordering, not a check, and an ordering is a fragile thing to
+  // rest on: moving the assignment above `sanitise()`, or adding a branch that stores a
+  // value straight from storage, would make this exploitable with nothing to catch it.
+  // `readAll` now uses `Object.create(null)` and skips `__proto__` outright so that the
+  // safety no longer depends on the order — and these tests state the property being
+  // protected, so a future refactor is measured against behaviour rather than against a
+  // reading of the code.
+  const payload = JSON.stringify({
+    version: 1,
+    games: JSON.parse('{"__proto__": {"chess": {"mode": "bot", "difficulty": "hard"}}}') as Record<
+      string,
+      unknown
+    >,
+  });
+
+  it('does not hand back settings for a game that was never stored', () => {
+    install(fakeStorage({ 'duelbox:last-mode': payload }));
+    expect(readLastMode('chess')).toBeNull();
+    expect(readSetup('chess')).toEqual(readSetup('never-played-either'));
+  });
+
+  it('still reads a legitimate entry stored beside the payload', () => {
+    const mixed = JSON.stringify({
+      version: 1,
+      games: JSON.parse(
+        '{"__proto__": {"chess": {"mode": "bot"}}, "pool": {"mode": "friend"}}',
+      ) as Record<string, unknown>,
+    });
+    install(fakeStorage({ 'duelbox:last-mode': mixed }));
+    expect(readLastMode('pool')).toBe('friend');
+    expect(readLastMode('chess')).toBeNull();
+  });
+
+  it('leaves Object.prototype alone, which it always did', () => {
+    // The damage was always scoped to this one map; nothing ever reached the rest of the
+    // page. Pinned so a future reader does not have to re-derive it.
+    install(fakeStorage({ 'duelbox:last-mode': payload }));
+    readSetup('chess');
+    const prototype: Record<string, unknown> = Object.prototype as never;
+    expect(prototype['chess']).toBeUndefined();
+  });
+});

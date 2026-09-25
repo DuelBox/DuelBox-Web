@@ -107,15 +107,45 @@ accepts instructions from any page that embeds us.
 against an allowlist, never trust `event.source`, and treat the message payload with the
 same suspicion as a peer's.
 
+**And the framing half of it does not have the headers it assumes.** `X-Frame-Options` and
+CSP `frame-ancestors` are both generated and both discarded — the site deploys to GitHub
+Pages, which serves no custom response headers, and neither control has a meta equivalent
+(#2481). So today *any* page can frame *any* route here. The stand-in is `FRAME_GUARD` in
+`apps/web/src/app/frame-guard.ts`: an inline script that hides a framed document before it
+paints, so there is nothing to overlay and nothing to click. It is a mitigation of
+clickjacking and nothing more — it does not run in an `<iframe sandbox>` without
+`allow-scripts`, which is the iframe an attacker writes, and the page is loaded either way.
+An origin allowlist for framing is not expressible in script at all; it needs the header,
+which needs a host that serves one. `scripts/header-delivery.mjs` holds the classification
+and the build fails if a header is added without one.
+
 ### 6. Third-party runtime dependencies
 
-We fetch three typefaces from Google's CDN on every cold load. That is a request to
-someone else's server on the critical path, and it sends every visitor's IP and
-User-Agent there.
+There are none. A cold load reaches this origin and nothing else: no CDN, no analytics
+beacon, no embedded map, no font host. Nothing about a visitor — not their IP, not their
+User-Agent — is disclosed to anybody but whoever serves the pages.
 
-**Not mitigated.** #187 covers self-hosting them. Play survives a blocked font, so this is
-a privacy and availability issue rather than a functional one — but "offline-capable" is a
-product claim, and today it is not quite true.
+**Mitigated, and by construction rather than by care.** This section used to say we fetch
+three typefaces from Google's CDN on every cold load and that #187 covered self-hosting
+them. #2469 did it: the three families are `.woff2` files in the repository, licensed in
+`apps/web/assets.license.json` as rule 3 requires, declared in `styles/fonts.css` with
+relative URLs that Next emits under `_next/static/media/`, and the `<link>` and
+`preconnect` pair that used to reach `fonts.googleapis.com` are gone from `layout.tsx`.
+The CSP was never widened to accommodate them and still reads `style-src 'self'
+'unsafe-inline'` and `font-src 'self'`.
+
+Two guards keep it that way, and both fail rather than warn. `csp-origins.test.ts` walks
+the markup, the stylesheets and the built export for every position that *loads*
+something and fails if it names an origin the policy does not permit — which is how the
+font problem was found in the first place, because a CSP does not error, it silently
+drops the subresource and the page renders in whatever face the device defaults to.
+`e2e/fonts.spec.ts` watches the network on a real cold load and fails if a single request
+goes to `fonts.googleapis.com` or `fonts.gstatic.com`.
+
+**Residual.** The host still sees the requests for the pages themselves; that is GitHub
+Pages, it is named on the privacy page, and it is not a third party in the sense this
+section is about. The day something here does reach another origin, it is this paragraph
+that has to be rewritten first — the same test that would fail the build points at it.
 
 ## What the architecture removes
 

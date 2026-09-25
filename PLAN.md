@@ -36,7 +36,7 @@ per-game research issue.
 | Layer | Choice | Why |
 |---|---|---|
 | Framework | Next.js 15, App Router, TypeScript strict | A client-rendered games portal earns no organic traffic; SSG/SSR is the whole discovery strategy |
-| Styling | Tailwind v4 over CSS custom-property tokens | One token source shared by shell CSS and canvas drawing code |
+| Styling | CSS Modules over CSS custom-property tokens (`apps/web/src/styles/tokens.css`) | One token source shared by shell CSS and canvas drawing code. Tailwind v4 was the plan and was not adopted; `tokens.test.ts` is what holds every stylesheet to the tokens instead (#71) |
 | Game engine | Custom, Canvas2D, fixed timestep | 107 small games do not need a physics library, and React must never enter a game loop |
 | 3D landing | React Three Fiber, landing route only | Isolated structurally, asserted in CI, never in a game bundle |
 | State | Zustand for the shell | Games hold their own state; the shell holds session and settings |
@@ -112,7 +112,9 @@ match state exactly across rotation, resize, and fold.
 
 The catalog is one flat scroll of 107 cards with no search, no categories, and no
 filters. Ours gets search, category filters, sort, favourites, recently played,
-animated card previews, per-game indexable pages, offline play, and installability.
+animated card previews and per-game indexable pages. Offline play and installability
+are the M3 line below and are not built yet — #191 to #196 and #2445 own them, and
+nothing in the product may claim either until they land.
 
 ## Milestones
 

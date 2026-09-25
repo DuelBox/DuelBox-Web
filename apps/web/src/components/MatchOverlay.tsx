@@ -1,12 +1,23 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { SeatId } from '@duelbox/engine';
+import type { Presentation, SeatId } from '@duelbox/engine';
 import type { GameManifest, MatchState } from '@duelbox/game-sdk';
-import { seatColour } from '@/styles/tokens';
+import { t } from '@/lib/i18n/messages';
+import { T } from '@/lib/i18n/T';
+import { useMessages } from '@/lib/i18n/use-messages';
+import type { Tally } from '@/lib/head-to-head';
+import type { SeatNames } from '@/lib/seats';
+import { resultAnnouncement, soloAnnouncement } from '@/lib/match-announcement';
+import type { RunResult } from '@/lib/best-scores';
+import type { MatchChanges } from '@/lib/match-changes';
+import type { BotDifficulty, PlayMode } from '@/lib/match-setup';
 import { SeatGlyph } from './SeatGlyph';
 import { Controls } from './Controls';
+import { MatchOptions } from './MatchOptions';
+import { countdownViews } from './countdown-views';
+import { SoundToggle } from './SoundToggle';
 import styles from './MatchOverlay.module.css';
 
 /**
@@ -16,6 +27,10 @@ import styles from './MatchOverlay.module.css';
  * These four screens are the shell's, not a game's. Written per game they drift into 107
  * slightly different pause menus, and a player who learns one game learns nothing about
  * the next.
+ *
+ * A fifth thing covers nothing and is drawn nowhere: the live region that says the result
+ * out loud. It sits beside the panels rather than inside one because it has to exist
+ * before there is a result to put in it — see `lib/match-announcement.ts`.
  */
 
 export interface MatchOverlayProps {
@@ -23,46 +38,181 @@ export interface MatchOverlayProps {
   /** Carries the per-game control copy the pause menu shows on demand. */
   manifest: GameManifest;
   rounds: number;
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
-  /** Matches won by each seat in this sitting, across rematches. */
-  record?: { p1: number; p2: number; draws: number } | undefined;
+  /** What both seats are called, from `lib/seats.ts`. Total, so nothing here falls back. */
+  seatNames: SeatNames;
+  /**
+   * Matches each seat has won at this game, all of them, from `lib/head-to-head.ts` —
+   * *including* the match this panel is announcing.
+   *
+   * It used to be the tally for one sitting and the line above it said "Tonight", which
+   * stopped being true the moment the record outlived the tab (#160). It arrives already
+   * carrying the current result rather than a commit later, so the first paint of the
+   * result panel is the paint with the final numbers on it.
+   *
+   * It is also the record against *this* match's opponent. A bot's wins are the bot's, and
+   * the store keeps them apart from the two seats' own head-to-head, so the names beside
+   * these numbers are the names of whoever actually won them.
+   */
+  record?: Tally | undefined;
   /** Somewhere to go after the match, so a result screen is not a dead end. */
   nextGame?: { slug: string; name: string } | undefined;
+  /** This game's route slug, for the address the share card prints (#164). */
+  slug: string;
+  /**
+   * How the match is presented, so the count-in reads upright for whoever is looking (#142).
+   * Shared-screen draws it twice, once turned; single-seat draws it once. Defaults to
+   * shared-screen, the archetype default for everything the shell hosts today.
+   */
+  presentation?: Presentation | undefined;
+  /**
+   * Why the match paused itself, when it did (#130): a controller came or went. Shown on the
+   * pause panel and nowhere else, because the panel is the thing the pause put on screen and
+   * a second surface for one sentence is a second thing to focus-trap.
+   */
+  notice?: string | undefined;
+  /** Swaps which controller drives which seat; absent when no controller has been seen. */
+  onSwapControllers?: (() => void) | undefined;
   onResume: () => void;
   onQuit: () => void;
   onNextRound: () => void;
   onRematch: () => void;
+  /** Restart the match cleanly from the pause menu (#145). */
+  onRestart: () => void;
+  /**
+   * A solo run's result (#1750), once the machine has settled it. Present only in solo mode:
+   * the ending is then a score against this device's best rather than a winner, the
+   * head-to-head line and the share card are not offered (there was nobody on the other side
+   * of either), and the way on is "Go again" rather than "Rematch".
+   */
+  solo?: RunResult | undefined;
+  /**
+   * What the match may change about itself between rounds, and the hands that change it
+   * (#2351). Absent, nothing is offered and nothing is refused — the overlay then reads as
+   * it did before a match could change at all.
+   */
+  changing?: Changing | undefined;
+  /**
+   * The far seat changed hands during this match, so its ending went on no record: a bot's
+   * wins are not the far player's, and a match that was both belongs on neither map. The
+   * panel says so where the record line would have been.
+   */
+  unrecorded?: boolean | undefined;
 }
 
-export function MatchOverlay({
+export interface Changing {
+  readonly changes: MatchChanges;
+  /** Who holds the far seat now, so the hand-over offers the other. */
+  readonly mode: PlayMode;
+  readonly difficulty: BotDifficulty;
+  readonly onHandSeat: (to: 'friend' | 'bot') => void;
+  readonly onDifficulty: (difficulty: BotDifficulty) => void;
+  readonly onRounds: (rounds: number) => void;
+}
+
+export function MatchOverlay(props: MatchOverlayProps) {
+  const { state, rounds, seatNames, solo } = props;
+  const messages = useMessages();
+  return (
+    <>
+      {/*
+        The result, said out loud, from a region that was already here.
+
+        This is the whole of #177's acceptance criterion — "hear the result" — and the
+        panel below cannot deliver it however it is marked up: it is *inserted* carrying
+        its text, and a live region that arrives with its content is the shape assistive
+        technology is least reliable about. This one has been on the page, empty, since
+        the countdown, so the ending is a change to text a screen reader was already
+        watching.
+
+        Assertive and atomic, exactly as the countdown below is, and for the same reason:
+        both are the thing everyone in the room is waiting on, and half a result read out
+        of a partly-changed region is worse than none. It says the panel's own words and
+        `lib/match-announcement.ts` explains why it says them exactly once.
+      */}
+      <p className="db-visually-hidden" role="status" aria-live="assertive" aria-atomic="true">
+        {solo === undefined
+          ? resultAnnouncement(messages, state, rounds, seatNames)
+          : soloAnnouncement(messages, state, solo)}
+      </p>
+      <Phase {...props} />
+    </>
+  );
+}
+
+function Phase({
   state,
   manifest,
   rounds,
   seatNames,
   record,
   nextGame,
+  slug,
+  presentation = 'shared-screen',
+  notice,
+  onSwapControllers,
   onResume,
   onQuit,
   onNextRound,
   onRematch,
+  onRestart,
+  solo,
+  changing,
+  unrecorded = false,
 }: MatchOverlayProps) {
+  const messages = useMessages();
+  // Every rendered player name is wrapped in `<bdi>` (#222): a name in another script must
+  // isolate itself rather than reorder the sentence it sits in.
+  const p1 = <bdi>{seatNames.p1}</bdi>;
+  const p2 = <bdi>{seatNames.p2}</bdi>;
   switch (state.phase) {
     case 'countdown':
-      return <Countdown remaining={state.countdownRemaining} />;
+      return <Countdown remaining={state.countdownRemaining} presentation={presentation} />;
 
     case 'paused':
       return (
-        <Panel heading="Paused" role="dialog">
-          <p className={styles.detail}>The board is exactly where you left it.</p>
+        <Panel heading={t(messages, 'Paused')} role="dialog">
+          {/* The controller sentence first, because when it is present it is the reason the
+              board stopped, and "exactly where you left it" is then the second thing to know. */}
+          {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
+          <p className={styles.detail}>{t(messages, 'The board is exactly where you left it.')}</p>
+          {/* Why the pause menu offers no change of seat, bot or length: a round is running,
+              and `lib/match-changes.ts` says so in one sentence (#2351). A solo run has no
+              far seat to ask about. */}
+          {changing === undefined || changing.mode === 'solo' ? null : (
+            <p className={styles.detail}>{t(messages, changing.changes.seat.reason)}</p>
+          )}
           {/* On demand during a match, as the issue asks: a player who has forgotten
               which keys are theirs should not have to quit to find out. */}
           <Controls manifest={manifest} />
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onResume} autoFocus>
-              Resume
+              {t(messages, 'Resume')}
             </button>
+            {/* Restart and Settings join Resume and Quit (#145). Restart starts the match
+                over cleanly; Settings opens the shell's settings surface. Both are ordinary
+                stops in the pause dialog's focus trap, so either seat operates them with a
+                keyboard as well as a tap. */}
+            <button type="button" className={styles.secondary} onClick={onRestart}>
+              {t(messages, 'Restart')}
+            </button>
+            {/* The manual half of "connection order plus manual reassignment" (#130): the
+                pair who were handed the wrong pads swap without re-plugging. Only offered
+                once a controller has been seen, so a keyboard-and-touch pair never meet a
+                button about a thing they do not have. */}
+            {onSwapControllers === undefined ? null : (
+              <button type="button" className={styles.secondary} onClick={onSwapControllers}>
+                {t(messages, 'Swap controllers')}
+              </button>
+            )}
+            <Link className={styles.secondary} href="/settings/" prefetch={false}>
+              {t(messages, 'Settings')}
+            </Link>
+            {/* The product's only sound control. Here because pause is already where a
+                pair stops to change something, and because a control beside the score is
+                one either player can hit reaching across a shared device. */}
+            <SoundToggle className={styles.secondary} />
             <button type="button" className={styles.secondary} onClick={onQuit}>
-              Quit match
+              {t(messages, 'Quit match')}
             </button>
           </div>
         </Panel>
@@ -70,44 +220,110 @@ export function MatchOverlay({
 
     case 'round-over':
       return (
-        <Panel heading={`Round ${state.round}`} role="status">
+        <Panel heading={t(messages, 'Round {round}', { round: state.round })} role="group">
           <Winner outcome={state.roundOutcome} seatNames={seatNames} />
           <p className={styles.detail}>
-            {seatName('p1', seatNames)} {state.roundWins.p1} — {state.roundWins.p2}{' '}
-            {seatName('p2', seatNames)} · first to {Math.ceil(rounds / 2)} takes it
+            <T
+              id="{p1} {wins1} — {wins2} {p2} · first to {target} takes it"
+              values={{
+                p1,
+                wins1: state.roundWins.p1,
+                wins2: state.roundWins.p2,
+                p2,
+                target: Math.ceil(rounds / 2),
+              }}
+            />
           </p>
+          {changing === undefined ? null : <NextRound rounds={rounds} {...changing} />}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onNextRound} autoFocus>
-              Next round
+              {t(messages, 'Next round')}
             </button>
             <button type="button" className={styles.secondary} onClick={onQuit}>
-              Quit match
+              {t(messages, 'Quit match')}
             </button>
           </div>
         </Panel>
       );
 
     case 'match-over':
+      if (solo !== undefined) {
+        // One person, one number, and the one they are trying to beat. No winner line — the
+        // machine settled the run with a seat in `matchOutcome` because that is its only
+        // vocabulary, and which seat it named is not a result anybody is shown.
+        return (
+          <Panel heading={t(messages, 'Game over')} role="group">
+            <p className={styles.winner}>{t(messages, 'Score {score}', { score: solo.score })}</p>
+            <p className={styles.detail}>
+              {solo.isNewBest
+                ? t(messages, 'A new best on this device.')
+                : t(messages, 'Best on this device: {best}.', { best: solo.best })}
+            </p>
+            <div className={styles.actions}>
+              <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
+                {t(messages, 'Go again')}
+              </button>
+              {nextGame ? (
+                <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
+                  {/* The game's own name is never translated (`docs/i18n.md`); the verb is. */}
+                  {t(messages, 'Play {game}', { game: nextGame.name })}
+                </Link>
+              ) : null}
+            </div>
+            <Link className={styles.back} href="/games" prefetch={false}>
+              {t(messages, 'Back to all games')}
+            </Link>
+          </Panel>
+        );
+      }
       return (
-        <Panel heading={rounds > 1 ? 'Match over' : 'Game over'} role="status">
+        <Panel heading={t(messages, rounds > 1 ? 'Match over' : 'Game over')} role="group">
           <Winner outcome={state.matchOutcome} seatNames={seatNames} />
           {rounds > 1 ? (
             <p className={styles.detail}>
-              {seatName('p1', seatNames)} {state.roundWins.p1} — {state.roundWins.p2}{' '}
-              {seatName('p2', seatNames)}
+              <T
+                id="{p1} {wins1} — {wins2} {p2}"
+                values={{ p1, wins1: state.roundWins.p1, wins2: state.roundWins.p2, p2 }}
+              />
             </p>
           ) : null}
-          {record && record.p1 + record.p2 + record.draws > 1 ? (
+          {/* From the first finished match rather than the second: the number is worth
+              showing as soon as there is one, now that it is a record kept across
+              sittings rather than a count of tonight's rematches. The match on screen is
+              already in it, so a settled match always has something here and the line
+              cannot appear a frame after the buttons it sits above. */}
+          {unrecorded ? (
             <p className={styles.record}>
-              Tonight: {seatName('p1', seatNames)} {record.p1} — {record.p2}{' '}
-              {seatName('p2', seatNames)}
-              {record.draws > 0 ? `, ${record.draws} drawn` : ''}
+              {t(
+                messages,
+                'Not added to the record: the far seat changed hands during this match.',
+              )}
+            </p>
+          ) : record && record.p1 + record.p2 + record.draws > 0 ? (
+            <p className={styles.record}>
+              <T
+                id="All time in {game}: {p1} {wins1} — {wins2} {p2}"
+                values={{ game: manifest.name, p1, wins1: record.p1, wins2: record.p2, p2 }}
+              />
+              {/* The drawn clause is its own id rather than a second copy of the whole line. */}
+              {record.draws > 0 ? t(messages, ', {drawn} drawn', { drawn: record.draws }) : ''}
             </p>
           ) : null}
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={onRematch} autoFocus>
-              Rematch
+              {t(messages, 'Rematch')}
             </button>
+            {state.matchOutcome !== null ? (
+              <ShareResult
+                slug={slug}
+                game={manifest.name}
+                seatNames={seatNames}
+                outcome={state.matchOutcome}
+                // The score a person would read off the panel: the round tally for a best-of,
+                // this round's tally for a single round — the same choice the line above makes.
+                score={rounds > 1 ? state.roundWins : state.tally}
+              />
+            ) : null}
             {/* prefetch={false} on both links here: the Next router otherwise warms these
                 routes' chunks while a match is running, downloading another game's code
                 during play for a link the player may never take. A match should need
@@ -115,12 +331,12 @@ export function MatchOverlay({
                 which is how this was found. */}
             {nextGame ? (
               <Link className={styles.secondary} href={`/play/${nextGame.slug}`} prefetch={false}>
-                Play {nextGame.name}
+                {t(messages, 'Play {game}', { game: nextGame.name })}
               </Link>
             ) : null}
           </div>
           <Link className={styles.back} href="/games" prefetch={false}>
-            Back to all games
+            {t(messages, 'Back to all games')}
           </Link>
         </Panel>
       );
@@ -130,15 +346,109 @@ export function MatchOverlay({
   }
 }
 
-function Countdown({ remaining }: { remaining: number }) {
+/**
+ * What the pair may change before the next round, and why not what they may not (#2351).
+ *
+ * Closed by default: the result and the way on are what a round result is for, and a pair
+ * who want nothing changed should not have to read past three controls to find "Next round".
+ * A control that cannot be offered is replaced by its reason, said once however many
+ * controls share it — the reasons are `lib/match-changes.ts`'s, and the tests there hold
+ * that no refusal is silent. The device line is always a reason, because carrying a match
+ * to another device is not something this build can do live, and saying so here is better
+ * than a button that would have to say it after being pressed.
+ */
+function NextRound({
+  rounds,
+  changes,
+  mode,
+  difficulty,
+  onHandSeat,
+  onDifficulty,
+  onRounds,
+}: Changing & { rounds: number }) {
+  // The tier's refusal in a match with no bot is not news to anybody, so it is not said.
+  const messages = useMessages();
+  const refused = [changes.seat, changes.rounds, ...(mode === 'bot' ? [changes.difficulty] : [])];
+  const reasons = [...new Set(refused.filter((v) => !v.allowed).map((v) => v.reason))];
+  return (
+    <details className={styles.changes}>
+      <summary className={styles.summary}>
+        {t(messages, 'Change something for the next round')}
+      </summary>
+      <div className={styles.changeBody}>
+        {changes.seat.allowed ? (
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => {
+              onHandSeat(mode === 'bot' ? 'friend' : 'bot');
+            }}
+          >
+            {t(
+              messages,
+              mode === 'bot' ? 'Hand the far seat to a person' : 'Let the bot take the far seat',
+            )}
+          </button>
+        ) : null}
+        {changes.difficulty.allowed || changes.rounds.allowed ? (
+          <MatchOptions
+            showDifficulty={changes.difficulty.allowed}
+            difficulty={difficulty}
+            onDifficulty={onDifficulty}
+            rounds={rounds}
+            onRounds={onRounds}
+            lengths={changes.rounds.allowed ? changes.rounds.choices : []}
+          />
+        ) : null}
+        {/* The reasons are `lib/match-changes.ts`'s own sentences, registered for the
+            extractor in `lib/i18n/sources.ts` because the id arrives here as a variable. */}
+        {reasons.map((reason) => (
+          <p key={reason} className={styles.detail}>
+            {t(messages, reason)}
+          </p>
+        ))}
+        <p className={styles.detail}>{t(messages, changes.device.reason)}</p>
+      </div>
+    </details>
+  );
+}
+
+function Countdown({ remaining, presentation }: { remaining: number; presentation: Presentation }) {
+  const messages = useMessages();
   // Ceiling, so the first frame of a three-second countdown reads "3" rather than "2".
   const count = Math.ceil(remaining);
-  const label = count <= 0 ? 'Go' : String(count);
+  const label = count <= 0 ? t(messages, 'Go') : String(count);
+  // One copy per seat that has to read it: in shared-screen two, the far one turned to face
+  // the player at the top of the device with the same rotate-180 the scoreboard uses; in
+  // single-seat one, upright (#142). Rotated copies first, so they sit at the top of the
+  // column facing the player there.
+  const views = [...countdownViews(presentation)].sort(
+    (a, b) => Number(b.rotated) - Number(a.rotated),
+  );
   return (
-    <div className={styles.overlay} role="status" aria-live="assertive" aria-atomic="true">
-      <span key={label} className={[styles.count, count <= 0 ? styles.go : ''].join(' ')}>
-        {label}
-      </span>
+    <div className={styles.overlay}>
+      <div className={styles.countdown}>
+        {views.map((view) => (
+          <div
+            key={view.seat}
+            className={[styles.countSeat, view.rotated ? styles.countFar : ''].join(' ')}
+            // The upright copy carries the announcement; the turned copy is decorative and
+            // hidden, or a screen reader hears the count twice — the same rule the flipped
+            // scoreboard follows.
+            {...(view.rotated
+              ? { 'aria-hidden': true as const }
+              : {
+                  role: 'status' as const,
+                  'aria-live': 'assertive' as const,
+                  'aria-atomic': true as const,
+                })}
+          >
+            <span key={label} className={[styles.count, count <= 0 ? styles.go : ''].join(' ')}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -189,7 +499,7 @@ function Panel({
   children,
 }: {
   heading: string;
-  role: 'dialog' | 'status';
+  role: 'dialog' | 'group';
   children: React.ReactNode;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -204,9 +514,17 @@ function Panel({
    * exist, which is worse than never claiming `aria-modal` at all (#2483). And this is
    * the product's only modal, raised mid-match on a device two people are sharing.
    *
-   * Only the pause menu is a dialog. The round and match results are `role="status"`:
-   * they are announcements, they interrupt nobody, and trapping focus in one would be a
-   * bug rather than a fix.
+   * Only the pause menu is a dialog. The round and match results are `role="group"`:
+   * they are not modal, they interrupt nobody, and trapping focus in one would be a bug
+   * rather than a fix.
+   *
+   * They were `role="status"`, which read as the right answer and was not one. A live
+   * region has to be on the page *before* the words are, and these panels are inserted
+   * already carrying theirs — so on the one hand a screen reader might say nothing at
+   * all, and on the other, an engine that did announce the insertion would read the whole
+   * panel: the heading, the winner, the score, the all-time record and three buttons. The
+   * result now goes to the region `MatchOverlay` keeps for it, in one sentence, once; this
+   * is the panel a player then navigates, and a named group is what it always was.
    */
   useEffect(() => {
     if (!modal) return;
@@ -284,7 +602,7 @@ function Panel({
       ref={dialogRef}
       className={styles.overlay}
       role={role}
-      {...(role === 'dialog' ? { 'aria-modal': true } : { 'aria-live': 'polite' as const })}
+      {...(role === 'dialog' ? { 'aria-modal': true } : {})}
       aria-label={heading}
     >
       <div className={styles.panel}>
@@ -295,23 +613,77 @@ function Panel({
   );
 }
 
-function Winner({
-  outcome,
+/**
+ * The Share button and the line it reports through (#164).
+ *
+ * The card's code arrives by `import()` on the first press and not before — the
+ * `SoundToggle` → `lib/audio` precedent — so a pair who never share never download a canvas
+ * renderer. It is the play route either way, but "on demand" is only honest if the demand
+ * actually happens.
+ *
+ * The status line is `aria-live` without `role="status"`, deliberately: the overlay already
+ * has the one status region on the page (the announcement above the panels), and
+ * `e2e/record.spec.ts` asks for "the" one.
+ */
+function ShareResult({
+  slug,
+  game,
   seatNames,
+  outcome,
+  score,
 }: {
-  outcome: SeatId | 'draw' | null;
-  seatNames?: Partial<Record<SeatId, string>> | undefined;
+  slug: string;
+  game: string;
+  seatNames: SeatNames;
+  outcome: SeatId | 'draw';
+  score: Readonly<Record<SeatId, number>>;
 }) {
-  if (outcome === null) return null;
-  if (outcome === 'draw') return <p className={styles.winner}>A draw</p>;
+  const messages = useMessages();
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const share = () => {
+    setBusy(true);
+    setStatus(null);
+    void import('@/lib/share-card')
+      .then(async (card) => {
+        const data = { game, slug, names: seatNames, score, outcome };
+        const blob = await card.renderShareCard(messages, data);
+        const result = await card.shareOrDownload(messages, blob, data);
+        setStatus(
+          result === 'downloaded'
+            ? t(messages, 'Saved as {file}.', { file: card.shareCardFilename(data) })
+            : result === 'shared'
+              ? t(messages, 'Shared.')
+              : null,
+        );
+      })
+      .catch(() => {
+        setStatus(t(messages, 'The picture could not be made. Try again.'));
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  };
   return (
-    <p className={styles.winner}>
-      <SeatGlyph seat={outcome} size={28} />
-      {seatName(outcome, seatNames)} wins
-    </p>
+    <>
+      <button type="button" className={styles.secondary} onClick={share} disabled={busy}>
+        {t(messages, 'Share result')}
+      </button>
+      <p className={styles.shareStatus} aria-live="polite">
+        {status}
+      </p>
+    </>
   );
 }
 
-function seatName(seat: SeatId, seatNames?: Partial<Record<SeatId, string>>): string {
-  return seatNames?.[seat] ?? seatColour[seat].name;
+function Winner({ outcome, seatNames }: { outcome: SeatId | 'draw' | null; seatNames: SeatNames }) {
+  const messages = useMessages();
+  if (outcome === null) return null;
+  if (outcome === 'draw') return <p className={styles.winner}>{t(messages, 'A draw')}</p>;
+  return (
+    <p className={styles.winner}>
+      <SeatGlyph seat={outcome} size={28} />
+      <T id="{name} wins" values={{ name: <bdi>{seatNames[outcome]}</bdi> }} />
+    </p>
+  );
 }

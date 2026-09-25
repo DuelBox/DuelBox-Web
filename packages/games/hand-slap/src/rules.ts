@@ -83,10 +83,17 @@ export function otherOf(seat: SeatId): SeatId {
   return seat === 'p1' ? 'p2' : 'p1';
 }
 
-export function createState(): State {
+/**
+ * A fresh match.
+ *
+ * `opener` is the seat that attacks the first round, and it comes from
+ * `context.openingSeat` rather than from here. Hard-coding `p1` was the whole of this
+ * game's seat bias: see {@link resetState}.
+ */
+export function createState(opener: SeatId = 'p1'): State {
   return {
     phase: 'ready',
-    attacker: 'p1',
+    attacker: opener,
     timer: MIN_READY_SECONDS,
     dodgeCooldown: 0,
     dodgeRemaining: 0,
@@ -98,9 +105,18 @@ export function createState(): State {
   };
 }
 
-export function resetState(state: State): void {
+/**
+ * Reset in place, with `opener` attacking first.
+ *
+ * The attacker alternates strictly and {@link TARGET_POINTS} is odd, so the seat that
+ * attacks round zero also attacks rounds two, four, six and eight - five of the nine
+ * rounds a 5-4 match runs to. Whenever the role decides the round, that seat wins the
+ * match, and starting every match from a literal `p1` handed it seat one every time. The
+ * shell already flips the opening seat between the rounds of a best-of; this reads it.
+ */
+export function resetState(state: State, opener: SeatId = 'p1'): void {
   state.phase = 'ready';
-  state.attacker = 'p1';
+  state.attacker = opener;
   state.timer = MIN_READY_SECONDS;
   state.dodgeCooldown = 0;
   state.dodgeRemaining = 0;
@@ -229,11 +245,27 @@ export type BotDifficulty = 'easy' | 'normal' | 'hard';
 
 export interface BotProfile {
   /**
-   * Seconds of reaction time before the bot can respond to a swing it has seen.
+   * The **middle** of the bot's reaction time, in seconds. Never the whole of it.
    *
-   * A human's simple visual reaction is about 0.25s, so a bot faster than that is not a
+   * A single number here was defect #2504. Whether a dodge beats a swing is decided by
+   * `reaction` against {@link SWING_SECONDS}, and with both sides constant the comparison
+   * has one answer for the whole match: `easy` sat above 0.34 s and its defender was hit
+   * every single round; `normal` and `hard` sat below it and their defender was never hit
+   * at all. The tier stopped being a difficulty and became a *verdict* — two equal bots
+   * did not play, they alternated a decided role, and a match was settled the moment the
+   * shell picked an opening seat. Nothing in a win-rate ladder can see that; the ladder
+   * was monotone throughout.
+   *
+   * Each swing now draws its own reaction from `reaction ± {@link REACTION_JITTER_SECONDS}`,
+   * so every tier's distribution **straddles** the swing rather than sitting on one side of
+   * it, and every tier is a hit *rate*. See {@link jitteredReaction}.
+   *
+   * A human's simple visual reaction is about 0.25 s, so a bot faster than that is not a
    * better player, it is a machine — and rule 6 says a bot never gets speed a human cannot
-   * have. `hard` sits at the quick end of human, not past it.
+   * have. What the rule constrains is the **fastest** the bot can ever be, which is
+   * `reaction - REACTION_JITTER_SECONDS`, not the average: `hard` bottoms out at 0.22 s, the
+   * quick end of human — which is the number `hard` used to hit on *every* swing, and is
+   * now the best it can ever do.
    */
   readonly reaction: number;
   /** Chance per live second that the attacker chooses to swing. */
@@ -242,24 +274,71 @@ export interface BotProfile {
   readonly flinchRate: number;
 }
 
+/**
+ * How far a single swing's reaction may wander either side of the tier's middle.
+ *
+ * Chosen, not guessed. A dodge beats a swing when the reaction that swing drew comes in
+ * under **0.35 s** — {@link SWING_SECONDS} rounded up to the next whole fixed step, because
+ * the defender's last chance to act is the step before the slap lands. With the jitter
+ * uniform over `reaction ± 0.10 s`, a tier's share of swings it dodges in time is
+ * `(0.35 - reaction + 0.10) / 0.20`, which puts the three tiers at 15%, 40% and 65% —
+ * twenty-five points apart, so no tier can be mistaken for its neighbour, and none of them
+ * is 0% or 100%, which is the whole point of the fix.
+ *
+ * The width is squeezed from both ends. It has to be wide enough that the slowest tier can
+ * still reach 0.35 s — `easy` is 0.42 s, so anything under ±0.07 s makes `easy` a verdict
+ * again — and narrow enough that the quickest tier's floor, `reaction - jitter`, stays at a
+ * speed a person can manage (rule 6). ±0.10 s clears both with room, and leaves the three
+ * rates evenly spaced; at ±0.05 s these same centres give 0%, 30% and 80%, and `easy` is a
+ * verdict again.
+ */
+export const REACTION_JITTER_SECONDS = 0.1;
+
+/**
+ * The tiers, as distributions.
+ *
+ * `easy` keeps the 0.42 s it always had; `normal` and `hard` moved out from 0.30 and 0.22
+ * so that all three straddle the 0.35 s the dodge is decided at rather than two of them
+ * sitting well under it. `hard`'s old constant 0.22 s survives as its **floor**. Every tier is slower on average than it was, which is the safe
+ * direction under rule 6 — jitter can only ever cost the bot a swing it used to win.
+ */
 export const BOT_PROFILES: Readonly<Record<BotDifficulty, BotProfile>> = Object.freeze({
   easy: { reaction: 0.42, swingRate: 0.7, flinchRate: 0.55 },
-  normal: { reaction: 0.3, swingRate: 1.1, flinchRate: 0.22 },
-  hard: { reaction: 0.22, swingRate: 1.6, flinchRate: 0.04 },
+  normal: { reaction: 0.37, swingRate: 1.1, flinchRate: 0.22 },
+  hard: { reaction: 0.32, swingRate: 1.6, flinchRate: 0.04 },
 });
 
-/** What a bot remembers between steps: only how long it has been watching a swing. */
+/**
+ * This swing's reaction time, from a seeded roll in `[0, 1)`.
+ *
+ * Uniform over `reaction ± REACTION_JITTER_SECONDS`. `roll` comes from the match generator
+ * (rule 4 — never `Math.random`), and it is handed to the bot **by role rather than by
+ * seat**, so a seed opened from one chair draws the same numbers as the same seed opened
+ * from the other and a match and its mirror stay one match.
+ */
+export function jitteredReaction(profile: BotProfile, roll: number): number {
+  return profile.reaction + (roll * 2 - 1) * REACTION_JITTER_SECONDS;
+}
+
+/** What a bot remembers between steps. Two numbers, allocated once (rule 5). */
 export interface BotState {
   /** Seconds the current swing has been visible to the bot. */
   watched: number;
+  /**
+   * The reaction this bot drew for the swing it is watching, or 0 when it is watching
+   * none. Drawn **once per swing**, not once per step: re-rolling every step would turn
+   * the reaction into a per-step lottery that a long swing always eventually wins.
+   */
+  reaction: number;
 }
 
 export function createBotState(): BotState {
-  return { watched: 0 };
+  return { watched: 0, reaction: 0 };
 }
 
 export function resetBotState(bot: BotState): void {
   bot.watched = 0;
+  bot.reaction = 0;
 }
 
 export type BotAction = 'none' | 'swing' | 'dodge';
@@ -281,11 +360,13 @@ export function botAction(
 ): BotAction {
   if (state.phase === 'ready' || state.phase === 'settling') {
     bot.watched = 0;
+    bot.reaction = 0;
     return 'none';
   }
 
   if (seat === state.attacker) {
     bot.watched = 0;
+    bot.reaction = 0;
     if (state.phase !== 'live') return 'none';
     // A per-second rate turned into a per-step chance, so the bot's timing does not
     // change with the step rate.
@@ -295,14 +376,20 @@ export function botAction(
   // Defending.
   if (state.phase === 'live') {
     bot.watched = 0;
+    bot.reaction = 0;
     if (state.dodgeCooldown > 0 || state.dodgeRemaining > 0) return 'none';
     return roll < profile.flinchRate * fixedDeltaSeconds ? 'dodge' : 'none';
   }
 
-  // A swing is in the air. The bot may only act once it has watched it for its own
-  // reaction time — the same delay a person needs, and never less.
+  // A swing is in the air, and this is the first step the bot has seen it: draw the
+  // reaction it will need for *this* swing. One roll per swing, from the seeded stream,
+  // and a plain number assigned into state the bot already owns - no allocation (rule 5).
+  if (bot.watched === 0) bot.reaction = jitteredReaction(profile, roll);
+
+  // The bot may only act once it has watched the swing for that reaction time — the same
+  // delay a person needs, and never less.
   bot.watched += fixedDeltaSeconds;
-  if (bot.watched < profile.reaction) return 'none';
+  if (bot.watched < bot.reaction) return 'none';
   if (state.dodgeCooldown > 0 || state.dodgeRemaining > 0) return 'none';
   return 'dodge';
 }

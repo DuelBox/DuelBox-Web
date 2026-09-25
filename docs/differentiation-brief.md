@@ -25,10 +25,14 @@ something the reference app cannot easily acquire.
 - **Cross-device.** A phone against a laptop, in the same room or in different countries.
   An installed app on one device cannot do this without becoming a network product; we
   are a network product by default because we are the web.
-- **Findable.** 107 indexable pages, one per game, each answering "how do you play X for
+- **Findable.** 108 indexable pages, one per game, each answering "how do you play X for
   two players" for someone who typed exactly that. An app has one store listing.
-- **Offline.** Once cached, a game plays with the network off — the thing people assume
-  only an installed app can do.
+- **Nothing to keep loaded.** Once a game is open it plays with the network off: the
+  simulation, the bot and the physics are all on the device, and `e2e/offline.spec.ts`
+  blocks every request after load and plays a match through to prove it. The step people
+  assume only an installed app can take — opening it again with no connection at all —
+  needs the service worker on the backlog (#2445). Until that ships this is a property of
+  an open tab rather than of the product, and it is not claimed as one anywhere.
 - **Free to run, therefore free to use.** No ads, no accounts, no upsell, because the
   hosting costs essentially nothing (ADR 0001). That is a product promise, not a
   temporary state.
@@ -37,7 +41,7 @@ something the reference app cannot easily acquire.
 
 Not "as good as". Better, and better in a way a person notices in the first minute.
 
-**1. Browsing 107 games.** A flat scroll of 107 identical cards is a list, not a
+**1. Browsing 108 games.** A flat scroll of 108 identical cards is a list, not a
 catalogue — you cannot form an intention about it, so you tap the first thing. We should
 make the collection navigable by *what you feel like*: length, energy, whether it needs a
 steady hand or a fast one. The measure of success is a pair choosing a game deliberately
@@ -64,7 +68,7 @@ and lazy.
   way a card indicates a category.
 - **HUD arrangement.** Where the score sits, how a turn is indicated, what a countdown
   looks like. Ours is a shared component precisely so it is one deliberate decision rather
-  than 107 imitations.
+  than 108 imitations.
 - **Colour identity.** Their player pairing is theirs. See the open question below — this
   is the one where we currently sit closest to them, and it needs deciding.
 - **Iconography and illustration.** Our own cast, our own hand, drawn by us.

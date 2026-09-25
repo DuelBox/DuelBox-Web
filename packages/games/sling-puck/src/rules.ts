@@ -350,6 +350,25 @@ export function onSideOf(game: Readonly<Game>, seat: SeatId): number {
 }
 
 /**
+ * How far across the board a point is, **measured in the shooting seat's own frame**.
+ *
+ * A given sign is a given side of the board *as the shooter sees it*, whichever seat is
+ * shooting, because a half turn flips `x` as well as `y` — which is exactly what the raw
+ * `x` does not do. Every tie-break and every angle in this file is expressed
+ * through this rather than through the board's `x`, and that is not a stylistic
+ * preference: a rule stated in board coordinates is a rule the two seats read differently.
+ * See {@link pickLoaded}.
+ */
+export function acrossOf(seat: SeatId, x: number): number {
+  // The `+ 0` is not decoration. A puck exactly on the centre line gives `-1 * 0`, which is
+  // `-0`, and `-0` is the one double that behaves differently for the two seats: it survives
+  // into `Math.atan2(-0, ahead)`, which returns `-0` where `Math.atan2(0, ahead)` returns
+  // `0`. That is the defect this repository already found in Chess, on the position every
+  // match starts from. Adding zero turns `-0` into `0` and leaves every other value alone.
+  return forwardOf(seat) * (x - BOARD_WIDTH / 2) + 0;
+}
+
+/**
  * Which puck a seat slings: the one **nearest** the gap on its own side.
  *
  * Deliberately not a choice. A seat picking its own puck would be choosing among five
@@ -363,16 +382,34 @@ export function onSideOf(game: Readonly<Game>, seat: SeatId): number {
  * put 0.30 to 0.32 pucks through a shot and `easy` beat `normal` — the aim was not reaching
  * the answer. The nearest puck has an open lane, which is what makes the angle worth
  * choosing, and it empties the rack from the front so the next shot has one too.
+ *
+ * **The tie is broken in the shooter's own frame, and that was worth sixteen points of seat
+ * balance (#2502).** The rack is four rows of two, so *every* shot from an untouched rack is
+ * a tie between two pucks equally near the gap. This used to keep whichever came first in
+ * `game.pucks`, which is the same as keeping the smaller board `x` — a tie-break written in
+ * board coordinates. Both seats then slung from the *same* lane, `x = 260`, where the half
+ * turn that swaps the seats sends `x = 260` to `x = 380`. So the two seats were shooting from
+ * lanes that are reflections rather than rotations of one another, while every angle in the
+ * game is a rotation: `angleOf(p2, s)` is exactly `angleOf(p1, s) + pi`. One seat's needle
+ * therefore wanted `s = 0.15` where the other's wanted `s = 0.85`, and a needle that always
+ * sweeps upward from zero and is always stopped at or just before the value the bot wants
+ * lands a systematic quarter-frame *short* in `s` — which is a nudge towards the middle of
+ * the gap for one seat and away from it for the other, against a top-scoring window only
+ * 3.3 units wide. Seat one took 34.1%.
  */
 export function pickLoaded(game: Readonly<Game>, seat: SeatId): number {
   let best = -1;
   let bestDepth = Infinity;
+  let bestAcross = Infinity;
   for (let i = 0; i < game.pucks.length; i += 1) {
     const puck = game.pucks[i] as Puck;
     if (puck.owner !== seat || puck.through) continue;
     const depth = seat === 'p1' ? MID_Y - puck.y : puck.y - MID_Y;
-    if (depth >= bestDepth) continue;
+    if (depth > bestDepth) continue;
+    const across = acrossOf(seat, puck.x);
+    if (depth === bestDepth && across >= bestAcross) continue;
     bestDepth = depth;
+    bestAcross = across;
     best = i;
   }
   return best;
@@ -477,9 +514,12 @@ function park(game: Game, puck: Puck, seat: SeatId): void {
   const y = MID_Y - forwardOf(seat) * PARK_DEPTH;
   const step = PUCK_RADIUS * 2 + 6;
   for (let slot = 0; slot < 9; slot += 1) {
-    // 0, +1, −1, +2, −2 … out from the middle.
+    // 0, −1, +1, −2, +2 … out from the middle, **in the receiving seat's own frame**. Walked
+    // in board `x` instead, the two seats fill their racks in mirror-image orders, so the
+    // slot a puck lands in stops being the half turn of the slot its mirror lands in as soon
+    // as a second puck arrives. Same family as the tie-break in {@link pickLoaded}.
     const offset = (slot % 2 === 0 ? 1 : -1) * Math.ceil(slot / 2) * step;
-    const x = BOARD_WIDTH / 2 + offset;
+    const x = BOARD_WIDTH / 2 + forwardOf(seat) * offset;
     if (x < PUCK_RADIUS || x > BOARD_WIDTH - PUCK_RADIUS) continue;
     let free = true;
     for (const other of game.pucks) {
@@ -789,11 +829,18 @@ function sweepForAngle(game: Readonly<Game>, seat: SeatId): number {
   // gap than the puck being slung — so there was never anything for it to dodge. Crossings
   // went from 0.67 a shot to 0.55 with it switched on. Deleted rather than tuned to zero: a
   // knob that reads like skill and is not one is worse than no knob at all.
-  const angle = Math.atan2(MID_Y - puck.y, BOARD_WIDTH / 2 - puck.x);
-  const base = forwardOf(seat) > 0 ? Math.PI / 2 : -Math.PI / 2;
-  let delta = angle - base;
-  while (delta > Math.PI) delta -= Math.PI * 2;
-  while (delta < -Math.PI) delta += Math.PI * 2;
+  //
+  // Measured in the shooting seat's own frame — how far ahead the gap is and how far across
+  // it sits — rather than as an absolute angle that is then folded back to the seat's base
+  // direction. The two are the same number in exact arithmetic and are *not* the same double:
+  // the far seat's absolute angle is the near seat's plus pi, and `Math.atan2(-a, -b)` is not
+  // bit-identical to `Math.atan2(a, b) - Math.PI`. That put the two seats' targets a couple of
+  // ULPs apart on the mirror-image board, which is enough to stop the needle a frame early on
+  // one side of the wall and not the other. Same quadrant for both seats, one atan2, no fold.
+  const forward = forwardOf(seat);
+  const ahead = forward * (MID_Y - puck.y);
+  const across = acrossOf(seat, puck.x);
+  const delta = Math.atan2(across, ahead);
   return clamp01((delta / AIM_SPREAD + 1) / 2);
 }
 

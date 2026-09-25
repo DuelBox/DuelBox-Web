@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InputManager, InputView, Rng } from '@duelbox/engine';
-import type { SeatId } from '@duelbox/engine';
+import type { Presentation, SeatId } from '@duelbox/engine';
 import type { Game, GameContext, Renderer } from '@duelbox/game-sdk';
 import { PinballDuelGame, GOAL_TARGET, IDLE_STEPS, MATCH_SECONDS, SERVE_STEPS } from './game.js';
 import { manifest } from './manifest.js';
@@ -10,6 +10,8 @@ import {
   GOAL_HALF_WIDTH,
   MAX_BALL_SPEED,
   TABLE,
+  otherSide,
+  seatSide,
   serveSpotX,
   serveSpotY,
 } from './rules.js';
@@ -33,12 +35,20 @@ const TIERS: readonly BotDifficulty[] = ['easy', 'normal', 'hard'];
 /** One more step than a whole match, so a run that does not finish is a failure not a hang. */
 const MATCH_STEPS = Math.ceil(MATCH_SECONDS / STEP) + 120;
 
-function contextFor(seed: number, difficulty: (seat: SeatId) => BotDifficulty | null): GameContext {
+function contextFor(
+  seed: number,
+  difficulty: (seat: SeatId) => BotDifficulty | null,
+  presentation: Presentation = 'shared-screen',
+  localSeat: SeatId = 'p1',
+): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
-    presentation: 'shared-screen',
-    localSeat: 'p1',
+    presentation,
+    localSeat,
+    // Pinball has no opener — it is real-time and both flippers are live from the first
+    // step — but the context carries one for every game, so it is supplied rather than
+    // left undefined. The seat-mirroring tests below vary `localSeat`, not this.
     openingSeat: 'p1',
     botDifficulty: difficulty,
   };
@@ -520,10 +530,16 @@ describe('the controls, driven through the real InputManager', () => {
     raised(seat: SeatId, side: FlipperSide): boolean;
   }
 
-  /** Two people at the device and no bots, so nothing but the input moves a flipper. */
-  function rig(): Rig {
+  /**
+   * Two people at the device and no bots, so nothing but the input moves a flipper.
+   *
+   * The presentation is a parameter because it is what decides whether a seat is reading the
+   * table upside down, which is now half of what these tests are about. Left alone it is the
+   * shared screen with p1 at the bottom, so p2 is the seat reading it the other way up.
+   */
+  function rig(presentation: Presentation = 'shared-screen', localSeat: SeatId = 'p1'): Rig {
     const game = new PinballDuelGame();
-    game.init(contextFor(2024, () => null));
+    game.init(contextFor(2024, () => null, presentation, localSeat));
     const { input, view } = idleInput();
     return {
       game,
@@ -554,20 +570,87 @@ describe('the controls, driven through the real InputManager', () => {
     right.game.destroy();
   });
 
-  it('gives the far seat the left and right arrows, on the same screen axis', () => {
+  it('gives the far seat the arrows on its own axis, not the screen axis', () => {
+    // Issue #2476. The table never turns, so the far seat is reading it upside down and the
+    // flipper under its left hand is the one drawn on the *right* of the screen. Reading the
+    // arrows in screen space handed that player the other flipper on every press.
     const left = rig();
+    left.input.keyDown('ArrowLeft');
+    left.step();
+    expect(left.raised('p2', 'right')).toBe(true);
+    expect(left.raised('p2', 'left')).toBe(false);
+    left.game.destroy();
+
+    const right = rig();
+    right.input.keyDown('ArrowRight');
+    right.step();
+    expect(right.raised('p2', 'left')).toBe(true);
+    expect(right.raised('p2', 'right')).toBe(false);
+    right.game.destroy();
+  });
+
+  it('reads both seats in screen space when neither is reading the table upside down', () => {
+    // Single-seat play: the local player owns the whole viewport and nobody is upside down,
+    // so `seatView` reports no rotation and p2's arrows read exactly as p1's A and D do. The
+    // mirror belongs to the seat's view, never to the seat's name.
+    const left = rig('single-seat', 'p2');
     left.input.keyDown('ArrowLeft');
     left.step();
     expect(left.raised('p2', 'left')).toBe(true);
     expect(left.raised('p2', 'right')).toBe(false);
     left.game.destroy();
 
-    const right = rig();
+    const right = rig('single-seat', 'p2');
     right.input.keyDown('ArrowRight');
     right.step();
     expect(right.raised('p2', 'right')).toBe(true);
     expect(right.raised('p2', 'left')).toBe(false);
     right.game.destroy();
+  });
+
+  /**
+   * The symmetry the two seats owe each other, driven through the real InputManager.
+   *
+   * `rules.test.ts` proves the property on the pure function; this proves the game is wired
+   * to it — that `PinballDuelGame` asks `seatView` which of its two seats is upside down and
+   * hands the answer to `wantsFlipper`, rather than reading both seats in screen space. An
+   * example at one seat could never have caught that, which is why the far seat's arrows were
+   * reversed for the whole of this game's life with sixty tests passing over them.
+   */
+  it('answers the same gesture at both seats with the same hand, both instruments', () => {
+    const KEYS: Record<SeatId, Record<FlipperSide, string>> = {
+      p1: { left: 'KeyA', right: 'KeyD' },
+      p2: { left: 'ArrowLeft', right: 'ArrowRight' },
+    };
+    for (const seat of SEATS) {
+      // p1 sits at the bottom of the shared screen, so p2 is the seat reading it upside down.
+      const rotated = seat === 'p2';
+      for (const hand of SIDES) {
+        // The screen side that hand is on. `seatSide` maps both ways, being a half turn.
+        const screen = seatSide(hand, rotated);
+
+        const keyed = rig();
+        keyed.input.keyDown(KEYS[seat][hand]);
+        keyed.step();
+        expect(keyed.raised(seat, screen), `${seat} keyed its ${hand}`).toBe(true);
+        expect(keyed.raised(seat, otherSide(screen))).toBe(false);
+        keyed.game.destroy();
+
+        // The same gesture with a finger: 80 units into that seat's own end, on the same
+        // hand, which is a different corner of the glass for each of them.
+        const seatX = hand === 'left' ? 80 : TABLE.width - 80;
+        const touched = rig();
+        touched.input.pointerDown(
+          0,
+          rotated ? TABLE.width - seatX : seatX,
+          rotated ? 60 : TABLE.height - 60,
+        );
+        touched.step();
+        expect(touched.raised(seat, screen), `${seat} touched its ${hand}`).toBe(true);
+        expect(touched.raised(seat, otherSide(screen))).toBe(false);
+        touched.game.destroy();
+      }
+    }
   });
 
   it('never lets one seat key the other seat flippers', () => {
@@ -642,7 +725,11 @@ describe('the controls, driven through the real InputManager', () => {
     right.game.destroy();
   });
 
-  it('gives a finger in the far half the far seat flippers, on the same axis', () => {
+  it('gives a finger in the far half the flipper it landed on, mirror and all', () => {
+    // The pointer needed no change and must not be given one: a finger is a place, and a
+    // place mirrors along with the flipper it is reaching for, so the far seat touching the
+    // left of the glass raises the flipper drawn on the left of the glass — which is the one
+    // under its own right hand, exactly as it looks from that chair.
     const left = rig();
     left.input.pointerDown(0, 80, 60);
     left.step();

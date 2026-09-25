@@ -113,3 +113,59 @@ describe('InputView', () => {
     expect(view.sync(input.beginStep(STEP))).toBe(view);
   });
 });
+
+/**
+ * #2498. The view is the whole of what a game can see, so this is the surface the finger
+ * count had to reach — carrying it on `SeatInputState` alone would have left it as invisible
+ * to a game as `SeatSources.pointerCount` was.
+ */
+describe('the finger count through the view', () => {
+  it('hands a game the count alongside the one position it gets', () => {
+    const input = manager();
+    const view = new InputView();
+    // Five fingers on seat one's half, at five different places.
+    for (let id = 1; id <= 5; id += 1) input.pointerDown(id, 80 + id * 60, 800);
+    view.sync(input.beginStep(STEP));
+
+    expect(view.seat('p1').pointerCount).toBe(5);
+    // And still exactly one position — whichever finger was last to arrive. The count says
+    // how many there are; it does not say where they are, and this is the assertion that
+    // stops anyone reading it as though it did.
+    expect(view.seat('p1').pointer?.x).toBe(onLattice(380));
+    expect(view.seat('p2').pointerCount).toBe(0);
+    expect(view.seat('p2').pointer).toBeNull();
+
+    for (let id = 1; id <= 5; id += 1) input.pointerUp(id);
+    view.sync(input.beginStep(STEP));
+    expect(view.seat('p1').pointerCount).toBe(0);
+  });
+
+  it('agrees with the nullable pointer, which is the same fact told twice', () => {
+    const input = manager();
+    const view = new InputView();
+    const agree = (label: string): void => {
+      for (const seat of ['p1', 'p2'] as const) {
+        const s = view.seat(seat);
+        // `?? 0` is the documented read on the interface: the field is optional there so a
+        // required one would not break the 27 hand-written doubles at once, and `InputView`
+        // sets it on every sync, so the fallback is unreachable through the real engine.
+        expect((s.pointerCount ?? 0) > 0, `${label}: ${seat}`).toBe(s.pointer !== null);
+      }
+    };
+
+    view.sync(input.beginStep(STEP));
+    agree('idle');
+    input.pointerDown(1, 300, 800);
+    input.pointerDown(2, 360, 800);
+    view.sync(input.beginStep(STEP));
+    agree('two fingers');
+    input.pointerUp(1);
+    view.sync(input.beginStep(STEP));
+    agree('one lifted');
+    input.pointerCancel(2);
+    view.sync(input.beginStep(STEP));
+    agree('the other cancelled');
+    expect(view.seat('p1').pointerCancelled).toBe(true);
+    expect(view.seat('p1').pointerCount).toBe(0);
+  });
+});

@@ -62,13 +62,14 @@ function makeContext(
   seed: number,
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
+  openingSeat: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation: 'shared-screen',
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
@@ -404,5 +405,78 @@ describe('the manifest', () => {
   it('is fair across input families', () => {
     // One button pressed at a moment of your choosing: no aiming, no tracking.
     expect(manifest.sameInputClassOnly).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------------------------ */
+/* The half-turn                                                                         */
+/* ------------------------------------------------------------------------------------ */
+
+interface Played {
+  readonly winner: SeatId | 'draw' | null;
+  readonly p1: number;
+  readonly p2: number;
+  readonly steps: number;
+}
+
+/** Two bots of one tier, nobody touching the device, from a given opening seat. */
+function playBots(seed: number, opener: SeatId, tier: BotDifficulty): Played {
+  const game = new HotPotatoGame();
+  const input = new ScriptedInput();
+  game.init(makeContext(seed, tier, tier, opener));
+  try {
+    for (let i = 0; i < 60 * 600; i += 1) {
+      game.update(STEP, input);
+      const score = game.getScore();
+      if (score.winner !== null) {
+        return { winner: score.winner, p1: score.p1, p2: score.p2, steps: i + 1 };
+      }
+    }
+    const score = game.getScore();
+    return { winner: score.winner, p1: score.p1, p2: score.p2, steps: 60 * 600 };
+  } finally {
+    game.destroy();
+  }
+}
+
+describe('the half-turn', () => {
+  it('plays a seed to the mirrored result when the other seat opens', () => {
+    // Not "seat one won about half of fifty seeds" - that is a measurement, and a
+    // measurement cannot tell a fair game from a small sample. This is the statement that
+    // the two halves of a seed pair are one match and its exact reflection.
+    const tiers: BotDifficulty[] = ['easy', 'normal', 'hard'];
+    for (const tier of tiers) {
+      for (let s = 0; s < 25; s += 1) {
+        const seed = 1000003 + s * 7919;
+        const forward = playBots(seed, 'p1', tier);
+        const backward = playBots(seed, 'p2', tier);
+        const where = `${tier} seed ${String(seed)}`;
+        expect(forward.winner, `${where} decided nothing`).not.toBeNull();
+        expect(backward.winner, where).toBe(
+          forward.winner === 'p1' ? 'p2' : forward.winner === 'p2' ? 'p1' : forward.winner,
+        );
+        expect(backward.p1, where).toBe(forward.p2);
+        expect(backward.p2, where).toBe(forward.p1);
+        expect(backward.steps, where).toBe(forward.steps);
+      }
+    }
+  });
+
+  it('splits a paired sweep exactly, at every tier', () => {
+    const tiers: BotDifficulty[] = ['easy', 'normal', 'hard'];
+    for (const tier of tiers) {
+      let seatOne = 0;
+      let decided = 0;
+      for (let s = 0; s < 25; s += 1) {
+        const seed = 1000003 + s * 7919;
+        for (const opener of ['p1', 'p2'] as SeatId[]) {
+          const result = playBots(seed, opener, tier);
+          if (result.winner === 'p1' || result.winner === 'p2') decided += 1;
+          if (result.winner === 'p1') seatOne += 1;
+        }
+      }
+      expect(decided, `${tier} decided ${String(decided)}`).toBe(50);
+      expect(seatOne, `${tier} gave seat one ${String(seatOne)} of ${String(decided)}`).toBe(25);
+    }
   });
 });

@@ -133,6 +133,33 @@ test.describe('the length of a match', () => {
     await expect(page.getByRole('group', { name: 'Score' })).toContainText('Round 2 of 3');
   });
 
+  /**
+   * Round three, which nothing had ever played. The opener alternates for two rounds and
+   * is then a seeded coin, and the host rebuilt the board only when the opener changed —
+   * so on the seeds where round three opened on the same seat as round two, the board
+   * that had already reported round two was resumed and the round never ended. The first
+   * match of a page load draws the seed that does exactly that, and this asserts a best
+   * of five plays through it to a result.
+   */
+  test('a best of five reaches its third round and finishes', async ({ page }) => {
+    await page.goto(GAME);
+    await page.getByRole('radio', { name: /Hard/ }).check();
+    await page.getByRole('radio', { name: 'Best of 5' }).check();
+    await page.getByRole('button', { name: /Play against/ }).click();
+
+    const nextRound = page.getByRole('button', { name: 'Next round' });
+    const rematch = page.getByRole('button', { name: /Rematch/i });
+    const hud = page.getByRole('group', { name: 'Score' });
+    for (let round = 1; round <= 5; round += 1) {
+      await expect(nextRound.or(rematch)).toBeVisible({ timeout: 25_000 });
+      if (await rematch.isVisible()) break;
+      await nextRound.click();
+      await expect(hud).toContainText(`Round ${String(round + 1)} of 5`);
+    }
+    await expect(rematch).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Match over' })).toContainText(/3 — \d|\d — 3/);
+  });
+
   test('a single round still ends the match outright', async ({ page }) => {
     await page.goto(GAME);
     await page.getByRole('radio', { name: /Hard/ }).check();

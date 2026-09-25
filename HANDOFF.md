@@ -19,11 +19,16 @@ pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && p
 **11,389 unit tests, 282 browser tests** across four Playwright projects — Desktop Chrome,
 Pixel 7, and iPhone 14 Pro in both orientations, the last two on **real WebKit**.
 
-**All 107 games play end to end.** The catalogue is complete: every row in
-`data/catalog.yaml` has a package, a `SPEC.md` written from its implementation, its own
-chunk, and a bot ladder measured from both seat orders. The shell is 279.1 KB gzipped
-against a 280 KB budget, so **the next game to be added has about 0.9 KB of headroom** —
-that is the first thing a growth plan has to solve.
+**All 107 games play end to end**, and a 108th (`cricket`) is being finished. Every row in
+`data/catalog.yaml` has a package, its own chunk, and a bot ladder measured from both seat
+orders; all but `cricket` have a `SPEC.md` written from the implementation.
+
+**The shell has no headroom left, and is currently over.** It was 279.1 KB against a 280 KB
+budget; wiring the audio subsystem took it to **280.5 KB** and `check-size` fails the build.
+That is the first thing a growth plan has to solve, and the second 29 August session below
+records how 4.2 KB was recovered once before — by making `registry.ts` import `GAME_IDS`
+instead of the whole `CATALOGUE`, rather than by moving the number. Budgets here are
+recovered from, not raised.
 
 That sentence has been wrong twice, so it is worth saying exactly what was fixed.
 
@@ -135,6 +140,107 @@ instrument, because the depth reached would then depend on the device and rule 8
 that; counting nodes is deterministic. The ceiling was picked by measuring the trade —
 1,500 nodes keeps 87.5% of the strongest tier's edge against 93.3% unbounded, for a fifth
 of the cost.
+
+## The second 29 August session: seat fairness, and six guards that were not guarding
+
+Open issues went **1,242 → 808**. The fixes matter less than the shape they kept taking, so
+read this list for the shape.
+
+**Every seat-balance exception is gone.** `OUTSIDE_THE_BAND` in `balance-aggregate.test.ts`
+now holds no seat-share record at all — only two "cannot decide a match at `hard`" entries,
+which are a different fact. Eight games were repaired, and **four of them measure exactly
+50.0%** rather than approximately, because bot streams are now handed out by *role* or by
+*opening seat* rather than by chair, so a paired seed is one match and its exact mirror.
+
+The mechanisms are worth knowing, because they recur:
+
+- **`paint-fight` was two bugs, each hiding the other.** Both rollers spawned on exact
+  half-turn images with a bot that used no randomness, so they played the identical round
+  rotated 180° and the counts could not do anything but tie. Nothing read the seed, so 100
+  sweep matches were **one match counted 100 times**; the "100.0%" at `easy` was a sample of
+  one, caused by `cos(h+π)` and `−cos(h)` disagreeing in the last bit at step 1000. Its own
+  test asserted "neither seat has an edge" and measured exactly 0 every time — **it could
+  not have failed.**
+- **`mini-soccer` was one `else`.** Two bots chase the same ball, so a ball touching both is
+  the normal state of the game, and every one was seat one's free kick. Worth 25 points at
+  `normal` and 0 at `easy`, which is why a `normal`-only reading never explained it.
+- **`checkers` had no termination rule at all.** Fixing its seat bias exposed it: the bias
+  had been the accidental loop-breaker, and 84 of 100 matches ran past ten simulated minutes
+  once the two seats became the same player.
+- **`hand-slap` and `hot-potato` were the same bug** — a favoured *role* pinned to a seat,
+  multiplied by an odd target.
+- **`king-of-the-yard` resolved its seats one after the other**, giving seat two half a step
+  of extra freshness every step. That is rule 6, not merely unfairness — and its own
+  `rules.test.ts` helper had always read both headings before moving either player, which is
+  exactly why every test passed while the shipped game did the other thing.
+
+### The pattern: a guard that is green about the wrong thing
+
+Six separate instances, all found and fixed this session. This is the failure mode to expect.
+
+- **The no-network guard never scanned the shell or any `.tsx` file.** `check-zero-cost.mjs`
+  is cited by `docs/threat-model.md` and CLAUDE.md as enforcing "no gameplay touches the
+  network". It walked three `packages/` directories and filtered on `extname === '.ts'` — so
+  `apps/web/src` was never scanned and no React component anywhere was. A `fetch` in a
+  component passed the build (#2510).
+- **The deploy never waited for CI.** Both workflows fired on the same push; deploy takes
+  2–4 minutes against CI's 10–18, so the site went live ~10 minutes before anyone knew the
+  tests passed, and a red CI neither blocked nor undid it. The gate was real, thorough, and
+  wired to nothing (#2511).
+- **The input split was decided twice, differently.** The fuzzer gave every pointer to seat
+  one in 11 real-time games — the harness for "two children mashing one screen" was
+  modelling one child (#2479).
+- **`soccer-pool`'s sweep pinned `openingSeat: 'p1'`**, which makes "seat one won" and
+  "whoever broke won" *the same counter*. It reported 55.3% and called it a seat edge while
+  the product harness read 50.0%. Both numbers were right (#2500, generalised in #2503).
+- **The SDK's player-name sanitiser was unreachable** — tested through its own path,
+  exported from nothing (#2486).
+- **An exemption outlived its reason.** `e2e/offline.spec.ts` still excluded Google Fonts
+  from its blocked-request assertion long after the fonts were self-hosted — so the one test
+  that would have caught them coming back was the one test that could not see it.
+
+Two of those were **written by me during this session** and caught only by mutating both
+ways: a `packages/ui` scan path for a directory that has never existed (`walk()` returns
+empty silently), and a prototype-pollution test that passed against the unfixed code.
+**Run the mutation. A green test is not evidence until you have watched it go red.**
+
+### What is new and load-bearing
+
+- **`zoneSplitFor`** in `packages/engine/src/seat.ts` — one answer to "what is the split
+  right now", used by the shell, the fuzzer and the parity harness. Three copies had drifted.
+- **`actionAbandoned`** in `packages/game-sdk/src/gesture.ts` — 16 games cleared a charge on
+  a cancelled pointer with a duplicated predicate whose `!actionHeld` guard is load-bearing
+  (without it, a palm-rejected second thumb kills the first thumb's draw). Three of those
+  games did not freeze the abandoned shot but **fired** it; `golf-football` kept winding and
+  kicked the ball with nobody touching the device.
+- **An audio subsystem that ships no audio files** — ten named events, synthesised. The
+  variation is a hash of how many times a cue has fired, so there is nothing random to keep
+  in lockstep across devices.
+- **`docs/adr/0002-no-backend-in-v1.md`** — records the architecture decision the repository
+  had already made and never written down. 21 backend and telemetry issues closed against
+  it; client-side security and *all* crossplay work deliberately left open.
+- **`docs/parallel-work.md`** — read it before dispatching agents. It cost three
+  work-destroying incidents to write.
+
+### Known open, and where to start
+
+- **The shell is over budget.** `check-size` reports 280.5 KB against 280.0. The audio
+  wiring is the cause and moving the synthesiser out of the shell chunk is the fix in flight.
+  `cc0431b` reverted this same wiring once before for the same reason — **do not raise the
+  budget.**
+- **`cricket` is the 108th game** and was found half-registered, breaking 16 guards. Its
+  bot ladder is inverted: `hard` bats worse than `normal`, because `resolveShot` multiplies
+  range by loft and loft comes from *mishits*, so the model pays you for mistiming.
+- **#2513** — seven shipped-copy defects, including a HUD that reads "Pip vs Player two" and
+  63 catalogue rules carrying exclamation marks against a shell with zero. Those strings are
+  also the meta descriptions, and they are the part of the product that reads most borrowed.
+- **#2514** — no game has a `RESEARCH.md`, so 214 research and spec issues are open *by
+  definition*. It cannot be shortcut: rule 2 forbids extracting from an APK, and the honest
+  route needs a person with the reference apps.
+- **#2481** — the security headers are still generated and discarded. Everything on the
+  repository side is ready; it needs a hosting decision only the owner can make.
+- **`packages/ui` is in CLAUDE.md's layout table and has never existed.** Either
+  aspirational or stale — worth deciding. There is also no LICENSE file.
 
 ## What the 29 August session changed, and what it found
 
@@ -386,6 +492,26 @@ A multi-agent audit was extremely productive — it found the dependency-array b
 **5 of 7 skeptic passes died on a session limit**, and the workflow mapped a failed
 refutation to `refuted: false`, which is indistinguishable from "verified clean". Check
 that verification actually ran before trusting a verdict.
+
+## Running agents in parallel: read `docs/parallel-work.md` first
+
+This handoff recommends dispatching several agents at once, and it is worth it — the last
+twenty-six games were built that way. It also created a hazard that destroyed work three
+times in one session before the rules were written down (#2497). The short version:
+
+- **File territories isolate; `HEAD` does not.** Never change branches in a working
+  directory an agent is using — `git worktree add` instead.
+- **Recover one file, not a path.** `git checkout <ref> -- <dir>` is a silent revert of
+  everything else under it. Use `git show <ref>:<path> > <path>`.
+- **Rebuild before trusting a guard.** `apps/web` resolves workspace packages through
+  `exports` → `dist`, so a source-only edit is invisible to the cross-game guards.
+- **`tsconfig.build.json` excludes tests.** Per-package verification that runs only
+  `tsc --build` says nothing about a test file you just edited. Run
+  `tsc --noEmit -p packages/games/<id>/tsconfig.json` too. This is #2464, and it recurred.
+- **A red test is evidence about the tree, not about the agent that found it.** Mutation
+  testing in a shared directory makes other agents report failures that are not theirs.
+
+The doc has the full version, including a checklist for writing an agent brief.
 
 ## Commands
 

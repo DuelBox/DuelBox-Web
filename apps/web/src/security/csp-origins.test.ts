@@ -399,6 +399,109 @@ describe('the CSP permits every origin the site loads from', () => {
   });
 });
 
+/**
+ * The threat model's inventory of third parties, held against the origins the site loads.
+ *
+ * Section 6 went on saying "We fetch three typefaces from Google's CDN on every cold load"
+ * and "**Not mitigated.** #187 covers self-hosting them" for as long as it did because a
+ * document is not a test. #2469 had self-hosted the faces, this file had been written to
+ * fail the build if they came back, `e2e/fonts.spec.ts` was asserting on a real cold load
+ * that nothing goes to Google — and the one document whose job is the honest inventory of
+ * live risk told a reader we had a third-party runtime dependency we do not have. A threat
+ * model that overstates is not the safe direction to be wrong in: it spends the reader's
+ * attention on a risk that is closed and teaches them the section is decorative.
+ *
+ * So the verdict is computed. If the source loads from nowhere but this origin, section 6
+ * may not carry a "not mitigated" verdict; if it loads from somewhere, section 6 has to
+ * name it. Both halves fail loudly, and exactly one of them runs — the shape
+ * `offline-claims.test.ts` established for the same class of failure.
+ */
+const remoteOrigins = [...new Set(sourceFiles.flatMap(scanFile).map((r) => r.origin))].sort();
+
+/** A live claim that something is fetched from somebody else's server. */
+const FETCHES_REMOTELY = /\b(?:we|the site) (?:fetch|fetches|load|loads|pull|pulls)\b[^.]*\bCDN\b/i;
+
+/**
+ * A sentence recording that a claim was *removed*, which is the opposite of making it.
+ *
+ * `offline-claims.test.ts` earned this rule the same way: a file that says "this used to say
+ * X" was failed as though it were saying X, and telling somebody to reword an accurate
+ * history is how a team learns to route around a guard.
+ */
+const REMEMBERED = /\bused to\b|\bno longer\b|\buntil\b.*#\d|\bwas removed\b/i;
+
+const sentences = (text: string): string[] => text.split(/(?<=[.!?])\s+/);
+
+/** Section 6, from its heading to the next one. */
+function thirdPartySection(): string {
+  const model = readFileSync(join(ROOT, 'docs/threat-model.md'), 'utf8');
+  const start = model.search(/^#{2,3} .*third[- ]party/im);
+  if (start === -1) {
+    throw new Error(
+      'docs/threat-model.md no longer has a third-party section, so this cannot hold its' +
+        ' verdict against what the site loads. Point it at whatever replaced it.',
+    );
+  }
+  const rest = model.slice(start);
+  // The next heading of the same rank or higher, found from the newline that opens it so
+  // that this section's own heading is not what stops the slice.
+  const next = rest.search(/\n#{2,3} /);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+describe('what the threat model says about third parties', () => {
+  it.skipIf(remoteOrigins.length > 0)('does not report a dependency that is not there', () => {
+    const section = thirdPartySection();
+    expect(
+      section.match(/\*\*Not mitigated[^*]*\*\*/i)?.[0] ?? null,
+      'nothing in apps/web/src loads from another origin — the typefaces are files in this' +
+        ' repository and the CSP was never widened — so this section may not stand as an open' +
+        ' risk. Say what landed, and which guard keeps it landed.',
+    ).toBeNull();
+    const live = sentences(section).filter(
+      (sentence) => FETCHES_REMOTELY.test(sentence) && !REMEMBERED.test(sentence),
+    );
+    expect(
+      live,
+      'this says the site fetches something from a CDN. It fetches nothing from anywhere but' +
+        ' this origin.',
+    ).toEqual([]);
+  });
+
+  it.runIf(remoteOrigins.length > 0)('names every origin the site now reaches', () => {
+    const section = thirdPartySection();
+    const unnamed = remoteOrigins.filter((origin) => !section.includes(new URL(origin).hostname));
+    expect(
+      unnamed,
+      `the site loads from ${remoteOrigins.join(', ')} and the threat model does not name` +
+        ' these. A third party the model does not list is a risk nobody weighed.',
+    ).toEqual([]);
+  });
+
+  it('can find the section, and can tell a verdict from a paragraph', () => {
+    // Which half runs is decided by a scan, and a scan that quietly stopped finding anything
+    // would skip one and pass the other on an empty string.
+    const section = thirdPartySection();
+    expect(section).toMatch(/third[- ]party/i);
+    expect(section, 'the slice ran to the end of the document').not.toContain(
+      'What the architecture removes',
+    );
+    expect('**Not mitigated.** #187 covers self-hosting them.').toMatch(
+      /\*\*Not mitigated[^*]*\*\*/i,
+    );
+    expect(
+      FETCHES_REMOTELY.test("We fetch three typefaces from Google's CDN on every cold load."),
+    ).toBe(true);
+    // And the use-and-mention half: the sentence that records the deletion is not the claim.
+    expect(
+      REMEMBERED.test("This section used to say we fetch three typefaces from Google's CDN."),
+    ).toBe(true);
+    expect(REMEMBERED.test("We fetch three typefaces from Google's CDN on every cold load.")).toBe(
+      false,
+    );
+  });
+});
+
 describe('the guard itself', () => {
   /** Exactly what `layout.tsx` carried before #2469, minus the excuses. */
   const beforeTheFix = `

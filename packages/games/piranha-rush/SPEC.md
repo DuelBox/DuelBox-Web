@@ -347,18 +347,24 @@ reef**, not at swimming faster — every tier swims at exactly `SWIM_SPEED`.
 
 ### Against the repository's own harness
 
-`apps/web/src/data/balance-aggregate.test.ts` measures every game over 50 seed pairs at a
-frozen idle input, playing each seed once per opening seat. Replicated exactly against this
-package's built `dist`, at all three tiers:
+`apps/web/src/data/balance-aggregate.test.ts` measures every game at a frozen idle input.
+This game never reads `context.openingSeat`, so since #2494 the harness plays each seed once
+rather than twice and spends the same budget on 88 seeds instead of 50 pairs. Replicated
+against this package's built `dist`:
 
 | tier | seat one | decided | draws | unfinished | mean match | `openerSwung` | `distinct` |
 |---|---|---|---|---|---|---|---|
-| easy | **52.0 %** | 100 | 0 | 0 | 16.9 s | 0 | 50 |
-| normal | **54.0 %** | 100 | 0 | 0 | 22.0 s | 0 | 50 |
-| hard | **52.0 %** | 100 | 0 | 0 | 19.6 s | 0 | 49 |
+| easy | **52.0 %** | 50 seeds | 0 | 0 | 16.9 s | 0 | 50 |
+| normal | **46.0 %** | 87 of 88 seeds | 1 | 0 | 20.7 s | 0 | 88 |
+| hard | **52.0 %** | 50 seeds | 0 | 0 | 19.6 s | 0 | 49 |
 
-All three are inside the **flat 45–55 % band**, not merely inside the 21.2-point allowance
-that sample gets. `openerSwung` is 0 because a real-time game has no opener — the SDK
+The `normal` row is the current sweep. The `easy` and `hard` rows were taken before #2494 at
+50 seeds played both ways — the harness reported them as "100 decided", which was 50
+independent draws each seen twice, so the shares stand and the denominators did not. Both are
+**due a re-measure** at the 88 seeds the same budget now buys.
+
+All three are inside the **flat 45–55 % band**, not merely inside the allowance that sample
+gets — 16.0 points at 88 seeds, 21.2 at 50 pairs. `openerSwung` is 0 because a real-time game has no opener — the SDK
 contract says so outright — and both swimmers start at the same point of the same lagoon, so
 there is nothing for `context.openingSeat` to name and inventing something would manufacture
 the first-mover advantage the shell alternates it to remove. `getActiveSeat` is not

@@ -1,4 +1,4 @@
-import { SEAT_PALETTE } from '@duelbox/engine';
+import { SEATS, SEAT_PALETTE, seatView } from '@duelbox/engine';
 import type { Rng, SeatId } from '@duelbox/engine';
 import { resolve } from '@duelbox/game-sdk';
 import type {
@@ -124,6 +124,13 @@ export class PinballDuelGame implements Game {
   readonly #rate = new Float64Array(FLIPPER_COUNT);
   /** Whether each flipper's driver is asking for it this step. */
   readonly #want = new Uint8Array(FLIPPER_COUNT);
+  /**
+   * Whether each seat reads the table upside down, from `seatView` — the engine's one
+   * definition of that. Read every step by {@link PinballDuelGame.update} and answered from
+   * here rather than from `seatView`, which returns a fresh object and so cannot be asked in
+   * a step (rule 5). It cannot change during a match: the presentation is fixed at `init`.
+   */
+  readonly #rotatedSeat: Record<SeatId, boolean> = { p1: false, p2: false };
   readonly #flash = new Int16Array(BUMPERS.length);
   readonly #memoryP1: BotMemory = createBotMemory();
   readonly #memoryP2: BotMemory = createBotMemory();
@@ -181,6 +188,9 @@ export class PinballDuelGame implements Game {
 
   init(context: GameContext): void {
     this.#context = context;
+    for (const seat of SEATS) {
+      this.#rotatedSeat[seat] = seatView(seat, context.presentation, context.localSeat).rotated;
+    }
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
     this.#score.p1 = 0;
@@ -350,8 +360,12 @@ export class PinballDuelGame implements Game {
     const pointer = seatInput.pointer;
     const pointerX = pointer !== null ? pointer.x : null;
     const moveX = seatInput.move.x;
-    this.#want[left] = wantsFlipper('left', moveX, pointerX) ? 1 : 0;
-    this.#want[right] = wantsFlipper('right', moveX, pointerX) ? 1 : 0;
+    // A person's press is read in their own frame; a bot has no frame to read in, which is
+    // why the branch above never asks. `left` and `right` stay screen sides all the way to
+    // the phase array — `wantsFlipper` is what knows which hand each of them is under.
+    const rotated = this.#rotatedSeat[seat];
+    this.#want[left] = wantsFlipper('left', moveX, pointerX, rotated) ? 1 : 0;
+    this.#want[right] = wantsFlipper('right', moveX, pointerX, rotated) ? 1 : 0;
   }
 
   #advanceFlippers(dt: number): void {

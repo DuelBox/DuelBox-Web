@@ -96,14 +96,46 @@ export const DEFAULT_SEARCH_NODES = 1_500;
  *
  * A partial depth is thrown away rather than trusted: half a ply is not an opinion, it is
  * whichever moves happened to be generated first.
+ *
+ * ## The precondition, which is not free (#2495)
+ *
+ * Keeping the last completed depth assumes **deeper is better**. That holds when leaf
+ * evaluations at adjacent depths are comparable, and it is false without a quiescent leaf
+ * evaluation — which is the normal case here, because quiescence search is exactly what a
+ * per-frame bot budget cannot afford.
+ *
+ * The reason is the odd-even effect. A search ending on an **odd** depth stops after the
+ * mover's own move; one ending on an **even** depth stops after the opponent has replied.
+ * Those measure different things, so their scores are not on one scale, and the bias
+ * *alternates in sign*. So a search that completes depth 4 can return a move strictly worse
+ * than the one depth 3 already had, and it does so systematically rather than occasionally.
+ *
+ * It bites hardest where the budget is tightest, because the budget is what decides which
+ * depth happens to be the last completed one — so a bot that gets one more ply on a faster
+ * machine can play *worse*, and the tier calibration becomes machine-dependent. That is the
+ * same argument as the one above about partial depths, one level up: a completed even depth
+ * is not comparable to a completed odd one.
+ *
+ * `step` is how a caller states its assumption. Pass **2** to keep every iteration on the
+ * same side of the exchange, so each completed depth is comparable to the last:
+ *
+ * ```ts
+ * deepen(budget, maxDepth, search);        // 1, 2, 3, 4 - only safe if leaves are quiescent
+ * deepen(budget, maxDepth, search, 2);     // 1, 3, 5, 7 - a whole exchange at a time
+ * ```
+ *
+ * The default stays 1 deliberately. Changing it would silently re-tune every ladder that
+ * was measured against the current behaviour, and a ladder that moves without anybody
+ * measuring it is worse than one that is wrong in a known way.
  */
 export function deepen(
   budget: SearchBudget,
   maxDepth: number,
   searchToDepth: (depth: number) => number | null,
+  step = 1,
 ): number {
   let best = -1;
-  for (let depth = 1; depth <= maxDepth; depth += 1) {
+  for (let depth = 1; depth <= maxDepth; depth += step) {
     const move = searchToDepth(depth);
     if (move === null) break; // the budget ran out part-way; keep the last full depth
     best = move;

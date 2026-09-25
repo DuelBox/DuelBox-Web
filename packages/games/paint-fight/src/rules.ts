@@ -74,34 +74,75 @@ export function inBounds(column: number, row: number): boolean {
   return column >= 0 && column < COLUMNS && row >= 0 && row < ROWS;
 }
 
+/** Where a roller starts, before its opening heading is drawn. */
+export interface StartMark {
+  readonly x: number;
+  readonly y: number;
+  readonly heading: number;
+}
+
+/**
+ * The two marks: opposite corners, each facing along its own diagonal.
+ *
+ * Exact half-turn images of one another, so the pair is unchanged by turning the board
+ * through 180 degrees and neither is aimed at the other.
+ */
+export const START_MARKS: readonly [StartMark, StartMark] = Object.freeze([
+  Object.freeze({ x: BOARD_WIDTH * 0.2, y: BOARD_HEIGHT * 0.2, heading: 0 }),
+  Object.freeze({ x: BOARD_WIDTH * 0.8, y: BOARD_HEIGHT * 0.8, heading: Math.PI }),
+]);
+
+/**
+ * How far off its mark's diagonal a roller may be pointed at the start, either side.
+ *
+ * The opening was fixed, and with a bot that used no randomness either that made the whole
+ * game fixed: every seed played the identical match, so a hundred sampled matches were one
+ * match counted a hundred times. A quarter turn either way is enough that no two rounds open
+ * the same and small enough that a roller still sets off across the board rather than into
+ * the nearest wall.
+ */
+export const START_SPREAD = Math.PI / 2;
+
 export function createGame(): Game {
-  return {
+  const game: Game = {
     cells: new Array<Owner>(CELLS).fill(null),
-    // Opposite corners, each facing along its own diagonal, so the position is identical
-    // under a half-turn of the board and neither is aimed at the other.
-    p1: { x: BOARD_WIDTH * 0.2, y: BOARD_HEIGHT * 0.2, heading: 0, painted: 0 },
-    p2: { x: BOARD_WIDTH * 0.8, y: BOARD_HEIGHT * 0.8, heading: Math.PI, painted: 0 },
+    p1: { x: 0, y: 0, heading: 0, painted: 0 },
+    p2: { x: 0, y: 0, heading: 0, painted: 0 },
     phase: 'playing',
     winner: null,
     elapsed: 0,
   };
+  resetGame(game, 'p1', 0.5, 0.5);
+  return game;
 }
 
-export function resetGame(game: Game): void {
-  const fresh = createGame();
+/**
+ * Start a round.
+ *
+ * `first` takes the first mark and its roll; the other seat takes the second of each. Those
+ * two lines are the **only** place in this file where a seat label reaches the simulation:
+ * painting, scoring, steering and the whistle all treat the two seats as interchangeable. So
+ * the same round played with the opening seat swapped is the same round with the two labels
+ * swapped, bit for bit — which is a proof that neither chair is favoured rather than a
+ * measurement that says so.
+ *
+ * Both rolls are in `[0, 1)`. Passing 0.5 twice gives the fixed opening the game had before
+ * it was seeded, which is what {@link createGame} does.
+ */
+export function resetGame(game: Game, first: SeatId, rollFirst: number, rollSecond: number): void {
   game.cells.fill(null);
-  copyRoller(game.p1, fresh.p1);
-  copyRoller(game.p2, fresh.p2);
+  place(rollerOf(game, first), START_MARKS[0], rollFirst);
+  place(rollerOf(game, otherOf(first)), START_MARKS[1], rollSecond);
   game.phase = 'playing';
   game.winner = null;
   game.elapsed = 0;
 }
 
-function copyRoller(target: Roller, source: Roller): void {
-  target.x = source.x;
-  target.y = source.y;
-  target.heading = source.heading;
-  target.painted = source.painted;
+function place(roller: Roller, mark: StartMark, roll: number): void {
+  roller.x = mark.x;
+  roller.y = mark.y;
+  roller.heading = mark.heading + (roll - 0.5) * START_SPREAD;
+  roller.painted = 0;
 }
 
 export function rollerOf(game: Game, seat: SeatId): Roller {
@@ -146,8 +187,20 @@ export function steer(roller: Roller, amount: number, fixedDeltaSeconds: number)
  * A disc rather than a point: a roller is a wide thing and painting only the cell under
  * its centre leaves a one-cell trail that no amount of driving fills in. The disc is what
  * makes covering ground feel like covering ground.
+ *
+ * `rivalX`/`rivalY` are the other roller's centre, and every cell under **both** discs is
+ * left exactly as it was. Nobody paints where two rollers meet, so the contested cells
+ * cannot be awarded by the order the two seats happen to be processed in — see {@link step}.
+ * Left out, there is no rival and the whole disc is painted.
  */
-export function paintAt(game: Game, seat: SeatId, x: number, y: number): number {
+export function paintAt(
+  game: Game,
+  seat: SeatId,
+  x: number,
+  y: number,
+  rivalX = Infinity,
+  rivalY = Infinity,
+): number {
   const reach = Math.ceil(ROLLER_RADIUS / CELL_SIZE);
   const centreColumn = Math.floor(x / CELL_SIZE);
   const centreRow = Math.floor(y / CELL_SIZE);
@@ -162,6 +215,7 @@ export function paintAt(game: Game, seat: SeatId, x: number, y: number): number 
       const cx = (column + 0.5) * CELL_SIZE;
       const cy = (row + 0.5) * CELL_SIZE;
       if (Math.hypot(cx - x, cy - y) > ROLLER_RADIUS) continue;
+      if (Math.hypot(cx - rivalX, cy - rivalY) <= ROLLER_RADIUS) continue;
       const cell = cellAt(column, row);
       if (game.cells[cell] === seat) continue;
       game.cells[cell] = seat;
@@ -174,8 +228,14 @@ export function paintAt(game: Game, seat: SeatId, x: number, y: number): number 
 /**
  * One fixed step.
  *
- * Both rollers move and paint before either count is read, so the order they are processed
- * in cannot decide who owns a cell they both crossed this step.
+ * **Both rollers move before either paints, and neither paints where the two discs overlap.**
+ * The comment here used to claim that moving and painting both rollers before reading either
+ * count meant "the order they are processed in cannot decide who owns a cell they both
+ * crossed", and that was simply false: p2 painted second, so p2 took every contested cell.
+ * It never showed up as a seat advantage because the rest of the game was an exact mirror
+ * and the overlap was symmetric too — a bug hiding behind another bug. Cells under both
+ * rollers now change hands for nobody, which is a rule two people can see happen and the
+ * only version of it that does not depend on a loop order.
  */
 export function step(game: Game, fixedDeltaSeconds: number): void {
   if (game.phase !== 'playing') return;
@@ -186,8 +246,9 @@ export function step(game: Game, fixedDeltaSeconds: number): void {
     roller.x += Math.cos(roller.heading) * SPEED * fixedDeltaSeconds;
     roller.y += Math.sin(roller.heading) * SPEED * fixedDeltaSeconds;
     bounceOffWalls(roller);
-    paintAt(game, seat, roller.x, roller.y);
   }
+  paintAt(game, 'p1', game.p1.x, game.p1.y, game.p2.x, game.p2.y);
+  paintAt(game, 'p2', game.p2.x, game.p2.y, game.p1.x, game.p1.y);
 
   game.p1.painted = countOwned(game, 'p1');
   game.p2.painted = countOwned(game, 'p2');
@@ -353,19 +414,36 @@ export function fanOffset(rank: number, half: number, side: number): number {
   return FAN_SPREAD * t * t * side;
 }
 
+/** Two headings scoring within this of each other are the same heading. */
+export const TIE_EPSILON = 1e-9;
+
 /**
  * Where the bot steers, as a −1..1 amount.
  *
  * Every tier sees the board a human sees, per rule 6. They differ in how far ahead they
  * look, how finely they steer, and whether they understand that repainting the opponent is
  * worth double.
+ *
+ * **`rng` breaks ties, and it is the only randomness in the game.** The fan is generated in
+ * pairs — straight ahead, then each rank to the left before the same rank to the right — and
+ * a strict `>` gave every tie to whichever of the pair was enumerated first, which is always
+ * the left one. On an empty board almost every option ties, so the opening was one scripted
+ * line the seed could not touch: 50 seeds produced *one* distinct match on every tier. Taking
+ * a tied heading uniformly at random makes the seed matter and takes the left-hand bias out
+ * with it, at no cost in strength, because the options it chooses between score the same.
+ *
+ * Each seat draws from its own stream, so the number of draws one roller makes cannot shift
+ * the other's — see `game.ts`, which hands the streams out by opening seat rather than by
+ * seat, so a round replayed with the seats swapped is bit-for-bit the same round.
  */
-export function botSteer(game: Game, seat: SeatId, difficulty: BotDifficulty): number {
+export function botSteer(game: Game, seat: SeatId, difficulty: BotDifficulty, rng: Rng): number {
   const profile = BOT_PROFILES[difficulty];
   const roller = rollerOf(game, seat);
 
   let best = 0;
   let bestScore = -Infinity;
+  /** How many headings are tied on the best score so far, for the reservoir below. */
+  let tied = 0;
   const half = Math.max(1, (profile.fanSize - 1) / 2);
 
   for (let i = 0; i < profile.fanSize; i += 1) {
@@ -375,17 +453,19 @@ export function botSteer(game: Game, seat: SeatId, difficulty: BotDifficulty): n
     // A faint preference for going straight, so a tie does not jitter.
     const score =
       scoreHeading(game, seat, roller.heading + offset, profile) - Math.abs(offset) * 0.5;
-    if (score > bestScore) {
+    if (score > bestScore + TIE_EPSILON) {
       bestScore = score;
       best = offset;
+      tied = 1;
+    } else if (score >= bestScore - TIE_EPSILON) {
+      // Reservoir sampling: the k-th tied heading is taken with probability 1/k, which
+      // leaves all of them equally likely without a second pass or an array to hold them.
+      tied += 1;
+      if (score > bestScore) bestScore = score;
+      if (rng.float() * tied < 1) best = offset;
     }
   }
 
   const amount = best / (TURN_RATE / 60);
   return amount < -1 ? -1 : amount > 1 ? 1 : amount;
-}
-
-/** Unused by the game; the bot needs no randomness, but tests seed one for symmetry. */
-export function rollFor(rng: Rng): number {
-  return rng.float();
 }

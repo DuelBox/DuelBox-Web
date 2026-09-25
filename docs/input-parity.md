@@ -37,6 +37,19 @@ one. The engine quantises pointer position to a grid derived from the logical bo
 mouse cannot exploit sub-pixel precision a thumb cannot match. This costs the mouse player
 nothing they can perceive and removes an advantage they could not otherwise give up.
 
+**Aimed scalars — the same envelope, one level up.** An angle, a power, a spin is aimed
+just as a position is, and until #2506 the engine levelled none of them. A game derives
+such a scalar twice: the pointer path inherits the position lattice, and the keyboard path
+is `SOME_KEY_RATE × fixedDeltaSeconds`, a constant the game picked. Nothing made the two
+commensurate. Measured in Shuriken's spin, they were not merely unequal — they were
+**disjoint**: multiples of 0.021 under a finger, of 0.043333 under a key, whose first
+common multiple is 2.73 and the clamp is ±1.9. Across the whole legal range the only spins
+both instruments could name were zero and the clamp itself. `scalarEnvelopeFor(span)` and
+`quantiseScalar` are the fix: one lattice, a sixty-fourth of the scalar's own span, that
+both paths are written through. It works for the same reason the position envelope does —
+if every increment either instrument can apply is smaller than a cell, a sweep on either
+passes through every cell, so both reach the identical set.
+
 **Drag distance — logical, not physical.** A drag is measured in logical units, never in
 millimetres of desk or screen. A short trackpad flick and a long phone swipe that cover
 the same fraction of the play area mean the same thing.
@@ -98,14 +111,98 @@ locally, by nudging its reticle at a rate rather than jumping it; Cornhole had n
 measurement on its issue is worth reading, because the gap turned out to be smaller than
 the game's own seeded wobble. Both are now levelled by the engine instead of by argument.
 
-**Not implemented: gamepad support.** #130 covers it. The table above anticipates it so
-the decision is not made twice.
+**Implemented: the scalar envelope, as a seam rather than as a sweep.** The engine exports
+`SCALAR_ENVELOPE`, `scalarEnvelopeFor(span)` and `quantiseScalar(value, lattice)`, and
+`input.test.ts` asserts the property that matters — that two instruments with different
+per-step increments reach the **same set of reachable values** once both go through one
+lattice. A set comparison is the right test and a win-rate comparison is not: the second
+half of this document compares win rates inside a ±75-point band explicitly looking for "a
+game one instrument simply cannot play", and a 2.1× resolution difference is invisible
+there at any sample size, because it is not a difference in strength but in what can be
+expressed.
+
+**Not applied to any game yet, and that is the honest state.** The seam exists; no game is
+written through it. `docs/input-idiom.md` names the obligation a game takes on when it
+does — its own keyboard rate must be finer than one cell, or the key skips cells the
+finger visits and the sets diverge again. The five aimed scalars in the collection today
+all satisfy it without retuning: Shuriken's spin spans 87 key steps, Shuriken's aim 99,
+Sword Throwing's aim 82, Archery Master's aim 81 and its draw 70. The draw is the binding
+one, so a denominator of 64 clears every one of them. **Only Shuriken's spin has been
+measured**; the other four are candidates by arithmetic, not by measurement, and the
+thirty-odd games carrying a keyboard rate constant have not been triaged at all. The
+discriminator is whether the scalar is *aimed and committed* (an angle, a power, a spin) or
+merely *integrated* (a velocity, a position), and #2478 is the standing reminder that this
+must be settled by measurement rather than by reading.
+
+**The one thing no envelope can level: a finger count.** #2498. The engine tracks ten
+concurrent pointers and now exposes the number to a game as `SeatInputView.pointerCount`,
+where it used to collapse it to a boolean. It is the one input capability in this document
+with **no fair equivalent in another family and no prospect of one** —
+`docs/keyboard-rollover.md` establishes that a commodity keyboard guarantees two or three
+simultaneous keys, that our seats already spend them, and that a blocked press is
+undetectable from the browser, so a game could not even degrade when the fingers failed to
+arrive. So reading the count costs `sameInputClassOnly: true`, and
+`apps/web/src/data/multi-touch.test.ts` enforces that rather than trusting anyone to
+remember it. Before the field existed the flag was a *trap* for exactly this case: a game
+could declare itself touch-only and still be handed one finger, advertising a restriction
+that bought the player no game. Position remains the fair multi-finger channel — a radius,
+a sweep, a place on the board — and Money Grabber's SPEC is the worked example of choosing
+it.
+
+**Implemented: gamepad support (#130).** Two pads drive two seats by connection order, a pause-panel
+button swaps them, and a hot-plug pauses the match with a sentence saying whose seat changed. The
+stick is *added* to the keyboard vector as a rate and **rounded onto `SCALAR_ENVELOPE`** before it
+becomes intent (`InputManager.setSeatAnalog`): a key names a rate of 0 or 1, a drag names a position
+on the lattice, and a raw stick would have named any real in between — the finest instrument on the
+site by a wide margin. On the envelope it still throttles, which is what a stick is for, and can name
+nothing a rounded drag could not. `rt-race` stays same-input-class-only for the reason the table gives.
 
 **Not verified: any of this across two real devices.** There is no cross-device harness
 yet, so every judgement here is reasoned from the properties of the input families rather
 than measured from matches. The verdicts are falsifiable and should be revisited once
 #1862's harness exists — particularly `rt-split`, where I have claimed two advantages
 cancel out, which is exactly the kind of claim that is comfortable and might be wrong.
+
+## Criterion-3 residuals: the outcome-lattice near-misses
+
+`apps/web/src/data/outcome-lattice.ts` measures criterion 1 of the fairness audits — *are the
+measured outcome distributions comparable across input families?* — as a number per game: the
+smallest change each instrument can make to a committed outcome, compared as the **set** of
+values each can name over the shared span. `parity` (set equality) and `nested` (one lattice a
+subset of the other) discharge the criterion; `partial` and `sparse` are measured expression
+gaps; `uncalibratable` means a single-axis sweep cannot separate the game's gesture and is
+silence rather than a verdict either way. The table is pinned in `outcome-lattice.test.ts`.
+
+Every game named below is one shape: a **paddle, runner, catcher or hand whose keyboard rate was
+chosen without reference to the position envelope**. The pointer position is rounded onto the
+engine's precision lattice (one two-hundredth of the short logical side — 3.0 units in a 600-wide
+box); the keyboard path integrates its own `SPEED × fixedDeltaSeconds` and lands on a different
+lattice. The two then share only their least common multiple. This is the same defect #2506's
+`scalarEnvelopeFor` closed for *aimed* scalars and which **nothing yet closes for integrated
+positions** — that fix belongs in the engine input path (#1865), not in a game, so no game code
+is changed for it here. `control-parity.test.ts` sees no win-rate consequence for any of them,
+but by its own statement it *cannot* see a resolution difference at any sample size, so a flat
+win rate is not evidence the criterion is met — the lattice comparison is.
+
+**Accepted residuals (`partial` — the lattices substantially overlap).** For these two the
+overlap clears the harness's own 25%-of-the-smaller-lattice line, so the residual is small,
+named, and accepted here per criterion 3; the durable fix remains the engine position envelope
+(#1865).
+
+| game | factor | named quantity | residual |
+|---|---|---|---|
+| `money-grabber` | 1.667× | keyboard hand `HAND_SPEED = 300`u/s → 5.0 units/step against a 3.0-unit pointer envelope (600-wide box) | 41 of 121 keyboard positions are shared; the hand is rate-limited identically for both instruments in *match* terms (rule 10), so the gap is which intermediate positions each can name, not who reaches a token first |
+| `pizza-memory` | 2.667× | keyboard hand advances `HAND_SPEED × dt × 2` along a station rail that maps to an 8.0-unit board lattice against the 3.0-unit pointer envelope | 26 of 76 keyboard positions shared; the rail is measured in stations, both seats run identical seat-local arithmetic, and neither instrument reaches an ingredient faster |
+
+**Gaps too large to accept as-is (`sparse` — under 25% overlap).** These share almost nothing
+between the two lattices and documentation calling that a small residual would not be honest.
+They need the shared position lattice (#1865), and until then their criterion 1 is genuinely
+unmet: `ping-pong`, `taxi-race`, `racing-cars`, `brick-blast`, `animal-stack`, `star-catcher`,
+`sticky-tongues`, `archery`, `happy-hippos`, `carrom`. Four rest on thin evidence and must be
+re-checked by hand before anyone acts on the number — `happy-hippos` (one drawn quantity),
+`archery` (frame split 10/19 about the answer), and `carrom` (commits an angle and a power in one
+gesture, the shape the harness says elsewhere it cannot separate, so its 6.285 is the least safe
+number in the file).
 
 
 ---
@@ -226,7 +323,7 @@ bot whichever way it is spelled, and the two spellings lose at the same rate.
 |---|---|---|---|
 | checkers | — (0/0) | — (0/0) | 0 / 0 |
 | color-wars | 0% (0/14) | 0% (0/14) | 14 / 14 |
-| dots-and-boxes | 0% (0/11) | 0% (0/14) | 11 / 14 |
+| dots-and-boxes | 0% (0/12) | 0% (0/14) | 12 / 14 |
 | four-in-a-row | 0% (0/14) | 0% (0/14) | 14 / 14 |
 | ludo | 21% (3/14) | 0% (0/1) | 14 / 1 |
 | mancala | 21% (3/14) | 0% (0/5) | 14 / 5 |
@@ -267,3 +364,205 @@ the source rather than assumed:
 **No residual difference is attributable to a game.** If one appears later, the fix is to bring
 the weaker path up rather than to degrade the stronger one — the engine already owns that
 normalisation, and the policy for it is the first half of this document.
+
+
+---
+
+# Measured: what each instrument can *say*
+
+Everything above compares how often each instrument wins. This compares what each one can
+express, which is a different question and the one the seventy-eight "[Game] Audit fairness
+across devices and input families" issues actually ask first:
+
+> 1. Measured outcome distributions are comparable across input families
+
+A win rate cannot answer it, at any band width, because the problem it names is not a
+strength difference. `control-parity.test.ts` says so itself — it is "looking for a game one
+instrument simply cannot play, not for a tuning gap". The sharper question is **can one
+instrument express things another cannot**, which is what this document's own policy section
+asks for when it demands "a common precision envelope so no input family can aim finer than
+another". That is a statement about *reachable sets*: two instruments can win equally often
+while one of them can name spins the other physically cannot reach, and the loser never sees
+it, because the shot they wanted was never in their vocabulary.
+
+`apps/web/src/data/input-expression.ts` measures it, and
+`apps/web/src/data/input-expression.test.ts` runs it over all 107 games on every push and
+prints the table below.
+
+## Why the two lattices are unrelated numbers
+
+The engine quantises pointer **position** onto `envelopeFor(logical)` — one two-hundredth of
+the shorter side — and quantises nothing else. So a pointer's finest expressible increment is
+one envelope of travel.
+
+A keyboard has no position at all. Every game that binds a continuous quantity to a key
+integrates a **private rate constant** over the fixed timestep, so its finest expressible
+increment is one simulation step of that rate. Roughly thirty games carry such a constant
+(`AIM_KEY_RATE`, `SPIN_KEY_RATE`, `AIM_KEY_SPEED`, `STEER_SPEED`, …), every one of them
+invented locally, and **nothing in the repository had ever compared the two**. The engine
+levelled the pointer against itself and left the keyboard out of the comparison entirely.
+
+## The method
+
+Per game, a knob is swept through each instrument **in that instrument's own smallest legal
+increment** — one envelope of pointer travel, one step of key hold, one key tap — and the
+game is observed through the only channel all 107 share: `Renderer`. A game draws its aim,
+its power, its reticle and its consequences, so the draw stream is a faithful generic read of
+the state a player selected. `greyscale.test.ts` uses the same seam for the same reason.
+
+Four things decide a verdict, and each exists because the simpler version of it was wrong.
+
+**Every checkpoint is after the commit.** A frame taken while the finger is still down reads
+the finger, and a pointer's live position is quantised at one envelope while a keyboard's
+cursor is not — so *any* pre-commit sample reports "the pointer is finer" for every game that
+draws a reticle. That is a fact about reticles.
+
+**The two arms are commit-aligned.** A keyboard commits on `actionPressed` and a pointer on
+`actionReleased` in every drag-and-release game here. Give both the same action window and
+the two shots are fired a window apart, and the tail then samples two different moments of
+two different flights. The pointer's gesture is therefore placed to *end* where the
+keyboard's begins.
+
+**Aimed or integrated, measured rather than read.** The gap only matters for a quantity that
+is aimed and committed; one both instruments merely accumulate excludes nobody. So the same
+gesture is run twice — same endpoint, same press step, same release step, once as a jump and
+once as a glide. An aimed quantity answers identically; an integrated one does not. This is
+the discriminator **issue #2478 got wrong by reading the source**: it asserted Shuriken bound
+spin to pointer *velocity*, which is exactly what a per-step delta looks like, and the deltas
+telescope to net displacement — the same 300-unit drag gives spin `1.800000` over 3 frames
+and over 120, identical to six decimals.
+
+**The ratio comes from calibrating the two knobs against each other, not from comparing step
+sizes.** What the renderer shows is `f(quantity)` for an unknown non-linear `f`; an aim
+sweeping 0.05–0.34 radians and one sweeping 0.12–0.77 move a blade at quite different rates
+per radian, so two step sizes measured over different stretches differ for a reason that has
+nothing to do with either lattice. So: for each keyboard knob, find the pointer knob whose
+*outcome* is nearest, and take the slope. Every `f` cancels, because the two runs being
+matched are two spellings of one game state. The slope is the answer — how many envelopes of
+finger travel it takes to say what one step of a held key says.
+
+Three earlier metrics were tried and are recorded in the source because each was confidently
+wrong: a pooled vector distance put Shuriken at 1.06 (nine hundred marks of rearranged bamboo
+drowning the dozen tracking the blade), per-mark step ratios put it at 3.03 and then 5.68, and
+a relative match tolerance matched everything to everything — Pool at 15×, Mini Golf at 35×,
+and Shuriken reversing direction. Shuriken's own two constants say 2.06× on spin and 2.15× on
+aim. The method that survives lands between them at **2.54×**, having read neither constant.
+
+Where the outcome is a small discrete set — a column, a cell, a lane, one of three buttons —
+there is no scalar to resolve and the calibration measures nothing. There the two **outcome
+sets** are compared directly: an instrument that reaches five of seven columns is unfair in a
+way no number of matches would average away. And where neither position nor hold changes
+anything, the game is a timing game, and what it reads — which step the commit landed on — is
+measured too, because the fixed timestep is the one lattice both instruments provably share.
+
+## The verdicts
+
+All 108 registry entries, seed 7, a little over two minutes on an idle machine.
+
+| | count | meaning |
+|---|---|---|
+| **A** | 1 | the two families are equivalent within the envelope, and the calibration says so |
+| **B** | 4 | a measurable gap: one instrument selects values the other cannot reach |
+| **C** | 49 | no aimed scalar, so the question does not arise |
+| **D** | 54 | not measured, and the note says why — a limit of the generic gesture, not a finding |
+
+### A — equivalent, measured
+
+| game | factor | evidence |
+|---|---|---|
+| archery | 1.29× | pointer and keyboard calibrated over 23 knobs; `AIM_KEY_SPEED = 1.25` against a pad-anchored drag lands inside the band |
+
+### B — a measurable gap
+
+| game | factor | which quantity | ruling |
+|---|---|---|---|
+| **shuriken** | **2.54×**, pointer finer | spin and aim. Spin: one envelope is 3.5 units, so `3.5 × SPIN_PER_UNIT = 0.021` against `SPIN_KEY_RATE / 60 = 0.0433`. Aim: 3.5 units at 392 away is 0.0089 rad against `AIM_KEY_RATE / 60 = 0.0192` | **Quantise.** Both are aimed scalars on a continuum, and the fix is the direct analogue of `envelopeFor`: round spin and aim onto a shared lattice so the pointer cannot select between the values a key can reach. Nothing about the interaction is same-class-only |
+| **darts** | **2.11×**, pointer finer | the aim vector. One envelope through `dx / AIM_RADIUS × AIM_GAIN`, clamped to the pad, is about 0.0096 per envelope against the keyboard's `1.1 / 60 = 0.0183` | **Quantise**, same shape as Shuriken. A pad-anchored aim is a continuum and both instruments should step it identically |
+| **cricket** | **1.57×**, pointer finer | swing/placement on the x axis | **Undecided, and deliberately.** Cricket was being written by another agent while this ran; the number is real for the tree it measured and should be re-measured before anything is concluded |
+
+No game in the catalogue measured as needing `sameInputClassOnly` on these grounds. That
+field is for an interaction one family cannot perform — the repeated discrete input this
+document rules on above — and none of these three gaps is that. Two are a lattice mismatch
+with an obvious fix; the third is undecided and waiting on a re-measure.
+
+A fourth game, `dots-and-boxes`, was on this list and is not now (#1924), and how it left is
+the point. The single-axis sweep read it as a reach gap the *tap* had — seven edges by tap
+against eleven by cursor — and the ruling here was to widen the tap's hit-testing. Walking
+the board proved the opposite, and larger: a tap names every one of the sixty edges, while
+the keyboard cursor reached only forty. Nearest-by-distance let each press drift onto the
+other lattice, and from the centre that drift never straightened, so the lower-right corner —
+twenty edges — had no keyboard route in at all. On a shared screen those were lines one
+player could draw and the other could not: exactly the cross-device unfairness this audit is
+for, and the sweep had pointed at the wrong instrument because it was measuring its own path
+and not the board (the same trap #2478 fell into by reading the source). The fix is in the
+cursor's navigation: inside the same cone it now takes the straightest edge first and the
+nearest of those second, so a press walks its own row or column and reaches the far corner.
+Both instruments then reach the same count and the game measures **C**. `game.test.ts` walks
+the navigation graph and asserts all sixty edges have a keyboard route, so the forty-of-sixty
+state cannot return unseen.
+
+### C — no aimed scalar
+
+Fifty games, in three kinds, each distinguished by measurement rather than by archetype:
+
+- **Discrete targets both instruments reach** (19): blocks, color-wars, dots-and-boxes,
+  four-in-a-row, guess-the-person, light-fingers, ludo, match, memory, nuts-and-bolts,
+  pop-it, rat-race, road-dodge, rock-paper-scissors, ship-battle, solitaire, tap-match,
+  tic-tac-toe, ultimate-ttt, yazy and others. Reach counts are printed per game; a cell is a
+  cell.
+- **Integrated, not selected** (15): beach-ball, crash-it, frozen-beaks, king-of-the-yard,
+  math-quiz, paint-fight, piranha-rush, racing-cars, snakes, spin-war, sticky-tongues, sumo,
+  taxi-race, tennis, traffic-jam and others. The jump-versus-glide test says the pointer is
+  accumulating, and both instruments accumulate.
+- **Timing games** (16): basketball, cannon-duel, cup-pong, hammer-hit, knife-thrower,
+  sling-puck, golf-football, target-practice, the-last-sashimi, explosive-festival,
+  chicken-jump, pull-the-rope, unfair-fishing, water-game, wrestle. Nothing is aimed; the
+  commit is a moment, and both instruments resolve it on the same fixed step — 48 against 48,
+  37 against 37, and so on. **This is the first evidence for the meter-period claim in
+  `docs/input-idiom.md`**, which had been argued and never measured.
+
+### D — not measured
+
+Fifty-four games, and every one of them indicts the generic gesture rather than the game.
+Four reasons, all printed per game:
+
+- **The two knobs could not be calibrated** (23): pool, mini-golf, bowling, cornhole,
+  soccer-pool, sword-throwing, star-catcher, air-hockey, mini-soccer, ping-pong and others.
+  These are the drag-and-release aim games where a single drag sets *both* an angle and a
+  power, so a one-axis sweep cannot hold one still while varying the other, and no pointer
+  knob reproduces any keyboard outcome. **This is the largest single piece of work left** and
+  it is where the interesting games are: closing it means a per-idiom gesture script rather
+  than one generic one.
+- **The gesture changed nothing at all** (15): disco-battle, fatal-siege, flappy-jump,
+  fruit-duel, hand-slap, happy-birds, hot-potato, maze-paint, penalty-kicks, pinball,
+  shut-the-box, sliding-puzzle, slot-cars, snakes-ladders, stampede. Not by position, not by
+  hold, not by moment.
+- **One instrument reached one or two outcomes and the other reached many** (11): backgammon,
+  carrom, dung-battle, frogs-fight, gravity-run, lumber-jack, mancala, reversi, sea-battle,
+  sudoku, whack-a-mole.
+- **Discrete, but one side sat on the floor** (5): chess, checkers, tanks, broken-tiles,
+  animal-stack — three outcomes against eight to fifteen. Chess and Checkers need a tap to
+  select and a second to move; Tanks and Broken Tiles read a drag rather than a press.
+
+## What this does and does not close
+
+**It closes criterion 1 for 54 games** — the 49 C's and the 5 A/B's — because for each of
+them there is now a measurement rather than an argument, and for the four B's a named
+quantity and a factor.
+
+**It does not close it for the 54 D's.** Those issues should stay open, and the note on each
+game names what a harness would need to do to close it.
+
+Two limits worth stating plainly. First, **the factor is accurate to about ±20%**: it lands
+between Shuriken's two known constants (2.06 and 2.15) at 2.54, which is right about the
+question and approximate about the number. Second, **only two families are compared**. A
+trackpad and a pen reach this code as ordinary pointers so they inherit the pointer's answer
+by construction, but a gamepad does not exist yet (#130), and when it does it will bring a
+third lattice — an analogue stick's dead zone and resolution — that nothing here measures.
+
+**Proved by breaking it.** `AIM_KEY_SPEED` in Archery was changed from 1.25 to 0.25, the
+package rebuilt, and the game moved from **A at 1.29× to B at 12.50×**, failing the ratchet
+by name; restoring the constant (md5-verified byte-identical) and rebuilding put it back to
+A at 1.29×. The first restore attempt *looked* like a failure because `tsc --build` reused a
+stale `dist` — which is `docs/parallel-work.md`'s "rebuild before trusting a guard", caught
+in the act.

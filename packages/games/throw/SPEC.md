@@ -472,10 +472,16 @@ with itself within 3.1 points across the two seat orders.
 
 ### Against the repository's own harness
 
-`apps/web/src/data/balance-aggregate.test.ts` measures every game at `normal` over 50 seed
-pairs. Replicated exactly against this game: **48.0% of 100 decided matches, no draws, none
-unfinished, 32.4 s a match**, `openerSwung` 0 and `readsInput` false. Comfortably inside the
-45–55% band.
+`apps/web/src/data/balance-aggregate.test.ts` measures every game at `normal`. Because this
+game never reads `context.openingSeat`, the harness plays each seed once rather than twice
+(#2494) and spends the same budget on **88 seeds**: it reads **50.0% of 88 decided matches, no
+draws, none unfinished, 31.5 s a match**, `openerSwung` 0 and `readsInput` false. Comfortably
+inside the 45–55% band.
+
+The reading this section used to carry — **48.0% of 100 decided matches, 32.4 s a match** —
+was the same 50 seeds played twice over, so its denominator claimed twice the evidence it
+had. The share itself was not wrong and did not move much: duplicating a sample cannot move a
+mean, only the error bar around it, which is now 16.0 points rather than 21.2.
 
 `openerSwung` is 0 because a real-time game has no opener — the SDK contract says so outright
 ("Real-time games have no opener and may ignore this"). Both throwers start on the centre line

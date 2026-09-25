@@ -90,13 +90,14 @@ function makeContext(
   botP1: BotDifficulty | null = null,
   botP2: BotDifficulty | null = null,
   presentation: 'shared-screen' | 'single-seat' = 'shared-screen',
+  opener: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation,
     localSeat: 'p1',
-    openingSeat: 'p1',
+    openingSeat: opener,
     botDifficulty(seat: SeatId): BotDifficulty | null {
       return seat === 'p1' ? botP1 : botP2;
     },
@@ -475,6 +476,53 @@ describe('the match', () => {
     expect(trace()).toBe(trace());
   });
 
+  it('is one match from either chair: swapping the opener mirrors the whole result', () => {
+    // #2549. The board is the same whoever opens; only the seat to move changes, and the
+    // rules are covariant under the half turn that maps one seat's board onto the other's
+    // (#2502). So the p2-opens arm of a seed must be the p1-opens arm with the seats
+    // swapped: the same length, the winner's seat swapped, the tallies swapped. The balance
+    // sweep compares winner and steps and read the drawn version of this - 9-6 against 6-9
+    // after the same 16489 steps on hard - as hidden per-opener state. It is the opposite:
+    // state the opener accounts for completely, and this pins it where the game lives. Both
+    // tiers that spend the seed are covered, because a blunder drawn from the same stream
+    // at the same decision must pick the mirrored move.
+    const ceiling = 60 * 600;
+    const arm = (seed: number, tier: BotDifficulty, opener: SeatId) => {
+      const game = new CheckersGame();
+      game.init(makeContext(seed, tier, tier, 'shared-screen', opener));
+      const input = new ScriptedInput();
+      let steps = 0;
+      while (game.getScore().winner === null && steps < ceiling) {
+        game.update(STEP, input);
+        steps += 1;
+      }
+      const { p1, p2, winner } = game.getScore();
+      return { p1, p2, winner, steps };
+    };
+    const mirror = (winner: SeatId | 'draw' | null): SeatId | 'draw' | null =>
+      winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : winner;
+
+    for (const [seed, tier] of [
+      [1000003, 'hard'],
+      [1000003, 'normal'],
+    ] as const) {
+      const first = arm(seed, tier, 'p1');
+      const second = arm(seed, tier, 'p2');
+      expect(first.winner, `${tier}: a natural end, not the ceiling`).not.toBeNull();
+      expect(first.steps).toBeLessThan(ceiling);
+      // Not vacuous: a level scoreline would mirror onto itself.
+      expect(first.p1, `${tier}: the tallies must differ for the mirror to say anything`).not.toBe(
+        first.p2,
+      );
+      expect(second, `${tier}: the other chair`).toEqual({
+        p1: first.p2,
+        p2: first.p1,
+        winner: mirror(first.winner),
+        steps: first.steps,
+      });
+    }
+  });
+
   it('starts a fresh game on init rather than carrying the last one', () => {
     const game = new CheckersGame();
     game.init(makeContext(33, 'easy', 'easy'));
@@ -660,5 +708,47 @@ describe('the manifest', () => {
   it('is fair across input families, so it does not restrict them', () => {
     // turn-board: discrete targets, no time pressure. A square is a square.
     expect(manifest.sameInputClassOnly).toBe(false);
+  });
+});
+
+describe('the board turning to face the player with the move', () => {
+  /** The angle the board was drawn at in one recorded frame, walked out of the flat args. */
+  function drawnAngle(renderer: RecordingRenderer): number {
+    let cursor = 0;
+    for (const op of renderer.ops) {
+      if (op === 'pushRotation') {
+        const value = renderer.args[cursor];
+        return typeof value === 'number' ? value : Number.NaN;
+      }
+      cursor += ARG_COUNTS[op] ?? 0;
+    }
+    return Number.NaN;
+  }
+
+  it('sweeps through part-way angles rather than cutting to the far seat', () => {
+    // The control this suite did not have, and it is the assertion that can tell a sweep
+    // from a cut: an angle strictly between the two resting orientations is drawn only by
+    // a tween. A board that jumped straight round — which is what the renderer draws for a
+    // player who has asked for reduced motion, and what a regression in `SeatFlip.angle`
+    // would draw for everybody — fails here and nothing else in this file notices.
+    const game = new CheckersGame();
+    game.init(makeContext(43));
+    const input = new ScriptedInput();
+    settle(game, input);
+    tapSlot(game, input, 'p1', slotAt(5, 0));
+    tapSlot(game, input, 'p1', slotAt(4, 1));
+    expect(game.position.toMove, 'the turn has passed, so the board is turning').toBe('p2');
+
+    const angles: number[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      const renderer = new RecordingRenderer();
+      game.render(renderer, 0);
+      angles.push(drawnAngle(renderer));
+      game.update(STEP, input);
+    }
+
+    expect(angles.some((angle) => angle > 0.01 && angle < Math.PI - 0.01)).toBe(true);
+    // And it arrives, rather than resting at an angle nobody can read.
+    expect(angles[angles.length - 1]).toBeCloseTo(Math.PI, 5);
   });
 });

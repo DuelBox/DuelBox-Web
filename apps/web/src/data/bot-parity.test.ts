@@ -127,18 +127,25 @@ describe('the catalogue', () => {
     expect(missing, `these have a friend mode and no bot: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('exempts exactly the solo puzzles, and names them', () => {
+  it('exempts nothing, because nothing in the catalogue is solo-only', () => {
     // The issue asks for the exemption to be explicit rather than incidental. If this list
     // grows, a two-player game has lost its friend mode and slipped out of the check above.
-    expect(SOLO_ONLY.slice().sort()).toEqual([
-      'blocks',
-      'maze-paint',
-      'nuts-and-bolts',
-      'sliding-puzzle',
-      'solitaire',
-      'sudoku',
-      'tap-match',
-    ]);
+    //
+    // It named seven games until #2531, and every one of them was a mistake in the data
+    // rather than a game without an opponent. `blocks`, `maze-paint`, `nuts-and-bolts`,
+    // `sliding-puzzle`, `solitaire`, `sudoku` and `tap-match` were each recorded in
+    // `data/catalog.yaml` as `modes: solo` while their own manifests declared `friend` and
+    // `bot` — and the shell builds its buttons from the manifest, so all seven were
+    // playable by two people the whole time and only the pages describing them said
+    // otherwise. Sudoku's rule text in the same catalogue row gives it away: "the square
+    // is your opponent's".
+    //
+    // So the list is empty now, and that is the stronger state: these seven are subject to
+    // the bot-parity checks below rather than exempt from them, which is what a
+    // two-player game with a bot should be. The assertion stays as an equality against the
+    // empty list rather than being deleted, because a game reappearing here means the same
+    // defect has come back.
+    expect(SOLO_ONLY.slice().sort()).toEqual([]);
     for (const id of SOLO_ONLY) {
       const entry = CATALOGUE.find((candidate) => candidate.id === id);
       expect(entry?.modes, `${id} is exempt, so it must offer solo`).toContain('solo');

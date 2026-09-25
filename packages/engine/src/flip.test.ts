@@ -148,7 +148,56 @@ describe('input ownership', () => {
   });
 });
 
-describe('reduced motion and resets', () => {
+describe('reduced motion is drawn here and stepped nowhere', () => {
+  it('sweeps whatever the player has asked their system for, because this class is never told', () => {
+    // A guard on a decision rather than on a behaviour, and it is here because the other
+    // answer was written, reviewed and taken out again. A switch on this class can only be
+    // adopted game by game, and a catalogue part way through that adoption draws one
+    // preference two ways: a flip that held its settled orientation would cut on the step
+    // it settles, while `Canvas2DRenderer.setReducedMotion` cuts at the midpoint of the
+    // sweep. Four games had the switch and forty-one did not, so the same player saw the
+    // board change hands at two different moments in an otherwise identical turn — and a
+    // game is handed its context once, so the four could not hear the preference being
+    // turned back off.
+    const flip = new SeatFlip();
+    expect(
+      'setReducedMotion' in flip,
+      'the preference belongs to the renderer, which reaches every board without an edit',
+    ).toBe(false);
+
+    flip.retarget(true);
+    for (let i = 0; i < 10; i += 1) flip.step(STEP);
+    // Unconditional, which is what leaves the renderer something to snap.
+    expect(flip.angle).toBeGreaterThan(0);
+    expect(flip.angle).toBeLessThan(HALF_TURN);
+  });
+});
+
+describe('why reduced motion is never a zero duration', () => {
+  it('a zero-duration flip reopens input on a step a tweened one refuses it', () => {
+    // Written down as a test because it is the mistake the feature invites, and it is
+    // invisible until two devices disagree about a match: forty-two of the forty-five
+    // games that own a flip gate their `update()` on `acceptsInput`, so the flip's
+    // duration is a simulation value and only its angle is a picture.
+    const tweened = new SeatFlip();
+    const instant = new SeatFlip({ durationSeconds: 0 });
+    tweened.retarget(true);
+    instant.retarget(true);
+    expect(tweened.acceptsInput).toBe(false);
+    expect(instant.acceptsInput).toBe(true);
+
+    // Twenty-two steps of 1/60 s cover the default 0.36 s; input reopens on the last.
+    for (let i = 0; i < 21; i += 1) {
+      expect(tweened.acceptsInput, `step ${String(i)}`).toBe(false);
+      tweened.step(STEP);
+    }
+    expect(tweened.acceptsInput).toBe(false);
+    tweened.step(STEP);
+    expect(tweened.acceptsInput).toBe(true);
+  });
+});
+
+describe('instant flips and resets', () => {
   it('swaps instantly at zero duration, with no frame in between', () => {
     const flip = new SeatFlip({ durationSeconds: 0 });
     flip.retarget(true);

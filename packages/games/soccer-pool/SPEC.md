@@ -275,9 +275,11 @@ because that is further than the weight it dares use will carry the ball.
 ### Measured win rates
 
 200 matches a pairing — 100 seeds, each played from **both seats** and added together,
-because seat one takes the opening kick-off from the centre spot and a one-sided sample
-would credit that to whichever tier happened to sit there. The row's tier is the one named
-first; the share is of *decided* matches.
+because the kick-off from the centre spot is the best shot on the pitch and a one-sided
+sample would credit it to whichever tier happened to take it. The sweep also alternates
+**which seat opens**, matching the shell; that changed none of the numbers in this table,
+which is the evidence that the ladder was already measured cleanly. The row's tier is the
+one named first; the share is of *decided* matches.
 
 | | v easy | v normal | v hard | draws | goals/match | mean | worst |
 |---|---|---|---|---|---|---|---|
@@ -299,12 +301,27 @@ person always occupies one of the two chairs, and a person converts far better t
 A test holds the ordering — stronger pairs score more and draw less — so the shape cannot
 silently invert.
 
-**Seat one wins 55.3% of decided bot matches** (411 of 743 across the whole sweep) — the
-first-move advantage every turn game has, and the same one Pool's break has. It is largest
-at `easy`, 62.5%, where a shot from the centre spot is one of the few `easy` can actually
-reach the goal with, and vanishes at `normal`, 48.3%. Both seats take exactly nine shots, and
-the simulation itself is exactly mirror-symmetric: a test half-turns the pitch, plays the
-mirrored shot, and compares every position step by step.
+**Seat one wins 50.3% of decided bot matches** (across 743 decided in the sweep, and 50.0%
+of 2,962 when the sweep is deepened four-fold) — inside the 45-55 band the balance harness
+holds every game to. **Whoever takes the kick-off wins 55.3%**, and that is the number the
+game is actually about.
+
+Those were one number until #2500. The sweep used to pin `openingSeat` to `p1`, which makes
+the two counters the same counter: this file reported 55.3% and called it a seat advantage,
+while `apps/web/src/data/balance-aggregate.test.ts`, which alternates the opener, reported
+50.0% for the same game. Both were right. Nothing could tell them apart, because in a sweep
+where the near seat always opens there is no measurement that separates the chair from the
+break. The sweep now alternates the opener across seeds — odd near, even far, the same thing
+the shell does between rounds of a best-of — for the same number of matches as before.
+
+**The kick-off advantage is real, and it is the design.** Striking first from the centre spot
+is the best shot on the pitch, the edge Pool's break has. It is worth **75.9%** when two
+`easy` bots meet, because neither can recover the deficit, and falls to **56.1%** between two
+`hard` ones that can answer the shot. A test holds that ordering. It costs nobody the match:
+the shell hands the opener to the other player next round.
+
+Both seats take exactly nine shots, and the simulation itself is exactly mirror-symmetric: a
+test half-turns the pitch, plays the mirrored shot, and compares every position step by step.
 
 ## Presentations
 

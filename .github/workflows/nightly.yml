@@ -2,9 +2,13 @@ name: Nightly
 
 # Everything that is too slow to pay for on every push.
 #
-# Three things now. The third browser engine: the whole suite passes on Firefox and has done
+# Five things now. The third browser engine: the whole suite passes on Firefox and has done
 # since it was first tried, so running it per-push would spend install and run time to
-# re-confirm a clean result. And the seat-balance sweep, on two axes the push cannot afford:
+# re-confirm a clean result. It runs as **three shards**, the way `ci.yml` runs the same suite
+# and for the same reason — on one runner it could not finish inside its own timeout and was
+# cancelled every night for a month — and it is the run that also lifts `tournament`,
+# `game-record` and `share-card` onto every engine (`NIGHTLY_EVERY_ENGINE`, #2585). And the
+# seat-balance sweep, on two axes the push cannot afford:
 #
 #   - Depth. `balance-aggregate.test.ts` runs fifty seeds a game on every push, which enforces
 #     a 23.8-76.2% band and nothing finer — enough to catch a game that has become grossly
@@ -32,6 +36,39 @@ name: Nightly
 # The cost of that choice, stated plainly: a pull request that drops coverage below 70% merges
 # green and is caught the next morning rather than in review. If that ever costs more than the
 # minutes it saves, move this job into `verify` — the command is identical either way.
+#
+# And the memory soak (#232). `lifecycle.spec.ts` counts listeners across fifty mount-unmount
+# cycles on every push and that is the right instrument for a push gate; `soak.spec.ts` runs a
+# hundred and measures the heap either side, which is the acceptance criterion #232 states and
+# a slower, noisier instrument than a listener count. It is here for this file's usual reason —
+# a minute or two of CI to re-measure at a hundred cycles what the push gate already watches at
+# fifty — and for one more that is specific to it: a heap comparison on a shared runner is the
+# flakiest assertion in the suite, and a flaky test on the push gate teaches everybody to re-run
+# the job rather than to read it.
+#
+# And the responsive sweep (#1891). Checking 107 games by hand at eight viewports is 856
+# manual checks, so nobody ever did it and the responsive state of the collection has only
+# ever been known one game at a time. `e2e/responsive-sweep.spec.ts` opens every playable
+# lobby at 320px portrait and landscape and asks the two questions that are bugs rather than
+# preferences: does the page scroll sideways, and is any control outside the viewport or
+# inside a phone's inset band. It is here rather than on the push gate for this file's usual
+# reason and one of its own — it is 107 navigations a project, which is more than the whole
+# push suite, to re-ask on every commit a question that only moves when somebody edits the
+# shell or adds a game.
+#
+# **It starts no match, and that is what keeps it inside its quarter hour.** The lobby is the
+# layout that actually differs per game; a running match is the shell's furniture around a
+# letterboxed canvas, which `resize.spec.ts` and `safe-area.spec.ts` already hold on every
+# push. `pnpm responsive <slug>` photographs the running match, both orientations and every
+# named class, when somebody is looking at one game.
+#
+# Half of what the soak job runs is a control that installs a deliberate leak and requires the
+# measurement to catch it, because a threshold nobody has watched fail is not a threshold — the
+# habit CLAUDE.md records after five guards in this repository turned out to be enforcing
+# nothing. Measured on a development machine, both at a hundred cycles: **0.73MB of growth
+# clean, 17.08MB with the control's leak installed**, against the 5MB budget between them. The
+# shell releases its matches; five consecutive blocks of a hundred cycles grew 0.71, 0.21, 0.06,
+# 0.011 and 0.011MB, which is a warm-up curve and not a leak.
 on:
   schedule:
     # 03:15 UTC, which is a quiet hour for the free-tier runners.
@@ -40,9 +77,41 @@ on:
 
 jobs:
   all-engines:
-    name: every browser engine
+    name: every browser engine (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # ## Sharded, because one runner never once finished this suite
+    #
+    # This job ran the whole suite on five projects in a single runner, and it was **cancelled
+    # by its own thirty-minute cap on every scheduled run from 9 September 2026 onwards**. In
+    # run 34681983965 the `pnpm e2e` step started at 07:59:57Z and was killed at 08:26:22Z,
+    # twenty-six minutes in and still going — so the one job this file exists to run has never
+    # reported what Firefox thinks, and a cancelled job reads as an infrastructure flake rather
+    # than as a budget that ran out. That is the same failure `ci.yml` has now been split twice
+    # to stop, and the second of those splits is the fix applied here.
+    #
+    # `ci.yml` divides the identical suite three ways with Playwright's own sharding, which
+    # splits by test rather than by file and so stays balanced as specs are added — see the
+    # note above its `e2e` job. There is more to divide here than there: four projects on two
+    # engines on a push, five on three tonight, because `firefox` only exists when
+    # `DUELBOX_ALL_ENGINES=1` and that flag also lifts `tournament.spec.ts`,
+    # `game-record.spec.ts` and `share-card.spec.ts` off the Chromium-only list they have been
+    # on since #2585, onto every one of the five.
+    #
+    # **Sixty minutes, and it is headroom rather than an estimate.** `ci.yml` gives a shard of
+    # a two-engine suite twenty; this shard is a third of a suite that exceeded twenty-six
+    # minutes without finishing, on five projects, after installing three engines instead of
+    # two — and nobody can state its real duration, because no run of it has ever completed.
+    # The first green run is what measures that; until then the cap must not be the thing that
+    # decides the result again. A run that approaches sixty is a finding, not a number to
+    # raise.
+    #
+    # `fail-fast: false` so one engine going red still lets the other two shards report. A
+    # suite that stops at the first failure tells you about one broken thing per night.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -51,15 +120,29 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The suite drives the real static artefact rather than a dev server, so it needs the
+      # build. Each shard builds its own: the three run in parallel and share nothing.
       - run: pnpm build
       - run: npx playwright install --with-deps chromium webkit firefox
-      - run: pnpm e2e
+      # No `--` before the flag: pnpm 9 consumes that itself and the argument never reaches
+      # Playwright, which then runs the whole suite on every shard — three full runs that each
+      # look like a pass, and this job back inside the timeout that just killed it. `ci.yml`
+      # records the same trap against the same flag; `npx playwright test --list` is how to
+      # check the three shards still add up to the suite rather than each equalling it.
+      - run: pnpm e2e --shard=${{ matrix.shard }}/3
         env:
+          # Also lets tournament.spec.ts, game-record.spec.ts and share-card.spec.ts off
+          # their per-push Chromium-only list — `NIGHTLY_EVERY_ENGINE` in
+          # `playwright.config.ts`, since #2585 — so the catalog-to-rematch and
+          # full-tournament journeys run on WebKit and Firefox too, at least once a day
+          # (#226).
           DUELBOX_ALL_ENGINES: '1'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
-          name: playwright-report
+          # Per shard: three jobs uploading one name is a collision, and the shard in the
+          # name is what says which third of the suite the report covers.
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
 
@@ -108,6 +191,45 @@ jobs:
           DUELBOX_BALANCE_TIER: ${{ matrix.tier }}
           DUELBOX_BALANCE_SEEDS: ${{ matrix.seeds }}
 
+  allocation:
+    name: rule 5, on a machine that is not doing anything else
+    runs-on: ubuntu-latest
+    # ## Why this is nightly and not on the push gate
+    #
+    # `packages/engine/src/allocation.test.ts` measures bytes allocated per call by reading
+    # `used_heap_size` around a window of iterations. Every window is shared with whatever else
+    # is running on the box: another worker's scavenge inside one makes it read low, another
+    # worker's allocation makes it read high. On the four-core runner `verify` uses — two vitest
+    # workers, three e2e shards beside them — the same unchanged case has been measured at
+    # **0, 16, 32 and 40 bytes per call on consecutive runs**, and 40 is "an object" in that
+    # file's own vocabulary.
+    #
+    # A retry over medians and a ceiling widened to one boxed double are both already in the
+    # file, and neither was enough. Widening it further would stop it catching the objects,
+    # arrays, closures and strings rule 5 is actually about, which is the whole of what it is
+    # for.
+    #
+    # **The trade, stated rather than implied:** a per-frame allocation can now merge green and
+    # is caught the next morning. That is worse than catching it at the gate. It is much better
+    # than a gate that fails at random, because a gate that fails at random is one people learn
+    # to re-run — and this repository keeps a tally of guards that stopped meaning anything.
+    # The same argument, in the same words, is why `coverage` and the deep seat-balance sample
+    # are here.
+    #
+    # One job, one worker, nothing beside it. `pnpm test:allocation` is the same command.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The engine's own `dist`, which the benchmark imports through the package name.
+      - run: pnpm typecheck
+      - run: pnpm test:allocation
+
   coverage:
     name: coverage thresholds
     runs-on: ubuntu-latest
@@ -132,6 +254,16 @@ jobs:
       # thresholds live in vitest.config.ts and fail this step on their own; there is no
       # separate check, and there must not be, or the number in the config and the number
       # that is enforced can drift apart.
+      #
+      # That flag now also holds `balance-aggregate.test.ts` out of the run, and this step is
+      # why: its `beforeAll` plays every game's bots, which takes 461.7s under v8
+      # instrumentation on a quiet development machine against a 600s hook budget that already
+      # has CI's multiplier inside it — so this step ended `Hook timed out in 600000ms` on
+      # every scheduled run from 9 September 2026. The seat-balance jobs above run that file
+      # three times a night on machines that are not also instrumenting 384 others, and the
+      # thresholds do not need it: without it the run still reports 98.75% of lines and every
+      # game's `rules.ts` at 95.67% or better, against a floor of 70. The measurement, the
+      # alternative that was rejected and how to reproduce both are in vitest.config.ts.
       - run: pnpm test:coverage
       # Published whether or not the thresholds held. A report you can only see when the run
       # is green tells you nothing on the morning you need it: the failure message names the
@@ -142,3 +274,83 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  responsive-sweep:
+    name: every lobby at 320px, both ways up
+    runs-on: ubuntu-latest
+    # 107 games, two orientations each, one browser context per game and no match started —
+    # measured at about four minutes a project on a development machine, and this file's other
+    # jobs record CI running this kind of work four to five times slower. Fifteen minutes is
+    # the budget #1891 was written to, and a run that approaches it is a finding rather than a
+    # number to raise: the answer would be to drop a cell, not to buy more runner.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The real static artefact rather than a dev server, like every other e2e job here.
+      - run: pnpm build
+      - run: npx playwright install --with-deps chromium webkit
+      # Two projects, one per engine, which is what `ONE_PER_ENGINE` in `playwright.config.ts`
+      # leaves for a spec that sets its own viewport: `mobile` and `notched-landscape` would
+      # be the same two engines measuring the same two viewports a second time.
+      # `notched-portrait` is real WebKit, and where a `<select>`, a radio and a search field
+      # land is drawn by the browser rather than by the stylesheet. No `--` before the flags:
+      # pnpm 9 consumes that itself and they never reach Playwright.
+      - run: pnpm e2e e2e/responsive-sweep.spec.ts --project=chromium --project=notched-portrait
+        env:
+          DUELBOX_RESPONSIVE_SWEEP: '1'
+      # The failure names the game, the viewport and the control, so the log is the record.
+      # The report is for the run where a trace is wanted.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: responsive-sweep-report
+          path: playwright-report/
+          retention-days: 7
+
+  soak:
+    name: memory soak, a hundred load-unload cycles
+    runs-on: ubuntu-latest
+    # Twelve seconds a test on a development machine, and the jobs above record that CI runs
+    # this kind of work four to five times slower; the rest of the wall clock is install and
+    # the build. Fifteen minutes is headroom rather than an estimate — a soak killed by its
+    # own timeout reads as an infrastructure flake, which is exactly what `ci.yml` has been
+    # bitten by twice.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The suite drives the real static artefact rather than a dev server, so what is
+      # measured is what ships. This job runs alone and shares nothing with `all-engines`,
+      # so it builds its own.
+      - run: pnpm build
+      # Chromium alone. The reading comes from the Chrome DevTools Protocol —
+      # `HeapProfiler.collectGarbage` then `Runtime.getHeapUsage` — and no other engine
+      # offers an honest one; the spec skips itself on WebKit rather than failing there.
+      - run: npx playwright install --with-deps chromium
+      # No `--` before the flags: pnpm 9 consumes that itself and they never reach Playwright,
+      # which is the mistake `ci.yml` records against its shard flag. `--project=chromium`
+      # because the `mobile` project is Chromium behind a phone viewport and would measure the
+      # same teardown a second time. `DUELBOX_SOAK` is what un-skips the spec: without it the
+      # soak is inert everywhere, which is how the push gate stays out of it.
+      - run: pnpm e2e e2e/soak.spec.ts --project=chromium
+        env:
+          DUELBOX_SOAK: '1'
+      # The numbers are printed by the spec on every run, pass or fail, so the log is the
+      # record. The report is for the run where the trace matters.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: soak-report
+          path: playwright-report/
+          retention-days: 7

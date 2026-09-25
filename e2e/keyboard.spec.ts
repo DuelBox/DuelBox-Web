@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SEAT_CHARACTERS } from '../apps/web/src/lib/seats';
 import { seatCentroids } from './seat-pixels.js';
 
 /**
@@ -166,8 +167,8 @@ test.describe('both players can see which keys are theirs', () => {
   test('the lobby names each seat and its keys', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     const controls = page.getByText('Controls').locator('..');
-    await expect(controls).toContainText('Pip');
-    await expect(controls).toContainText('Bo');
+    await expect(controls).toContainText(SEAT_CHARACTERS.p1);
+    await expect(controls).toContainText(SEAT_CHARACTERS.p2);
     await expect(controls).toContainText('W A S D');
     await expect(controls).toContainText('Space');
     await expect(controls).toContainText('Enter');
@@ -185,8 +186,8 @@ test.describe('both players can see which keys are theirs', () => {
     await expect(paused, 'a player who has forgotten their keys can find them').toContainText(
       'W A S D',
     );
-    await expect(paused).toContainText('Pip');
-    await expect(paused).toContainText('Bo');
+    await expect(paused).toContainText(SEAT_CHARACTERS.p1);
+    await expect(paused).toContainText(SEAT_CHARACTERS.p2);
   });
 
   test('the two halves register at the same time', async ({ page }) => {

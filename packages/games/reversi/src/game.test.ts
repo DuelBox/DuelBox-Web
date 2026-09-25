@@ -348,7 +348,12 @@ describe('lifecycle and render', () => {
       game.update(STEP, input);
       game.render(renderer, 0);
     }
-    expect(renderer.angles.some((a) => a > 0.01)).toBe(true);
+    // Strictly between the two resting orientations, which is the assertion that can
+    // tell a sweep from a cut. `some((a) => a > 0.01)` cannot: pi clears it, so a board
+    // that jumped straight to the far seat — the shape a reduced-motion snap draws, and
+    // the shape a regression in `SeatFlip.angle` would draw for everyone — satisfied it,
+    // and nothing else in this file would have noticed either.
+    expect(renderer.angles.some((a) => a > 0.01 && a < Math.PI - 0.01)).toBe(true);
     expect(renderer.angles[renderer.angles.length - 1]).toBeCloseTo(Math.PI, 5);
   });
 

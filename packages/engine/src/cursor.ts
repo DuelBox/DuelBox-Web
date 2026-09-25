@@ -16,9 +16,20 @@
  * they did not summon, and a game must not have to ask what kind of device it is on
  * (CLAUDE.md rule 10) to decide. Pressing a direction wakes it; that is the only trigger.
  *
- * **It moves in the player's frame, not the board's.** When the board turns to face the
- * far seat, that player's "up" is the board's "down". The caller says whether its view is
- * rotated and the cursor handles the rest, so no game repeats the reasoning.
+ * **It moves in the device's frame, and maps that onto the board.** A direction key is
+ * absolute in device space: `input.ts` hands every seat a vector where +y is *down the
+ * device*, whichever side of it the player sits. When a board is drawn half a turn round
+ * to face the far seat, "down the device" is *up* that board, so the vector has to be
+ * turned before it becomes a row and a column — exactly the mapping `toWorld` applies to
+ * a pointer on the same board. The caller says whether the board is drawn rotated and the
+ * cursor does the turn, so no game repeats the reasoning and no game gets it backwards.
+ *
+ * This is one rotation, not two. The flip rotates the *drawing*; this rotates the
+ * *input* into the drawing's coordinates. Both are needed, and they are the same half
+ * turn — which is why every call site passes the same boolean here that it passes to
+ * `toWorld` for its pointer (#2521). A board drawn upright on a far seat's half of the
+ * device, as Sea Battle's placing boards and Penalty Kicks' selectors are, passes `false`
+ * to both, and its cursor moves the way the arrow on the key points.
  */
 
 /** How long a held direction waits before it starts repeating, in seconds. */
@@ -115,9 +126,11 @@ export class GridCursor {
   /**
    * Advance by one fixed step.
    *
-   * `moveX`/`moveY` are the seat's direction vector, in the *player's* frame. `rotated`
-   * says whether that player is reading the board upside down, in which case their up is
-   * the board's down.
+   * `moveX`/`moveY` are the seat's direction vector in *device* orientation, as the input
+   * system hands it over: +y is down the device. `rotated` says whether the board this
+   * cursor sits on is drawn half a turn round — the same flag the caller gives `toWorld`
+   * for a pointer on that board — and when it is, both axes are turned so a press moves
+   * the on-screen highlight the way the arrow on the key points.
    *
    * Returns true if the cursor moved this step, so a caller can play a tick.
    */
@@ -158,7 +171,8 @@ export class GridCursor {
 
   #apply(x: number, y: number, rotated: boolean): boolean {
     this.#visible = true;
-    // The far seat reads the board half a turn round, so both axes invert for them.
+    // The board is drawn half a turn round, so a device-frame direction turns with it:
+    // the same half turn `toWorld` gives a pointer, applied to a key.
     const dx = rotated ? -x : x;
     const dy = rotated ? -y : y;
 

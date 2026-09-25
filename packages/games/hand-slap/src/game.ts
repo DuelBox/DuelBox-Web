@@ -96,6 +96,8 @@ export class HandSlapGame implements Game {
   #localSeat: SeatId = 'p1';
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
+  /** The seat that attacks the first round, from the shell rather than from a literal. */
+  #opener: SeatId = 'p1';
   #winner: SeatId | 'draw' | null = null;
 
   /** Read-only view for the harness and the tests. */
@@ -109,7 +111,8 @@ export class HandSlapGame implements Game {
     this.#localSeat = context.localSeat;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
-    resetState(this.#state);
+    this.#opener = context.openingSeat;
+    resetState(this.#state, this.#opener);
     resetBotState(this.#runtimeP1.bot);
     resetBotState(this.#runtimeP2.bot);
     this.#runtimeP1.held = false;
@@ -121,8 +124,29 @@ export class HandSlapGame implements Game {
     const context = this.#context;
     if (context === null || this.#winner !== null) return;
 
-    this.#driveSeat('p1', this.#runtimeP1, this.#botP1, input, fixedDeltaSeconds, context);
-    this.#driveSeat('p2', this.#runtimeP2, this.#botP2, input, fixedDeltaSeconds, context);
+    // **Driven by role, never by seat.** Both bots draw from the one match generator, so
+    // whoever is driven first gets the first number - and driving `p1` first made a seed
+    // played from one chair a different match from the same seed played from the other.
+    // Attacker then defender is the same order however the seats are labelled, which is
+    // what makes a seed and its mirror one match and its exact reflection.
+    const attacker = this.#state.attacker;
+    const defender = defenderOf(this.#state);
+    this.#driveSeat(
+      attacker,
+      this.#runtimeOf(attacker),
+      this.#botOf(attacker),
+      input,
+      fixedDeltaSeconds,
+      context,
+    );
+    this.#driveSeat(
+      defender,
+      this.#runtimeOf(defender),
+      this.#botOf(defender),
+      input,
+      fixedDeltaSeconds,
+      context,
+    );
 
     step(this.#state, fixedDeltaSeconds, context.rng);
     this.#winner = winnerOf(this.#state);
@@ -157,10 +181,18 @@ export class HandSlapGame implements Game {
     this.#context = null;
     this.#botP1 = null;
     this.#botP2 = null;
-    resetState(this.#state);
+    resetState(this.#state, this.#opener);
     resetBotState(this.#runtimeP1.bot);
     resetBotState(this.#runtimeP2.bot);
     this.#winner = null;
+  }
+
+  #runtimeOf(seat: SeatId): SeatRuntime {
+    return seat === 'p1' ? this.#runtimeP1 : this.#runtimeP2;
+  }
+
+  #botOf(seat: SeatId): BotDifficulty | null {
+    return seat === 'p1' ? this.#botP1 : this.#botP2;
   }
 
   #settle(): void {

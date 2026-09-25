@@ -173,37 +173,107 @@ function clampSpeed(ball: Mover): void {
   ball.vy = (ball.vy / speed) * MAX_BALL_SPEED;
 }
 
-/**
- * A player running into the ball kicks it away from themselves.
- *
- * The direction is the line between the two centres, so where you meet the ball decides
- * where it goes — the same model Crabby Volley settled on, for the same reason: sending it
- * somewhere that does not depend on the approach makes positioning worthless.
- */
-export function kick(ball: Mover, player: Readonly<Mover>): void {
+/** Centre-to-centre gap, squared — squared so a contact is judged without a square root. */
+export function gapSquared(ball: Readonly<Mover>, player: Readonly<Mover>): number {
   const dx = ball.x - player.x;
   const dy = ball.y - player.y;
-  const distance = Math.hypot(dx, dy);
-  const nx = distance === 0 ? 1 : dx / distance;
-  const ny = distance === 0 ? 0 : dy / distance;
-
-  ball.vx = nx * KICK_SPEED + player.vx * KICK_TRANSFER;
-  ball.vy = ny * KICK_SPEED + player.vy * KICK_TRANSFER;
-  clampSpeed(ball);
-
-  // Pushed clear, so a player standing on the ball does not kick it every step.
-  const overlap = PLAYER_RADIUS + BALL_RADIUS - distance;
-  if (overlap > 0) {
-    ball.x += nx * (overlap + 1);
-    ball.y += ny * (overlap + 1);
-  }
+  return dx * dx + dy * dy;
 }
 
 export function touching(ball: Readonly<Mover>, player: Readonly<Mover>): boolean {
   const reach = PLAYER_RADIUS + BALL_RADIUS;
+  return gapSquared(ball, player) <= reach * reach;
+}
+
+/**
+ * How hard one body is pressing on the ball, and which way — the sum over both players.
+ *
+ * Module-level and reused, because {@link contest} runs every step and rule 5 forbids
+ * allocating in one. Nothing outside `contest` may read it between steps.
+ */
+const PRESS = { x: 0, y: 0, vx: 0, vy: 0, depth: 0, deepest: 0 };
+
+function pressOn(ball: Readonly<Mover>, player: Readonly<Mover>): void {
   const dx = ball.x - player.x;
   const dy = ball.y - player.y;
-  return dx * dx + dy * dy <= reach * reach;
+  const distance = Math.hypot(dx, dy);
+  const overlap = PLAYER_RADIUS + BALL_RADIUS - distance;
+  if (overlap <= 0) return;
+
+  // A ball exactly on a player's centre has no line between the centres to leave along.
+  // The old code answered `(1, 0)` — rightwards, in board coordinates, for *either* seat,
+  // which is a seat advantage sitting on a measure-zero case and waiting for a physics
+  // change to make it reachable. The player's own motion carries it instead, which mirrors
+  // when the pitch does; a player standing perfectly still on it presses nothing at all.
+  let nx = 0;
+  let ny = 0;
+  if (distance === 0) {
+    const speed = Math.hypot(player.vx, player.vy);
+    if (speed === 0) return;
+    nx = player.vx / speed;
+    ny = player.vy / speed;
+  } else {
+    nx = dx / distance;
+    ny = dy / distance;
+  }
+  PRESS.x += nx * overlap;
+  PRESS.y += ny * overlap;
+  PRESS.vx += player.vx * overlap;
+  PRESS.vy += player.vy * overlap;
+  PRESS.depth += overlap;
+  if (overlap > PRESS.deepest) PRESS.deepest = overlap;
+}
+
+/**
+ * Both players press on the ball at once, and the ball goes where the press adds up to.
+ *
+ * **This used to be `if (touching p1) kick(p1); else if (touching p2) kick(p2)`, and that
+ * `else` was the whole seat imbalance.** Two bots both chase the same ball, so a ball touching
+ * both of them is the normal state of this game rather than an edge case, and every one of
+ * those was seat one's free kick. Measured at fifty seeds with the same tier on both chairs it
+ * was worth 64.7% of decided matches to seat one on `normal` and 75.0% on `hard` — and a clean
+ * 50.0% on `easy`, which charges blindly and rarely contests anything. A game whose unfairness
+ * only appears once the players are good enough to reach the ball together is exactly the game
+ * a single-tier balance number calls fair.
+ *
+ * Deciding the challenge by *who is closer* would have been symmetric too, and was tried: it
+ * put the score up from 2 goals a match to 26, because a ball squeezed between two bodies was
+ * released at full pace by whichever body was a unit nearer instead of being held up. Summing
+ * the press is the rule that keeps a scramble a scramble. Each player pushes the ball out along
+ * the line from their own centre, weighted by how deep the ball is inside them, and the ball
+ * leaves along the sum — so a defender pressing from the far side genuinely blocks a striker,
+ * and two players squeezing it from exactly opposite sides cancel and the ball is held between
+ * them. That is a continuous rule rather than a threshold, which is the point: there is no
+ * knife-edge for a seat to fall off, and the balanced case is the one where nothing happens.
+ *
+ * @returns whether anybody was touching it at all.
+ */
+export function contest(game: Game): boolean {
+  PRESS.x = 0;
+  PRESS.y = 0;
+  PRESS.vx = 0;
+  PRESS.vy = 0;
+  PRESS.depth = 0;
+  PRESS.deepest = 0;
+  pressOn(game.ball, game.p1);
+  pressOn(game.ball, game.p2);
+  if (PRESS.depth === 0) return false;
+
+  const ball = game.ball;
+  const length = Math.hypot(PRESS.x, PRESS.y);
+  // Cancelled exactly: the ball is pinned between two bodies and stays pinned until one of
+  // them moves. Nudging it either way here would be picking a seat.
+  if (length === 0) return true;
+
+  ball.vx = (PRESS.x / length) * KICK_SPEED + (PRESS.vx / PRESS.depth) * KICK_TRANSFER;
+  ball.vy = (PRESS.y / length) * KICK_SPEED + (PRESS.vy / PRESS.depth) * KICK_TRANSFER;
+  clampSpeed(ball);
+
+  // Moved clear along that same sum rather than clear of each body in turn: clearing one and
+  // then the other depends on which is done first, which is a seat label wearing a disguise.
+  ball.x += (PRESS.x / length) * (PRESS.deepest + 1);
+  ball.y += (PRESS.y / length) * (PRESS.deepest + 1);
+  return true;
 }
 
 /** Whether the ball has crossed into a seat's goal — which is a goal *for the other*. */
@@ -283,8 +353,7 @@ export function step(game: Game, fixedDeltaSeconds: number, rng: Rng): StepResul
     }
   }
 
-  if (touching(ball, game.p1)) kick(ball, game.p1);
-  else if (touching(ball, game.p2)) kick(ball, game.p2);
+  contest(game);
 
   for (const seat of ['p1', 'p2'] as SeatId[]) {
     if (!inGoal(ball, seat)) continue;
@@ -390,9 +459,19 @@ export function botHeading(
     const standX = aheadX - (toGoalX / length) * profile.approach;
     const standY = aheadY - (toGoalY / length) * profile.approach;
 
-    const angle = Math.atan2(standY - me.y, standX - me.x) + (roll - 0.5) * 2 * profile.wobble;
-    bot.headingX = Math.cos(angle);
-    bot.headingY = Math.sin(angle);
+    const toStandX = standX - me.x;
+    const toStandY = standY - me.y;
+    // Standing exactly on the spot it wants has no direction in it, and `Math.atan2(0, 0)`
+    // answers 0 — rightwards in pitch coordinates, which is *towards the goal it is
+    // attacking* for seat one and towards its own for seat two. Measure-zero in play and a
+    // seat advantage all the same, of the same shape as the one that cost seat two 25 points
+    // of win rate; a bot that is already where it wants to be keeps the heading it committed
+    // to instead, which is the same answer from either chair.
+    if (toStandX !== 0 || toStandY !== 0) {
+      const angle = Math.atan2(toStandY, toStandX) + (roll - 0.5) * 2 * profile.wobble;
+      bot.headingX = Math.cos(angle);
+      bot.headingY = Math.sin(angle);
+    }
   }
   out.x = bot.headingX;
   out.y = bot.headingY;

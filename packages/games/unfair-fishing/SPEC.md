@@ -428,14 +428,19 @@ the game is built beats 49.4% because of how many seeds were run.
 
 ### Against the repository's own harness
 
-`apps/web/src/data/balance-aggregate.test.ts`, 50 seeds, `normal`, both opening seats:
+`apps/web/src/data/balance-aggregate.test.ts`, `normal`, one opening seat per seed:
 
 ```
-unfair-fishing   rt-split   50.0%   ±21.2   100 decided   0.0% opener   87.5 s   0 draws   50 distinct
+unfair-fishing   rt-split   52.3%   ±16.0   88 seeds   88 decided   0/12 opener   86.0 s   0 draws   88 distinct
 ```
 
-Fifty distinct matches out of a hundred, which is the signature of a game whose two halves
-are mirrors: the sample is real, and every pair of it is one match seen twice.
+Fifty distinct matches out of a hundred is what this line used to read, and it is the
+signature of a game whose two halves are mirrors: every pair of that sample was one match seen
+twice. #2494 stopped the harness paying for the second half — this game never reads
+`context.openingSeat`, so the second arm is the first one again — and spent the saving on 88
+seeds, which is why the distinct count is now the seed count and the allowance is 16.0 rather
+than 21.2 points. The share moved from 50.0% to 52.3% because the sample is a different one,
+not because the game changed.
 
 ## Rule 7: never colour alone, and no text at all
 

@@ -145,17 +145,22 @@ never actually produce.
 **Measured**, which is the part that says the cap is a backstop and not a rule anybody plays
 against:
 
-| Two bots, through the real game loop, 40 seeds | Mean | Worst |
+| Two bots, through the real game loop, 40 seeds `i × 7919 + 13` at 60 Hz | Mean | Worst |
 |---|---|---|
-| easy v easy | 46.6 s | 79.7 s |
-| hard v easy | 59.3 s | 115.6 s |
-| hard v hard | 77.7 s | 155.1 s |
-| normal v normal | 97.0 s | 162.2 s |
+| easy v easy | 44.7 s | 66.9 s |
+| hard v easy | 54.7 s | 91.2 s |
+| hard v hard | 80.6 s | 133.9 s |
+| normal v normal | 98.8 s | 162.3 s |
 
 None unfinished. Over **2000** easy-against-easy matches at the rules level the cap was
-reached **not once**; the longest ran 121 turns of the 220 available. The cap does bite
-occasionally in the slower pairings — 18 matches in 400 for normal against normal, which
+reached **not once**; the longest ran 149 turns of the 220 available. The cap does bite
+occasionally in the slower pairings — 23 matches in 400 for normal against normal, which
 trade blots for a long time — and those end on pips, correctly, rather than running on.
+
+Those figures moved with the bot's aim error (#2477), and all of them by less than the
+spread between two seed sets: the same harness on the same seeds before it reported 47.1 /
+79.3, 55.7 / 107.1, 73.7 / 127.3 and 88.6 / 167.8. The longest rules-level easy match went
+from 121 turns to 149 and the cap is still 220.
 
 ### The stuck state this game could have had
 
@@ -255,11 +260,11 @@ the opening seat changes.
 
 ## The bot
 
-| | Blunder rate | Hunts blots | Counts shots against its own |
-|---|---|---|---|
-| easy | 0.55 | no | 0 |
-| normal | 0.18 | yes | half |
-| hard | 0 | yes | fully |
+| | Blunder rate | Hunts blots | Counts shots against its own | Aim error |
+|---|---|---|---|---|
+| easy | 0.55 | no | 0 | 1.6 points |
+| normal | 0.18 | yes | half | 1.0 points |
+| hard | 0 | yes | fully | 0.55 points |
 
 It scores each legal move on the four things a person weighs on an ordinary turn: how far
 the checker gets, whether it hits, whether it lands somewhere safe, and whether it breaks a
@@ -270,9 +275,44 @@ fat hit bonus talks the bot out of finishing the game — a test makes the two c
 screen is `exposure` — how many of the six dice would let the opponent land on a given
 point — and that is a number a human counts off the board in a second and the first thing
 anybody looks at. Direct shots only; combination shots are not counted, by anybody. The
-tiers differ in *how well they choose among the legal moves*, never in what they can see:
-`easy` grabs a move without looking better than half the time, and cannot see a hit or a
-shot at all; `hard` looks every time.
+tiers differ in *how well they choose among the legal moves* and *how steadily they reach
+for the one they chose*, never in what they can see: `easy` grabs a move without looking
+better than half the time, and cannot see a hit or a shot at all; `hard` looks every time.
+
+### The aim error, and why a bot has one (#2477)
+
+Everything a player does here is "name a place, and the nearest legal move to it is played"
+— `#nearestMove` in `game.ts` is the only way either instrument commits. The bot used to
+skip that step: it read the legal list, scored it, and returned a move code. Perfect
+knowledge of the legal set *and* perfect precision in reaching into it, which is exactly
+what rule 6 forbids and what CLAUDE.md's fairness section denies every other input family
+when it says no input family may aim finer than another. A bot is an input family.
+
+So the decision is left alone — the fix is not to make the bot choose worse — and only the
+reaching is made fallible. `wantedMove` works out the move the tier means; then its finger
+comes down `misjudgement(roll, aimError)` points away from the checker it meant, and
+`aimedMove` plays whatever that lands on, ranked the way `#nearestMove` ranks a tap: the
+starting point first, and the die it meant among the moves from whichever point it touched.
+
+The unit is a **point of the board**, never a pixel (rule 8), measured along the travel line
+— which is the order the board is read, since this board runs its twenty-four points left to
+right along the top and then left to right along the bottom like two lines of text, and both
+instruments walk it in that order.
+
+Measured over 40 matches a tier, blunders excluded and one-legal-move turns skipped, the
+finger lands on a move the tier did not mean:
+
+| | Mis-taps |
+|---|---|
+| easy | 13.9% |
+| normal | 6.2% |
+| hard | 1.1% |
+
+`hard`'s 0.55 is under half a point, so it can only ever slip onto an *immediately adjacent*
+occupied point and does so about one turn in ninety. It is not zero, and that is the point:
+a bot that cannot miss is the thing #2477 was about. A slip can never produce an illegal
+move — the nearest legal move to anywhere is still legal — which is exactly the guarantee a
+finger has.
 
 ### Measured win rates
 
@@ -281,25 +321,41 @@ shot at all; `hard` looks every time.
 
 | | Win rate | Average length | Reached the cap |
 |---|---|---|---|
-| hard v easy | **94.0%** | 76.5 turns | 0/400 |
-| normal v easy | **93.0%** | 80.8 turns | 0/400 |
-| hard v normal | **62.0%** | 115.8 turns | 3/400 |
-| easy v easy | 48.3% | 62.5 turns | 0/400 |
-| normal v normal | 51.0% | 127.4 turns | 18/400 |
-| hard v hard | 51.5% | 103.5 turns | 2/400 |
+| hard v easy | **95.3%** | 79.4 turns | 0/400 |
+| normal v easy | **91.0%** | 86.9 turns | 1/400 |
+| hard v normal | **71.0%** | 118.9 turns | 6/400 |
+| easy v easy | 46.3% | 64.1 turns | 0/400 |
+| normal v normal | 51.2% | 130.5 turns | 23/400 |
+| hard v hard | 47.5% | 108.3 turns | 2/400 |
 
-The three mirror pairings sitting within two points of even is the check that seat
+The three mirror pairings sitting within four points of even is the check that seat
 alternation did its job and that neither seat is playing a different game.
 
 `rules.test.ts`'s `wins more often the harder it is` runs the same pairings over 150
-matches with p1 fixed as the stronger tier — 97.3%, 94.7% and 68.7%, about two points
-higher across the board, which is the first-move advantage — and asserts floors of 0.80,
-0.75 and 0.55 so the ordering cannot silently invert.
+matches with p1 fixed as the stronger tier — 96.0%, 90.7% and 70.7% — and asserts floors of
+0.80, 0.75 and 0.55 so the ordering cannot silently invert.
 
-**Why the gap between hard and normal is only 62/38.** 19% of all decisions in a match have
+**What the aim error moved.** The table above read 94.0 / 93.0 / 62.0 before it, over the
+identical seeds:
+
+| | Before | After |
+|---|---|---|
+| hard v easy | 94.0% | 95.3% |
+| normal v easy | 93.0% | 91.0% |
+| hard v normal | 62.0% | 71.0% |
+
+`normal` loses most, and that is arithmetic rather than a preference: a blunder and a
+mis-tap cannot both spoil the same turn, so a tier that is already not looking half the time
+has less left for its finger to ruin. `easy` blunders 55% of the time, `normal` 18%, `hard`
+never — so the aim bites hardest at the top of the ladder and the hard/normal gap widens
+while the normal/easy gap narrows. Matches also run two to three turns longer, and
+`normal v normal` reaches the 220-turn cap 23 times in 400 rather than 18: two shaky hands
+trading blots is exactly the pairing that does not finish.
+
+**Why the gap between hard and normal is 71/29.** 19% of all decisions in a match have
 exactly one legal move, so a fifth of the time there is nothing to decide; the dice decide a
-great deal of the rest. A 62/38 edge over a tier that already hits blots and counts half the
-shots against it is a real edge for a dice game, and it is honest to say it is not chess.
+great deal of the rest. It was 62/38 before the aim error, and both are real edges for a
+dice game; it is honest to say neither is chess.
 
 ## Presentations
 

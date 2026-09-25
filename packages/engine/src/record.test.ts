@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { InputManager } from './input.js';
 import { InputView } from './input-view.js';
 import { Rng } from './rng.js';
@@ -173,5 +173,106 @@ describe('recording and replaying input', () => {
     const player = new TracePlayer(recorder.toTrace('sumo', 1, STEP));
     const input = new InputManager(LOGICAL);
     expect(() => player.apply(input, 5)).toThrow(/skipped/);
+  });
+});
+
+describe('refusing a prototype-pollution payload (#2365)', () => {
+  const head =
+    '{"version":1,"game":"x","seed":1,"fixedDeltaSeconds":0.016,"logical":{"width":1,"height":1}';
+
+  afterEach(() => {
+    delete (Object.prototype as Record<string, unknown>)['polluted'];
+  });
+
+  it('refuses a __proto__ key at the top level, before trusting the shape', () => {
+    expect(() => importTrace(`{"__proto__":{"polluted":1},${head.slice(1)}}`)).toThrow(
+      /forbidden key "__proto__"/,
+    );
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('refuses constructor and prototype keys too', () => {
+    expect(() => importTrace(`${head},"frames":[],"constructor":{"x":1}}`)).toThrow(
+      /forbidden key "constructor"/,
+    );
+    expect(() => importTrace(`${head},"frames":[],"prototype":{"x":1}}`)).toThrow(
+      /forbidden key "prototype"/,
+    );
+  });
+
+  it('refuses a payload buried inside a frame or an event', () => {
+    expect(() =>
+      importTrace(`${head},"frames":[{"at":0,"events":[],"__proto__":{"polluted":1}}]}`),
+    ).toThrow(/forbidden key/);
+    expect(() =>
+      importTrace(
+        `${head},"frames":[{"at":0,"events":[{"kind":"clear","__proto__":{"polluted":1}}]}]}`,
+      ),
+    ).toThrow(/forbidden key/);
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('still accepts and round-trips an honest trace', () => {
+    const recorder = new InputRecorder(
+      new InputManager(LOGICAL, { split: 'horizontal', bottomSeat: 'p1' }),
+    );
+    const live = storm(recorder, 5, 120);
+    const trace = importTrace(exportTrace(recorder.toTrace('pool', 3, STEP)));
+    expect(trace.game).toBe('pool');
+    expect(replay(trace, 120)).toEqual(live);
+  });
+});
+
+describe('recording a gamepad (#130)', () => {
+  const STEP = 1 / 60;
+  const SIZE = { width: 800, height: 600 };
+
+  it('writes a reading down on the step it changes and on no other', () => {
+    const input = new InputManager(SIZE);
+    const recorder = new InputRecorder(input);
+    recorder.setSeatAnalog('p1', 0, 0, false); // the host's every-step zero for an empty seat
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, false);
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, false);
+    recorder.beginStep(STEP);
+    recorder.setSeatAnalog('p1', 0.5, 0, true);
+    recorder.beginStep(STEP);
+    const frames = recorder.toTrace('sumo', 1, STEP).frames;
+    expect(frames.map((frame) => frame.at)).toEqual([1, 3]);
+    expect(frames[0]?.events).toEqual([
+      { kind: 'analog', seat: 'p1', x: 0.5, y: 0, action: false },
+    ]);
+  });
+
+  it('replays a held stick as the hold it was', () => {
+    const recorder = new InputRecorder(new InputManager(SIZE));
+    const seen: number[] = [];
+    for (let step = 0; step < 6; step += 1) {
+      recorder.setSeatAnalog('p2', step >= 2 && step < 5 ? -1 : 0, 0, false);
+      seen.push(recorder.beginStep(STEP).seat('p2').moveX);
+    }
+    const trace = importTrace(exportTrace(recorder.toTrace('sumo', 1, STEP)));
+    const replayed = new InputManager(SIZE);
+    const player = new TracePlayer(trace);
+    const again: number[] = [];
+    for (let step = 0; step < 6; step += 1) {
+      player.apply(replayed, step);
+      again.push(replayed.beginStep(STEP).seat('p2').moveX);
+    }
+    expect(seen).toEqual([0, 0, -1, -1, -1, 0]);
+    expect(again).toEqual(seen);
+  });
+
+  it('refuses an analog event with a component missing', () => {
+    const text = JSON.stringify({
+      version: 1,
+      game: 'sumo',
+      seed: 1,
+      logical: SIZE,
+      fixedDeltaSeconds: STEP,
+      frames: [{ at: 0, events: [{ kind: 'analog', seat: 'p1', x: 0.5, y: 0 }] }],
+    });
+    expect(() => importTrace(text)).toThrow(/missing a component/);
   });
 });

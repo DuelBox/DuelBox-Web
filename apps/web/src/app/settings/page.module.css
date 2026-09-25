@@ -1,0 +1,15 @@
+.head {
+  padding-block: var(--db-space-7) var(--db-space-5);
+}
+
+.head h1 {
+  font-family: var(--db-font-display);
+  font-size: var(--db-text-3xl);
+}
+
+.lede {
+  max-width: 46rem;
+  margin-top: var(--db-space-3);
+  color: var(--db-muted);
+  font-size: var(--db-text-lg);
+}

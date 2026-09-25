@@ -423,6 +423,14 @@ export interface MatchState {
   /** Squares taken. Reported for the players; it cannot decide a match on its own. */
   squaresP1: number;
   squaresP2: number;
+  /**
+   * One seat, never handed over (#1750). Set from `GameContext.solo`: `settle` keeps the turn
+   * on `p1` after every square, right or wrong. A wrong digit still concedes the square —
+   * that is what a mistake costs in this game — and it goes to a `p2` nobody is in, which is
+   * how a solo run's mistakes are counted. The grid still has to be finished for the run to
+   * end, exactly as between two people.
+   */
+  readonly solo: boolean;
   /** The last answer, kept for the reveal. `lastDigit` is 0 when the turn was let go. */
   lastCell: number;
   lastDigit: number;
@@ -452,6 +460,7 @@ export function createMatch(
   rng: Rng,
   openingSeat: SeatId = 'p1',
   targetBlanks: number = TARGET_BLANKS,
+  solo = false,
 ): MatchState {
   const { givens, solution, blanks } = generatePuzzle(rng, targetBlanks);
   const owner = new Array<number>(CELL_COUNT).fill(EMPTY);
@@ -475,7 +484,9 @@ export function createMatch(
     owner,
     solution,
     head,
-    active: openingSeat,
+    // Solo always opens on the one seat there is; a coin that landed on `p2` would wait
+    // forever for a player who is not there.
+    active: solo ? 'p1' : openingSeat,
     anchor: rng.int(0, CELL_COUNT),
     wideOpen: true,
     blanks,
@@ -486,6 +497,7 @@ export function createMatch(
     lastCell: -1,
     lastDigit: 0,
     lastCorrect: false,
+    solo,
   };
   state.wideOpen = !crossHasEmpty(state.cells, state.anchor);
   return state;
@@ -553,7 +565,7 @@ function settle(state: MatchState, index: number, digit: number, correct: boolea
   state.lastCell = index;
   state.lastDigit = digit;
   state.lastCorrect = correct;
-  state.active = otherOf(mover);
+  state.active = state.solo ? mover : otherOf(mover);
   return correct ? 'claimed' : 'conceded';
 }
 

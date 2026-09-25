@@ -42,6 +42,13 @@ export interface Game {
    * so the same seat moves again and only that one piece may move.
    */
   chain: number;
+  /**
+   * Plies since the last capture or man move — the forty-move rule's counter.
+   *
+   * See {@link IDLE_PLIES_DRAW}. A man move is progress because a man can only go forward
+   * and must eventually crown or be taken; a king move on its own is not progress at all.
+   */
+  idlePlies: number;
 }
 
 export function otherOf(seat: SeatId): SeatId {
@@ -94,6 +101,7 @@ export function createGame(): Game {
     slots: new Array<Slot>(SLOT_COUNT).fill(null),
     toMove: 'p1',
     chain: -1,
+    idlePlies: 0,
   };
   resetGame(game);
   return game;
@@ -115,14 +123,29 @@ export function resetGame(game: Game, opener: SeatId = 'p1'): void {
   }
   game.toMove = opener;
   game.chain = -1;
+  game.idlePlies = 0;
 }
 
-/** The four diagonal steps, as row/column deltas. */
+/**
+ * The four diagonal steps, **in the moving seat's own frame**.
+ *
+ * Each entry is `[ahead, across]` as the mover sees the board, and a global row/column
+ * delta is `[ahead * f, across * f]` where `f` is {@link forwardOf} — so a given entry is
+ * the same side of the board to whichever seat is moving, once the board is turned round.
+ * Written the obvious
+ * way — one fixed list of global deltas, walked in the same order for both seats — move
+ * generation is *not* covariant under the half turn that maps one seat's board onto the
+ * other's: mirroring a position reverses the generated list rather than mirroring it, and
+ * everything downstream that breaks a tie by taking the first-listed move then prefers one
+ * seat's direction of travel over the other's. That was worth 8 points of seat balance
+ * (#2502). Keeping the order in the mover's frame is what makes the two seats the same
+ * player facing opposite ways.
+ */
 const DIAGONALS: readonly (readonly [number, number])[] = [
-  [-1, -1],
-  [-1, 1],
-  [1, -1],
   [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
 ];
 
 export interface Move {
@@ -161,7 +184,10 @@ export function movesFrom(out: Move[], count: number, game: Game, slot: number):
   const column = columnOf(slot);
   let next = count;
 
-  for (const [dr, dc] of DIAGONALS) {
+  const facing = forwardOf(piece.seat);
+  for (const [ahead, across] of DIAGONALS) {
+    const dr = ahead * facing;
+    const dc = across * facing;
     if (!canTravel(piece, dr)) continue;
 
     const stepSlot = slotAt(row + dr, column + dc);
@@ -206,7 +232,13 @@ export function legalMoves(out: Move[], game: Game): number {
     return kept;
   }
 
-  for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+  // Walked from the mover's own back rank forward, for the same reason the diagonals are
+  // kept in the mover's frame: slot order is board order, and board order runs towards one
+  // seat and away from the other. Ascending for p2, whose back rank is row 0; descending
+  // for p1, whose back rank is row 7.
+  const ascending = forwardOf(seat) === 1;
+  for (let i = 0; i < SLOT_COUNT; i += 1) {
+    const slot = ascending ? i : SLOT_COUNT - 1 - i;
     const piece = game.slots[slot];
     if (piece === null || piece === undefined || piece.seat !== seat) continue;
     count = movesFrom(out, count, game, slot);
@@ -260,6 +292,9 @@ export function applyMove(game: Game, from: number, to: number): boolean {
   const piece = game.slots[from];
   if (piece === null || piece === undefined) return false;
 
+  // Counted before the piece is crowned, because a crowning move is a man move.
+  game.idlePlies = chosen.captured >= 0 || piece.kind === 'man' ? 0 : game.idlePlies + 1;
+
   game.slots[from] = null;
   game.slots[to] = piece;
   if (chosen.captured >= 0) game.slots[chosen.captured] = null;
@@ -311,11 +346,34 @@ export function tallyOf(game: Game): Tally {
 }
 
 /**
+ * Forty moves each without a capture or a man move, and the game is a draw.
+ *
+ * This is the standard forty-move rule, and until #2502 this game did not have it: the
+ * SPEC's "not specified here" section said a long endgame would be "settled by the shell's
+ * round timer instead", and nothing in the simulation ends a match on that timer. Nothing
+ * ended it at all.
+ *
+ * It was invisible while the bot was lopsided. A search whose tie-break quietly favoured
+ * one seat's direction of travel is a search the two seats do not share, and two different
+ * players break a shuffle sooner or later. Making the two seats the same player — which is
+ * the whole of the seat-balance fix — made them shuffle in step: six kings, 944 plies with
+ * no capture and no man move, one position reached thirty-one times, and 84 matches in 100
+ * still running after ten simulated minutes. So the rule that was missing had been load-
+ * bearing on an accident, and this is it stated outright.
+ *
+ * Forty moves per seat is eighty plies, which is the tournament figure for English
+ * draughts. A man move counts as progress because a man cannot go backwards and so must
+ * crown or be taken; a king shuffling between two squares is not progress by any reading.
+ */
+export const IDLE_PLIES_DRAW = 80;
+
+/**
  * Who has won, or null while the game is live.
  *
  * A seat loses when it has no pieces **or no legal move**. Being stalemated is a loss in
  * checkers rather than a draw, which is not obvious and is the sort of thing a player
- * only discovers by being on the wrong end of it.
+ * only discovers by being on the wrong end of it. A game that stops making progress is a
+ * draw — see {@link IDLE_PLIES_DRAW}.
  */
 export function winnerOf(game: Game): SeatId | 'draw' | null {
   let p1 = 0;
@@ -329,6 +387,7 @@ export function winnerOf(game: Game): SeatId | 'draw' | null {
   if (p1 === 0) return 'p2';
   if (p2 === 0) return 'p1';
   if (legalMoves(legalScratch, game) === 0) return otherOf(game.toMove);
+  if (game.idlePlies >= IDLE_PLIES_DRAW) return 'draw';
   return null;
 }
 
@@ -340,15 +399,58 @@ export const BLUNDER_CHANCE: Readonly<Record<BotDifficulty, number>> = Object.fr
   hard: 0,
 });
 
+/**
+ * How deep each tier searches, counted in **turns**.
+ *
+ * Turns, not moves: a jump chain does not pass the turn and so does not spend depth
+ * either (#2524). Re-measured after that change — 120 games a row, seats alternated,
+ * randomised 2/4/6-ply openings, blunder off for the depth rows, a game outliving the
+ * 300-turn cap settled on captures the way the shell's round timer settles one, and score
+ * counted as win + half a draw for the first-named side:
+ *
+ * | | before #2524 | after |
+ * |---|---|---|
+ * | d2 v d1 | 99.2% | 100.0% |
+ * | d3 v d2 | 70.8% | 72.9% |
+ * | d4 v d3 | 62.5% | 66.3% |
+ * | d5 v d4 | 53.8% | 52.9% |
+ * | normal v easy | 96.7% | 98.3% |
+ * | hard v normal | 97.1% | 95.4% |
+ * | hard v easy | 100.0% | 100.0% |
+ *
+ * Each depth still beats the one below it and the tiers keep their order. Head to head at
+ * the same tier the fixed search scores 60.0% easy, 52.5% normal, 55.8% hard against the
+ * old one — at or above even everywhere, which is as much as 120 games can say.
+ */
 export const SEARCH_DEPTH: Readonly<Record<BotDifficulty, number>> = Object.freeze({
   easy: 1,
   normal: 3,
   hard: 5,
 });
 
-/** A king is worth appreciably more than a man, because it is. */
-const MAN_VALUE = 10;
-const KING_VALUE = 17;
+/**
+ * Piece values, in fifths of a man.
+ *
+ * **Every term here is a whole number, and that is the point.** The scale used to be
+ * `man = 10`, `king = 17`, two fifths of a point per row advanced and one point for the
+ * edge — and two fifths is `0.4`, which has no exact binary representation. Two dozen
+ * multiples of it, summed in slot order, land a few times `Number.EPSILON` away from the
+ * true total, and *which* way they land depends on the order the terms were added in. A
+ * position and its half-turn mirror sum the identical terms in opposite orders, so the
+ * opening position scored `+7.1e-15` from one seat and `-7.1e-15` from the other: the same
+ * `-0`-shaped defect this repository has already found in Chess, on the position every
+ * match starts from. Downstream, `score > bestScore` is a strict comparison, so a
+ * fifteenth-decimal-place difference is enough to pick a different move for one seat.
+ *
+ * Scaling by five removes the fraction rather than papering over it, and integer sums are
+ * exact in any order at these magnitudes. The ratios, and therefore the bot, are unchanged.
+ */
+const MAN_VALUE = 50;
+const KING_VALUE = 85;
+/** Per row a man has advanced towards its crown — a twenty-fifth of a man, as before. */
+const ADVANCE_VALUE = 2;
+/** For a piece on a file it can never be captured from — a tenth of a man, as before. */
+const EDGE_VALUE = 5;
 
 /**
  * Score a position from `seat`'s point of view.
@@ -356,6 +458,8 @@ const KING_VALUE = 17;
  * Material dominates, as it should. Two positional terms carry the rest: advancing a man
  * is worth a little because it is progress towards a crown, and a piece on the edge is
  * worth a little more because it can never be captured there.
+ *
+ * The result is always a whole number — see {@link MAN_VALUE}.
  */
 export function evaluate(game: Game, seat: SeatId): number {
   let score = 0;
@@ -368,19 +472,56 @@ export function evaluate(game: Game, seat: SeatId): number {
       // How far this man has come, in rows, towards its crown.
       const row = rowOf(slot);
       const advanced = piece.seat === 'p1' ? BOARD_SIZE - 1 - row : row;
-      value += advanced * 0.4;
+      value += advanced * ADVANCE_VALUE;
     }
     const column = columnOf(slot);
-    if (column === 0 || column === BOARD_SIZE - 1) value += 1;
+    if (column === 0 || column === BOARD_SIZE - 1) value += EDGE_VALUE;
     score += sign * value;
   }
   return score;
 }
 
-/** One game state per ply, reused across the search so no node allocates. */
-const SEARCH_PLIES = 12;
+/**
+ * One game state per ply, reused across the search so no node allocates.
+ *
+ * A line is no longer at most `depth` moves long. A jump chain does not pass the turn, so
+ * it no longer spends depth either (#2524) — which means a line is at most
+ * `SEARCH_DEPTH.hard` turn-passing moves plus one extra move per capture inside a chain.
+ * Every such capture takes a piece off the board and there are only `PIECES_PER_SEAT * 2`
+ * pieces to take, so 5 + 24 = 29 moves is the ceiling and no real line comes near it.
+ * Sized above that so the ply guard below is a memory backstop rather than something a
+ * chain can walk into.
+ */
+const SEARCH_PLIES = 32;
 const searchStates: Game[] = Array.from({ length: SEARCH_PLIES }, () => createGame());
 const moveBuffers: Move[][] = Array.from({ length: SEARCH_PLIES }, () => new Array<Move>(64));
+
+/**
+ * Test seam: every leaf the search scores passes through here first.
+ *
+ * #2524 asks for a *property* — no leaf is ever scored while a capture is pending — and a
+ * claim about every leaf of every sweep cannot be shown by choosing a board. One null
+ * check per leaf makes the whole search checkable from a test instead.
+ */
+let leafObserver: ((game: Game) => void) | null = null;
+
+export function observeLeaves(observer: ((game: Game) => void) | null): void {
+  leafObserver = observer;
+}
+
+/**
+ * The value of a position the search has decided to stop at.
+ *
+ * **A position with a capture pending is not a position worth scoring.** `evaluate` counts
+ * material, and mid-chain the mover is *guaranteed* at least one more capture — so scoring
+ * there books a half-taken chain as though it had stopped, and undervalues exactly the
+ * branches where the material swing is largest (#2524). Every stopping condition below is
+ * therefore conditioned on `chain < 0`; this is the single funnel they all come through.
+ */
+function leafValue(game: Game): number {
+  if (leafObserver !== null) leafObserver(game);
+  return evaluate(game, game.toMove);
+}
 
 function copyInto(target: Game, source: Game): void {
   for (let i = 0; i < SLOT_COUNT; i += 1) {
@@ -399,6 +540,7 @@ function copyInto(target: Game, source: Game): void {
   }
   target.toMove = source.toMove;
   target.chain = source.chain;
+  target.idlePlies = source.idlePlies;
 }
 
 function search(
@@ -411,13 +553,22 @@ function search(
 ): number {
   // Charged on every node, leaves included: leaves are the overwhelming majority of the
   // work, and charging only internal nodes puts the ceiling above the thing it limits.
-  if (!budget.spend()) return evaluate(game, game.toMove);
+  //
+  // Running out is a reason to stop *thinking*, not a reason to score a half-taken chain,
+  // so an exhausted budget only ends the line once the capture is finished. What that
+  // costs is bounded by the chain still in flight — the continuations are forced and each
+  // one takes a piece — and the sweep is thrown away anyway once the budget is gone.
+  const affordable = budget.spend();
+  if (!affordable && game.chain < 0) return leafValue(game);
   const decided = winnerOf(game);
   if (decided !== null) {
     if (decided === 'draw') return 0;
     return decided === game.toMove ? 10_000 - ply : -(10_000 - ply);
   }
-  if (depth === 0 || ply >= SEARCH_PLIES - 1) return evaluate(game, game.toMove);
+  // Depth counts *turns*, so a chain runs to its end before the line can stop. The ply
+  // guard is the backstop on the state stack and cannot fire mid-chain — see SEARCH_PLIES.
+  if (game.chain < 0 && depth <= 0) return leafValue(game);
+  if (ply >= SEARCH_PLIES - 1) return leafValue(game);
 
   const buffer = moveBuffers[ply] ?? [];
   const count = legalMoves(buffer, game);
@@ -431,10 +582,11 @@ function search(
     if (move === undefined) continue;
     copyInto(next, game);
     applyMove(next, move.from, move.to);
-    // A jump chain does not pass the turn, so the same seat keeps searching at this sign.
+    // A jump chain does not pass the turn, so the same seat keeps searching at this sign
+    // — and does not spend depth either, because depth is a count of turns.
     const score =
       next.toMove === mover
-        ? search(next, depth - 1, ply + 1, alpha, beta, budget)
+        ? search(next, depth, ply + 1, alpha, beta, budget)
         : -search(next, depth - 1, ply + 1, -beta, -alpha, budget);
     if (score > best) best = score;
     if (best > alpha) alpha = best;
@@ -471,7 +623,7 @@ export function bestMove(game: Game, rng: Rng, difficulty: BotDifficulty): Move 
       applyMove(next, move.from, move.to);
       const score =
         next.toMove === mover
-          ? search(next, depth - 1, 1, -Infinity, Infinity, budget)
+          ? search(next, depth, 1, -Infinity, Infinity, budget)
           : -search(next, depth - 1, 1, -Infinity, Infinity, budget);
       if (budget.exhausted) return undefined;
       if (score > bestScore) {

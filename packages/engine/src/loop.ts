@@ -6,6 +6,9 @@
  * the last two steps using `alpha`.
  */
 
+import type { GamepadSnapshot } from './gamepad.js';
+import type { BatterySnapshot, BatterySource } from './power.js';
+
 const DEFAULT_STEPS_PER_SECOND = 60;
 const DEFAULT_MAX_STEPS_PER_FRAME = 5;
 
@@ -18,6 +21,17 @@ const MAX_FRAME_SECONDS = 0.25;
 export interface LoopCallbacks {
   update(fixedDeltaSeconds: number): void;
   render(alpha: number): void;
+  /**
+   * Once per animation frame, before any step, with the wall-clock time this frame is
+   * bringing to the loop — clamped, but not yet scaled by assist mode.
+   *
+   * The one number the adaptive-quality monitor needs and nothing else on this interface
+   * carries: `update` sees only the fixed step, and `render` sees only `alpha`. Measured by
+   * `RunLoop` from the clock it already reads, so no host has to touch `performance` a
+   * second time to learn how long its frames are taking. Optional, because most callers of
+   * `FixedLoop` are tests that drive it by hand and want nothing of the kind.
+   */
+  frame?(frameDeltaSeconds: number): void;
 }
 
 export interface LoopOptions {
@@ -88,6 +102,7 @@ export class FixedLoop {
   advance(frameDeltaSeconds: number): void {
     let delta = frameDeltaSeconds;
     if (!Number.isFinite(delta) || delta < 0) delta = 0;
+    this.#callbacks.frame?.(delta);
     this.#accumulator += delta;
 
     let stepsThisFrame = 0;
@@ -165,13 +180,137 @@ export function browserClock(): Clock {
   };
 }
 
-/** Drives a FixedLoop from a Clock. Owns all wall-clock concerns. */
+/**
+ * The browser adapter for {@link GamepadManager}'s injected source (#130).
+ *
+ * `navigator.getGamepads` is the one device API gamepad support needs, and this is the only
+ * place it is read — alongside `browserClock`, in the file lint exempts from the device-global
+ * ban, so the engine's `gamepad.ts` and every test of it stay `navigator`-free. It maps the
+ * live `Gamepad` objects to the plain snapshots the manager consumes.
+ *
+ * ## Allocation, said honestly (rule 5)
+ *
+ * This runs once per fixed step. Everything *this* function owns is reused: one snapshot
+ * per pad slot, kept across calls and mutated in place, its `axes` and `buttons` arrays
+ * grown once to the pad's size and overwritten thereafter, and one result array whose
+ * length is set rather than rebuilt. The first draft mapped, sliced and re-mapped on every
+ * call — five allocations a step per pad, forever, on the path rule 5 exists for.
+ *
+ * What it cannot reuse is the platform's own answer. `navigator.getGamepads()` returns a
+ * fresh array in every engine, and on Chromium each `Gamepad` in it is a new object with
+ * new `axes` and `buttons` arrays as well — a snapshot by specification, not a live handle.
+ * That is a platform call, like `getBoundingClientRect`, and it sits on the far side of the
+ * line rule 5 draws: the rule is about *our* per-frame allocations in engine and game code,
+ * and a browser API that hands over a copy is a cost of asking the browser, not of how we
+ * asked. It is named here so nobody measures this path, sees the browser's array, and goes
+ * looking for it in `gamepad.ts`. In a browser with no pads plugged in the returned array is
+ * empty or all-null, and this touches nothing at all.
+ *
+ * Returns an empty array where the API is absent (older engines, a locked-down context) rather
+ * than throwing, so a host can poll unconditionally and simply see no pads.
+ */
+export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
+  const scope = globalThis;
+  if (typeof scope.navigator === 'undefined' || typeof scope.navigator.getGamepads !== 'function') {
+    return () => [];
+  }
+  const getGamepads = scope.navigator.getGamepads.bind(scope.navigator);
+  interface Slot {
+    index: number;
+    id: string;
+    connected: boolean;
+    axes: number[];
+    buttons: boolean[];
+  }
+  const slots: (Slot | null)[] = [];
+  const out: (GamepadSnapshot | null)[] = [];
+  return () => {
+    const pads = getGamepads();
+    out.length = pads.length;
+    for (let i = 0; i < pads.length; i += 1) {
+      const pad = pads[i];
+      if (pad === null || pad === undefined) {
+        out[i] = null;
+        continue;
+      }
+      let slot = slots[i];
+      if (slot === undefined || slot === null) {
+        slot = { index: pad.index, id: pad.id, connected: false, axes: [], buttons: [] };
+        slots[i] = slot;
+      }
+      slot.index = pad.index;
+      // A string assignment shares the browser's string; nothing is copied.
+      slot.id = pad.id;
+      slot.connected = pad.connected;
+      const axes = slot.axes;
+      axes.length = pad.axes.length;
+      for (let a = 0; a < pad.axes.length; a += 1) axes[a] = pad.axes[a] ?? 0;
+      const buttons = slot.buttons;
+      buttons.length = pad.buttons.length;
+      for (let b = 0; b < pad.buttons.length; b += 1) buttons[b] = pad.buttons[b]?.pressed === true;
+      out[i] = slot;
+    }
+    return out;
+  };
+}
+
+/**
+ * The browser adapter for the battery (#190), beside {@link browserGamepadSource} and for the
+ * same reason: `navigator.getBattery` is a device API, this is the one file allowed to read
+ * one, and `power.ts` — which decides what a low battery means — stays `navigator`-free.
+ *
+ * The API is a promise that resolves to a live `BatteryManager` with `levelchange` and
+ * `chargingchange` events. The promise is asked for once, here; the returned reader answers
+ * from one snapshot that the events keep current, so a host may read it every frame and the
+ * frame path allocates nothing (rule 5). Until the promise resolves, and wherever the API does
+ * not exist — which is every WebKit browser, so every iPhone — the reader answers `null`, and
+ * `isLowPower(null)` is "no": an unknown battery is never throttled on a guess.
+ */
+export function browserBatterySource(): BatterySource {
+  const scope = globalThis;
+  const nav = scope.navigator as
+    (Navigator & { getBattery?: () => Promise<BatteryManagerLike> }) | undefined;
+  if (nav === undefined || typeof nav.getBattery !== 'function') return () => null;
+  const state: { level: number; charging: boolean } = { level: 1, charging: true };
+  let known: BatterySnapshot | null = null;
+  const sync = (manager: BatteryManagerLike): void => {
+    state.level = manager.level;
+    state.charging = manager.charging;
+    known = state;
+  };
+  nav
+    .getBattery()
+    .then((manager) => {
+      sync(manager);
+      manager.addEventListener('levelchange', () => {
+        sync(manager);
+      });
+      manager.addEventListener('chargingchange', () => {
+        sync(manager);
+      });
+    })
+    .catch(() => {
+      // A browser that has the method and refuses to answer — a locked-down context — is
+      // a browser with no battery to read, which the reader already reports.
+    });
+  return () => known;
+}
+
+/** The slice of `BatteryManager` the adapter reads, declared here so tests need no DOM. */
+export interface BatteryManagerLike {
+  readonly level: number;
+  readonly charging: boolean;
+  addEventListener(type: 'levelchange' | 'chargingchange', listener: () => void): void;
+}
+
 export class RunLoop {
   readonly #loop: FixedLoop;
   readonly #clock: Clock;
   #running = false;
   #handle = 0;
   #lastTimeMs = 0;
+  /** Assist-mode speed (#179): wall-clock time is scaled by this before it feeds the loop. */
+  #timeScale = 1;
 
   readonly #tick = (timeMs: number): void => {
     if (!this.#running) return;
@@ -181,10 +320,17 @@ export class RunLoop {
       delta = 0;
     } else if (delta > MAX_FRAME_SECONDS) {
       // A backgrounded tab returns with a gap of many seconds; clamp it so the match
-      // does not fast-forward through the time it spent hidden.
+      // does not fast-forward through the time it spent hidden. Clamped before scaling, so
+      // the assist multiplier acts on the honest frame time rather than the clamped ceiling.
       delta = MAX_FRAME_SECONDS;
     }
-    this.#loop.advance(delta);
+    // Assist mode scales how much wall-clock time reaches the fixed loop, never the step
+    // size (#179). At half speed the loop runs half as many steps this second, each one the
+    // identical `stepSeconds` update it always was — so the simulation, its seeded RNG and
+    // its step order are untouched and the match plays slowed, not changed. Rendering is
+    // unscaled: `render` still runs every frame, interpolating with `alpha`, so slow motion
+    // stays smooth rather than stepping.
+    this.#loop.advance(delta * this.#timeScale);
     // Re-checked because update() or render() may have called stop(). Flow analysis
     // cannot see through the callback, hence the disable rather than a redundant guard.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -198,6 +344,23 @@ export class RunLoop {
 
   get running(): boolean {
     return this.#running;
+  }
+
+  /** The assist-mode speed currently in effect; 1 is full speed. */
+  get timeScale(): number {
+    return this.#timeScale;
+  }
+
+  /**
+   * Set the assist-mode speed multiplier (#179).
+   *
+   * Applies from the next frame on and can be changed mid-match, because it touches only how
+   * fast wall-clock time is fed in, not any simulation state — no reset, no lost carry. A
+   * value that is not a positive finite number is ignored rather than allowed to stall or
+   * reverse the loop; the presentation layer clamps it to a sane range before it gets here.
+   */
+  setTimeScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) this.#timeScale = scale;
   }
 
   start(): void {

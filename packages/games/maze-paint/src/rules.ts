@@ -450,7 +450,8 @@ export function ownerOf(position: Position, cell: number): SeatId | null {
 }
 
 /** Neither roller can move: the position itself is finished, whatever the stall count says. */
-export function isOver(position: Position): boolean {
+export function isOver(position: Position, solo = false): boolean {
+  if (solo) return !canRoll(position, 'p1');
   return !canRoll(position, 'p1') && !canRoll(position, 'p2');
 }
 
@@ -486,8 +487,8 @@ export function outcomeOf(position: Position, opener: SeatId): SeatId {
 }
 
 /** The outcome of a *finished* position, or null while either roller can still move. */
-export function winnerOf(position: Position, opener: SeatId): SeatId | null {
-  return isOver(position) ? outcomeOf(position, opener) : null;
+export function winnerOf(position: Position, opener: SeatId, solo = false): SeatId | null {
+  return isOver(position, solo) ? outcomeOf(position, opener) : null;
 }
 
 /**
@@ -886,6 +887,13 @@ export interface Tuning {
 
 export interface Match {
   readonly position: Position;
+  /**
+   * One seat, never handed over (#1750). Set from `GameContext.solo` by `startMatch`: the
+   * turn comes straight back to `p1` while it can still roll, and the run settles the moment
+   * it cannot. `p2` never rolls, so the match's end is `p1` running out of moves rather than
+   * both seats doing so, which is what `isOver` and `winnerOf` take the flag for.
+   */
+  solo: boolean;
   /** The seat that opened, which is what settles a match level on squares. */
   opener: SeatId;
   stallLimit: number;
@@ -911,6 +919,7 @@ export interface Match {
 export function createMatch(): Match {
   return {
     position: createPosition(),
+    solo: false,
     opener: 'p1',
     stallLimit: STALL_LIMIT,
     profiles: null,
@@ -936,12 +945,21 @@ export function createMatch(): Match {
  * a best-of so first-mover advantage washes out, and a game that always opened with `p1`
  * would leave that promise unkept.
  */
-export function startMatch(match: Match, rng: Rng, openingSeat: SeatId, tuning?: Tuning): void {
+export function startMatch(
+  match: Match,
+  rng: Rng,
+  openingSeat: SeatId,
+  tuning?: Tuning,
+  solo = false,
+): void {
   generateMaze(match.position, rng, tuning?.wallPairs ?? WALL_PAIRS);
-  match.opener = openingSeat;
+  // Solo always opens on the one seat there is; a coin that landed on `p2` would wait
+  // forever for a player who is not there.
+  match.solo = solo;
+  match.opener = solo ? 'p1' : openingSeat;
   match.stallLimit = tuning?.stallLimit ?? STALL_LIMIT;
   match.profiles = tuning?.profiles ?? null;
-  match.active = openingSeat;
+  match.active = match.opener;
   match.phase = 'ready';
   match.phaseSteps = 0;
   match.thinkSteps = 0;
@@ -979,7 +997,8 @@ function handOver(match: Match): void {
     return;
   }
   const other = otherSeat(match.active);
-  if (canRoll(match.position, other)) {
+  // Nobody is in the far seat of a solo run, so it is never offered the roll.
+  if (!match.solo && canRoll(match.position, other)) {
     match.active = other;
     beginTurn(match);
     return;

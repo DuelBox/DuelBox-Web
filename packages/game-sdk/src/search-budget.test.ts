@@ -67,6 +67,55 @@ describe('deepening', () => {
     expect(deepen(new SearchBudget(4), 3, () => null)).toBe(-1);
   });
 
+  it('walks a whole exchange at a time when asked to (#2495)', () => {
+    const budget = new SearchBudget(1000);
+    const reached: number[] = [];
+    const move = deepen(
+      budget,
+      7,
+      (depth) => {
+        reached.push(depth);
+        return depth * 10;
+      },
+      2,
+    );
+    expect(reached, 'every depth on the same side of the exchange').toEqual([1, 3, 5, 7]);
+    expect(move).toBe(70);
+  });
+
+  it('steps by one unless told otherwise, so no ladder re-tunes itself silently', () => {
+    const budget = new SearchBudget(1000);
+    const reached: number[] = [];
+    deepen(budget, 4, (depth) => {
+      reached.push(depth);
+      return depth;
+    });
+    expect(reached).toEqual([1, 2, 3, 4]);
+  });
+
+  it('never overshoots maxDepth, whatever the step', () => {
+    // `depth += step` can stride past the ceiling where `depth += 1` lands on it, so an
+    // even ceiling with an odd stride must stop below rather than search one ply too deep.
+    for (const [maxDepth, step, expected] of [
+      [6, 2, [1, 3, 5]],
+      [5, 2, [1, 3, 5]],
+      [1, 2, [1]],
+      [4, 3, [1, 4]],
+    ] as const) {
+      const reached: number[] = [];
+      deepen(
+        new SearchBudget(1000),
+        maxDepth,
+        (depth) => {
+          reached.push(depth);
+          return depth;
+        },
+        step,
+      );
+      expect(reached, `maxDepth ${maxDepth}, step ${step}`).toEqual([...expected]);
+    }
+  });
+
   it('is deterministic — the same budget spends the same way on any device', () => {
     // A stopwatch would make the depth reached depend on how fast the machine is, and
     // rule 8 says a phone and a laptop must step the identical match.

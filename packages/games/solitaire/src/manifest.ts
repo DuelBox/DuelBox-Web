@@ -7,10 +7,12 @@ export const manifest = parseGameManifest({
   // Two seats take turns on one deal: one tableau, one stock, four shared foundations, and
   // neither half of the screen belongs to a seat.
   archetype: 'turn-board',
-  // The catalogue row records a solo game, because the reference app's is one, and `solo` stays
-  // so the row and the manifest agree about what was observed. `friend` and `bot` are ours: the
-  // duel in SPEC.md needs two seats, and `PlaySurface` draws a start button only for those two,
-  // so a solo-only manifest would ship a game page with no way to begin.
+  // The catalogue row records a solo game, because the reference app's is one, and since
+  // #1750 the shell can start one: `GameContext.solo` keeps the turn on the one seat there
+  // is, and `rules.ts` says what that means for this game. `friend` and `bot` stay because
+  // the two-seat version is a real game too — and because `scripts/validate-manifests.mjs`
+  // now plays every solo-declaring game with the flag set and fails the build if the far
+  // seat is ever handed the turn, so the word is a claim rather than a category.
   modes: ['friend', 'bot', 'solo'],
   presentations: ['shared-screen', 'single-seat'],
   // The header row of piles, seven tableau columns beneath it, and the ledger along the bottom.

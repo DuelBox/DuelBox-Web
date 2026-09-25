@@ -4,10 +4,32 @@ export {
   PRESENTATIONS,
   ORIENTATIONS,
   ZONE_SPLITS,
+  GAME_OPTION_TYPES,
+  DEVICE_CLASSES,
   gameManifestSchema,
+  gameOptionSchema,
   parseGameManifest,
+  supportedPresentations,
+  supportsViewport,
+  supportsDeviceClass,
+  // The orientation four, added by #1886 and reachable by nobody until now: the barrel is
+  // the package, and a function outside it is a function the shell cannot call. `#136`'s
+  // prompt is the first caller `rotateHintFor` has ever had.
+  preferredOrientation,
+  isDesignedForOrientation,
+  logicalForOrientation,
+  rotateHintFor,
 } from './manifest.js';
-export type { GameManifest, GameArchetype, PlayMode } from './manifest.js';
+export type {
+  GameManifest,
+  GameArchetype,
+  PlayMode,
+  GameOption,
+  GameOptionType,
+  DeviceClass,
+  Orientation,
+  DeclaredOrientation,
+} from './manifest.js';
 
 export type {
   Game,
@@ -18,6 +40,22 @@ export type {
   Renderer,
   MatchScore,
 } from './contract.js';
+
+export { defaultLayout, resolveLayout, placeLayout, mirrorRect } from './layout.js';
+export type {
+  LayoutRect,
+  ControlRole,
+  ControlZone,
+  HudSlot,
+  GameLayout,
+  LayoutContext,
+  LayoutAware,
+  PlacedZone,
+  PlacedLayout,
+} from './layout.js';
+
+export { createPresentationToggle, otherPresentation } from './presentation-toggle.js';
+export type { PresentationToggle } from './presentation-toggle.js';
 
 export {
   reduce,
@@ -45,3 +83,44 @@ export {
 export type { Judgement } from './bot-judgement.js';
 
 export { SearchBudget, DEFAULT_SEARCH_NODES, deepen } from './search-budget.js';
+
+export {
+  createClock,
+  advanceClock,
+  clockElapsed,
+  clockRemaining,
+  clockExpired,
+  clockWarning,
+  resetClock,
+  formatClock,
+} from './match-clock.js';
+export type { MatchClock } from './match-clock.js';
+
+export {
+  BOT_TIERS,
+  BOT_DIFFICULTIES,
+  isBotTier,
+  difficultyForTier,
+  isStronger,
+} from './bot-difficulty.js';
+export type { BotTier, BotDifficulty } from './bot-difficulty.js';
+
+export { guard, errorMessage } from './guard.js';
+
+export { actionAbandoned } from './gesture.js';
+
+export {
+  sanitisePlayerName,
+  isValidPlayerName,
+  containsBlockedWord,
+  MAX_NAME_LENGTH,
+} from './player-text.js';
+export type { SanitiseResult, SanitiseReason } from './player-text.js';
+export { DragAim, PressGesture, HoldToAct } from './gesture.js';
+export type {
+  DragAimOptions,
+  DragAimResult,
+  PressGestureOptions,
+  PressKind,
+  HoldToActOptions,
+} from './gesture.js';

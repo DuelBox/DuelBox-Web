@@ -401,11 +401,14 @@ draws first over the same 1600 seeds moves seat one's share by −2.2, −3.9 an
 the three tiers. Averaging the two orders gives 51.4%, 49.7% and 50.1%. There is nothing to
 fix in the geometry, because the geometry is provably exact.
 
-`balance-aggregate.test.ts`, which plays the game its own way over fifty seeds, reads
-**48.0%** — inside the flat 45–55% band, not merely inside the 23.8–76.2% that fifty seeds
-can actually enforce. Its average match there is 60.6 simulated seconds, and 49 of its 50
-seeds produce a distinct match, so the sample is a sample rather than one match counted
-fifty times.
+`balance-aggregate.test.ts`, which plays the game its own way, reads **50.0%** — inside the
+flat 45–55% band, not merely inside the 29.0–71.0% its sample can actually enforce. This game
+never reads `context.openingSeat`, so since #2494 the harness plays each seed once and spends
+the budget on 88 seeds rather than 50 pairs: its average match there is 61.0 simulated
+seconds, and 87 of the 88 seeds produce a distinct match, so the sample is a sample rather
+than one match counted twice. The earlier reading of **48.0% over fifty seeds** was the same
+number taken from half the seeds and twice the matches; the share was never wrong, but the
+"100 decided" the harness printed beside it was 50 independent draws.
 
 ---
 

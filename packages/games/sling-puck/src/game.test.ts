@@ -54,12 +54,14 @@ function started(
   bots: Partial<Record<SeatId, 'easy' | 'normal' | 'hard'>>,
   seed = 5,
   presentation: Presentation = 'shared-screen',
+  openingSeat: SeatId = 'p1',
 ): SlingPuckGame {
   const game = new SlingPuckGame();
   game.init({
     rng: new Rng(seed),
     presentation,
     localSeat: 'p1',
+    openingSeat,
     botDifficulty: (seat: SeatId) => bots[seat] ?? null,
   } as unknown as GameContext);
   return game;
@@ -251,5 +253,29 @@ describe('fairness', () => {
       scores.add(`${score.p1}:${score.p2}`);
     }
     expect(scores.size).toBeGreaterThan(3);
+  });
+
+  it('hands the two generators out by opening seat, not by chair', () => {
+    // The seat-balance proof rests on this. A seed's two rounds differ only in who opens, so
+    // if the streams follow the *opener* the second round is the first turned half a turn —
+    // same rack, same needles, same draws — and the winner is the other seat by
+    // construction. Followed the *chair* instead, the two rounds are two different matches
+    // and seat balance goes back to being a number with nine points of noise on it.
+    //
+    // See the half-turn suite in `rules.test.ts` for what that buys: seat one takes exactly
+    // half of the decided matches at every tier, at every sample size. It was 34.1%.
+    let pairs = 0;
+    for (let seed = 0; seed < 12; seed += 1) {
+      const near = started({ p1: 'normal', p2: 'normal' }, seed, 'shared-screen', 'p1');
+      const far = started({ p1: 'normal', p2: 'normal' }, seed, 'shared-screen', 'p2');
+      runOut(near);
+      runOut(far);
+      const a = near.getScore();
+      const b = far.getScore();
+      expect(b.p1, `seed ${String(seed)}`).toBe(a.p2);
+      expect(b.p2, `seed ${String(seed)}`).toBe(a.p1);
+      if (a.winner !== 'draw') pairs += 1;
+    }
+    expect(pairs, 'every match drew, so this asserted nothing').toBeGreaterThan(0);
   });
 });

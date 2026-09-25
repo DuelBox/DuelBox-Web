@@ -14,7 +14,32 @@
 import type { SeatId } from '@duelbox/engine';
 import type { MatchRules } from '@duelbox/game-sdk';
 
-export type PlayMode = 'friend' | 'bot';
+export type PlayMode = 'friend' | 'bot' | 'solo';
+
+/**
+ * The same two modes written as a value, because a union cannot be walked and three readers
+ * need to walk it.
+ *
+ * `isPlayMode` used to carry its own copy of the two strings, `offeredModes` below narrows a
+ * game's declaration down to this list, and `scripts/validate-manifests.mjs` reads this array
+ * out of this file at build time to decide whether a game is declaring a mode the product has
+ * no way to run (#1749). Three copies of two strings is a drift waiting for the fourth mode.
+ *
+ * The union above is deliberately still written out in literals rather than derived from this
+ * array. `app/metadata-claims.test.ts` parses `export type PlayMode = …` out of this very file
+ * to work out what a visitor is offered — that is the fact behind CLAUDE.md's ninth entry, the
+ * `<meta>` description promising a match across two devices — and `(typeof PLAY_MODES)[number]`
+ * gives its reader nothing to read. So the two spellings both stay and are held together:
+ * `satisfies` rejects a member here that the union does not have, and `match-setup.test.ts`
+ * reads both declarations out of this file's source and compares the sets in both directions.
+ *
+ * `solo` joined the list with #1750. It was absent on purpose before that — six manifests
+ * declared it and nothing in `apps/web` could start one — and the rule that kept it out is
+ * the same one that let it in: a button is drawn only for a mode with a branch behind it.
+ * {@link botSeatsFor} and {@link isSolo} are that branch, and `PlaySurface` seats one player
+ * alone on it.
+ */
+export const PLAY_MODES = ['friend', 'bot', 'solo'] as const satisfies readonly PlayMode[];
 
 /**
  * The three tiers every game in the catalogue implements.
@@ -28,12 +53,46 @@ export const BOT_DIFFICULTIES = ['easy', 'normal', 'hard'] as const;
 export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];
 
 /**
+ * The tiers as the pre-match radios name them, and the one place each is spelled (#220).
+ *
+ * The labels used to be computed from {@link BOT_DIFFICULTIES} by upper-casing the first
+ * letter, which is a rule about English rather than a name: a language whose word for "easy"
+ * is not capitalised mid-sentence cannot be reached through it, and the extractor cannot read
+ * a string that is built. Written out, each is a message id a locale can translate.
+ *
+ * The tier word the HUD and the tournament track say mid-sentence is the *union member*
+ * itself — "Round 2 of 3 · easy" — which is a second, lower-case spelling of the same three
+ * words on purpose: capitalisation belongs to the position in the sentence, and both sets are
+ * registered in `lib/i18n/sources.ts` so a locale gets both.
+ */
+export const DIFFICULTY_LABELS: Readonly<Record<BotDifficulty, string>> = {
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+};
+
+/**
  * Best-of lengths the shell offers.
  *
  * Odd only, so a best-of cannot be split down the middle, and short: this is a game two
  * people play standing up, and a best-of-seven is a commitment rather than a round.
  */
 export const ROUND_CHOICES = [1, 3, 5] as const;
+
+/**
+ * Each offered length, as the radio names it (#220).
+ *
+ * "1 round" rather than "one round" only because on a 412px phone the spelled-out version
+ * wraps onto a second line and its neighbours do not, which reads as a broken column; and
+ * "1 round" rather than "Best of 1", which is not a set. Written out for the reason
+ * {@link DIFFICULTY_LABELS} is: a label assembled from a number and a word is a label no
+ * extractor can read and no grammar but English can rearrange.
+ */
+export const ROUND_LABELS: Readonly<Record<(typeof ROUND_CHOICES)[number], string>> = {
+  1: '1 round',
+  3: 'Best of 3',
+  5: 'Best of 5',
+};
 
 /** The tier a player who expresses no preference gets. */
 export const DEFAULT_DIFFICULTY: BotDifficulty = 'normal';
@@ -67,7 +126,32 @@ export const DEFAULT_SETUP: MatchSetup = {
 };
 
 export function isPlayMode(value: unknown): value is PlayMode {
-  return value === 'friend' || value === 'bot';
+  return (PLAY_MODES as readonly unknown[]).includes(value);
+}
+
+/**
+ * The modes a game declares, narrowed to the ones the shell can actually start.
+ *
+ * A manifest's `modes` and this list are not the same set and must never be assumed to be.
+ * The SDK's vocabulary and the shell's agree today — `friend | bot | solo` — and that is a
+ * fact this function exists to stop being assumed: the day the SDK grows a fourth word, a
+ * manifest that declares it gets no button until the shell has a branch for it.
+ *
+ * `solo` was the case for a long time. Six games declared it, nothing in `apps/web` could
+ * start one, and each of the six pages advertised a mode its lobby did not offer (#1749).
+ * The rule this puts a name on is that a button is drawn for the **intersection** and never
+ * for the declaration: a button for a mode with no branch behind it does nothing when it is
+ * pressed, and a dead button is the defect. #1750 built the branch, and the six buttons came
+ * back through this same filter rather than through an exception to it.
+ *
+ * Order is the game's own, so a caller that wants the remembered mode first sorts afterwards
+ * rather than getting a second ordering rule buried in here.
+ *
+ * Returning an empty array is a real answer and means a game page with no way to begin — see
+ * the catalogue-wide assertion in `match-setup.test.ts`, which is the thing that would notice.
+ */
+export function offeredModes(declared: readonly string[]): readonly PlayMode[] {
+  return declared.filter(isPlayMode);
 }
 
 export function isBotDifficulty(value: unknown): value is BotDifficulty {
@@ -109,5 +193,26 @@ export function botSeatsFor(
   mode: PlayMode,
   difficulty: BotDifficulty,
 ): Partial<Record<SeatId, BotDifficulty>> | undefined {
+  // `solo` is `undefined` here on purpose, the same answer as `friend`: nobody is in the far
+  // seat, and "no bot" is the truth of it. What is different about solo is not who holds the
+  // far seat but that nobody does, which is {@link isSolo}'s question and not this one's.
   return mode === 'bot' ? { p2: difficulty } : undefined;
+}
+
+/**
+ * Whether a mode seats one player alone (#1750).
+ *
+ * The one question three readers ask about a mode that {@link botSeatsFor} cannot answer:
+ * the host hands it to the game as `GameContext.solo`, the HUD draws one seat instead of two,
+ * and the result screen shows a score against a best rather than a winner. A solo run is
+ * always a single round — a best-of is two people taking turns to lose, and there is nobody
+ * to take turns with — which is why {@link soloRules} exists beside `matchRulesFor`.
+ */
+export function isSolo(mode: PlayMode): mode is 'solo' {
+  return mode === 'solo';
+}
+
+/** The rules for a solo run: one round, decided by the game, counted in. */
+export function soloRules(): MatchRules {
+  return { win: { kind: 'first-to', target: 1 }, rounds: 1, countdownSeconds: 3 };
 }

@@ -545,13 +545,20 @@ the one the gate runs:
 
 | seeds | `easy` | `normal` | `hard` |
 |---|---|---|---|
-| 50 (what a push runs) | 46.0% | **40.0%** | **62.0%** |
+| 50 (what a push ran before #2494) | 46.0% | **40.0%** | **62.0%** |
+| 88 (what a push runs now) | — | **42.0%** | — |
 | 250 (what nightly runs) | 46.8% | 54.0% | 52.8% |
 | 1000 (the audit) | 48.6% | 49.5% | 53.5% |
 
-The fifty-seed row is why that file's allowance is 21.2 points wide: the same game reads 40.0%
-and 62.0% at fifty seeds and 49.5% and 53.5% at a thousand. Anything under a few hundred seeds
-in one family here is noise wearing a suit.
+Every row is seeds, never matches. The 50-seed row was reported by the harness as "100 decided
+matches", but this game never reads `context.openingSeat`, so each of those seeds was played
+twice to the same result; #2494 stopped paying for the second arm and spends the budget on 88
+seeds instead, which is the row a push reads today. The `easy` and `hard` cells of that row are
+**due a re-measure** — the tier axis has not been run since.
+
+The shallow rows are why that file's allowance is 16 to 21 points wide: the same game reads
+40.0% and 62.0% at fifty seeds and 49.5% and 53.5% at a thousand. Anything under a few hundred
+seeds in one family here is noise wearing a suit.
 
 **Why the share is near 50 by construction rather than by luck.** Both seats are dealt the
 identical brainrots by index; the two yards are exact half-turn images and are asserted to be,

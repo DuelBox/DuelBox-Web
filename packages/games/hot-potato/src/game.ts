@@ -8,6 +8,7 @@ import {
   botThrows,
   createBotState,
   createGame,
+  otherOf,
   resetBotState,
   resetGame,
   step,
@@ -76,6 +77,8 @@ export class HotPotatoGame implements Game {
    */
   #botP1: BotDifficulty | null = null;
   #botP2: BotDifficulty | null = null;
+  /** The seat that holds the potato first, from the shell rather than from a literal. */
+  #opener: SeatId = 'p1';
   #winner: SeatId | null = null;
 
   constructor() {
@@ -96,8 +99,9 @@ export class HotPotatoGame implements Game {
     this.#rng = context.rng;
     this.#botP1 = context.botDifficulty('p1');
     this.#botP2 = context.botDifficulty('p2');
+    this.#opener = context.openingSeat;
     this.#winner = null;
-    resetGame(this.#position, this.#rng);
+    resetGame(this.#position, this.#rng, this.#opener);
     for (const runtime of [this.#runtimeP1, this.#runtimeP2]) {
       resetBotState(runtime.bot);
       runtime.held = false;
@@ -107,8 +111,20 @@ export class HotPotatoGame implements Game {
 
   update(fixedDeltaSeconds: number, input: InputState): void {
     if (this.#winner !== null) return;
-    this.#driveSeat('p1', this.#runtimeP1, this.#botP1, input, fixedDeltaSeconds);
-    this.#driveSeat('p2', this.#runtimeP2, this.#botP2, input, fixedDeltaSeconds);
+    // **Driven by role, never by seat.** Both bots draw from the one match generator, and
+    // whoever is driven first takes the first number - so driving `p1` first made a seed
+    // opened from one chair a different match from the same seed opened from the other.
+    // Holder then non-holder is the same order however the seats are labelled.
+    const holder = this.#position.holder;
+    const waiting = otherOf(holder);
+    this.#driveSeat(holder, this.#runtimeOf(holder), this.#botOf(holder), input, fixedDeltaSeconds);
+    this.#driveSeat(
+      waiting,
+      this.#runtimeOf(waiting),
+      this.#botOf(waiting),
+      input,
+      fixedDeltaSeconds,
+    );
     step(this.#position, fixedDeltaSeconds, this.#rng);
     this.#winner = winnerOf(this.#position);
   }
@@ -142,8 +158,16 @@ export class HotPotatoGame implements Game {
   }
 
   destroy(): void {
-    resetGame(this.#position, this.#rng);
+    resetGame(this.#position, this.#rng, this.#opener);
     this.#winner = null;
+  }
+
+  #runtimeOf(seat: SeatId): SeatRuntime {
+    return seat === 'p1' ? this.#runtimeP1 : this.#runtimeP2;
+  }
+
+  #botOf(seat: SeatId): BotDifficulty | null {
+    return seat === 'p1' ? this.#botP1 : this.#botP2;
   }
 
   #settle(): void {

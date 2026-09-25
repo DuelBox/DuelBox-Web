@@ -500,6 +500,27 @@ export function pressAim(match: Match, seat: SeatId): boolean {
  * is a legal kick here — the feeblest one there is, {@link MIN_REACH} units of turf. Refusing
  * it would make a tap mean nothing on the one input the whole game is built out of.
  */
+/**
+ * The gesture taken away rather than let go: back to aiming, with the gauge dropped.
+ *
+ * A cancel must commit nothing, and here doing nothing is not enough. The wind is a *phase*,
+ * not a value the game reads back: {@link step} fills the gauge on its own clock for as long
+ * as it lasts, and {@link WIND_DEADLINE} kicks it. An abandoned press therefore keeps winding
+ * and eventually takes a shot nobody asked for — and until then `pressAim` is refused, so the
+ * player's next tap kicks at the weight their interruption accumulated (#2501).
+ *
+ * The needle is left exactly where it stopped and resumes its sweep from there: the weight is
+ * the charge, the line is the aim, and an interruption takes only the first.
+ */
+export function abandonWind(match: Match, seat: SeatId): boolean {
+  if (match.phase !== 'winding') return false;
+  if (match.seat !== seat) return false;
+  match.phase = 'aiming';
+  match.power = 0;
+  match.clock = 0;
+  return true;
+}
+
 export function release(match: Match, seat: SeatId): boolean {
   if (match.phase !== 'winding') return false;
   if (match.seat !== seat) return false;

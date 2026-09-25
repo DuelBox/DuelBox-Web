@@ -115,6 +115,7 @@ import { manifest as piranhaRush } from '@duelbox/game-piranha-rush';
 import { manifest as stickyTongues } from '@duelbox/game-sticky-tongues';
 import { manifest as pizzaMemory } from '@duelbox/game-pizza-memory';
 import { manifest as ballgamesPhysics } from '@duelbox/game-ballgames-physics';
+import { manifest as cricket } from '@duelbox/game-cricket';
 import type { GameManifest } from '@duelbox/game-sdk';
 import { CATALOGUE } from './catalogue.generated';
 
@@ -141,6 +142,7 @@ export const MANIFESTS: readonly GameManifest[] = [
   cornhole,
   crabbyVolley,
   crashIt,
+  cricket,
   cupPong,
   darts,
   discoBattle,

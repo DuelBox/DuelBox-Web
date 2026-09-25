@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" role="img" aria-label="DuelBox">
+  <rect width="40" height="40" rx="11" fill="#4b3beb"/>
+  <circle cx="14.5" cy="20" r="6.5" fill="#ff5a4e"/>
+  <circle cx="25.5" cy="20" r="4.95" fill="none" stroke="#21b0e8" stroke-width="3.1"/>
+</svg>

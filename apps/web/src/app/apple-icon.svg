@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DuelBox">
+  <!-- The apple-touch-icon: full-bleed and opaque, because iOS rounds and drops the corners
+       itself and shows the icon on the home screen with no page behind it. Same mark as the
+       favicon, no transparent corners. -->
+  <rect x="0" y="0" width="64" height="64" fill="#4b3beb" />
+  <path d="M46 12 18 52" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+  <circle cx="23" cy="25" r="5.5" fill="#ffffff" />
+  <rect x="36" y="34" width="10" height="10" rx="2.5" fill="#ffffff" />
+</svg>

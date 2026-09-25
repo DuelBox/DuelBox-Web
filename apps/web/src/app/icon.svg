@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DuelBox">
+  <!-- The DuelBox mark: one box, one seam, two seats.
+
+       A neutral, original geometric form (#73): a rounded square is the box two people
+       share, a diagonal seam splits it in two, and a pip sits in each half — a disc on one
+       side and a rounded square on the other, so the two read apart by shape and not only by
+       position (rule 7). It is deliberately not tied to the unmade brand identity (#2322);
+       the seam there is a candidate, and this can be reskinned when that lands. -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#4b3beb" />
+  <path d="M46 12 18 52" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+  <circle cx="23" cy="25" r="5.5" fill="#ffffff" />
+  <rect x="36" y="34" width="10" height="10" rx="2.5" fill="#ffffff" />
+</svg>

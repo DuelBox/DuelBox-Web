@@ -164,7 +164,7 @@ export class BlocksGame implements Game {
     // seat — are then exact relabellings of each other, so a seat cannot inherit a bias
     // from which generator it happened to be given. See SPEC.md.
     this.#openingSeat = context.openingSeat;
-    this.#state = createMatch(context.rng, context.openingSeat);
+    this.#state = createMatch(context.rng, context.openingSeat, context.solo === true);
     this.#rngOpening = new Rng(context.rng.int(1, 0x7fff_ffff));
     this.#rngResponding = new Rng(context.rng.int(1, 0x7fff_ffff));
 

@@ -327,6 +327,9 @@
     },
     {
       "path": "./packages/games/ballgames-physics"
+    },
+    {
+      "path": "./packages/games/cricket"
     }
   ]
 }

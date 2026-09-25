@@ -1,4 +1,5 @@
 import type { Game, GameManifest } from '@duelbox/game-sdk';
+import { killSwitchFor } from '../lib/flags';
 import { GAME_IDS } from './game-names.generated';
 
 /**
@@ -126,6 +127,7 @@ const LOADERS: Record<string, Loader> = {
   'sticky-tongues': () => import('@duelbox/game-sticky-tongues').then((m) => m.default),
   'pizza-memory': () => import('@duelbox/game-pizza-memory').then((m) => m.default),
   'ballgames-physics': () => import('@duelbox/game-ballgames-physics').then((m) => m.default),
+  cricket: () => import('@duelbox/game-cricket').then((m) => m.default),
 };
 
 /**
@@ -135,8 +137,38 @@ const LOADERS: Record<string, Loader> = {
  *
  * Keyed by **package id**, which is what `create-game` and `register-game` write. The site
  * routes by slug; the two are reconciled below.
+ *
+ * **`LOADERS`, deliberately, and not `AVAILABLE`.** This names every game with a build, so
+ * the balance, fuzz, control-parity and cross-viewport suites keep playing a game the kill
+ * switch (#208) has taken off the site — which is the game whose tests most need to run. The
+ * cost is that `routing.test.ts`'s "cover exactly the games that have a build" goes red for
+ * as long as a switch is set, because that is exactly what a switch makes untrue; ADR 0005
+ * records the choice and what the failure means when somebody meets it.
+ *
+ * **Nothing may go between the end of `LOADERS` and this comment.** `scripts/register-game.mjs`
+ * finds the end of the table by searching for the literal `};` followed by a blank line and
+ * the first line of this docstring, and fails with "could not find the end of LOADERS" when
+ * it cannot — which is how this note came to be written, because the kill switch was added
+ * in that gap first and the scaffold stopped being able to add a game at all.
  */
 export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
+
+/**
+ * The same table with the kill switch (#208) applied: what this build will actually open.
+ *
+ * Everything a player can reach is derived from here rather than from `LOADERS` — the
+ * routes, the sitemap, the catalogue's Play badges, Surprise me, and the "play something
+ * else" list at the end of a match. That is the whole of the mechanism, and it is one
+ * filter on purpose: a second notion of "playable" sitting beside the first is a thing that
+ * drifts, and a game switched off in one of them and on in the other is worse than a game
+ * nobody switched off at all.
+ *
+ * `lib/flags.ts` holds the list and reconciles a game's two names, so a switch written
+ * `memory` and a lookup written `memory-match` are the same question.
+ */
+const AVAILABLE: Record<string, Loader> = /*#__PURE__*/ Object.fromEntries(
+  Object.entries(LOADERS).filter(([id]) => killSwitchFor(id) === null),
+);
 
 /**
  * A game has two names, and the site had been using both.
@@ -156,24 +188,81 @@ export const LOADERS_FOR_TEST: Readonly<Record<string, Loader>> = LOADERS;
  * test failure should name. Everything the site asks is answered in slug terms, and both
  * spellings are accepted so a stale link cannot 404.
  */
-const ID_BY_SLUG: ReadonlyMap<string, string> = new Map(Object.entries(GAME_IDS));
+/**
+ * The eighteen slugs whose package id is spelled differently. The other ninety are their
+ * own id and need no entry.
+ *
+ * Written out rather than read from `GAME_IDS`, and the reason is size. `resolve` is the
+ * one thing in this file a **client** component calls — `PlaySurface` loads a game — so
+ * whatever `resolve` touches ships to every visitor. Reading the full slug-to-id map
+ * carried all 108 pairs into the browser, 0.7 KB gzipped, so that eighteen of them could
+ * be looked up. `LOADERS` already holds the other ninety answers as its own keys.
+ *
+ * `slug-aliases.test.ts` checks this table against `GAME_IDS` in both directions, so it
+ * cannot drift: a game renamed in the catalogue and not here fails there rather than 404ing
+ * in production. That test runs in Node, where the full map costs nothing.
+ */
+const SLUG_ALIASES: Readonly<Record<string, string>> = {
+  'ball-games': 'ballgames-physics',
+  'colour-wars': 'color-wars',
+  'dice-yatzy': 'yazy',
+  'drop-four': 'four-in-a-row',
+  'guess-who': 'guess-the-person',
+  'ludo-dash': 'ludo',
+  lumberjack: 'lumber-jack',
+  'mancala-pits': 'mancala',
+  'match-rush': 'match',
+  'math-duel': 'math-quiz',
+  'memory-match': 'memory',
+  'pinball-duel': 'pinball',
+  'snake-clash': 'snakes',
+  'snakes-and-ladders': 'snakes-ladders',
+  'snowball-throw': 'throw',
+  'sumo-push': 'sumo',
+  'ultimate-tic-tac-toe': 'ultimate-ttt',
+  'wobble-stack': 'brainrot-stack',
+};
 
-/** The package id behind a slug, or the argument unchanged if it is already one. */
+/**
+ * The package id behind a slug, or the argument unchanged if it is already one.
+ *
+ * Asks `LOADERS` first, which answers for every game whose slug *is* its id and for an id
+ * passed in directly, and falls back to the alias table for the eighteen that differ.
+ * Same answer for every input as the full map gave; a fifth of the bytes.
+ */
 function resolve(slugOrId: string): string {
-  return ID_BY_SLUG.get(slugOrId) ?? slugOrId;
+  if (slugOrId in LOADERS) return slugOrId;
+  return SLUG_ALIASES[slugOrId] ?? slugOrId;
 }
 
-/** Slugs that are actually playable today, for the catalogue to mark and the router to build. */
-export const PLAYABLE: readonly string[] = Object.entries(GAME_IDS)
-  .filter(([, id]) => id in LOADERS)
+/**
+ * Slugs that are actually playable today, for the catalogue to mark and the router to build.
+ *
+ * `/*#__PURE__*\/` because this is read only by server components — the play route's
+ * `generateStaticParams`, the how-to-play count — and a bundler cannot otherwise prove a
+ * `.filter().map()` chain is safe to drop, so the whole of `GAME_IDS` rode into the client
+ * behind it. See the notes at the top of `scripts/check-size.mjs`.
+ *
+ * It filters `AVAILABLE` rather than `LOADERS`, so a game switched off by the kill switch
+ * (#208) leaves the catalogue and the router together — the two came from different
+ * branches and both are load-bearing, so the merge keeps both.
+ */
+export const PLAYABLE: readonly string[] = /*#__PURE__*/ Object.entries(GAME_IDS)
+  .filter(([, id]) => id in AVAILABLE)
   .map(([slug]) => slug);
 
+/** The alias table, for the drift guard in `slug-aliases.test.ts` and nothing else. */
+export const SLUG_ALIASES_FOR_TEST = SLUG_ALIASES;
+
 export function isPlayable(slugOrId: string): boolean {
-  return resolve(slugOrId) in LOADERS;
+  return resolve(slugOrId) in AVAILABLE;
 }
 
 export async function loadGame(slugOrId: string): Promise<LoadedGame> {
-  const loader = LOADERS[resolve(slugOrId)];
+  const loader = AVAILABLE[resolve(slugOrId)];
+  // The message is unchanged for a game the kill switch took out, and it is still true: this
+  // build has no playable build for it. Nothing that can reach here has a player in front of
+  // it to tell — the route is not exported, so the only caller left is a stale tab.
   if (!loader) throw new Error(`No playable build for "${slugOrId}"`);
   return loader();
 }

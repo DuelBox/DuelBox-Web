@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, seatRotated, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -136,6 +137,15 @@ export class CornholeGame implements Game {
     const seatInput = input.seat(active);
     if (!this.#flip.acceptsInput) return;
 
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing fires on this step — but the charge the gesture had built would otherwise
+    // stay standing and be fired by whatever release came next. Drop the charge; leave the
+    // aim, which the player set and which an interruption must not also take away (#2501).
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#abandonGesture();
+
     const pointer = seatInput.pointer;
     if (pointer !== null) {
       toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
@@ -225,6 +235,15 @@ export class CornholeGame implements Game {
 
   #resetAim(): void {
     this.#angle = 0;
+    this.#abandonGesture();
+  }
+
+  /**
+   * Everything that exists only because a throw was being built: the power, the armed
+   * flag, and the anchor the drag was measured from. Deliberately *not* the angle — see
+   * the note on `pointerCancelled` in `update`.
+   */
+  #abandonGesture(): void {
     this.#power = 0;
     this.#ready = false;
     this.#dragging = false;

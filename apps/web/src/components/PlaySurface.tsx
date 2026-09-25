@@ -1,32 +1,94 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
-import type { SeatId } from '@duelbox/engine';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { setActiveSeatPalette, setSeatSwap, type GamepadEvent, type SeatId } from '@duelbox/engine';
 import {
+  advanceClock,
+  clockExpired,
+  clockRemaining,
+  clockWarning,
+  createClock,
+  formatClock,
   initialMatchState,
   reduce,
+  resetClock,
   type Game,
   type GameManifest,
+  type MatchClock,
   type MatchEvent,
   type MatchRules,
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
-import { seatColour } from '@/styles/tokens';
+import { recordRunScore, type RunResult } from '@/lib/best-scores';
+import {
+  REASON_TEXT,
+  browserEngineEnvironment,
+  unsupportedReason,
+  type UnsupportedReason,
+} from '@/lib/engine-support';
+import { T } from '@/lib/i18n/T';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
+import { gamepadNotice } from '@/lib/gamepad-notice';
+import { MATCH_FINISHED } from '@/lib/install-prompt-key';
+import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
+import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
+import {
+  addOutcome,
+  EMPTY_TALLY,
+  readGameRecord,
+  recordResult,
+  type Opponent,
+  type Tally,
+} from '@/lib/head-to-head';
+import { readPlayerNames } from '@/lib/player-names';
+import { readSettings } from '@/lib/settings';
+import { useGameplayTouchTarget } from '@/lib/touch-target';
 import { readSetup, writeSetup } from '@/lib/last-mode';
+import { armAudio, audio } from '@/lib/audio';
+import { ducksMatchAudio, shellCueFor } from '@/lib/match-cues';
+import { vibrate } from '@/lib/haptics';
+import { readRecent, recordPlayed } from '@/lib/recent';
+import {
+  currentGame,
+  initialTournament,
+  isCurrentLeg,
+  pickTournamentGames,
+  reduce as reduceTournament,
+  resume,
+  TOURNAMENT_LEG_ROUNDS,
+  TOURNAMENT_LENGTH,
+  legsToWin,
+  type TournamentState,
+} from '@/lib/tournament';
+import { clearTournament, readTournament, writeTournament } from '@/lib/tournament-store';
 import {
   DEFAULT_SETUP,
   botSeatsFor,
+  isSolo,
+  offeredModes,
+  soloRules,
   matchRulesFor,
   type BotDifficulty,
   type MatchSetup,
   type PlayMode,
 } from '@/lib/match-setup';
+import { describeChanges } from '@/lib/match-changes';
 import { GameHost } from './GameHost';
+import { TournamentTrack } from './TournamentTrack';
 import { TracePanel } from './TracePanel';
 import { MatchHud } from './MatchHud';
 import { MatchOverlay } from './MatchOverlay';
 import { MatchOptions } from './MatchOptions';
+import { GameOptionsPanel } from './GameOptionsPanel';
+import { ExitControl } from './ExitControl';
+import { ControlHints } from './ControlHints';
+import { RotatePrompt } from './RotatePrompt';
+import { HandoffOverlay } from './HandoffOverlay';
+import { GameErrorBoundary } from './GameErrorBoundary';
+import { shouldHandOff } from './handoff';
 import { Controls } from './Controls';
 import styles from './PlaySurface.module.css';
 
@@ -39,9 +101,36 @@ type Mode = PlayMode;
  * None of it belongs to a game. Games supply a simulation and an outcome; the countdown,
  * the HUD, the pause menu, the result screen and the rematch all come from here, so the
  * hundred-and-eighth game inherits them for free and the first seven cannot drift apart.
+ *
+ * ## The surface never mirrors (#222)
+ *
+ * The shell follows the reading direction; the element this returns during a match does
+ * not, and that is a decision rather than a per-game setting. #222 asks to "let each game
+ * declare whether its canvas mirrors", and the answer is that none may: rule 9 says neither
+ * player ever sees more of the play area than the other, and a board mirrored on one device
+ * is a different play area from the un-mirrored one on the other device the moment two
+ * devices play the same match. The seats make the same argument on one device — player
+ * one's zone is a side of the phone, not a side of a sentence, and the two people holding
+ * it have not moved because the menus changed language. A manifest field no game could
+ * legitimately set would be a guard that enforces nothing, and this repository counts
+ * those (CLAUDE.md), so there is no field. The root carries `dir="ltr"` and its stylesheet
+ * pins `direction: ltr` with the three direction tokens; `e2e/rtl.spec.ts` measures that
+ * nothing on it moves when `<html>` turns round, and `styles/direction.test.ts` holds the
+ * attribute and the stylesheet to each other. docs/rtl.md has the whole of it.
  */
 export function PlaySurface({ slug }: { slug: string }) {
+  const messages = useMessages();
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  /**
+   * Why this browser cannot run a game, or null while nothing says it cannot (#225).
+   *
+   * Set from the same effect that fetches the game, and set *instead* of fetching it — see
+   * there. A state rather than a value computed during render, and deliberately: this route
+   * is statically exported, so a probe that ran while rendering would ask a build machine
+   * whether a browser can draw, put the answer in the HTML of all 108 play routes, and then
+   * disagree with the browser on hydration.
+   */
+  const [unsupported, setUnsupported] = useState<UnsupportedReason | null>(null);
   const [manifest, setManifest] = useState<GameManifest | null>(null);
   const [create, setCreate] = useState<(() => Game) | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
@@ -60,9 +149,22 @@ export function PlaySurface({ slug }: { slug: string }) {
   useEffect(() => {
     setRecording(new URLSearchParams(globalThis.location.search).get('trace') === '1');
   }, []);
-  // The running head-to-head for this sitting. A pair that plays five in a row wants to
-  // know the score across all five, not just the last one.
-  const [record, setRecord] = useState({ p1: 0, p2: 0, draws: 0 });
+
+  /**
+   * Armed here rather than in `GameHost`, and the difference is the whole point.
+   *
+   * `GameHost` mounts only *after* Start is pressed, so by the time it could attach a
+   * listener the gesture that should have unlocked audio has already happened, and the
+   * first match plays in silence — which is the failure #167 describes, reached from the
+   * other side. The play page mounts before Start, so the Start tap is itself the
+   * unlocking gesture and nobody is ever asked for permission.
+   *
+   * Idempotent, and `armAudio` also re-arms after iOS suspends the context for a
+   * backgrounded tab or a phone call.
+   */
+  useEffect(() => {
+    armAudio();
+  }, []);
   // A new seed per match keeps a rematch from replaying the previous one exactly.
   const [seed, setSeed] = useState(1);
 
@@ -75,9 +177,118 @@ export function PlaySurface({ slug }: { slug: string }) {
    * defaults render, and the remembered choice replaces them a frame later.
    */
   const [setup, setSetup] = useState<MatchSetup>(DEFAULT_SETUP);
+  /** What the two people here call themselves, if they have said (#161). */
+  const [chosenNames, setChosenNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
+  /**
+   * The tournament this device has in progress, if it has one (#157).
+   *
+   * Written down on every change rather than held here, because a tournament spans seven
+   * URLs: leg three is a different page from leg two, so every advance through one is a
+   * page load and React state cannot carry it across. `resume` derives the phase, which is
+   * the one thing about a tournament that is deliberately not stored.
+   */
+  const [tournament, setTournament] = useState<TournamentState>(initialTournament);
+  /**
+   * Whether the match on screen is a tournament leg, fixed at the moment it starts.
+   *
+   * State rather than a look at `tournament`, because the tournament moves on the instant a
+   * leg is reported: a derived answer would flip to "not a leg" as the result screen
+   * appeared, and the HUD would grow round pips for a best-of nobody chose.
+   */
+  const [legMatch, setLegMatch] = useState(false);
+  /**
+   * Whether the far seat has changed hands during the match on screen (#2351).
+   *
+   * A match whose far seat was a bot for some rounds and a person for others belongs on
+   * neither head-to-head map — a bot's wins are not the far player's, and the store keeps
+   * the two apart on purpose — so its ending is written to neither, and the result screen
+   * says so. Set by any hand-over and cleared only by a new match: a seat handed over and
+   * straight back at the same round result is still a match whose seats were in question,
+   * and a record short one match is better than a record carrying a doubtful one.
+   */
+  const [mixed, setMixed] = useState(false);
+  // Three reads of this device's storage, in one effect because they are one thing: what
+  // this browser already knows before anybody presses Start.
   useEffect(() => {
     setSetup(readSetup(slug));
+    setHintsDue(!hasSeenHints(slug));
+    setChosenNames(readPlayerNames());
+    // `PLAYABLE` rather than nothing: a line-up drawn before a game was switched off (#208)
+    // would otherwise send the pair to a route this build no longer exports, and a leg can
+    // only be reported from the route it names.
+    const stored = readTournament(PLAYABLE);
+    setTournament(stored === null ? initialTournament() : resume(stored));
   }, [slug]);
+
+  /**
+   * The bot's tier this match: the tournament's when this is a leg, the player's otherwise.
+   *
+   * A tournament fixes its tier when it starts (#2347), and a leg reads it from the record
+   * rather than from this game's remembered option — which is per game, so seven legs at
+   * seven games were seven tiers, whichever the player had last chosen at each of them.
+   */
+  const tier: BotDifficulty =
+    legMatch && tournament.difficulty !== undefined ? tournament.difficulty : setup.difficulty;
+
+  /**
+   * Which seats a bot holds this match, and how hard it tries.
+   *
+   * Memoised because its identity has to be stable for the life of a match: it sits in
+   * the game host's setup-effect dependencies, and when this was written inline it was a
+   * fresh object on every render — the first countdown frame tore the game down and
+   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency changes
+   * while a round is running: the tier and the far seat are offered before a match and
+   * between its rounds (#2351), and a change between rounds rebuilds the board the way a
+   * new opening seat already does.
+   */
+  const botSeats = useMemo(
+    () => (mode === null ? undefined : botSeatsFor(mode, tier)),
+    [mode, tier],
+  );
+
+  /**
+   * Who is in the far seat, which is the record this match belongs on.
+   *
+   * Derived from the same `botSeats` map the game host is handed rather than from `mode`
+   * again, so "who is a bot" is decided once per match. A bot's wins are not the far
+   * player's wins, and the store keeps the two apart — see `lib/head-to-head.ts`.
+   */
+  const opponent: Opponent = botSeats === undefined ? 'friend' : 'bot';
+
+  /**
+   * One player alone (#1750). Decided once per match from the same `mode` everything else
+   * reads, and it changes four things and no more: the presentation the host is handed, the
+   * shape of the scoreboard, what the result screen says, and which store the ending goes to
+   * — a best score for this game rather than a head-to-head, because a run has nobody on the
+   * other side of it to have a record against.
+   */
+  const solo = mode !== null && isSolo(mode);
+  /** The run's result, settled once by the same effect that writes it. */
+  const [run, setRun] = useState<RunResult | null>(null);
+
+  /**
+   * The head-to-head at this game *before* the match now on screen, from storage.
+   *
+   * It was the tally for one sitting, held here and nowhere else, so five matches on
+   * Tuesday were gone by Wednesday and gone the moment anybody reloaded (#160). The store
+   * is the source now, and this state exists only so nothing has to read storage during a
+   * render.
+   *
+   * Deliberately the record *before* this match rather than after it. A passive effect
+   * runs after the commit that showed the result, so a screen fed from one painted the
+   * score as it stood before the match the players had just watched end — and on the very
+   * first match at a game it painted with no record line at all and then inserted one
+   * above the Rematch button a frame later, under a thumb already on its way there. What
+   * the panel is handed is this plus the outcome the match machine has already settled,
+   * which is known during the same render.
+   *
+   * Re-read whenever the match changes — a new `seed` is a new match — so the match after
+   * this one starts from what the store now holds.
+   */
+  const [recordBefore, setRecordBefore] = useState<Tally>(EMPTY_TALLY);
+  useEffect(() => {
+    setRecordBefore(readGameRecord(slug, opponent));
+  }, [slug, opponent, seed]);
 
   /**
    * The seven games built so far settle their own rounds and report a winner, so the
@@ -89,7 +300,15 @@ export function PlaySurface({ slug }: { slug: string }) {
    * it the round pips, the "Next round" screen and the opening-seat rotation of #2466,
    * all of which are implemented and were being shipped switched off.
    */
-  const rules = useMemo<MatchRules>(() => matchRulesFor(setup.rounds), [setup.rounds]);
+  const rules = useMemo<MatchRules>(
+    // A tournament leg is a single match whatever the player's remembered length says: the
+    // tournament is the best-of, and seven best-of-threes is a different product
+    // (`docs/tournament.md`).
+    // A solo run is always one round, whatever length is remembered: a best-of is two
+    // people taking turns to lose, and there is nobody to take turns with (#1750).
+    () => (solo ? soloRules() : matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds)),
+    [legMatch, setup.rounds, solo],
+  );
 
   const [match, send] = useReducer(
     (state: ReturnType<typeof initialMatchState>, event: MatchEvent) => reduce(state, event, rules),
@@ -97,8 +316,82 @@ export function PlaySurface({ slug }: { slug: string }) {
     initialMatchState,
   );
 
+  /** Whether the quit confirmation is open (#144). The persistent exit control is always shown. */
+  const [exitOpen, setExitOpen] = useState(false);
+  /** An error a game threw, caught at the host boundary, surfaced as the recovery screen (#151). */
+  const [gameError, setGameError] = useState<unknown>(null);
+  /** The seat the device is being passed to, or null when no hand-off is in progress (#134). */
+  const [handoffTo, setHandoffTo] = useState<SeatId | null>(null);
+  /**
+   * The last controller edge the host reported (#130), shown on the pause panel it caused,
+   * and the swap the host hands over once per match. The notice is cleared on resume so a
+   * later pause for some other reason does not re-read old news.
+   */
+  const [gamepadEdge, setGamepadEdge] = useState<GamepadEvent | null>(null);
+  const [swapGamepads, setSwapGamepads] = useState<(() => void) | null>(null);
+  /**
+   * Whether this device has been shown this game's "which half is yours" hints (#137), and
+   * which seats have since played.
+   *
+   * `null` until storage has been read, which is one frame after the first paint on a static
+   * export — and a hint that flashed up for a returning pair and vanished would be worse than
+   * one that arrives a frame late.
+   */
+  const [hintsDue, setHintsDue] = useState(false);
+  const [seatUsed, setSeatUsed] = useState<Record<SeatId, boolean>>({ p1: false, p2: false });
+  /** The active seat the last hand-off check saw, so only a real change of hands blacks out. */
+  const handoffFrom = useRef<SeatId | null>(null);
+
+  /**
+   * The round/match clock (#149), advanced from the fixed step and shown in the HUD.
+   *
+   * Held in a ref and advanced every tick, but only surfaced to React when the displayed
+   * `m:ss` actually changes — a clock re-rendering the whole surface sixty times a second is
+   * the one thing a HUD element must not do. Inert unless a game declares `roundLimitSeconds`,
+   * which none in the catalogue does today, so the whole path costs nothing for them.
+   */
+  const clockLimit = rules.roundLimitSeconds ?? null;
+  const clockRef = useRef<MatchClock>(createClock(clockLimit, rules.clockWarnSeconds));
+  const [clockView, setClockView] = useState<{ text: string; warning: boolean } | null>(null);
+  // Read inside the stable `handleTick` without re-creating it every frame.
+  const clockLimitRef = useRef(clockLimit);
+  clockLimitRef.current = clockLimit;
+  const phaseRef = useRef(match.phase);
+  phaseRef.current = match.phase;
+  const tallyRef = useRef(match.tally);
+  tallyRef.current = match.tally;
+  /** True once this round's expiry has been reported, so it fires the round end exactly once. */
+  const expiredRef = useRef(false);
+  // The physical size a gameplay control should be on this device (#1889). Read in an
+  // effect inside the hook and kept current across a DPR change, so it is the shell target
+  // on the first paint and the device-aware size a frame later.
+  const gameplayTarget = useGameplayTouchTarget();
+
   useEffect(() => {
     let cancelled = false;
+    // Select the seat palette before the game chunk loads (#174). A game may read
+    // `SEAT_PALETTE.p1.base` into a module-level constant as its file is evaluated, so the
+    // choice has to be in effect before the dynamic import inside `loadGame` resolves and
+    // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
+    // has already been read. It is a no-op on the default and cheap either way.
+    const chosen = readSettings();
+    // The swap (#161) rides with the palette, for the same reason and at the same moment.
+    setSeatSwap(chosen.seatSwap);
+    setActiveSeatPalette(chosen.seatPalette);
+    /*
+     * The capability probe, and this is the earliest place it can run (#225).
+     *
+     * Before `loadGame`, so a browser that cannot draw never fetches the game chunk — there
+     * is nothing it could do with it, and the panel below is the whole of what it gets.
+     * `e2e/engine-support.spec.ts` watches the network to hold that. It cannot run earlier
+     * than an effect for the reason the state's comment gives, and it should not run later:
+     * `GameHost` is where the dead canvas is, and by then the player has pressed Play.
+     */
+    const reason = unsupportedReason(browserEngineEnvironment());
+    if (reason !== null) {
+      setUnsupported(reason);
+      return;
+    }
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;
@@ -115,9 +408,21 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [slug]);
 
   // Escape pauses and resumes. The host deliberately never swallows it.
+  //
+  // Shift+Escape opens the quit confirmation instead (#144) — a distinct shortcut that is
+  // deliberately not a seat action key. Enter is seat two's and Space is seat one's, and the
+  // host captures both while the board is live, so a shortcut on either could never reach
+  // here (HANDOFF: the Enter-is-seat-two bug); the host passes Escape straight through with
+  // its modifiers, so Shift+Escape arrives intact.
   useEffect(() => {
     function onKey(event: KeyboardEvent): void {
       if (event.code !== 'Escape') return;
+      const live =
+        match.phase === 'playing' || match.phase === 'countdown' || match.phase === 'paused';
+      if (event.shiftKey) {
+        if (live) setExitOpen(true);
+        return;
+      }
       if (match.phase === 'playing' || match.phase === 'countdown') send({ kind: 'pause' });
       else if (match.phase === 'paused') send({ kind: 'resume' });
     }
@@ -127,7 +432,6 @@ export function PlaySurface({ slug }: { slug: string }) {
     };
   }, [match.phase]);
 
-  // Counted once per match, when the machine enters its terminal phase.
   /**
    * Stop the browser's own pull-to-refresh while a match is running.
    *
@@ -151,19 +455,178 @@ export function PlaySurface({ slug }: { slug: string }) {
     };
   }, [match.phase]);
 
+  /**
+   * The seed of the match already written down, so a match is counted exactly once.
+   *
+   * A seed identifies a match here: one is drawn on Start and another on every rematch.
+   * This effect used to add one to the tally from its previous value on every entry into
+   * `match-over`, which is a shape that counts twice as soon as anything re-runs it — a
+   * remount, a Fast Refresh, a dependency added later — and a double count is invisible
+   * precisely because both numbers look plausible. A ref rather than state: writing it
+   * must not cause the render that would run this effect again.
+   */
+  const counted = useRef(0);
   useEffect(() => {
     if (match.phase !== 'match-over') return;
     const outcome = match.matchOutcome;
-    setRecord((previous) => ({
-      p1: previous.p1 + (outcome === 'p1' ? 1 : 0),
-      p2: previous.p2 + (outcome === 'p2' ? 1 : 0),
-      draws: previous.draws + (outcome === 'draw' ? 1 : 0),
-    }));
+    // A match the machine ends with no outcome at all is not a result to record. It is
+    // also not reachable today, and recording a phantom draw if it ever became reachable
+    // is worse than recording nothing.
+    if (outcome === null || counted.current === seed) return;
+    counted.current = seed;
+    if (solo) {
+      // A run, not a match: nothing goes on the head-to-head, which counts wins between two
+      // seats, and the number the player wanted is whether they beat themselves.
+      setRun(recordRunScore(slug, match.tally.p1));
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
+    if (mixed) {
+      // The far seat changed hands during this match (#2351): its ending belongs to neither
+      // head-to-head map, so it goes on neither. See `mixed`.
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
+    // Write only. What the result screen shows is `addOutcome` applied to the same tally
+    // this call is about to write, from the same function, so the two cannot be different
+    // arithmetic — and the panel does not have to wait for a second commit to be right.
+    recordResult(slug, outcome, opponent);
+    // The first moment an install offer could reasonably be answered yes (#195).
+    window.dispatchEvent(new Event(MATCH_FINISHED));
+    /**
+     * And the tournament, if this is the game it is waiting on.
+     *
+     * A leg is reported by that route and by no other, which is what makes a result count
+     * once: the result screen still offers Rematch — taking it away would be a worse answer
+     * than leaving it — and a replayed leg is a friendly game that goes on the head-to-head
+     * record above and not on the tournament. The head-to-head write is unconditional for
+     * the same reason: a match played to its end is a match played to its end.
+     */
+    if (!isCurrentLeg(tournament, slug)) return;
+    const advanced = reduceTournament(tournament, { kind: 'report', outcome });
+    writeTournament(advanced);
+    setTournament(advanced);
+  }, [
+    match.phase,
+    match.matchOutcome,
+    match.tally.p1,
+    seed,
+    slug,
+    opponent,
+    solo,
+    mixed,
+    tournament,
+  ]);
+
+  /**
+   * A buzz when a round ends and another when the match does (#135).
+   *
+   * Inert until the player turns vibration on: `vibrate` checks the setting and the device
+   * before it does anything and returns quietly when either says no, so on the default
+   * install this costs one settings read per phase change and nothing else. A draw gets
+   * the short tap rather than the win pattern — the phone is lying between two people who
+   * both just failed to win, and celebrating at them is the wrong note.
+   */
+  useEffect(() => {
+    if (match.phase === 'round-over') vibrate('score');
+    else if (match.phase === 'match-over') vibrate(match.matchOutcome === 'draw' ? 'tap' : 'win');
   }, [match.phase, match.matchOutcome]);
+
+  /**
+   * The same phase changes, said in sound (#168) and given room to be heard (#172).
+   *
+   * The shell owns the count-in, the pause and the result, so it owns their cues too;
+   * `lib/match-cues.ts` turns the match state into one of them and
+   * `packages/engine/src/sound-events.ts` is the vocabulary both halves of the product read.
+   * Nothing is audible yet — no sound file exists (#169, #170), so `play` is handed a name
+   * nothing has registered and answers false — and that is the intended state: the names are
+   * wired now so the recordings drop into a shell already asking for them.
+   */
+  const cue = shellCueFor(match);
+  const beat = Math.ceil(match.countdownRemaining);
+  /** The cue and beat already raised, so a re-run of this effect is not a second sound. */
+  const raised = useRef('');
+  useEffect(() => {
+    if (cue === null) return;
+    // The beat is part of the identity, not decoration: a count-in raises the same cue once
+    // a second, and without the number the second beat reads as a repeat of the first and is
+    // dropped. It also covers development's double-invoked effects, which would otherwise
+    // make every cue in the product fire twice in the one environment anybody is listening.
+    const key = `${cue}:${String(beat)}`;
+    if (raised.current === key) return;
+    raised.current = key;
+    const sound = audio();
+    sound.play(cue);
+    // Drained here rather than left to the host's per-frame `flush()`, which is the only
+    // other caller. The loop is stopped in every phase that is not live, so a cue raised at
+    // a pause or a result would sit in the queue until somebody started the next match and
+    // then fire against that screen instead.
+    sound.flush();
+  }, [cue, beat]);
+
+  /**
+   * Hold the match down while a count-in or a result is on screen.
+   *
+   * This is the caller #172's reference-counted duck was written for and did not have. The
+   * duck moves the master gain rather than a sound, so it works with nothing playing (a
+   * ramp on a node with no voices under it) and before the first gesture has built a context
+   * at all; and it cannot fight the mute, because a muted system reports zero however deep
+   * the duck is. `ducksMatchAudio` says which cues take one and why the other two do not.
+   *
+   * One duck per held reason, released in the cleanup, so the pairing is React's to get
+   * right rather than ours: an effect that is torn down and set up again nets one duck, and
+   * the counted API means an unduck can never run a debt up that the *next* announcement
+   * would pay by not ducking at all.
+   */
+  const ducking = cue !== null && ducksMatchAudio(cue);
+  useEffect(() => {
+    if (!ducking) return;
+    const sound = audio();
+    sound.duck();
+    return () => {
+      sound.unduck();
+    };
+  }, [ducking]);
 
   const handleTick = useCallback((dt: number) => {
     send({ kind: 'tick', seconds: dt });
+    // The clock advances on the same fixed step (#149), but only when a game is timed —
+    // otherwise there is nothing to run and nothing to re-render.
+    if (clockLimitRef.current === null) return;
+    const advanced = advanceClock(clockRef.current, phaseRef.current, dt);
+    clockRef.current = advanced;
+    const remaining = clockRemaining(advanced);
+    if (remaining !== null) {
+      const text = formatClock(remaining);
+      const warning = clockWarning(advanced);
+      // Surface to React only when the shown value changes, so the HUD updates about once a
+      // second rather than every frame.
+      setClockView((previous) =>
+        previous !== null && previous.text === text && previous.warning === warning
+          ? previous
+          : { text, warning },
+      );
+    }
+    if (clockExpired(advanced) && phaseRef.current === 'playing' && !expiredRef.current) {
+      // Time is up. Report the round's current tally with `timeExpired`, which the win
+      // condition resolves into a round or match end. Latched so it fires once.
+      expiredRef.current = true;
+      send({ kind: 'score', tally: tallyRef.current, timeExpired: true });
+    }
   }, []);
+
+  /**
+   * Reset the clock at the start of every round, and whenever a fresh match begins.
+   *
+   * The round number and the seed together identify a round; when either changes the clock
+   * goes back to its limit and the expiry latch clears, so a rematch or the next round of a
+   * best-of counts its own time from zero rather than inheriting the last one's.
+   */
+  useEffect(() => {
+    clockRef.current = resetClock(createClock(clockLimit, rules.clockWarnSeconds));
+    expiredRef.current = false;
+    setClockView(clockLimit === null ? null : { text: formatClock(clockLimit), warning: false });
+  }, [seed, match.round, clockLimit, rules.clockWarnSeconds]);
 
   const handleScore = useCallback((p1: number, p2: number, winner: SeatId | 'draw' | null) => {
     send({ kind: 'score', tally: { p1, p2 }, outcome: winner });
@@ -179,8 +642,15 @@ export function PlaySurface({ slug }: { slug: string }) {
       // pre-selects what you last chose, it does not start it.
       writeSetup(slug, { mode: chosen });
       setSetup((previous) => ({ ...previous, mode: chosen }));
+      // Counted as played from the moment a mode is chosen rather than when the match
+      // ends, because a pair who quit halfway through still played it (#87).
+      recordPlayed(slug);
+      // Settled here rather than derived while the match runs: see `legMatch`.
+      setLegMatch(isCurrentLeg(tournament, slug));
       setMode(chosen);
       setActiveSeat(null);
+      setRun(null);
+      setMixed(false);
       const next = seed + 1;
       setSeed(next);
       // The seed goes with the event: it is what the match machine flips its opening-seat
@@ -192,11 +662,70 @@ export function PlaySurface({ slug }: { slug: string }) {
     // from the render that created it and every match after the first would open on a
     // stale one. This was found by hand; `react-hooks/exhaustive-deps` now fails the
     // build on it, so the next one will not be (#2482).
-    [slug, seed],
+    [slug, seed, tournament],
   );
+
+  /**
+   * Starts a tournament from this game's lobby (#156).
+   *
+   * The first leg is the game the press happened in and the other six are drawn; that
+   * follows from where the entry point is rather than from taste, and
+   * `docs/tournament.md` sets out both. The current game is kept out of the pool so the
+   * line-up cannot repeat it.
+   *
+   * `Math.random` is right here and forbidden under `packages/`: this is the shell deciding
+   * what to open, not a simulation, and no match depends on which games were drawn.
+   *
+   * Reduced from whatever state the machine is in rather than from a fresh one, so the
+   * `complete → start` transition in its table is the one that actually runs when a pair
+   * start a second tournament off the screen that told them who won the first. A `start`
+   * while one is running is refused by that same table, which is why nothing offers it.
+   */
+  const beginTournament = useCallback(
+    (against: Opponent) => {
+      const games = [
+        slug,
+        ...pickTournamentGames(
+          PLAYABLE.filter((candidate) => candidate !== slug),
+          readRecent(),
+          TOURNAMENT_LENGTH - 1,
+          Math.random,
+        ),
+      ];
+      const drawn = reduceTournament(tournament, {
+        kind: 'start',
+        games,
+        opponent: against,
+        // The tier the player has chosen here goes on the record and holds for every leg
+        // (#2347); each game's own remembered tier is not consulted again until the
+        // tournament is over.
+        ...(against === 'bot' ? { difficulty: setup.difficulty } : {}),
+      });
+      writeTournament(drawn);
+      setTournament(drawn);
+    },
+    [slug, tournament, setup.difficulty],
+  );
+
+  /**
+   * Leaves the tournament, in one press.
+   *
+   * Storage is cleared outside the updater on purpose: React may call a state updater more
+   * than once, and an updater that also wrote to storage would be a side effect running an
+   * unknown number of times.
+   */
+  const leaveTournament = useCallback(() => {
+    clearTournament();
+    setTournament((current) => reduceTournament(current, { kind: 'abandon' }));
+  }, []);
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
+    setRun(null);
+    setMixed(false);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
     const next = seed + 1;
     setSeed(next);
     send({ kind: 'rematch', seed: next });
@@ -204,7 +733,88 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const quit = useCallback(() => {
     setMode(null);
+    setRun(null);
+    setMixed(false);
+    setLegMatch(false);
+    setExitOpen(false);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
     send({ kind: 'quit' });
+  }, []);
+
+  /**
+   * Restart the match cleanly, from the pause menu (#145) or the recovery screen (#151).
+   *
+   * A quit back to idle followed by a fresh start, with a new seed so the game host tears the
+   * game down and rebuilds it — the honest way to guarantee a restarted match is a new match
+   * and not a half-reset one. The mode is React state and survives, so the same opponent is
+   * kept; only the match itself starts over.
+   */
+  const restart = useCallback(() => {
+    setActiveSeat(null);
+    setMixed(false);
+    setExitOpen(false);
+    setGameError(null);
+    handoffFrom.current = null;
+    setHandoffTo(null);
+    const next = seed + 1;
+    setSeed(next);
+    send({ kind: 'quit' });
+    send({ kind: 'start', seed: next });
+  }, [seed]);
+
+  /** A game threw; the host stopped the loop, and this raises the recovery screen (#151). */
+  const handleGameError = useCallback(
+    (error: unknown) => {
+      // The sentence `GameErrorBoundary` shows when a game threw something that carried no
+      // message of its own, translated here where the catalogue is in hand (#220): the
+      // boundary is a class component and looks its id up without knowing where it came from.
+      setGameError(error ?? new Error(t(messages, 'The game stopped unexpectedly.')));
+    },
+    [messages],
+  );
+
+  /**
+   * The active seat changed. Track it for the turn indicator, and raise the pass-and-play
+   * blackout when a hand-off game changes hands (#134).
+   *
+   * Only for a game that opted in, and only on a real change from one seat to another — the
+   * first seat of a match is nobody handing over. A game that does not opt in never blacks out.
+   */
+  /**
+   * A seat's first successful input, from `GameHost` (#137).
+   *
+   * The seat's hint goes, and the *pair* is marked as shown the moment either seat plays —
+   * not when both do. A pair who have started are a pair who have understood, and a game
+   * where one player moves first is every game; waiting for the second would leave a device
+   * that has played a match still counted as never having seen the hints.
+   */
+  const handleSeatInput = useCallback(
+    (seat: SeatId) => {
+      setSeatUsed((used) => (used[seat] ? used : { ...used, [seat]: true }));
+      markHintsSeen(slug);
+    },
+    [slug],
+  );
+
+  const handleGamepad = useCallback((event: GamepadEvent) => {
+    setGamepadEdge(event);
+  }, []);
+
+  const handleActiveSeat = useCallback(
+    (seat: SeatId | null) => {
+      setActiveSeat(seat);
+      if (manifest !== null && shouldHandOff(manifest, handoffFrom.current, seat)) {
+        setHandoffTo(seat);
+      }
+      handoffFrom.current = seat;
+    },
+    [manifest],
+  );
+
+  const continueHandoff = useCallback(() => {
+    setHandoffTo(null);
   }, []);
 
   // Both written through as they are chosen rather than when a match starts, so a player
@@ -226,41 +836,119 @@ export function PlaySurface({ slug }: { slug: string }) {
   );
 
   /**
-   * Which seats a bot holds this match, and how hard it tries.
+   * Hands the far seat from the bot to a person or back, between rounds (#2351).
    *
-   * Memoised because its identity has to be stable for the life of a match: it sits in
-   * the game host's setup-effect dependencies, and when this was written inline it was a
-   * fresh object on every render — the first countdown frame tore the game down and
-   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
-   * change while a match is running: the tier is only offered before one starts.
+   * The same `mode` state a match starts with, so everything derived from it — who is a
+   * bot, what the seats are called, what the host is handed — follows in one render, and
+   * the host rebuilds the board for the next round with the new occupant in it. The round
+   * tally lives in the match machine, which is not told, so nothing anybody has won moves.
+   * Remembered as the last mode for the reason `start` remembers its own: the lobby leads
+   * with what this pair did last.
    */
-  const botSeats = useMemo(
-    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
-    [mode, setup.difficulty],
+  const handSeat = useCallback(
+    (to: 'friend' | 'bot') => {
+      writeSetup(slug, { mode: to });
+      setSetup((previous) => ({ ...previous, mode: to }));
+      setMode(to);
+      setMixed(true);
+    },
+    [slug],
   );
 
-  const nextGame = useMemo(() => suggestNextGame(slug), [slug]);
+  const suggested = useMemo(() => suggestNextGame(slug), [slug]);
+
+  /** The game the tournament is waiting on, if there is a tournament and it is waiting. */
+  const waiting = currentGame(tournament);
+
+  /**
+   * Where the result screen points.
+   *
+   * The tournament's next game when there is one, so the link the overlay already draws
+   * carries the tournament forward and neither it nor the match machine has to learn what a
+   * tournament is. Otherwise the ordinary suggestion, so a result is never a dead end.
+   */
+  const nextGame =
+    waiting === undefined || waiting === slug
+      ? suggested
+      : { slug: waiting, name: nameOf(waiting) };
+
+  /**
+   * What a browser too old to run a game is told, in place of the lobby (#225).
+   *
+   * The same `db-panel` geometry the loading and not-playable states use, because this is the
+   * third answer to the same question and a fourth box would be the bespoke copy of a shell
+   * screen CLAUDE.md calls a bug. Three sentences and no more: that the games will not run
+   * here, why in words a visitor can act on, and where the rest of the site is — this game's
+   * own page has its rules and controls written out as plain HTML, which is the thing a
+   * browser in Tier 3 can still read. `docs/support-matrix.md` owes them exactly this.
+   *
+   * No Start button is rendered, so no lobby and no countdown can begin from here.
+   */
+  if (unsupported !== null) {
+    return (
+      <div className="db-panel" role="alert">
+        <h2>{t(messages, 'This browser cannot run the games')}</h2>
+        <p>{t(messages, REASON_TEXT[unsupported])}</p>
+        <p>
+          <T
+            id="The rest of the site works. {game} has its rules and controls written out, and {guide} explains how a match goes."
+            values={{
+              // `prefetch={false}` on both, as everywhere else on this route: speculating a
+              // payload for a browser that has just been told it cannot play is a download
+              // nobody asked for.
+              game: (
+                <Link href={`/games/${slug}/`} prefetch={false}>
+                  {nameOf(slug)}
+                </Link>
+              ),
+              guide: (
+                <Link href="/how-to-play/" prefetch={false}>
+                  {t(messages, 'How to play')}
+                </Link>
+              ),
+            }}
+          />
+        </p>
+      </div>
+    );
+  }
 
   if (loadState === 'error') {
     return (
-      <div className={styles.state} role="alert">
-        <h2>This game is not playable yet</h2>
-        <p>Its rules and controls are settled, but the build has not landed. Try another game.</p>
+      <div className="db-panel" role="alert">
+        <h2>{t(messages, 'This game is not playable yet')}</h2>
+        <p>
+          {t(
+            messages,
+            'Its rules and controls are settled, but the build has not landed. Try another game.',
+          )}
+        </p>
       </div>
     );
   }
 
   if (loadState === 'loading' || !manifest || !create) {
     return (
-      <div className={styles.state}>
-        <p>Loading {slug.replace(/-/g, ' ')}…</p>
+      <div className="db-panel">
+        {/*
+          `<T>` rather than `t()` for this one line, and the reason is the exported bytes. It is
+          the only copy in this component that a build machine renders — every other phase is
+          reached after a press — so it is in the HTML of all 108 play routes and all 108 embed
+          routes. React writes `Loading <!-- -->air hockey<!-- -->…` for three children and
+          `Loading air hockey…` for one string, and `t()` here would merge them: the same words,
+          eight bytes different, on 216 exported pages. `<T>` renders the parts separately, so
+          the English export is byte-for-byte what it was before the string was converted.
+        */}
+        <p>
+          <T id="Loading {name}…" values={{ name: slug.replace(/-/g, ' ') }} />
+        </p>
       </div>
     );
   }
 
   if (match.phase === 'idle' || mode === null) {
     const remembered = setup.mode;
-    const offered = manifest.modes.filter((m): m is Mode => m === 'friend' || m === 'bot');
+    const offered = offeredModes(manifest.modes);
     // The remembered mode leads, so the button under the player's thumb is the one they
     // used last. Order, not preselection — nothing starts without a deliberate press.
     const ordered = [...offered].sort((a, b) => {
@@ -268,90 +956,338 @@ export function PlaySurface({ slug }: { slug: string }) {
       if (b === remembered) return 1;
       return 0;
     });
+    /** Whether the tournament is waiting on *this* game, which is the only leg it can start. */
+    const legHere = isCurrentLeg(tournament, slug);
+    /*
+     * The track has to name both seats before a mode has been chosen, and `botSeats` is
+     * undefined until a match starts — so who is in the far seat comes from the tournament,
+     * which settled that once for all seven of its games.
+     */
+    const trackNames = seatNamesFor(
+      botSeatsFor(tournament.opponent, setup.difficulty),
+      chosenNames,
+      messages,
+    );
     return (
-      <div className={styles.state}>
+      <div className="db-panel">
         <h2>{manifest.name}</h2>
-        {/* Above the buttons, because these settle what the button is about to start —
-            and the buttons stay last, nearest the thumb that presses them. The tier is
-            offered only where the manifest has a bot to play, which today is every
-            playable game: even the solo puzzles declare `friend` and `bot` as well,
-            because a solo-only manifest is a game page nobody can start. */}
-        <MatchOptions
-          showDifficulty={offered.includes('bot')}
-          difficulty={setup.difficulty}
-          onDifficulty={chooseDifficulty}
-          rounds={setup.rounds}
-          onRounds={chooseRounds}
-        />
-        <div className={styles.modes}>
-          {ordered.map((offer, index) => (
-            <button
-              key={offer}
-              type="button"
-              className={index === 0 ? styles.primary : styles.secondary}
-              onClick={() => {
-                start(offer);
-              }}
-            >
-              {offer === 'friend' ? 'Play together here' : `Play against ${seatColour.p2.name}`}
-            </button>
-          ))}
-        </div>
+        {tournament.phase === 'idle' ? null : (
+          <TournamentTrack
+            state={tournament}
+            names={trackNames}
+            tier={tournament.difficulty}
+            onLeave={leaveTournament}
+            {...(legHere
+              ? {
+                  onPlay: () => {
+                    start(tournament.opponent);
+                  },
+                }
+              : {})}
+            {...(legHere || waiting === undefined ? {} : { href: `/play/${waiting}/` })}
+          />
+        )}
+        {/* The ordinary lobby, and it stands down only on the game the tournament is
+            waiting on: a tournament running elsewhere is no reason to stop somebody
+            playing the game they have actually opened. */}
+        {legHere ? null : (
+          <>
+            {/* Above the buttons, because these settle what the button is about to start —
+                and the buttons stay last, nearest the thumb that presses them. The tier is
+                offered only where the manifest has a bot to play, which today is every
+                playable game: even the solo puzzles declare `friend` and `bot` as well,
+                because a solo-only manifest is a game page nobody can start. */}
+            <MatchOptions
+              showDifficulty={offered.includes('bot')}
+              difficulty={setup.difficulty}
+              onDifficulty={chooseDifficulty}
+              rounds={setup.rounds}
+              onRounds={chooseRounds}
+            />
+            {/* The game's own options (#1751), rendered generically from its manifest and
+                persisted per game. A game that declares none shows nothing here. */}
+            <GameOptionsPanel slug={slug} options={manifest.options ?? []} />
+            <div className={styles.modes}>
+              {ordered.map((offer, index) => (
+                <button
+                  key={offer}
+                  type="button"
+                  className={index === 0 ? styles.primary : styles.secondary}
+                  onClick={() => {
+                    start(offer);
+                  }}
+                >
+                  {offer === 'bot'
+                    ? t(messages, 'Play against {name}', { name: SEAT_CHARACTERS.p2 })
+                    : t(messages, offer === 'friend' ? 'Play together here' : 'Play solo')}
+                </button>
+              ))}
+            </div>
+            {/* The tournament's way in (#156), and the two entry buttons are the reference
+                app's two: player against player, and player against the bot. They are here
+                rather than in a bar on every page because a control on every page is shell
+                weight on every page, and this feature is priced against the budget of the
+                route it runs on — `docs/tournament.md` sets the whole argument out.
+
+                Offered while one is finished as well as while there is none, because that
+                is the screen a pair are on when they decide to go again. It is withheld
+                only while one is actually running, and the machine refuses a `start` there
+                anyway — this is the same rule, not a second copy of it. */}
+            {tournament.phase === 'playing' ? null : (
+              <>
+                <p className={styles.tournamentLede}>
+                  {/* One sentence with both numbers in it rather than three fragments: a
+                      translator needs the whole line to put "first to four" where their
+                      grammar wants it. Not `plural()` — `TOURNAMENT_LENGTH` is a constant
+                      seven, so there is no other count this line can ever be about. */}
+                  {t(
+                    messages,
+                    'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.',
+                    { games: TOURNAMENT_LENGTH, wins: legsToWin(TOURNAMENT_LENGTH) },
+                  )}
+                </p>
+                {/*
+                  `ordered`, not a hardcoded pair. These two buttons used to be written out as
+                  `['friend', 'bot'] as const`, ignoring `manifest.modes` entirely — so a game
+                  that declared only `friend` would still have offered "Tournament against Pip".
+                  Nothing is dead today because every one of the 108 games declares `bot`, which
+                  is exactly why it would have stayed unnoticed until the first one did not.
+                  It reads from the same list the start buttons above it do, so the two can
+                  never disagree about what this game can be played as.
+                */}
+                <div className={styles.modes}>
+                  {/* Two seats only. A tournament is seven games between the same two
+                      people or a person and a bot; a solo run has nobody to draw a line-up
+                      against, so the filter here is `isSolo` rather than the shell's list
+                      (#1750). `lib/tournament.ts` types its opponent as `Opponent`, which has
+                      no solo member, so the machine refuses it as well as the button. */}
+                  {ordered
+                    .filter((against) => !isSolo(against))
+                    .map((against) => (
+                      <button
+                        key={against}
+                        type="button"
+                        className={styles.secondary}
+                        onClick={() => {
+                          if (!isSolo(against)) beginTournament(against);
+                        }}
+                      >
+                        {against === 'friend'
+                          ? t(messages, 'Tournament together')
+                          : t(messages, 'Tournament against {name}', {
+                              name: SEAT_CHARACTERS.p2,
+                            })}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
         <Controls manifest={manifest} />
       </div>
     );
   }
 
-  const seatNames: Partial<Record<SeatId, string>> =
-    mode === 'bot' ? { p2: `${seatColour.p2.name} (bot)` } : { p2: 'Player two' };
+  /**
+   * What the two seats are called this match.
+   *
+   * Derived from the same `botSeats` map the game host is handed, so the scoreboard, the
+   * result screen and the simulation cannot disagree about who is a bot. The shell used to
+   * write a *partial* override here — seat two only — and leave seat one to whatever
+   * fallback each component happened to carry, which is how the HUD came to read
+   * "Pip vs Player two" (#2513).
+   *
+   * A name the pair chose for themselves replaces the seat's own, and `seatNamesFor` still
+   * marks the seat if a bot is in it — so naming the far seat and then playing the bot
+   * shows the bot marked rather than the player's name on it.
+   */
+  const seatNames = seatNamesFor(botSeats, chosenNames, messages);
+
+  /**
+   * The record the result screen shows: what the store held when this match began, plus
+   * the match itself once the machine has settled it.
+   *
+   * Computed here rather than read back after the write, so the first paint of the result
+   * panel already carries the final numbers — see `recordBefore` above.
+   */
+  const record =
+    match.phase === 'match-over' && match.matchOutcome !== null
+      ? addOutcome(recordBefore, match.matchOutcome)
+      : recordBefore;
 
   const hudProps = {
     state: match,
     rounds: rules.rounds ?? 1,
+    solo,
     activeSeat,
     seatNames,
-    botSeats: mode === 'bot' ? { p2: true } : undefined,
+    botSeats,
+    // Said on the scoreboard for as long as a bot is playing, so a tier fixed for seven
+    // games is visible in all seven rather than only where it was chosen (#2347).
+    tier: botSeats === undefined ? undefined : tier,
+    ...(clockView ? { clock: clockView.text, clockWarning: clockView.warning } : {}),
   };
 
+  /** What this match may still change about itself, and why not what it may not (#2351). */
+  const changes = describeChanges({
+    phase: match.phase,
+    mode,
+    leg: legMatch,
+    round: match.round,
+    roundWins: match.roundWins,
+  });
+
+  /** Whether the match is live, which is when the exit control and the pull-to-refresh guard apply. */
+  const matchLive =
+    match.phase === 'countdown' || match.phase === 'playing' || match.phase === 'paused';
+
   return (
-    <div className={styles.surface}>
+    <div
+      className={styles.surface}
+      // Never mirrored, whatever direction the shell reads in (#222, rule 9): the seats are
+      // sides of the device and the board is the same play area on every device. The
+      // stylesheet pins `direction: ltr` for the box model; this is the same decision for
+      // the bidi algorithm, and it is what tokens.css keys the island's own direction
+      // tokens on (`[dir='ltr']`). `direction.test.ts` fails if either half goes missing.
+      dir="ltr"
+      // The physical gameplay target (#1889), published as a custom property the play
+      // controls read. Computed from the device's pixel ratio in the presentation layer, so
+      // a control jabbed at across a table holds its size in millimetres rather than in a
+      // pixel count that a dense screen shrinks. Falls back to the shell target where a
+      // control does not opt in.
+      style={{ ['--db-gameplay-target' as string]: `${String(gameplayTarget)}px` }}
+    >
+      {/* The tournament's standing, on the one screen during a leg where it is what the
+          pair are talking about: the moment a game ends. It is deliberately not up while
+          the board is live — the match HUD is the score that matters then, and a phone two
+          people share has no height to spare for a second one. */}
+      {tournament.phase === 'idle' || match.phase !== 'match-over' ? null : (
+        <TournamentTrack
+          state={tournament}
+          names={seatNames}
+          tier={tournament.difficulty}
+          onLeave={leaveTournament}
+        />
+      )}
+
       {/* Two people sit on opposite sides of one device, so the scoreboard faces both
           ways. The far copy is turned to face the player at the top of the screen. */}
       <MatchHud {...hudProps} flipped />
 
       <div className={styles.boardArea}>
         <div className={styles.board}>
-          <GameHost
-            manifest={manifest}
-            createGame={create}
-            seed={seed}
-            phase={match.phase}
-            presentation="shared-screen"
-            localSeat="p1"
-            openingSeat={match.openingSeat}
-            {...(botSeats ? { botDifficulty: botSeats } : {})}
-            onTick={handleTick}
-            onScore={handleScore}
-            onActiveSeat={setActiveSeat}
-            onRequestPause={handlePauseRequest}
-            recordTrace={recording}
-            // Wrapped, not passed. React treats a function handed to a state setter as an
-            // *updater* and calls it with the previous state — so `setGetTrace(get)` invoked
-            // the getter and stored the string it returned, and the panel then tried to call
-            // a string. The trace stayed empty and nothing threw where anyone would see it.
-            onTraceReady={(get) => {
-              setGetTrace(() => get);
-            }}
-          />
+          {/* A crash inside the game surfaces the recovery screen rather than a frozen board
+              or a white screen (#151). The boundary catches a throw in React's own render;
+              the host catches a throw inside the fixed loop and hands it back as
+              `externalError`, so both land on the same Restart / Quit screen. */}
+          <GameErrorBoundary externalError={gameError} onRestart={restart} onQuit={quit}>
+            <GameHost
+              manifest={manifest}
+              createGame={create}
+              seed={seed}
+              phase={match.phase}
+              // A solo run is one player on the whole viewport, upright, and it always opens
+              // on the only seat there is: the match machine's coin would otherwise hand the
+              // opening to a far seat nobody is in, and a turn-board game would wait forever
+              // for it (#1750).
+              presentation={solo ? 'single-seat' : 'shared-screen'}
+              localSeat="p1"
+              openingSeat={solo ? 'p1' : match.openingSeat}
+              round={match.round}
+              solo={solo}
+              {...(botSeats ? { botDifficulty: botSeats } : {})}
+              onTick={handleTick}
+              onScore={handleScore}
+              onActiveSeat={handleActiveSeat}
+              onSeatInput={handleSeatInput}
+              onRequestPause={handlePauseRequest}
+              onGamepad={handleGamepad}
+              onGamepadReady={(controls) => {
+                // Wrapped, for the reason `onTraceReady` is: a function handed to a state
+                // setter is an updater.
+                setSwapGamepads(() => controls.swap);
+              }}
+              onError={handleGameError}
+              recordTrace={recording}
+              // Wrapped, not passed. React treats a function handed to a state setter as an
+              // *updater* and calls it with the previous state — so `setGetTrace(get)` invoked
+              // the getter and stored the string it returned, and the panel then tried to call
+              // a string. The trace stayed empty and nothing threw where anyone would see it.
+              onTraceReady={(get) => {
+                setGetTrace(() => get);
+              }}
+            />
+          </GameErrorBoundary>
           <TracePanel getTrace={recording ? getTrace : null} />
+          {/* The persistent edge-anchored exit and its forfeit confirmation (#144). Up
+              whenever the match is live, so quitting mid-play is always one deliberate step
+              away and never one accidental tap. */}
+          {matchLive ? (
+            <ExitControl
+              open={exitOpen}
+              onOpen={() => {
+                setExitOpen(true);
+              }}
+              onCancel={() => {
+                setExitOpen(false);
+              }}
+              onQuit={quit}
+            />
+          ) : null}
+          {/* Which half belongs to whom, on this device's first go at this game (#137). Only
+              while the board is live: before the countdown there is nothing to play, and after
+              the match the result screen is what the pair are reading. */}
+          {hintsDue && matchLive ? <ControlHints names={seatNames} used={seatUsed} /> : null}
+          {/* The rotate suggestion (#136), for the 71 games whose box has a long axis, and
+              only while the device is the other way round. It never pauses and never covers
+              the board — `RotatePrompt` carries the argument, including why there is no
+              orientation lock behind it. */}
+          {matchLive ? <RotatePrompt manifest={manifest} /> : null}
+          {/* The pass-and-play hand-off blackout (#134), only for a game that opted in and
+              only while a hand-off is in progress. It sits above the board so no frame of the
+              previous seat's state shows through. */}
+          {handoffTo !== null ? (
+            <HandoffOverlay
+              toSeat={handoffTo}
+              toName={seatNames[handoffTo]}
+              onContinue={continueHandoff}
+            />
+          ) : null}
           <MatchOverlay
             state={match}
             manifest={manifest}
             rounds={rules.rounds ?? 1}
             seatNames={seatNames}
-            record={record}
+            // A match whose far seat changed hands went on no record, and a record line
+            // that added it would be showing a number the store does not hold.
+            record={mixed ? undefined : record}
+            unrecorded={mixed}
+            changing={{
+              changes,
+              mode,
+              difficulty: tier,
+              onHandSeat: handSeat,
+              onDifficulty: chooseDifficulty,
+              onRounds: chooseRounds,
+            }}
             nextGame={nextGame}
+            slug={slug}
+            presentation={solo ? 'single-seat' : 'shared-screen'}
+            solo={solo && run !== null ? run : undefined}
+            notice={
+              gamepadEdge === null ? undefined : gamepadNotice(messages, gamepadEdge, seatNames)
+            }
+            onSwapControllers={
+              gamepadEdge === null || swapGamepads === null
+                ? undefined
+                : () => {
+                    swapGamepads();
+                    setGamepadEdge({ kind: 'reassigned', seat: null, gamepadIndex: -1, id: '' });
+                  }
+            }
             onResume={() => {
+              setGamepadEdge(null);
               send({ kind: 'resume' });
             }}
             onQuit={quit}
@@ -359,6 +1295,7 @@ export function PlaySurface({ slug }: { slug: string }) {
               send({ kind: 'next-round' });
             }}
             onRematch={rematch}
+            onRestart={restart}
           />
         </div>
       </div>
@@ -366,6 +1303,15 @@ export function PlaySurface({ slug }: { slug: string }) {
       <MatchHud {...hudProps} onPause={handlePauseRequest} />
     </div>
   );
+}
+
+/**
+ * What a game is called, or its slug turned back into words when the build has no name for
+ * it. One function, because the suggestion and the tournament's next leg both need it and a
+ * second copy is a second place for a link to be labelled differently.
+ */
+function nameOf(slug: string): string {
+  return GAME_NAMES[slug] ?? slug.replace(/-/g, ' ');
 }
 
 /**
@@ -379,5 +1325,5 @@ function suggestNextGame(slug: string): { slug: string; name: string } | undefin
   let hash = 0;
   for (let i = 0; i < slug.length; i += 1) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
   const pick = others[hash % others.length] ?? first;
-  return { slug: pick, name: GAME_NAMES[pick] ?? pick.replace(/-/g, ' ') };
+  return { slug: pick, name: nameOf(pick) };
 }

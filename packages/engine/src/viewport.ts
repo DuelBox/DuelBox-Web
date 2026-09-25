@@ -20,6 +20,49 @@ export const NO_INSETS: SafeAreaInsets = Object.freeze({
 });
 
 /**
+ * Which way round a rectangle is. Two values, because a rectangle is one or the other.
+ *
+ * Deliberately narrower than the manifest's `ORIENTATIONS`, which is
+ * `'portrait' | 'landscape' | 'any'` — that third value is a *declaration* a game makes
+ * about the box it designed ("either way round suits it"), not a shape a screen can have.
+ * The pair is the same shape as `DeclaredZoneSplit` against `ZoneSplit` in seat.ts, and
+ * for the same reason: the wider declared union is not assignable to this one, so a
+ * caller that tries to pass `manifest.orientation` straight into a function taking this
+ * stops compiling rather than silently treating `'any'` as a screen shape.
+ */
+export type Orientation = 'portrait' | 'landscape';
+
+/**
+ * Which way round this screen is — the one place in the product where a pixel measurement
+ * becomes the word "portrait" or "landscape".
+ *
+ * It lives here because rule 8 puts every pixel-to-anything conversion in the render layer,
+ * and rule 10 forbids a game asking what device it is on. A game physically cannot misuse
+ * this: a game is handed a `LogicalSize` and never a screen size, so it has no pixels to
+ * pass in. Feeding it the logical box instead answers a question about the *box*, which is
+ * a constant of the match and tells a game nothing about the device it is running on.
+ *
+ * **Returns null when the screen has no shape yet**, and that is the interesting case
+ * rather than a defensive flourish. A rotation is not instantaneous: mobile browsers report
+ * a zero or nonsensical size for a frame or two in the middle of one — the same transient
+ * {@link fitViewport} answers with a collapsed viewport rather than a throw. A function that
+ * had to answer anyway would flap between the two orientations while the device turned, and
+ * anything downstream of it — a rotate hint, a re-layout — would flicker in step. Null says
+ * "no answer this frame"; the honest thing for a caller to do with it is keep the answer it
+ * already had.
+ *
+ * A square screen is reported as landscape. The tie-break is arbitrary and it is also free:
+ * a square screen letterboxes a portrait box and that same box turned on its side to exactly
+ * the same drawn area, so whichever way the tie falls, neither player gets a larger board out
+ * of it. `viewport.test.ts` asserts that equality rather than leaving it as a claim.
+ */
+export function screenOrientation(screenWidth: number, screenHeight: number): Orientation | null {
+  if (!Number.isFinite(screenWidth) || !Number.isFinite(screenHeight)) return null;
+  if (screenWidth <= 0 || screenHeight <= 0) return null;
+  return screenHeight > screenWidth ? 'portrait' : 'landscape';
+}
+
+/**
  * The mapping from a game's fixed logical resolution onto one device's screen.
  * Every number is in device-independent CSS pixels; the simulation itself never
  * sees any of them.
@@ -192,4 +235,59 @@ export function negotiateSharedLogical(
   if (scale > 1) scale = 1;
 
   return { width: a.width * scale, height: a.height * scale };
+}
+
+/** One device's screen, for {@link negotiateSharedViewport}. Device-independent CSS pixels. */
+export interface DeviceScreen {
+  readonly logical: { width: number; height: number };
+  readonly screenWidth: number;
+  readonly screenHeight: number;
+  readonly insets?: SafeAreaInsets;
+}
+
+/**
+ * The shared logical box a match adopts, and one device's letterbox onto it.
+ *
+ * `logical` is the negotiated play area — the *same object of dimensions* on both devices —
+ * and `view` is how this particular screen letterboxes it. The pair is what the host needs:
+ * it renders and hit-tests through `view`, and it reads coordinates in `logical`.
+ */
+export interface SharedViewport {
+  readonly logical: { width: number; height: number };
+  readonly view: Viewport;
+}
+
+/**
+ * The match-start negotiation of the one play area both players share (CLAUDE.md rule 9).
+ *
+ * The two devices in a remote match must never see different amounts of the world, and the
+ * only honest way to guarantee it is to fix **one** logical box before either has drawn a
+ * frame and letterbox both screens to it. This is where that box is decided.
+ *
+ * The box is `negotiateSharedLogical(local.logical, peerLogical)`: the largest box, in the
+ * game's own aspect, that fits inside both devices' declared play areas. Because both devices
+ * are running the same game they declare the same box, so the negotiation returns that box
+ * unchanged — the point is that it is *decided by agreement between the two declarations*
+ * rather than assumed per device, and it stays independent of either screen's shape or size
+ * (the issue's "independent of either device's screen"). Were the two ever handed different
+ * boxes, the clamp is what stops the larger one showing a strip of world the smaller cannot —
+ * the same disagreement `LockstepSession`'s config fingerprint refuses outright.
+ *
+ * `view` then letterboxes this device's screen to that box: surplus screen becomes bars, and
+ * a bigger or wider screen gets the identical field of view as a smaller one, with the extra
+ * space free for chrome. `shared-viewport.test.ts` proves the end-to-end property — every
+ * pair of real devices sees the identical set of world points once negotiated.
+ */
+export function negotiateSharedViewport(
+  local: DeviceScreen,
+  peerLogical: { width: number; height: number },
+): SharedViewport {
+  const logical = negotiateSharedLogical(local.logical, peerLogical);
+  const view = fitViewport(
+    logical,
+    local.screenWidth,
+    local.screenHeight,
+    local.insets ?? NO_INSETS,
+  );
+  return { logical, view };
 }

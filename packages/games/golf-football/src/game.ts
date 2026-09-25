@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, seatRotated } from '@duelbox/engine';
 import type { Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import {
   AIM_DEADLINE,
@@ -31,6 +32,7 @@ import {
   kicksLeftOf,
   pressAim,
   reachOf,
+  abandonWind,
   release,
   resetBotState,
   resetMatch,
@@ -165,6 +167,13 @@ export class GolfFootballGame implements Game {
     // Two `if`s and not an `else if`. Most taps arrive with the press and the release on the
     // same step, and a release read as the else-branch of a press means only a deliberate
     // hold ever kicks. Here a same-step tap is the feeblest legal kick, which is right.
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    //
+    // The wind is dropped rather than kicked, because a gesture the browser disowned commits
+    // nothing; the needle keeps the line the player left it on (#2501).
+    if (actionAbandoned(view)) abandonWind(this.#match, seat);
     if (view.actionPressed) pressAim(this.#match, seat);
     if (view.actionReleased) release(this.#match, seat);
   }

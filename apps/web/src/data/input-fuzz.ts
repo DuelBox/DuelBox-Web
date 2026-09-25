@@ -1,5 +1,5 @@
-import { InputManager, InputView, Rng } from '@duelbox/engine';
-import type { SeatId } from '@duelbox/engine';
+import { InputManager, InputView, Rng, zoneSplitFor } from '@duelbox/engine';
+import type { Presentation, SeatId, ZoneSplit } from '@duelbox/engine';
 import type { Game, GameContext, GameManifest, Renderer } from '@duelbox/game-sdk';
 
 /**
@@ -38,6 +38,9 @@ const KEYS = [
 
 const SPLITS = ['horizontal', 'vertical', 'shared'] as const;
 
+/** The presentation the storm plays under. Also what {@link makeContext} tells the game. */
+const PRESENTATION: Presentation = 'shared-screen';
+
 /**
  * The split the shell would start this game on.
  *
@@ -46,11 +49,21 @@ const SPLITS = ['horizontal', 'vertical', 'shared'] as const;
  * move, all of it. Seventeen turn games therefore took no pointer input at all and read as
  * "never responded", which is a defect in the harness rather than in any of them. The storm
  * still shuffles the split afterwards, because the shell does too.
+ *
+ * The fix for that was made *here*, independently of the shell, and the two answers then
+ * disagreed (#2479). This one read `zoneSplit: 'shared-board'` straight off the manifest as
+ * `'shared'` — but `'shared'` gives the entire surface to `bottomSeat`, and eleven of the
+ * manifests that declare it belong to **real-time** games where both seats act at once. So
+ * for Whack a Mole, Snake Clash, Sumo and eight others this harness sent every one of six
+ * fingers to seat one and none at all to seat two: two children mashing a screen, modelled
+ * as one child. The shell never had that bug, because it went through the live active seat.
+ *
+ * Now both go through {@link zoneSplitFor}, and `input-fuzz.test.ts` asserts they agree for
+ * every game in the registry. The discriminator is the game's live `getActiveSeat`, not the
+ * manifest field — a `'shared-board'` declaration describes the picture, not the ownership.
  */
-function splitFor(manifest: GameManifest): (typeof SPLITS)[number] {
-  if (manifest.zoneSplit === 'vertical') return 'vertical';
-  if (manifest.zoneSplit === 'shared-board') return 'shared';
-  return 'horizontal';
+export function splitFor(manifest: GameManifest, activeSeat: SeatId | null): ZoneSplit {
+  return zoneSplitFor(PRESENTATION, manifest.zoneSplit, activeSeat);
 }
 
 /**
@@ -115,7 +128,10 @@ export function fuzz(
   let game = create();
   let context = makeContext(manifest, rng.next() | 0);
   game.init(context);
-  const split = splitFor(manifest);
+  // Exactly the shell's opening move: the split follows the live turn state, so a turn game
+  // starts with the whole surface handed to whoever is to move and a real-time game starts
+  // with a zone each.
+  let split = splitFor(manifest, game.getActiveSeat?.() ?? null);
   let input = new InputManager({ width, height }, { split, bottomSeat: 'p1' });
   const down = new Set<number>();
   const held = new Set<string>();
@@ -169,6 +185,7 @@ export function fuzz(
         game = create();
         context = makeContext(manifest, rng.next() | 0);
         game.init(context);
+        split = splitFor(manifest, game.getActiveSeat?.() ?? null);
         input = new InputManager({ width, height }, { split, bottomSeat: 'p1' });
         down.clear();
         held.clear();
@@ -187,7 +204,7 @@ function makeContext(manifest: GameManifest, seed: number): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
-    presentation: 'shared-screen',
+    presentation: PRESENTATION,
     localSeat: 'p1',
     openingSeat: 'p1',
     // Nobody is a bot: the storm drives both seats, so both seats are being mashed.

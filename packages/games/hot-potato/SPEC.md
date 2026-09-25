@@ -16,10 +16,11 @@ vertical bar and wraps; the band is a slice of that bar.
 | | Value | Why |
 |---|---|---|
 | Fuse | 12 s | |
-| Sweep | 0.85 → 1.9 bars/s | Faster as the fuse burns, so the end of a round is the hard part |
+| Sweep | 0.85 → 1.25 bars/s | Faster as the fuse burns, so the end of a round is the hard part |
 | Band at first throw | ±0.30 of the bar | Easy enough that anyone can play |
 | Band decay | ×0.86 a throw | |
-| Band floor | ±0.055 | Never impossible |
+| Band floor | ±0.15625 | **Derived**: `MIN_TRANSIT × MAX_SWEEP ÷ 2`. See below |
+| Window floor | 0.25 s | One simple visual reaction. Never impossible |
 | Flight | 0.35 s | |
 | Rounds to win | 3 | |
 
@@ -30,6 +31,73 @@ A band is placed at least its own width from each end, so it never straddles the
 point. A wrapped band would be two bands to look at and one to hit — a puzzle rather than a
 test of timing. The first version used a fixed margin and did not survive its own test: at
 full width the band ran off the end of the bar.
+
+## Difficulty is a window, not a width
+
+What a player actually has is `transit = 2 × band ÷ sweep`: how long the marker spends
+inside the target. The band's width alone says nothing, because a band is only hard in
+proportion to how fast the marker crosses it.
+
+Band and sweep both push transit down, and until #2507 they were set independently and
+compounded. Band decayed ×0.86 a throw towards ±0.055 while sweep climbed towards 1.9,
+which produced this, measured at the top sweep:
+
+| Throw | Band | Player's window | easy | normal | hard |
+|---|---|---|---|---|---|
+| 0 | 0.300 | 0.316 s | lands | lands | lands |
+| 3 | 0.191 | 0.201 s | acts, never lands | lands | lands |
+| 5 | 0.141 | 0.149 s | cannot act | cannot act | lands |
+| 6 | 0.121 | 0.128 s | cannot act | cannot act | cannot act |
+| 12 | 0.055 | **0.058 s** | cannot act | cannot act | cannot act |
+
+Two things are wrong with that, and the second is the worse one. From the sixth throw no
+bot tier could act at all, so `easy` and `hard` became the same opponent and the round fell
+to whoever happened to be holding it — the difficulty a player chose quietly expiring
+part-way through the match. And a **person** was out of it sooner still: against ~0.25 s of
+simple visual reaction, the window was already too short at the *second* throw, and by the
+floor it was 0.058 s, a quarter of a reaction.
+
+So the floor is now derived rather than chosen:
+
+```
+MIN_BAND = MIN_TRANSIT_SECONDS × MAX_SWEEP ÷ 2      = 0.15625
+2 × MIN_BAND ÷ MAX_SWEEP = MIN_TRANSIT_SECONDS      = 0.25 s, exactly, always
+```
+
+Raising the sweep now widens the floor in step, so the two cannot silently compound again.
+`MAX_SWEEP` came down from 1.9 to 1.25 to buy the band back its range: the total ramp is
+fixed by the start and the floor, and `MAX_SWEEP` only decides how much of it is the band
+narrowing and how much is the marker speeding up. The band narrowing is the game, so it
+keeps the larger share.
+
+What the ramp does now, at the top sweep: **0.480 s → 0.413 → 0.355 → 0.305 → 0.263 →
+0.250 s from the fifth throw on.** At a full fuse the same bands give 0.706 s down to
+0.368 s. The floor is deliberately the *conservative* human number: this bar is a
+predictable, constant-speed target, so a person timing the marker's arrival beats their own
+raw reaction time, and 0.25 s is a floor nobody bumps into by being slow.
+
+Rule 6 is what forces this shape. The fix could not be to give the bots a faster reaction —
+that is exactly the thing rule 6 forbids — so it had to be the ramp.
+
+### It was also the seat lean
+
+Fixing the ramp removed a seat asymmetry nobody had connected to it. Measured over 200
+seeds of equal-tier self-play, seat one's share of decided matches:
+
+| Tier | Before | After |
+|---|---|---|
+| easy | 95.0% | 49.5% |
+| normal | 91.5% | 50.0% |
+| hard | 63.5% | 53.5% |
+
+Which is what the defect had to do. Once the window shut, neither seat could throw again, so
+the round went to whichever seat was *not* holding it at that moment — and since seat one
+throws first, the parity of the exchange decided the round rather than either player. The
+lean was the ramp, seen from the other end.
+
+Note for whoever owns `apps/web/src/data/balance-aggregate.test.ts`: its
+`OUTSIDE_THE_BAND` records this game at 92.0% on `normal` and 94% on `easy`. Both are now
+stale and inside the band.
 
 ## Three outcomes, all distinct
 
@@ -50,6 +118,50 @@ hands **[ours]**.
 Whoever is caught starts the next round, which hands them the throw and is the closest
 thing this game has to a comeback rule.
 
+**Round one's holder is `context.openingSeat`**, never a literal `p1` — see below.
+
+## Seat balance
+
+Measured by `apps/web/src/data/balance-aggregate.test.ts`, fifty seed pairs, both bots on
+the same tier, seat one's share of decided matches:
+
+| tier | before | after |
+|---|---|---|
+| easy | **94.0%** | **50.0%** |
+| normal | 96.0% (92.0% at 1000 seeds) | **50.0%** |
+| hard | 58.0% | **50.0%** |
+
+It is a **parity** bug, and the comeback rule above is the half of it that hides the other
+half. Two equal bots make the same number of throws in a twelve-second fuse — five on
+`easy`, seven on `normal` — and that count is **odd**, so the seat caught is the seat that
+did *not* start the round. The loser then opens the next round, so the catch alternates
+seat by seat; and `TARGET_ROUNDS` is **three, also odd**. Compose the two and the seat that
+held the potato first wins 3-2 in every match that is not disturbed by a missed throw.
+`resetGame` handed that seat to a literal `p1`, so seat one won 94 to 96 of every hundred.
+`hard` is only 58% because its bots miss often enough to break the parity sometimes — the
+same bug, sampled through more noise, which is why one tier is never an answer.
+
+Three changes, all structural rather than tuned:
+
+- **The first holder is `context.openingSeat`.** The shell already alternates the opener
+  between the rounds of a best-of; this reads it.
+- **The bots' rolls are drawn by role — holder first, then the seat waiting — never by
+  seat.** Both draw from the one match generator, so whoever is driven first takes the
+  first number, and driving `p1` first made a seed opened from one chair a different match
+  from the same seed opened from the other.
+- **`step` no longer names a seat.** When a settling round could not say who was caught it
+  fell back to a literal `'p1'`. That line is unreachable in real play — settling is only
+  ever entered by a catch — but a seat written as a constant is not covariant under the
+  half-turn, and the mirror test in `rules.test.ts` reaches it and fails on it. The
+  fallback is now `game.holder`.
+
+Together those make a seed and its mirror **one match and its exact reflection**, so the
+50.0% above is a symmetry proof rather than a measurement: `game.test.ts` asserts winner,
+scoreline *and step count* mirror for every seed at every tier, and `rules.test.ts` asserts
+the same one step at a time over 600 random boards whose fuse, flight and settle are whole
+numbers of fixed steps — so a fuse expiring on the very step a flight lands, the case that
+decides who is caught, happens by construction rather than by luck.
+
 ## Controls
 
 | | Pointer | Keyboard |
@@ -68,22 +180,42 @@ replays identically from its seed.
 
 | Tier | Aim | Reaction | Freeze |
 |---|---|---|---|
-| easy | 1.50 | 0.30 s | 25% |
-| normal | 1.10 | 0.18 s | 7% |
-| hard | 0.80 | 0.13 s | 2% |
+| easy | 1.50 | 0.30 s | 80% |
+| normal | 1.10 | 0.18 s | 55% |
+| hard | 0.80 | 0.13 s | 5% |
 
 `aim` is how much of the band the bot trusts itself to use, from the centre out. **Below 1
 it commits to the middle and lands; above 1 it grabs at the edge and misses.** That is the
-whole skill, and it is the same skill a person has: a good player commits early enough to
-land inside a narrow band, a poor one is late and clips the edge.
+skill a person has too: a good player commits early enough to land inside a narrow band, a
+poor one is late and clips the edge.
 
-Measured over forty matches a pairing: hard beats normal **88%** and both beat easy. The
-first hard tier beat normal **100%**, which is a wall rather than an opponent — the same
-objection raised against Cornhole's first bot, and it applies just as well here. It now
-misses sometimes.
+`reaction` is a **cost**, not a gift — the bot has to stay inside its window that long
+before it commits, so a shorter reaction is a better player. It is never shortened to
+rescue a bot from a window that has closed; that is what the window floor is for.
 
-No tier reacts faster than a person, and none sees anything a person cannot: the marker and
-the band are on screen for both players the whole time.
+`freeze` is hesitation: the chance of letting a whole pass of the marker go by. It is
+rolled **once**, when the marker enters the window, and held until it leaves.
+
+Measured over forty matches a pairing: **hard beats easy 95%, hard beats normal 90%, normal
+beats easy 80%.** Per-tier throw rates over throws six and later, across 240 matches:
+**easy 3.3, normal 10.3, hard 29.8** throws per thousand steps of holding the potato — a
+ladder that is still a ladder in the last third of a round, which a win rate alone cannot
+see. A test asserts those rates, not just the win rate, because #2504 paid for that lesson.
+
+It was 100% and 88% before #2507, and those numbers were not earned. `freeze` was 25/7/2%
+and did **nothing**: drawn afresh every step, the chance of never throwing across a k-step
+window is freeze^k, so normal's nominal 7% was one in fourteen million. What actually
+separated the tiers was the ramp shutting the window on both seats — they differed only in
+*which of them was still holding it* when the game became unplayable for both. Giving the
+window a human-playable floor removes that separator, so the tiers now have to be told apart
+by something a person also does, and `freeze` was made real and sized to do the work. This
+is the same failure the SDK's `bot-judgement` module was written to prevent — an error drawn
+every step averages to nothing — arriving by a different route.
+
+No tier sees anything a person cannot: the marker and the band are on screen for both
+players the whole time. And no tier can act inside a window a person could not, because the
+window has a floor of one simple visual reaction and every tier's own window is that floor
+scaled by its `aim`.
 
 ## Presentations
 

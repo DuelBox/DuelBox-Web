@@ -587,6 +587,26 @@ export function setHold(ground: Ground, seat: SeatId, held: boolean): void {
   launcherOf(ground, seat).want = held;
 }
 
+/**
+ * The gesture taken away rather than let go: drop the sight **without firing it**.
+ *
+ * `setHold(..., false)` cannot express this. {@link stepLauncher} derives its own release
+ * edge from `!want && held`, so a hold that simply stops reads as a release and the rocket
+ * goes — which is the whole of #2480 reimplemented one layer down, and #2501 is the half of
+ * it that lives in the games. A cancel must commit nothing, so the edge is erased along with
+ * the sight: `held` goes false beside `want`, and the range drops back to the bottom of its
+ * gauge. The cart's column is untouched — the range is the charge, the column is the aim,
+ * and an interruption takes only the first. The fuse keeps burning, so nothing stalls.
+ */
+export function abandonHold(ground: Ground, seat: SeatId): void {
+  const launcher = launcherOf(ground, seat);
+  launcher.want = false;
+  launcher.held = false;
+  launcher.aiming = false;
+  launcher.range = MIN_RANGE;
+  launcher.rangeRising = true;
+}
+
 export interface StepResult {
   /** True on a step a rocket left a tube. */
   fired: boolean;

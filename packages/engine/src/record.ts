@@ -26,6 +26,13 @@ export type InputEvent =
   | { readonly kind: 'pointerCancel'; readonly id: number }
   | { readonly kind: 'boardSeat'; readonly seat: SeatId }
   | { readonly kind: 'split'; readonly split: ZoneSplit }
+  | {
+      readonly kind: 'analog';
+      readonly seat: SeatId;
+      readonly x: number;
+      readonly y: number;
+      readonly action: boolean;
+    }
   | { readonly kind: 'clear' };
 
 export interface RecordedFrame {
@@ -115,6 +122,32 @@ export class InputRecorder {
   setSplit(split: ZoneSplit): void {
     this.#pending.push({ kind: 'split', split });
     this.#input.setSplit(split);
+  }
+
+  /** What each seat's pad last read, so a poll that changes nothing writes nothing down. */
+  readonly #lastAnalog: Record<SeatId, { x: number; y: number; action: boolean }> = {
+    p1: { x: 0, y: 0, action: false },
+    p2: { x: 0, y: 0, action: false },
+  };
+
+  /**
+   * A gamepad reading (#130), recorded only when it differs from the last one.
+   *
+   * The host calls this every step for both seats whether or not a pad is plugged in, so
+   * writing every call down would put two events on every frame of every recording — a trace
+   * of a keyboard match would be mostly zeros about a pad nobody had. A reading is an event
+   * only on the step it changes, which is also what makes a replay exact: `setSeatAnalog`
+   * persists a value until the next call, so replaying the changes reproduces the holds.
+   */
+  setSeatAnalog(seat: SeatId, x: number, y: number, action: boolean): void {
+    const last = this.#lastAnalog[seat];
+    if (last.x !== x || last.y !== y || last.action !== action) {
+      last.x = x;
+      last.y = y;
+      last.action = action;
+      this.#pending.push({ kind: 'analog', seat, x, y, action });
+    }
+    this.#input.setSeatAnalog(seat, x, y, action);
   }
 
   /** A query rather than a change, so it is delegated and not written down. */
@@ -219,6 +252,9 @@ function applyEvent(input: InputManager, event: InputEvent): void {
     case 'split':
       input.setSplit(event.split);
       return;
+    case 'analog':
+      input.setSeatAnalog(event.seat, event.x, event.y, event.action);
+      return;
     case 'clear':
       input.clear();
       return;
@@ -228,6 +264,32 @@ function applyEvent(input: InputManager, event: InputEvent): void {
 /** A trace as JSON. Pretty-printed: these get pasted into issues and read by people. */
 export function exportTrace(trace: Trace): string {
   return JSON.stringify(trace, null, 2);
+}
+
+/** Keys that reach an object's prototype chain, refused anywhere in a parsed trace. */
+const FORBIDDEN_KEYS: readonly string[] = ['__proto__', 'constructor', 'prototype'];
+
+/**
+ * Throws if any object in a parsed value carries a prototype-polluting key, at any depth.
+ *
+ * `JSON.parse` leaves such a key as a plain own property rather than mutating a prototype, so
+ * this walk sees it via `Object.keys` and refuses it before the trace is trusted. The `seen`
+ * set guards a cyclic graph; `JSON.parse` never produces one, but the walk is written not to
+ * assume that.
+ */
+function assertNoForbiddenKeys(value: unknown, seen: Set<object>): void {
+  if (typeof value !== 'object' || value === null) return;
+  if (seen.has(value)) return;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value as unknown[]) assertNoForbiddenKeys(item, seen);
+    return;
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (FORBIDDEN_KEYS.includes(key)) throw new Error(`trace carries a forbidden key "${key}"`);
+    assertNoForbiddenKeys(record[key], seen);
+  }
 }
 
 /**
@@ -240,6 +302,12 @@ export function exportTrace(trace: Trace): string {
  */
 export function importTrace(text: string): Trace {
   const raw: unknown = JSON.parse(text);
+  // A trace is a file a person was sent, and a `__proto__`, `constructor` or `prototype`
+  // key in it can only be an attempt to reach the runtime's prototype chain through a later
+  // read — no honest trace carries one (CWE-1321, #2365). Refused before any of the
+  // structure below is trusted, with the same shape of message as every other malformed
+  // input here: this is the one boundary a person watches, so it rejects rather than strips.
+  assertNoForbiddenKeys(raw, new Set());
   if (typeof raw !== 'object' || raw === null) throw new Error('trace is not an object');
   const value = raw as Record<string, unknown>;
   if (value['version'] !== 1)
@@ -284,6 +352,7 @@ const KINDS = new Set([
   'pointerCancel',
   'boardSeat',
   'split',
+  'analog',
   'clear',
 ]);
 
@@ -305,5 +374,17 @@ function checkEvent(event: unknown, at: number): void {
   }
   if (kind === 'boardSeat' && value['seat'] !== 'p1' && value['seat'] !== 'p2') {
     throw new Error(`frame ${at}: a boardSeat names ${String(value['seat'])}`);
+  }
+  if (kind === 'analog') {
+    if (value['seat'] !== 'p1' && value['seat'] !== 'p2') {
+      throw new Error(`frame ${at}: an analog reading names ${String(value['seat'])}`);
+    }
+    if (
+      typeof value['x'] !== 'number' ||
+      typeof value['y'] !== 'number' ||
+      typeof value['action'] !== 'boolean'
+    ) {
+      throw new Error(`frame ${at}: an analog reading is missing a component`);
+    }
   }
 }

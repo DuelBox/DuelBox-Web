@@ -45,7 +45,14 @@ describe('the end-to-end specs', () => {
       const visited = [...source.matchAll(/goto\(\s*[`'"]\/play\/([a-z0-9-]+)\//g)].map(
         (match) => match[1],
       );
-      const strays = [...new Set(visited)].filter(
+      // `e2e/responsive.ts` owns the goto now (#1891), so a spec that starts a match names
+      // its slug in the call instead of in a URL. A guard that reads only `goto` would have
+      // stopped seeing five of `resize.spec.ts`'s navigations the moment they moved, which
+      // is the silent loss this file exists to prevent.
+      const started = [...source.matchAll(/startMatch\(\s*page,\s*'([a-z0-9-]+)'/g)].map(
+        (match) => match[1],
+      );
+      const strays = [...new Set([...visited, ...started])].filter(
         (slug) => slug !== undefined && !routed.has(slug),
       );
       expect(strays, `${spec} visits ${strays.join(', ')}`).toEqual([]);

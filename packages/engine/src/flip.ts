@@ -15,6 +15,19 @@
  * turn would mean a tap halfway through landed in a seat neither player intended, and
  * whose it was would depend on frame timing. Here the settled orientation holds until
  * the flip completes, and input is suppressed while it runs.
+ *
+ * **Reduced motion is not this class's business, and it was tried here once.** The
+ * preference is delivered by `Canvas2DRenderer.setReducedMotion`, which reaches every one
+ * of the forty-five boards that own a flip through the angle they already push, with no
+ * edit to any of them, and which follows a preference changed mid-match in both
+ * directions. A second switch on this class could only be adopted game by game, and a
+ * half-adopted catalogue draws one preference two ways: a flip that holds its settled
+ * orientation cuts on the step it settles, while the renderer's snap cuts at the midpoint
+ * of the sweep, so the same player would see the board change hands at visibly different
+ * moments in tic tac toe and in chess. It would also be a snapshot — a game is handed its
+ * context once and cannot be told again — so a player who turned the preference off
+ * halfway through a match would keep the cut for the rest of it. One mechanism, and it is
+ * the renderer's.
  */
 
 const HALF_TURN = Math.PI;
@@ -62,7 +75,13 @@ export class SeatFlip {
     return this.#rotated !== this.#target;
   }
 
-  /** How far through the running flip, in [0, 1]. Zero when settled. */
+  /**
+   * How far through the running flip, in [0, 1]. Zero when settled.
+   *
+   * A simulation value, not a picture: this is how far through the flip the match is, and
+   * two devices must read the same number on the same step whatever either of them has
+   * asked its system for.
+   */
   get progress(): number {
     if (!this.isFlipping) return 0;
     if (this.#durationSeconds === 0) return 1;
@@ -72,6 +91,11 @@ export class SeatFlip {
   /**
    * Current rotation in radians, in [0, π]. This is the only value the renderer needs;
    * it is eased, so the board slows into its new orientation rather than stopping dead.
+   *
+   * Always the sweep, on every device. A player who has asked for reduced motion is served
+   * downstream of here, by the renderer, which draws whatever it is handed as the resting
+   * orientation nearest it — see the note at the top of this file for why the switch is
+   * there rather than here.
    */
   get angle(): number {
     const settled = this.#rotated ? HALF_TURN : 0;
@@ -111,7 +135,21 @@ export class SeatFlip {
     if (this.#durationSeconds === 0) this.#settle();
   }
 
-  /** Jump to an orientation with no tween. Used for reduced motion and on a reset. */
+  /**
+   * Jump to an orientation with no tween, settling on the spot.
+   *
+   * For a reset — a game laying its board out in `init`, or starting a fresh round — and
+   * for nothing else. **Not for reduced motion**, despite what this line used to say, and
+   * neither is a `durationSeconds` of zero: both move the *settled* orientation, which is
+   * what input is mapped by and what `acceptsInput` is read from. `acceptsInput` is false
+   * for exactly as long as the flip runs and forty-two of the forty-five games that own a
+   * flip gate their `update()` on it, so a flip made instant to honour a preference would
+   * reopen input about twenty-two steps early at sixty hertz: the same taps on the same
+   * steps would play a different match on a device with the preference set than on one
+   * without, and rule 8 would go, taking every replay and lockstep trace with it. The
+   * duration is a simulation value that happens to be written in seconds. Only the angle
+   * is a picture, and `Canvas2DRenderer.setReducedMotion` is where the picture is changed.
+   */
   snap(rotated: boolean): void {
     this.#rotated = rotated;
     this.#target = rotated;

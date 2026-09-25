@@ -15,8 +15,30 @@
   height: 100%;
   padding-top: max(var(--db-space-2), var(--db-safe-top));
   padding-bottom: max(var(--db-space-2), var(--db-safe-bottom));
-  padding-left: max(0px, var(--db-safe-left));
-  padding-right: max(0px, var(--db-safe-right));
+  padding-left: max(0px, var(--db-safe-left)); /* physical: side of the device */
+  padding-right: max(0px, var(--db-safe-right)); /* physical: side of the device */
+  /*
+   * The one part of the product that never mirrors (#222, rule 9).
+   *
+   * Two people sit on opposite sides of this element, and which of them is "player one" is
+   * a side of the device, not a side of a sentence: the near seat's scoreboard, the far
+   * seat's turned copy, the board between them and the control zones the engine draws on
+   * it are all the same physical object under an Arabic shell as under an English one. A
+   * flex row follows `direction`, so without this line the landscape layout below would
+   * carry the far player's scoreboard to the near player's end of the phone with neither
+   * of them having moved — and a board mirrored on one device is a different play area
+   * from the other device's, which is the thing rule 9 forbids. So the surface pins its
+   * own direction, and `PlaySurface.tsx` stamps `dir="ltr"` on the same element so the
+   * bidi algorithm agrees with the box model.
+   *
+   * The attribute is also what hands the island its own direction tokens. Custom properties
+   * inherit from <html>, where `[dir='rtl']` in tokens.css has swapped them, and a control
+   * in here would otherwise sit at its right edge (`inset-inline-end` under `ltr`) while
+   * clearing the *left* cutout (`--db-safe-inline-end` from the shell's `rtl`); tokens.css
+   * sets all three back under `[dir='ltr']`, and `direction.test.ts` holds that block to the
+   * `[dir='rtl']` one, so a fourth token cannot be turned round there and forgotten here.
+   */
+  direction: ltr; /* physical: one play area on both sides of the device (rule 9) */
 }
 
 .hud {
@@ -89,19 +111,10 @@
   min-height: 0;
 }
 
-.state,
-.result {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--db-space-4);
-  padding-block: var(--db-space-7);
-  text-align: center;
-}
-
-.state h2 {
-  font-size: var(--db-text-2xl);
-}
+/* The panel these phases are drawn in is `.db-panel`, in `globals.css`. It moved there so
+   the route's loading fallback — a server component, which cannot import this file without
+   Next emitting a client chunk for it — can be the same panel rather than a second copy of
+   one. See the note beside the rule. */
 
 .modes {
   display: flex;
@@ -122,7 +135,7 @@
 
 .primary {
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border: none;
   box-shadow: 0 4px 0 var(--db-brand-deep);
 }
@@ -137,4 +150,20 @@
   font-family: var(--db-font-display);
   font-size: var(--db-text-xl);
   font-weight: 600;
+}
+
+/*
+ * The one line of copy above the tournament's two entry buttons: what pressing either of
+ * them starts.
+ *
+ * `--db-muted` at 4.65:1 rather than `--db-faint` at 2.45:1, which the `.versus` label above
+ * can carry because it is three uppercase letters of decoration and this is body text. The
+ * measure is capped so the sentence does not run the full width of a laptop panel and lose
+ * its connection to the buttons under it.
+ */
+.tournamentLede {
+  max-width: 30rem;
+  margin: 0;
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
 }

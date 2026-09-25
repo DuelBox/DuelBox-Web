@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
+import { misjudgement } from '@duelbox/game-sdk';
 import {
   BAR,
   BEAR_OFF,
@@ -11,6 +12,7 @@ import {
   MAX_TURNS,
   POINTS,
   START_PIPS,
+  aimedMove,
   allHome,
   applyMove,
   barOf,
@@ -36,6 +38,7 @@ import {
   pipsLeft,
   resetPosition,
   roll,
+  wantedMove,
   winnerOf,
 } from './rules.js';
 import type { BotDifficulty, Position } from './rules.js';
@@ -746,6 +749,126 @@ describe('the bot', () => {
     expect(BOT_PROFILES.normal.hits).toBe(true);
     expect(BOT_PROFILES.hard.safety).toBeGreaterThan(BOT_PROFILES.normal.safety);
     expect(BOT_PROFILES.easy.safety).toBe(0);
+  });
+
+  it('plays the move it meant when its finger lands on it', () => {
+    const moves: number[] = [];
+    const position = at({
+      p1: [
+        [4, 1],
+        [7, 1],
+      ],
+      dice: [2],
+    });
+    const count = legalMoves(moves, position, 'p1');
+    const wanted = encodeMove(7, 2);
+    expect(aimedMove(moves, count, wanted, 0), 'no slip, no miss').toBe(wanted);
+    // Half a point either way still resolves to the checker it touched, because the two
+    // sources are whole points apart and ties go to the move it meant.
+    expect(aimedMove(moves, count, wanted, 0.5)).toBe(wanted);
+    expect(aimedMove(moves, count, wanted, -0.5)).toBe(wanted);
+  });
+
+  it('plays the checker next door when its finger lands nearer that one', () => {
+    const moves: number[] = [];
+    const position = at({
+      p1: [
+        [6, 1],
+        [7, 1],
+      ],
+      dice: [2],
+    });
+    const count = legalMoves(moves, position, 'p1');
+    expect(count, 'two checkers, one die').toBe(2);
+    // Aiming at the checker on 7 and landing past halfway towards the one on 6.
+    expect(aimedMove(moves, count, encodeMove(7, 2), -0.6)).toBe(encodeMove(6, 2));
+    // And the other way round.
+    expect(aimedMove(moves, count, encodeMove(6, 2), 0.6)).toBe(encodeMove(7, 2));
+  });
+
+  it('cannot slip past a point with nothing on it', () => {
+    // The only other legal move starts six points away, so a slip of one point lands on
+    // empty board and the nearest legal move is still the one it meant. A miss is only
+    // possible where a person could mis-tap too.
+    const moves: number[] = [];
+    const position = at({
+      p1: [
+        [1, 1],
+        [7, 1],
+      ],
+      dice: [2],
+    });
+    const count = legalMoves(moves, position, 'p1');
+    for (const slip of [-1, -0.9, 0.9, 1, 2]) {
+      expect(aimedMove(moves, count, encodeMove(7, 2), slip)).toBe(encodeMove(7, 2));
+    }
+  });
+
+  it('takes the die it meant from whichever checker it touched', () => {
+    // The bar is one place on the board and cannot be mis-touched, so what is left to get
+    // right there is the die — and the die is a decision rather than a place.
+    const moves: number[] = [];
+    const position = at({ bar: [1, 0], dice: [3, 5] });
+    const count = legalMoves(moves, position, 'p1');
+    expect(count, 'two entries from the bar').toBe(2);
+    for (const slip of [-3, -0.4, 0, 0.4, 3]) {
+      expect(aimedMove(moves, count, encodeMove(BAR, 5), slip)).toBe(encodeMove(BAR, 5));
+    }
+  });
+
+  it('can land on a move it did not mean, and does so less the harder it is', () => {
+    // Issue #2477. The aim measured on its own: real positions from real matches, the slip
+    // drawn from a stream of its own so the dice cannot colour it, and blunders left out —
+    // a blunder is not a miss, it is not having looked. Only turns with a genuine choice
+    // are counted, because a turn with one legal move cannot be got wrong by anybody.
+    //
+    // Measured over 40 matches a tier: easy 13.9%, normal 6.2%, hard 1.1%. The bands are
+    // wide enough to survive a reordering of the legal list and narrow enough that an aim
+    // switched off, or one made uniform across the tiers, fails here.
+    const missRate = (tier: BotDifficulty): number => {
+      const moves: number[] = [];
+      let missed = 0;
+      let counted = 0;
+      for (let seed = 0; seed < 40; seed += 1) {
+        const position = createPosition();
+        const rng = new Rng(seed * 7919 + 13);
+        const hand = new Rng(seed * 104_729 + 7);
+        for (let step = 0; step < 20_000 && position.winner === null; step += 1) {
+          if (position.phase === 'rolling') {
+            roll(position, rng);
+            continue;
+          }
+          const count = legalMoves(moves, position, position.seat);
+          if (count === 0) {
+            passTurn(position);
+            continue;
+          }
+          if (count > 1) {
+            counted += 1;
+            const wanted = wantedMove(moves, count, position, tier);
+            const slip = misjudgement(hand.float(), BOT_PROFILES[tier].aimError);
+            if (aimedMove(moves, count, wanted, slip) !== wanted) missed += 1;
+          }
+          const code = botMove(position, rng, tier);
+          if (code < 0) passTurn(position);
+          else applyMove(position, code);
+        }
+      }
+      expect(counted, `${tier} never faced a choice`).toBeGreaterThan(1000);
+      return missed / counted;
+    };
+    const easy = missRate('easy');
+    const normal = missRate('normal');
+    const hard = missRate('hard');
+    expect(easy, `easy missed ${String(easy)}`).toBeGreaterThan(0.1);
+    expect(easy).toBeLessThan(0.2);
+    expect(normal, `normal missed ${String(normal)}`).toBeGreaterThan(0.03);
+    expect(normal).toBeLessThan(0.09);
+    // Every tier can miss: a bot that never misses is the thing #2477 was about.
+    expect(hard, `hard missed ${String(hard)}`).toBeGreaterThan(0.005);
+    expect(hard).toBeLessThan(0.03);
+    expect(easy).toBeGreaterThan(normal);
+    expect(normal).toBeGreaterThan(hard);
   });
 
   it('wins more often the harder it is', () => {

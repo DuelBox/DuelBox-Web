@@ -33,7 +33,13 @@
 .cards {
   display: grid;
   gap: var(--db-space-4);
-  grid-template-columns: 1fr;
+  /* `minmax(0, 1fr)` and not `1fr`, which is `minmax(auto, 1fr)` and therefore floors the
+     track at the item's min-content width — its longest unbreakable word. On a locale half
+     again as long as the English that word is wide enough to push the one-column phone
+     layout to 610px inside a 320px window (#223). The two-column rule below already spells
+     it this way; this is the same decision for the narrow case, and it changes nothing in
+     English, where no word in these cards comes near the column. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (min-width: 40rem) {
@@ -54,8 +60,12 @@
   margin-bottom: var(--db-space-2);
 }
 
+/* The card's background is `--db-surface`, where `--db-muted` is 4.38:1 and misses AA.
+   `--db-body` is 7.6:1 there. These four cards are the answers to the four questions a
+   pair who have never played actually ask, so they are prose to be read rather than a
+   caption. */
 .card p {
-  color: var(--db-muted);
+  color: var(--db-body);
   margin: 0;
 }
 
@@ -103,22 +113,32 @@
 
 .keys th,
 .keys td {
-  text-align: left;
+  text-align: start;
   padding: var(--db-space-2) var(--db-space-3);
   border-bottom: 1px solid var(--db-hairline);
 }
 
+/* `--db-faint` is 2.6:1 on this page's white — the eyebrow treatment reused on something
+   that is not an eyebrow. These cells carry the column names of the keyboard table and the
+   name of the seat each row belongs to, which is the whole point of the table, and a screen
+   reader is not the only person who has to read them. `--db-muted` is 4.65:1. */
 .keys th {
   font-size: var(--db-text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--db-faint);
+  color: var(--db-muted);
+}
+
+/* Rendered from `SEAT_KEYS`, so the gap between keys is the stylesheet's job rather than
+   a literal space between two elements in the markup. */
+.keys kbd + kbd {
+  margin-inline-start: var(--db-space-1);
 }
 
 .keys kbd {
   font-family: var(--db-font-mono);
   font-size: var(--db-text-sm);
-  padding: 2px 6px;
+  padding: 2px 6px; /* off-scale: a key cap hugs its glyph, between two grid steps */
   border: 1px solid var(--db-border);
   border-bottom-width: 2px;
   border-radius: 4px;

@@ -2,6 +2,16 @@
   padding-block: var(--db-space-6) var(--db-space-5);
 }
 
+/* The title and the "Surprise me" button, side by side while there is room and one
+   above the other on a narrow phone. */
+.headRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--db-space-3) var(--db-space-4);
+}
+
 .head h1 {
   font-size: var(--db-text-2xl);
 }
@@ -12,31 +22,21 @@
   max-width: 40rem;
 }
 
-.section {
-  margin-bottom: var(--db-space-7);
-}
-
-.sectionTitle {
-  display: flex;
-  align-items: center;
-  gap: var(--db-space-3);
-  font-size: var(--db-text-xl);
-  margin-bottom: var(--db-space-4);
-}
-
-.sectionCount {
-  font-family: var(--db-font-mono);
-  font-size: var(--db-text-xs);
+/* Styled like the header's own call to action: the one button on the page that starts a
+   match rather than narrowing the list. */
+.surprise {
+  min-height: var(--db-touch-target);
+  padding: 0 var(--db-space-5);
+  border: 0;
+  border-radius: var(--db-radius);
+  background: var(--db-brand);
+  color: var(--db-paper);
+  font: inherit;
   font-weight: 700;
-  color: var(--db-muted);
-  background: var(--db-surface);
-  border: 1px solid var(--db-border);
-  border-radius: var(--db-radius-pill);
-  padding: 2px 8px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--db-brand-deep);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: var(--db-space-4);
+.surprise:hover {
+  background: var(--db-brand-deep);
 }

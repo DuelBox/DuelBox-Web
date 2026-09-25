@@ -51,6 +51,8 @@ class FakeInput implements InputState {
       seat.actionHeld = false;
       seat.actionReleased = false;
       seat.holdSeconds = 0;
+      seat.holdSecondsAtRelease = 0;
+      seat.pointerCancelled = false;
     }
   }
 }
@@ -142,13 +144,14 @@ function makeContext(
   presentation: Presentation = 'single-seat',
   localSeat: SeatId = 'p1',
   seed = 1234,
+  openingSeat: SeatId = 'p1',
 ): GameContext {
   return {
     manifest,
     rng: new Rng(seed),
     presentation,
     localSeat,
-    openingSeat: 'p1',
+    openingSeat,
     botDifficulty: (seat: SeatId) => (seat === 'p1' ? p1Bot : p2Bot),
   };
 }
@@ -172,6 +175,22 @@ function lift(input: FakeInput, seat: SeatId): void {
   target.pointer = null;
   target.actionHeld = false;
   target.actionReleased = true;
+}
+
+/**
+ * The browser taking the gesture away rather than the player letting go — a system swipe,
+ * palm rejection, an incoming call. The pointer is gone, nothing is held, and there is
+ * **no release**: a cancel and a release are opposite events since #2480.
+ */
+function cancel(input: FakeInput, seat: SeatId): void {
+  const target = seat === 'p1' ? input.p1 : input.p2;
+  target.pointer = null;
+  target.actionPressed = false;
+  target.actionHeld = false;
+  target.actionReleased = false;
+  target.holdSeconds = 0;
+  target.holdSecondsAtRelease = 0;
+  target.pointerCancelled = true;
 }
 
 /** A whole shot: point, draw, loose, and wait for the arrow to land and score. */
@@ -322,6 +341,80 @@ describe('taking a shot', () => {
     step(game, input, TURN_TAIL_FRAMES);
     expect(game.arrowsFor('p1')).toBe(1);
     expect(game.activeSeat).toBe('p2');
+  });
+});
+
+describe('a cancelled draw', () => {
+  it('lets the bow down rather than leaving it drawn', () => {
+    const game = new ArcheryGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null));
+    touch(input, 'p1', 0, 0);
+    step(game, input, 20);
+    expect(game.drawSeconds, 'the bow was drawn').toBeGreaterThan(0);
+
+    cancel(input, 'p1');
+    step(game, input, 1);
+    expect(game.drawSeconds, 'a gesture the browser disowned leaves nothing behind').toBe(0);
+  });
+
+  it('does not loose the abandoned arrow on the next, unrelated release', () => {
+    const game = new ArcheryGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null));
+    touch(input, 'p1', 0, 0);
+    step(game, input, 20);
+    cancel(input, 'p1');
+    step(game, input, 1);
+
+    input.clear();
+    input.p1.actionReleased = true;
+    step(game, input, 1);
+    expect(game.arrowInFlight, 'the nock was let down, not loosed').toBe(false);
+    expect(game.arrowsFor('p1')).toBe(0);
+  });
+
+  it('keeps a draw the action key is still making when a stray touch is cancelled', () => {
+    // The engine raises `pointerCancelled` for *any* cancelled pointer, not only the last
+    // one down, and it keeps `actionHeld` true while another source still holds the action.
+    // A cancel that ended nothing must abandon nothing — which is why the game reads the
+    // pair and not the bit on its own. Driven through the real `InputManager`, because that
+    // is the only thing that can produce this combination honestly.
+    const game = new ArcheryGame();
+    game.init(makeContext(null, null));
+    const manager = new InputManager(manifest.logical, { split: 'shared', bottomSeat: 'p1' });
+    const view = new InputView();
+
+    manager.keyDown(DEFAULT_BINDINGS.p1.action);
+    for (let i = 0; i < 20; i += 1) game.update(STEP, view.sync(manager.beginStep(STEP)));
+    const drawn = game.drawSeconds;
+    expect(drawn, 'the key drew the bow').toBeGreaterThan(0.2);
+
+    manager.pointerDown(1, 100, 100);
+    game.update(STEP, view.sync(manager.beginStep(STEP)));
+    manager.pointerCancel(1);
+    const cancelled = view.sync(manager.beginStep(STEP));
+    expect(cancelled.seat('p1').pointerCancelled, 'a pointer was taken away').toBe(true);
+    expect(cancelled.seat('p1').actionHeld, 'and the key still holds the action').toBe(true);
+    game.update(STEP, cancelled);
+    expect(game.drawSeconds, 'the key was not cancelled, so its draw stands').toBeGreaterThan(
+      drawn,
+    );
+  });
+
+  it('keeps the sight where it was: a cancel drops the draw and nothing else', () => {
+    const game = new ArcheryGame();
+    const input = new FakeInput();
+    game.init(makeContext(null, null));
+    touch(input, 'p1', 0.5, -0.5);
+    step(game, input, 10);
+    const aimX = game.aimX;
+    const aimY = game.aimY;
+
+    cancel(input, 'p1');
+    step(game, input, 1);
+    expect(game.aimX, 'the sight does not move because a phone call arrived').toBe(aimX);
+    expect(game.aimY).toBe(aimY);
   });
 });
 
@@ -604,13 +697,24 @@ describe('both seats play the same game', () => {
     expect(two.pointsFor('p2')).toBe(one.pointsFor('p1'));
   });
 
-  it('favours neither seat when the same tier sits in both', () => {
+  it('favours neither seat, and gives the first arrow nothing either', () => {
+    // Two counts, because they are two claims. This used to be one: the sweep pinned
+    // `openingSeat` to `p1`, which makes "seat one won" and "the seat that loosed first
+    // won" the same number, and a test that cannot separate them can only ever assert one
+    // of them while appearing to assert both. That is what #2500 was in Soccer Pool, where
+    // a 55.3% *break* advantage had been written into SPEC.md as a seat advantage.
+    //
+    // The opener alternates by seed here, the way the shell alternates it between the
+    // rounds of a best-of. Sample is 160 matches rather than 40, because a band worth
+    // asserting needs one: at 40, a fair game sits inside +-15 points two times in three.
     let p1Wins = 0;
     let p2Wins = 0;
-    for (let seed = 0; seed < 40; seed += 1) {
+    let openerWins = 0;
+    for (let seed = 0; seed < 160; seed += 1) {
+      const opener: SeatId = seed % 2 === 0 ? 'p1' : 'p2';
       const game = new ArcheryGame();
       const input = new FakeInput();
-      game.init(makeContext('easy', 'easy', 'single-seat', 'p1', 700 + seed * 31));
+      game.init(makeContext('easy', 'easy', 'single-seat', 'p1', 700 + seed * 31, opener));
       for (let i = 0; i < 60 * 600; i += 1) {
         game.update(STEP, input);
         if (game.getScore().winner !== null) break;
@@ -618,9 +722,32 @@ describe('both seats play the same game', () => {
       const winner = game.getScore().winner;
       if (winner === 'p1') p1Wins += 1;
       if (winner === 'p2') p2Wins += 1;
+      if (winner === opener) openerWins += 1;
     }
-    expect(p1Wins + p2Wins).toBeGreaterThan(30);
-    expect(Math.abs(p1Wins - p2Wins)).toBeLessThan(14);
+    const decided = p1Wins + p2Wins;
+    expect(decided).toBeGreaterThan(120);
+
+    const seatShare = p1Wins / decided;
+    expect(
+      seatShare,
+      `seat one took ${(seatShare * 100).toFixed(1)}% of ${decided}`,
+    ).toBeGreaterThan(0.42);
+    expect(seatShare, `seat one took ${(seatShare * 100).toFixed(1)}% of ${decided}`).toBeLessThan(
+      0.58,
+    );
+
+    // Archery hands the first arrow no edge by construction — both seats loose the same
+    // number of arrows at the same target in the same wind, so going first only means
+    // finishing first. This is the assertion that says so rather than a comment.
+    const openerShare = openerWins / decided;
+    expect(
+      openerShare,
+      `the first arrow took ${(openerShare * 100).toFixed(1)}% of ${decided}`,
+    ).toBeGreaterThan(0.42);
+    expect(
+      openerShare,
+      `the first arrow took ${(openerShare * 100).toFixed(1)}% of ${decided}`,
+    ).toBeLessThan(0.58);
   });
 });
 

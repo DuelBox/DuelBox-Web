@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FixedLoop, RunLoop, browserClock } from './loop.js';
+import {
+  FixedLoop,
+  RunLoop,
+  browserBatterySource,
+  browserClock,
+  browserGamepadSource,
+} from './loop.js';
 import type { Clock, LoopCallbacks } from './loop.js';
 
 class Recorder implements LoopCallbacks {
@@ -406,6 +412,118 @@ describe('RunLoop', () => {
   });
 });
 
+/**
+ * Assist-mode speed (#179): the multiplier scales how much wall-clock time reaches the fixed
+ * loop, and nothing about the simulation step itself.
+ *
+ * The property that makes this a legitimate assist rather than a different match is that the
+ * step size never moves — every `update` is the identical `stepSeconds` it always was, so
+ * the seeded RNG and the step order a game runs are byte-for-byte what they were at full
+ * speed, just delivered over more wall-clock seconds. These check exactly that: the step
+ * size is invariant, half speed runs half the steps for the same real time, render keeps
+ * pace with frames rather than steps, and reaching a given step count is deterministic at
+ * any speed.
+ */
+describe('RunLoop assist-mode time scaling', () => {
+  it('defaults to full speed', () => {
+    const runner = new RunLoop(new FixedLoop(new Recorder()), new FakeClock());
+    expect(runner.timeScale).toBe(1);
+  });
+
+  it('runs half the steps at half speed over the same wall-clock time', () => {
+    function run(scale: number): Recorder {
+      const recorder = new Recorder();
+      const clock = new FakeClock();
+      const runner = new RunLoop(new FixedLoop(recorder), clock);
+      runner.setTimeScale(scale);
+      runner.start();
+      // 30 frames of 16 ms of real time each.
+      for (let i = 0; i < 30; i += 1) clock.tick(16);
+      return recorder;
+    }
+    const full = run(1);
+    const half = run(0.5);
+    // Renders track frames in both, because rendering is never scaled.
+    expect(full.renders).toBe(30);
+    expect(half.renders).toBe(30);
+    // Steps: 480 ms / 16.667 ≈ 28 at full speed; 240 ms / 16.667 ≈ 14 at half. The half run
+    // is within one step of exactly half the full run's steps.
+    expect(Math.abs(half.updates - full.updates / 2)).toBeLessThanOrEqual(1);
+  });
+
+  it('never changes the step size the simulation is handed, at any speed', () => {
+    const deltas: number[] = [];
+    const loop = new FixedLoop(
+      {
+        update(dt) {
+          deltas.push(dt);
+        },
+        render() {
+          /* not under test here */
+        },
+      },
+      { stepsPerSecond: 60 },
+    );
+    const clock = new FakeClock();
+    const runner = new RunLoop(loop, clock);
+    runner.setTimeScale(0.25);
+    runner.start();
+    for (let i = 0; i < 40; i += 1) clock.tick(16);
+    expect(deltas.length).toBeGreaterThan(0);
+    // Every step is exactly one step of simulation time, quarter speed or not.
+    for (const dt of deltas) expect(dt).toBeCloseTo(1 / 60, 12);
+  });
+
+  it('reaches a given step count deterministically regardless of speed', () => {
+    // The same sequence of steps, only spread over more wall-clock time. Reaching 20 steps
+    // at quarter speed takes four times the real time it takes at full speed, and produces
+    // the identical run of step deltas.
+    function stepsFor(scale: number, msPerFrame: number): number[] {
+      const deltas: number[] = [];
+      const loop = new FixedLoop(
+        {
+          update(dt: number) {
+            deltas.push(dt);
+          },
+          render() {
+            /* counted elsewhere */
+          },
+        },
+        { stepsPerSecond: 60 },
+      );
+      const clock = new FakeClock();
+      const runner = new RunLoop(loop, clock);
+      runner.setTimeScale(scale);
+      runner.start();
+      while (deltas.length < 20) clock.tick(msPerFrame);
+      return deltas.slice(0, 20);
+    }
+    expect(stepsFor(0.25, 16)).toEqual(stepsFor(1, 16));
+  });
+
+  it('ignores a scale that is not a positive finite number', () => {
+    const runner = new RunLoop(new FixedLoop(new Recorder()), new FakeClock());
+    runner.setTimeScale(0.5);
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      runner.setTimeScale(bad);
+      expect(runner.timeScale).toBe(0.5);
+    }
+  });
+
+  it('can change speed mid-run without losing the steps already taken', () => {
+    const recorder = new Recorder();
+    const clock = new FakeClock();
+    const runner = new RunLoop(new FixedLoop(recorder), clock);
+    runner.start();
+    for (let i = 0; i < 10; i += 1) clock.tick(16);
+    const before = recorder.updates;
+    runner.setTimeScale(0.5);
+    for (let i = 0; i < 10; i += 1) clock.tick(16);
+    // Steps kept accumulating from where they were, just more slowly after the change.
+    expect(recorder.updates).toBeGreaterThan(before);
+  });
+});
+
 describe('browserClock', () => {
   it('reports a clear error when requestAnimationFrame is unavailable', () => {
     const scope = globalThis as unknown as { requestAnimationFrame?: unknown };
@@ -416,5 +534,234 @@ describe('browserClock', () => {
     } finally {
       if (original !== undefined) scope.requestAnimationFrame = original;
     }
+  });
+});
+
+describe('the frame callback (#31)', () => {
+  it('reports the wall-clock time each frame brings, before any step runs', () => {
+    const seen: number[] = [];
+    const order: string[] = [];
+    const loop = new FixedLoop({
+      update() {
+        order.push('update');
+      },
+      render() {
+        order.push('render');
+      },
+      frame(delta) {
+        seen.push(delta);
+        order.push('frame');
+      },
+    });
+    loop.advance(1 / 30);
+    expect(seen).toEqual([1 / 30]);
+    // Once, first, however many steps the frame owed.
+    expect(order).toEqual(['frame', 'update', 'update', 'render']);
+  });
+
+  it('hands over the sanitised delta, never a negative or a NaN', () => {
+    const seen: number[] = [];
+    const loop = new FixedLoop({
+      update() {},
+      render() {},
+      frame(delta) {
+        seen.push(delta);
+      },
+    });
+    loop.advance(-1);
+    loop.advance(Number.NaN);
+    expect(seen).toEqual([0, 0]);
+  });
+
+  it('is optional, so a loop driven by hand owes nothing', () => {
+    const loop = new FixedLoop({ update() {}, render() {} });
+    expect(() => {
+      loop.advance(1 / 60);
+    }).not.toThrow();
+  });
+});
+
+describe('browserBatterySource (#190)', () => {
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  /** A stand-in for `BatteryManager`, with the two events the adapter subscribes to. */
+  function fakeBattery(level: number, charging: boolean) {
+    const listeners: Record<string, (() => void)[]> = {};
+    return {
+      level,
+      charging,
+      addEventListener(type: string, listener: () => void) {
+        (listeners[type] ??= []).push(listener);
+      },
+      fire(type: string) {
+        for (const listener of listeners[type] ?? []) listener();
+      },
+    };
+  }
+
+  it('answers null where the API is absent, which is every WebKit browser', () => {
+    const read = withNavigator({}, () => browserBatterySource());
+    expect(read()).toBeNull();
+    const none = withNavigator(undefined, () => browserBatterySource());
+    expect(none()).toBeNull();
+  });
+
+  it('answers null until the promise resolves, then the level and whether it is charging', async () => {
+    const battery = fakeBattery(0.15, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    // Asked at once, answered later: the first frames of a match see "unknown".
+    expect(read()).toBeNull();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toEqual({ level: 0.15, charging: false });
+  });
+
+  it('follows the battery through its own events without a second ask', async () => {
+    const battery = fakeBattery(0.5, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    battery.level = 0.1;
+    battery.fire('levelchange');
+    expect(read()?.level).toBe(0.1);
+    battery.charging = true;
+    battery.fire('chargingchange');
+    expect(read()?.charging).toBe(true);
+  });
+
+  it('hands back the same object on every read, so a frame that asks allocates nothing (rule 5)', async () => {
+    const battery = fakeBattery(0.5, true);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    const first = read();
+    battery.level = 0.4;
+    battery.fire('levelchange');
+    expect(read()).toBe(first);
+  });
+
+  it('stays null when the browser has the method and refuses to answer', async () => {
+    const read = withNavigator({ getBattery: () => Promise.reject(new Error('no')) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toBeNull();
+  });
+});
+
+describe('browserGamepadSource', () => {
+  /** A stand-in for `navigator.getGamepads`, returning a fresh array each call as the real one does. */
+  function fakeNavigator(pads: () => (null | Record<string, unknown>)[]) {
+    return { getGamepads: () => pads() };
+  }
+
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  it('answers with nothing where the API is absent, rather than throwing', () => {
+    const read = withNavigator(undefined, () => browserGamepadSource());
+    expect(read()).toEqual([]);
+  });
+
+  it('presents the plain snapshot shape the manager consumes', () => {
+    const nav = fakeNavigator(() => [
+      null,
+      {
+        index: 1,
+        id: 'Pad',
+        connected: true,
+        axes: [0.5, -0.25],
+        buttons: [{ pressed: true }, { pressed: false }],
+      },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const pads = read();
+    expect(pads[0]).toBeNull();
+    expect(pads[1]).toEqual({
+      index: 1,
+      id: 'Pad',
+      connected: true,
+      axes: [0.5, -0.25],
+      buttons: [true, false],
+    });
+  });
+
+  it('reuses its snapshots and arrays across polls, so the step path allocates none of them (rule 5)', () => {
+    // The platform's own array is fresh every call and outside the rule; everything this
+    // adapter owns must not be. Identity across two polls is the whole assertion.
+    let pressed = false;
+    const nav = fakeNavigator(() => [
+      { index: 0, id: 'Pad', connected: true, axes: [0.1, 0.2], buttons: [{ pressed }] },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const first = read();
+    const firstPad = first[0];
+    const firstAxes = firstPad?.axes;
+    const firstButtons = firstPad?.buttons;
+    pressed = true;
+    const second = read();
+    expect(second).toBe(first);
+    expect(second[0]).toBe(firstPad);
+    expect(second[0]?.axes).toBe(firstAxes);
+    expect(second[0]?.buttons).toBe(firstButtons);
+    // And it is a *fresh reading*, not a stale one — reuse must not mean remembering.
+    expect(second[0]?.buttons[0]).toBe(true);
+  });
+
+  it('forgets a pad that unplugs and shrinks to the slots the browser reports', () => {
+    let pads: (null | Record<string, unknown>)[] = [
+      { index: 0, id: 'A', connected: true, axes: [0, 0], buttons: [] },
+      { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] },
+    ];
+    const read = withNavigator(
+      fakeNavigator(() => pads),
+      () => browserGamepadSource(),
+    );
+    expect(read()).toHaveLength(2);
+    pads = [null, { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] }];
+    const next = read();
+    expect(next).toHaveLength(2);
+    expect(next[0]).toBeNull();
+    expect(next[1]?.id).toBe('B');
+    pads = [];
+    expect(read()).toHaveLength(0);
   });
 });

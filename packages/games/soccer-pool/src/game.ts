@@ -1,5 +1,6 @@
 import { Rng, SEAT_PALETTE, SeatFlip, toWorld, vec2 } from '@duelbox/engine';
 import type { LogicalSize, Presentation, SeatId } from '@duelbox/engine';
+import { actionAbandoned } from '@duelbox/game-sdk';
 import type { Game, GameContext, InputState, MatchScore, Renderer } from '@duelbox/game-sdk';
 import { manifest } from './manifest.js';
 import {
@@ -158,7 +159,7 @@ export class SoccerPoolGame implements Game {
     this.#settleSteps = 0;
     this.#power = 0;
     this.#angle = this.#defaultAim();
-    this.#flip.snap(this.#shouldRotate());
+    this.#flip.snap(this.#facesActiveSeat());
   }
 
   /**
@@ -179,7 +180,7 @@ export class SoccerPoolGame implements Game {
     if (this.#stepsPerSecond === 0 && fixedDeltaSeconds > 0) {
       this.#stepsPerSecond = Math.max(1, Math.round(1 / fixedDeltaSeconds));
     }
-    this.#flip.retarget(this.#shouldRotate());
+    this.#flip.retarget(this.#facesActiveSeat());
     this.#flip.step(fixedDeltaSeconds);
     if (this.#matchWinner !== null) return;
 
@@ -256,11 +257,20 @@ export class SoccerPoolGame implements Game {
    * is how hard you hit it. On a keyboard the same shot is steer, hold, release.
    */
   #updateAim(fixedDeltaSeconds: number, seatInput: ReturnType<InputState['seat']>): void {
+    // A cancel is the browser saying the gesture did not happen. It suppresses the release,
+    // so nothing fires on this step — but the charge the gesture had built would otherwise
+    // stay standing and be fired by whatever release came next. Drop the charge; leave the
+    // aim, which the player set and which an interruption must not also take away (#2501).
+    // `actionAbandoned` is the mirror of `actionReleased`: the action ended, and it ended by
+    // being taken away rather than let go. Its doc comment carries the reasoning, including
+    // why a bare `pointerCancelled` is the wrong read.
+    if (actionAbandoned(seatInput)) this.#power = 0;
+
     const ball = ballOf(this.#match);
     const pointer = seatInput.pointer;
 
     if (pointer !== null) {
-      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#flip.rotated);
+      toWorld(this.#pointerWorld, pointer.x, pointer.y, this.#logical, this.#viewRotated());
       const dx = ball.x - this.#pointerWorld.x;
       const dy = ball.y - this.#pointerWorld.y;
       const pull = Math.hypot(dx, dy);
@@ -309,9 +319,28 @@ export class SoccerPoolGame implements Game {
     this.#angle = this.#defaultAim();
   }
 
-  #shouldRotate(): boolean {
-    if (this.#presentation === 'single-seat') return false;
+  /**
+   * Whether the board turns to face the seat to move.
+   *
+   * Presentation-independent on purpose. The turn handover — the board settling to face
+   * whoever now has the shot, and the input it suppresses while it settles — is part of the
+   * simulation, not decoration: the shot clock and the bot both sit behind `acceptsInput`,
+   * so the handover must cost the same steps in both presentations or the two step different
+   * matches (CLAUDE.md rule 8, enforced by presentation-parity.test.ts). Single-seat spends
+   * those steps too; it simply does not draw the board turning (docs/presentation.md), which
+   * is {@link #viewRotated}'s job and this method's non-concern.
+   */
+  #facesActiveSeat(): boolean {
     return this.#match.seat !== this.#localSeat;
+  }
+
+  /**
+   * Whether the picture and the pointer mapping are turned. Never in single-seat, where the
+   * local player owns the whole viewport upright — so a finger and the board are read
+   * straight even while, underneath, the handover flip is running.
+   */
+  #viewRotated(): boolean {
+    return this.#presentation === 'shared-screen' && this.#flip.rotated;
   }
 
   getActiveSeat(): SeatId {
@@ -347,7 +376,7 @@ export class SoccerPoolGame implements Game {
   render(renderer: Renderer, alpha: number): void;
   render(renderer: Renderer): void {
     renderer.clear(COLOUR_SURROUND);
-    renderer.pushRotation(this.#flip.angle);
+    renderer.pushRotation(this.#presentation === 'single-seat' ? 0 : this.#flip.angle);
     this.#drawPitch(renderer);
     this.#drawGoals(renderer);
     this.#drawDiscs(renderer);

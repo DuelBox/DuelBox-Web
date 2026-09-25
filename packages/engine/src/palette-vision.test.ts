@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { SEAT_PALETTE } from './palette.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  SEAT_PALETTE,
+  SEAT_PALETTES,
+  activeSeatPaletteId,
+  setActiveSeatPalette,
+} from './palette.js';
 import { SEATS } from './seat.js';
 
 /**
@@ -125,5 +130,84 @@ describe('the seat colours as a colour-blind player sees them', () => {
       expect(entry.base).toMatch(/^#[0-9a-f]{6}$/);
       expect(entry.soft).toMatch(/^rgba\(/);
     }
+  });
+});
+
+/**
+ * The alternative palette, and the bar the default one cannot clear (#174).
+ *
+ * This is the fix the block above documents the need for: an opt-in palette whose two
+ * seats stay apart under every dichromacy, not merely under normal vision. The default
+ * stays the product's identity and its gap stays recorded; a player who needs the seats to
+ * separate by colour turns this on in settings and it flows to both the shell and the games
+ * through the same `SEAT_PALETTES`.
+ */
+describe('the colour-blind seat palette', () => {
+  const cb1 = toRgb(SEAT_PALETTES.colourblind.p1.base);
+  const cb2 = toRgb(SEAT_PALETTES.colourblind.p2.base);
+  const TARGET = 3;
+
+  it('clears 3:1 between the seats under every dichromacy, which is the whole point', () => {
+    for (const kind of ['protan', 'deutan', 'tritan'] as const) {
+      const measured = contrast(simulate(cb1, kind), simulate(cb2, kind));
+      expect(measured, `${kind} contrast`).toBeGreaterThanOrEqual(TARGET);
+    }
+  });
+
+  it('also separates the seats for normal vision', () => {
+    expect(contrast(cb1, cb2)).toBeGreaterThanOrEqual(TARGET);
+  });
+
+  it('reads against both the light and the dark surfaces a game may draw on', () => {
+    const paper = toRgb('#ffffff');
+    const ink = toRgb('#14161f');
+    for (const seat of SEATS) {
+      const colour = toRgb(SEAT_PALETTES.colourblind[seat].base);
+      const best = Math.max(contrast(colour, paper), contrast(colour, ink));
+      expect(best, `${seat} against its best surface`).toBeGreaterThanOrEqual(TARGET);
+    }
+  });
+
+  it('keeps each seat distinguishable from its own outline', () => {
+    for (const seat of SEATS) {
+      const entry = SEAT_PALETTES.colourblind[seat];
+      expect(luminance(toRgb(entry.deep))).toBeLessThan(luminance(toRgb(entry.base)));
+    }
+  });
+
+  it('is a genuine improvement, not a relabelling of the default', () => {
+    // The default's deuteranopia contrast is 1.03:1; the alternative must beat it clearly,
+    // or it is a different red-and-blue and not worth the setting.
+    const defaultDeutan = contrast(simulate(p1, 'deutan'), simulate(p2, 'deutan'));
+    const cbDeutan = contrast(simulate(cb1, 'deutan'), simulate(cb2, 'deutan'));
+    expect(cbDeutan).toBeGreaterThan(defaultDeutan);
+  });
+});
+
+describe('switching the live palette', () => {
+  afterEach(() => {
+    // Leave the singleton on the default so no other test in this file inherits a swap.
+    setActiveSeatPalette('default');
+  });
+
+  it('starts on the default', () => {
+    expect(activeSeatPaletteId()).toBe('default');
+    expect(SEAT_PALETTE.p1.base).toBe(SEAT_PALETTES.default.p1.base);
+  });
+
+  it('recolours the live palette in place, so a captured reference updates too', () => {
+    // A game may hold `SEAT_PALETTE.p1` from module load and read `.base` per frame; the
+    // swap has to reach that reference, not just replace the map entry.
+    const captured = SEAT_PALETTE.p1;
+    setActiveSeatPalette('colourblind');
+    expect(activeSeatPaletteId()).toBe('colourblind');
+    expect(captured.base).toBe(SEAT_PALETTES.colourblind.p1.base);
+    expect(SEAT_PALETTE.p2.base).toBe(SEAT_PALETTES.colourblind.p2.base);
+  });
+
+  it('falls back to the default for an id it does not know, rather than half-recolouring', () => {
+    const resolved = setActiveSeatPalette('neon' as never);
+    expect(resolved).toBe('default');
+    expect(SEAT_PALETTE.p1.base).toBe(SEAT_PALETTES.default.p1.base);
   });
 });

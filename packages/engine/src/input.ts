@@ -34,6 +34,28 @@ export interface SeatInputState {
   pointerY: number;
   /** True while at least one pointer owned by this seat is down. */
   pointerActive: boolean;
+  /**
+   * How many pointers this seat currently owns. 0 exactly when {@link pointerActive} is false.
+   *
+   * The engine has always tracked this — ten concurrent fingers with per-seat ownership, so a
+   * seat stays active until its *last* one lifts — and until #2498 it collapsed the number to
+   * {@link pointerActive} and never let a game see it. That made `sameInputClassOnly` a trap:
+   * a game could declare itself touch-only and still be handed one finger, so the flag bought
+   * the player nothing it took away.
+   *
+   * **Reading this commits a game to `sameInputClassOnly: true`, and a guard enforces that**
+   * (`apps/web/src/data/multi-touch.test.ts`). There is no fair keyboard equivalent of a
+   * finger count and there cannot be one: `docs/keyboard-rollover.md` establishes that a
+   * commodity membrane keyboard guarantees only two or three simultaneous keys, that our two
+   * seats already spend those on a direction and an action, and that a blocked press is
+   * *undetectable from the browser* — so a game could not even degrade when the count it asked
+   * for failed to arrive. Position is the fair multi-finger channel; the count is not.
+   *
+   * Only the count is exposed, not a per-finger list. The engine stores one position per seat
+   * — whichever pointer moved most recently — so a list would be new state rather than a new
+   * view, and it would sit under the same `sameInputClassOnly` ceiling this does.
+   */
+  pointerCount: number;
   /** True for exactly one step: the step on which the action first read as held. */
   actionPressed: boolean;
   /** True while any source — the action key or a pointer — holds the action. */
@@ -82,6 +104,7 @@ function createSeatInputState(): SeatInputState {
     pointerX: 0,
     pointerY: 0,
     pointerActive: false,
+    pointerCount: 0,
     actionPressed: false,
     actionHeld: false,
     actionReleased: false,
@@ -97,6 +120,7 @@ function resetSeatInputState(state: SeatInputState): void {
   state.pointerX = 0;
   state.pointerY = 0;
   state.pointerActive = false;
+  state.pointerCount = 0;
   state.actionPressed = false;
   state.actionHeld = false;
   state.actionReleased = false;
@@ -170,34 +194,58 @@ function copyBinding(binding: Readonly<KeyBinding>): KeyBinding {
 }
 
 /**
- * A key may drive exactly one slot of one seat. Two seats sharing a code would let
- * one player move the other, and one seat using a code twice would leave the second
- * slot stuck down after a key-up. Both are rejected before anything is stored.
+ * Every reason `binding` (for `seat`) cannot be used against `other`, in the order the
+ * checks run — cross-seat collisions first, then a seat colliding with itself. An empty
+ * array means the binding is legal.
+ *
+ * A key may drive exactly one slot of one seat. Two seats sharing a code would let one
+ * player move the other, and one seat using a code twice would leave the second slot stuck
+ * down after a key-up. Exported so a rebinding UI can show a conflict *before* the player
+ * commits it (#129) rather than only catching the throw {@link validateBinding} raises — one
+ * source of truth for both paths.
+ */
+export function bindingConflicts(
+  seat: SeatId,
+  binding: Readonly<KeyBinding>,
+  other: Readonly<KeyBinding>,
+): string[] {
+  const conflicts: string[] = [];
+  for (const slot of KEY_SLOTS) {
+    const code = binding[slot];
+    for (const otherSlot of KEY_SLOTS) {
+      if (other[otherSlot] === code) {
+        conflicts.push(
+          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
+        );
+      }
+    }
+  }
+  for (let i = 0; i < KEY_SLOTS.length; i += 1) {
+    for (let j = i + 1; j < KEY_SLOTS.length; j += 1) {
+      const slot = KEY_SLOTS[i];
+      const otherSlot = KEY_SLOTS[j];
+      if (slot !== undefined && otherSlot !== undefined && binding[slot] === binding[otherSlot]) {
+        conflicts.push(
+          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
+        );
+      }
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Throws on the first conflict {@link bindingConflicts} finds, naming the key. Both are
+ * rejected before anything is stored, so a rejected binding leaves the manager untouched.
  */
 function validateBinding(
   seat: SeatId,
   binding: Readonly<KeyBinding>,
   other: Readonly<KeyBinding>,
 ): void {
-  for (const slot of KEY_SLOTS) {
-    const code = binding[slot];
-    for (const otherSlot of KEY_SLOTS) {
-      if (other[otherSlot] === code) {
-        throw new Error(
-          `Cannot bind ${code} to ${seat}.${slot}: ${otherSeat(seat)}.${otherSlot} already uses it`,
-        );
-      }
-    }
-  }
-  for (const slot of KEY_SLOTS) {
-    for (const otherSlot of KEY_SLOTS) {
-      if (slot !== otherSlot && binding[slot] === binding[otherSlot]) {
-        throw new Error(
-          `Cannot bind ${binding[slot]} to ${seat} twice: ${slot} and ${otherSlot} would share it`,
-        );
-      }
-    }
-  }
+  const conflicts = bindingConflicts(seat, binding, other);
+  const first = conflicts[0];
+  if (first !== undefined) throw new Error(first);
 }
 
 /** Live hardware state for one seat. Not exported: games read SeatInputState instead. */
@@ -240,13 +288,30 @@ interface SeatSources {
    */
   pointerLatched: boolean;
   /**
-   * Whether a pointer owned by this seat was cancelled since the last step.
+   * Whether this seat's action was taken away since the last step.
    *
    * Latched like the others so a cancel that lands between two steps is still reported —
    * losing it would put the gesture back exactly where it was before #2480, with the game
    * still holding an aim nothing will ever tell it to drop.
+   *
+   * Raised by {@link InputManager.pointerCancel} for a cancelled pointer, and by
+   * {@link InputManager.clear} for **any** source that was holding the action — a key as
+   * much as a finger. See `clear` for why the keyboard belongs here too.
    */
   cancelLatched: boolean;
+  /**
+   * A gamepad's analogue movement and action for this seat (#130), each axis in [-1, 1].
+   *
+   * Set once per step by the host's gamepad poll through {@link InputManager.setSeatAnalog},
+   * before `beginStep`, and added to the keyboard's movement vector so a seat driven by a
+   * pad reads the same `moveX`/`moveY`/`actionHeld` a seat driven by keys does — a game never
+   * learns which family it is. Zero by default, so a build with no pad is byte-identical to
+   * one before this existed: the analog is *added* to the key vector, and adding zero changes
+   * nothing.
+   */
+  analogX: number;
+  analogY: number;
+  analogAction: boolean;
 }
 
 function createSeatSources(): SeatSources {
@@ -260,6 +325,9 @@ function createSeatSources(): SeatSources {
     actionLatched: false,
     pointerLatched: false,
     cancelLatched: false,
+    analogX: 0,
+    analogY: 0,
+    analogAction: false,
   };
 }
 
@@ -280,6 +348,19 @@ function releaseKeys(sources: SeatSources): void {
   latched.action = false;
 }
 
+/**
+ * Whether this seat's action is, or was, live with nothing having told the game it ended.
+ *
+ * The three terms are three ways for a charge to be in flight when the world is taken away:
+ * a finger on the glass, a key physically down, and — the one that is easy to miss — an
+ * action the last step reported as held whose key-up landed between two steps and has not
+ * been published yet. All three must produce a cancellation, or the game is left holding a
+ * charge with nothing to tell it to drop one.
+ */
+function actionLive(sources: SeatSources): boolean {
+  return sources.pointerCount > 0 || sources.keys.action || sources.wasActionHeld;
+}
+
 function releaseSources(sources: SeatSources): void {
   releaseKeys(sources);
   sources.pointerCount = 0;
@@ -289,6 +370,9 @@ function releaseSources(sources: SeatSources): void {
   sources.actionLatched = false;
   sources.pointerLatched = false;
   sources.cancelLatched = false;
+  sources.analogX = 0;
+  sources.analogY = 0;
+  sources.analogAction = false;
 }
 
 /** Where a key code writes to. Built on construction and on rebind, never per step. */
@@ -323,6 +407,86 @@ export function envelopeFor(logical: LogicalSize): number {
   return Math.min(logical.width, logical.height) * PRECISION_ENVELOPE;
 }
 
+/**
+ * The precision envelope for an *aimed scalar* — an angle, a power, a spin.
+ *
+ * {@link PRECISION_ENVELOPE} levels the one quantity the engine owns: where a pointer is. A
+ * game that lets a player aim a scalar derives it two ways and the engine levels neither. The
+ * pointer path inherits the position lattice; the keyboard path is some `KEY_RATE × delta`, a
+ * constant the game picked. Nothing makes those two commensurate, and measured in Shuriken
+ * (#2506) they are not merely unequal but **disjoint**: spin lands on multiples of 0.021 under
+ * a finger and of 0.043333 under a key, and 130 × 0.021 is the first common multiple — 2.73,
+ * past the ±1.9 clamp. Over the whole legal range the only spin both instruments could name
+ * was zero.
+ *
+ * A win-rate comparison cannot see that, which is why `control-parity.test.ts` never did: it
+ * is not a difference in strength but in *what can be expressed*. The test that sees it
+ * compares the **set of reachable values**, and a set comparison cannot pass by luck.
+ *
+ * ## Why a fraction of the span, and why one lattice fixes it
+ *
+ * A scalar has no shorter side to take a two-hundredth of, so the envelope is a fraction of
+ * the scalar's own span — which keeps rule 8: the number means the same thing whether the
+ * game's spin runs to 1.9 or to 400.
+ *
+ * The property that makes both instruments *equal* rather than merely comparable: if every
+ * increment either instrument can apply is no larger than one cell, then a continuous sweep on
+ * either one passes through every cell on its way, so both reach the identical set. That is
+ * exactly why quantising position works — a dragged finger visits every lattice point between
+ * where it started and where it stopped — and it is the obligation this constant carries with
+ * it. **A game's own keyboard rate must be finer than one cell**: `KEY_RATE × fixedDelta <=
+ * scalarEnvelopeFor(span)`, which is a line of arithmetic a game can assert about itself.
+ *
+ * One sixty-fourth, therefore, and it is chosen from the collection rather than from taste.
+ * The five aimed scalars that exist today spell their span in these many key steps —
+ * Shuriken's spin 87, Shuriken's aim 99, Sword Throwing's aim 82, Archery Master's aim 81 and
+ * its draw **70**. The draw is the binding one, so any denominator at or below 70 clears every
+ * game in the catalogue without retuning one of them; 64 is the power of two below it, so the
+ * cell is exact in binary and quantising twice gives what quantising once gave.
+ *
+ * Sixty-four distinct values across an aim is not a small vocabulary — it is four times what
+ * `PRECISION_ENVELOPE` leaves across a play area's short side per hundred units — and it is
+ * the ceiling on what *either* player may name, not a floor under what one of them can.
+ */
+export const SCALAR_ENVELOPE = 1 / 64;
+
+/**
+ * The lattice spacing for an aimed scalar spanning `span`, in that scalar's own units.
+ *
+ * `span` is the full width of the range the player may name — `2 * MAX_SPIN` for a spin that
+ * clamps at ±MAX_SPIN, `1` for a draw in [0, 1]. Sign is ignored so a span written either way
+ * round gives the same lattice.
+ */
+export function scalarEnvelopeFor(span: number): number {
+  if (!Number.isFinite(span)) return 0;
+  return Math.abs(span) * SCALAR_ENVELOPE;
+}
+
+/**
+ * Round an aimed scalar onto a lattice, the way {@link InputManager} rounds a position.
+ *
+ * Applied at the one place a game *writes* the scalar, so the pointer path and the keyboard
+ * path go through it alike and neither can opt out — the same argument that puts `#quantise`
+ * at the one place coordinates enter the engine. Quantising the pointer path alone would move
+ * the gap rather than close it.
+ *
+ * A lattice of zero or worse is the identity, so a game that has not sized its envelope yet
+ * degrades to today's behaviour rather than to `NaN`.
+ */
+export function quantiseScalar(value: number, lattice: number): number {
+  if (!Number.isFinite(value)) return value;
+  if (!Number.isFinite(lattice) || lattice <= 0) return value;
+  return Math.round(value / lattice) * lattice;
+}
+
+/** A finite number held to [-1, 1]; anything else reads as no intent. */
+function clampUnit(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value < -1) return -1;
+  if (value > 1) return 1;
+  return value;
+}
+
 export class InputManager {
   readonly #logical: LogicalSize;
   #split: ZoneSplit;
@@ -338,6 +502,19 @@ export class InputManager {
   readonly #state = new InputState(this.#p1State, this.#p2State);
   /** Scratch for the movement vector, so beginStep allocates nothing. */
   readonly #move: Vec2 = vec2();
+  /**
+   * The step's delta, handed to `#applySeat` through a slot rather than as an argument.
+   *
+   * Rule 5, and the allocation it avoids is one nothing in this file writes. A
+   * floating-point value crossing a call the optimiser has declined to inline cannot travel
+   * as a raw double: it is materialised on the heap first, and `#applySeat` is far past any
+   * inlining budget. Measured on V8 26, `beginStep` allocated one 16-byte number every step
+   * — every step of every match in the collection, since every game reaches input through
+   * this method — for a value that never leaves this object. A typed slot is written and
+   * read as a raw double, so nothing is materialised, and `allocation.test.ts` holds it at
+   * zero rather than leaving it to be re-noticed.
+   */
+  readonly #stepDelta = new Float64Array(1);
 
   constructor(
     logical: LogicalSize,
@@ -414,6 +591,34 @@ export class InputManager {
     const target = this.#keyTargets.get(code);
     if (target === undefined) return;
     target.sources.keys[target.slot] = false;
+  }
+
+  /**
+   * Set a seat's analogue movement and action from a gamepad (#130).
+   *
+   * Called once per step by the host's gamepad poll, before {@link beginStep}, with the
+   * deadzoned, normalised reading from {@link GamepadManager}. The values persist until the
+   * next call, so a host that polls every step keeps them fresh and one that stops polling
+   * (the pad was unplugged) should call this with zeros — which `GamepadManager.reading`
+   * returning null tells it to do.
+   *
+   * Movement is *added* to the keyboard vector and clamped with it, so a seat with both a pad
+   * and a hand on the keys is not two players; a seat with neither reads exactly as it did
+   * before this channel existed.
+   */
+  setSeatAnalog(seat: SeatId, moveX: number, moveY: number, action: boolean): void {
+    const sources = this.#sourcesFor(seat);
+    // Onto the scalar envelope, for the reason `docs/input-parity.md` gives every aimed
+    // quantity one: no family may name a value finer than the coarsest supported one can.
+    // A key names a rate of exactly 0 or 1; a finger's drag names one on the position
+    // lattice; a stick left raw would name any real in between and be the finest
+    // instrument on the site by a wide margin. Rounded to `SCALAR_ENVELOPE` — one
+    // sixty-fourth of full tilt — it still throttles, which is what a stick is for, and it
+    // can name nothing a rounded drag could not. `quantiseScalar` is the same call the
+    // aimed-scalar seam uses, so the two envelopes cannot drift.
+    sources.analogX = quantiseScalar(clampUnit(moveX), SCALAR_ENVELOPE);
+    sources.analogY = quantiseScalar(clampUnit(moveY), SCALAR_ENVELOPE);
+    sources.analogAction = action;
   }
 
   /**
@@ -524,21 +729,34 @@ export class InputManager {
    * not deliver a press. The cost is that a key still physically held when focus
    * returns counts as up until it repeats or is pressed again — the right trade,
    * since the browser does not reliably deliver the key-up that happened elsewhere.
+   *
+   * **A seat whose action was live is told its gesture was taken away.** That is the whole
+   * of the trade above made survivable: this method deletes both edges at once — the
+   * release cannot be published because `wasActionHeld` has just been zeroed, and the hold
+   * cannot continue because the key is gone — so a game charging a shot would otherwise be
+   * left with a drawn bow and nothing to tell it to let the string down, forever.
+   * `pointerCancelled` is that telling, and `actionAbandoned` in the SDK is how a game
+   * reads it.
+   *
+   * It was raised only for a seat with a *pointer* down until #2501, which left the
+   * keyboard half of the same bug intact: opening the pause menu with the action key held
+   * froze the charge silently, and the next release fired it. A key and a finger are one
+   * intent everywhere else in this file (`held = keys.action || pointerDown`) and they are
+   * one intent here.
    */
   clear(): void {
-    // Read before the wipe: a seat holding a pointer when the world is taken away has had
-    // its gesture cancelled in exactly the sense `pointerCancel` means, and must be told
-    // so on the next step. Without it a paused aim stays armed in the game, waiting for a
-    // release that can never come.
-    const p1Live = this.#p1Sources.pointerCount > 0;
-    const p2Live = this.#p2Sources.pointerCount > 0;
+    // Read before the wipe: a seat whose action was live when the world was taken away has
+    // had its gesture cancelled in exactly the sense `pointerCancel` means, whichever
+    // instrument was holding it, and must be told so on the next step.
+    const p1Held = actionLive(this.#p1Sources);
+    const p2Held = actionLive(this.#p2Sources);
     this.#ownership.releaseAll();
     releaseSources(this.#p1Sources);
     releaseSources(this.#p2Sources);
     resetSeatInputState(this.#p1State);
     resetSeatInputState(this.#p2State);
-    this.#p1Sources.cancelLatched = p1Live;
-    this.#p2Sources.cancelLatched = p2Live;
+    this.#p1Sources.cancelLatched = p1Held;
+    this.#p2Sources.cancelLatched = p2Held;
   }
 
   /**
@@ -547,16 +765,22 @@ export class InputManager {
    * Sampling on the step boundary rather than on the event is what makes the edges
    * exact: `actionPressed` and `actionReleased` are true for exactly one step no
    * matter how many events, repeats included, arrived since the last one.
+   *
+   * The sentence above has been in this docstring since the method was written and was
+   * measurably untrue until #122; `#stepDelta` records what it cost. It is now measured on
+   * every push rather than asserted here, which is the only form of the claim worth having.
    */
   beginStep(fixedDeltaSeconds: number): Readonly<InputState> {
     let delta = fixedDeltaSeconds;
     if (!Number.isFinite(delta) || delta < 0) delta = 0;
-    this.#applySeat(this.#p1State, this.#p1Sources, delta);
-    this.#applySeat(this.#p2State, this.#p2Sources, delta);
+    this.#stepDelta[0] = delta;
+    this.#applySeat(this.#p1State, this.#p1Sources);
+    this.#applySeat(this.#p2State, this.#p2Sources);
     return this.#state;
   }
 
-  #applySeat(out: SeatInputState, sources: SeatSources, delta: number): void {
+  #applySeat(out: SeatInputState, sources: SeatSources): void {
+    const delta = this.#stepDelta[0]!; // invariant: a one-slot array always has slot 0
     const keys = sources.keys;
     const taps = sources.latchedKeys;
     const move = this.#move;
@@ -566,7 +790,14 @@ export class InputManager {
     const left = keys.left || taps.left;
     const down = keys.down || taps.down;
     const up = keys.up || taps.up;
-    set(move, (right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
+    // The gamepad's analogue movement is added to the keyboard's digital one (#130). A seat
+    // with no pad has analogX/Y == 0, so this line is byte-identical to the digital-only
+    // one it replaced — the clamp below keeps a pad-and-keys seat inside unit length.
+    set(
+      move,
+      (right ? 1 : 0) - (left ? 1 : 0) + sources.analogX,
+      (down ? 1 : 0) - (up ? 1 : 0) + sources.analogY,
+    );
     taps.right = false;
     taps.left = false;
     taps.down = false;
@@ -582,12 +813,17 @@ export class InputManager {
     // reported now, and a press with no coordinates cannot be aimed.
     const pointerActive = pointerDown || sources.pointerLatched;
     out.pointerActive = pointerActive;
+    // The latched tap counts as the one finger it was, so `pointerCount > 0` and
+    // `pointerActive` can never disagree — a game reading the count must not be told
+    // "no fingers" on the very step it is handed a tap's position.
+    out.pointerCount = pointerDown ? sources.pointerCount : pointerActive ? 1 : 0;
     // The pointer owns position outright; keys never write it.
     out.pointerX = sources.pointerX;
     out.pointerY = sources.pointerY;
 
-    // Either source raises the action: a thumb on the screen and a key are the same intent.
-    const held = keys.action || pointerDown;
+    // Either source raises the action: a thumb on the screen, a key, or a gamepad button
+    // are the same intent, so a game reading `actionHeld` never learns which family it was.
+    const held = keys.action || pointerDown || sources.analogAction;
     const was = sources.wasActionHeld;
     // A tap that began and ended between two steps is still a press. Without the latch
     // it is invisible: by the time the step runs the finger is already gone.

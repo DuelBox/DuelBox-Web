@@ -389,6 +389,51 @@ describe('the gesture', () => {
 
 /* ------------------------------------------------------------------ presentations */
 
+describe('a gesture the browser takes away', () => {
+  function started(): { game: WobbleStackGame; input: InputManager; view: InputView } {
+    const game = new WobbleStackGame();
+    game.init(contextFor());
+    const input = manager();
+    const view = new InputView();
+    while (game.match.p1.stance !== 'hover') {
+      game.update(STEP, view.sync(input.beginStep(STEP)));
+    }
+    return { game, input, view };
+  }
+
+  it('never becomes a drop, on that step or any later one', () => {
+    // The engine suppresses the release on a cancel, and it also resets its own "was held"
+    // edge — so no later `actionReleased` can arrive without a fresh press, and a fresh press
+    // re-anchors the grip. The stale `grip.down` is therefore unreachable rather than merely
+    // unlikely, and this is the test that says so. It is a characterisation of #2501 in this
+    // game, not a fix: nothing in `game.ts` changed for it.
+    const { game, input, view } = started();
+    const where = { x: worldXOf('p1', 0), y: worldYOf('p1', 120) };
+
+    input.pointerDown(1, where.x, where.y);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    for (let i = 0; i < 20; i += 1) game.update(STEP, view.sync(input.beginStep(STEP)));
+
+    input.pointerCancel(1);
+    for (let i = 0; i < 5; i += 1) game.update(STEP, view.sync(input.beginStep(STEP)));
+    expect(game.match.p1.stance, 'the cancel drops nothing').toBe('hover');
+
+    // And the next gesture is read on its own terms: a drag is still a drag, not a tap left
+    // over from a press point the player abandoned.
+    const to = { x: worldXOf('p1', SLOT_LIMIT * SLOT_PITCH), y: worldYOf('p1', 120) };
+    input.pointerDown(2, where.x, where.y);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    for (let i = 1; i <= 30; i += 1) {
+      input.pointerMove(2, where.x + ((to.x - where.x) * i) / 30, where.y);
+      game.update(STEP, view.sync(input.beginStep(STEP)));
+    }
+    input.pointerUp(2);
+    game.update(STEP, view.sync(input.beginStep(STEP)));
+    expect(game.match.p1.stance, 'a drag is still a drag').toBe('hover');
+    game.destroy();
+  });
+});
+
 describe('the two presentations', () => {
   it('step the identical match', () => {
     // Rules, scoring and simulation are byte-identical; only placement, rotation and

@@ -1,15 +1,23 @@
 'use client';
 
 import { useId } from 'react';
-import { seatColour } from '@/styles/tokens';
-import { BOT_DIFFICULTIES, ROUND_CHOICES, type BotDifficulty } from '@/lib/match-setup';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
+import { SEAT_CHARACTERS } from '@/lib/seats';
+import {
+  BOT_DIFFICULTIES,
+  DIFFICULTY_LABELS,
+  ROUND_CHOICES,
+  ROUND_LABELS,
+  type BotDifficulty,
+} from '@/lib/match-setup';
 import styles from './MatchOptions.module.css';
 
 /**
  * The two things a player settles before a match starts: how hard the bot tries, and how
  * many rounds it takes to win.
  *
- * Both existed and neither could be reached. Every one of the 107 games implements three
+ * Both existed and neither could be reached. Every one of the 108 games implements three
  * tiers, each tuned over many commits and each with a measured win rate written into its
  * spec, and the shell hardcoded `normal`; the SDK implements best-of and the shell
  * hardcoded one round. This is the screen that hands both back to the player.
@@ -31,17 +39,33 @@ export interface MatchOptionsProps {
    *
    * False for a game with no bot to play, where a difficulty control would be offering a
    * choice that changes nothing. Every playable manifest offers one today.
+   *
+   * A boolean rather than the mode list, and the caller derives it: this panel settles what a
+   * match is like once it has started, and which matches can be started at all is a question
+   * one step earlier. `offeredModes` in `lib/match-setup.ts` is where that question is answered
+   * now, and `scripts/validate-manifests.mjs` fails the build if a manifest declares a mode
+   * nothing can start — so a `true` arriving here means a bot that has been played against in
+   * a trace, not a manifest that spells the word (#1749).
    */
   showDifficulty: boolean;
   difficulty: BotDifficulty;
   onDifficulty: (difficulty: BotDifficulty) => void;
   rounds: number;
   onRounds: (rounds: number) => void;
+  /**
+   * Which lengths to offer, when not all of them still make sense.
+   *
+   * Between rounds a match can only grow (#2351): a length shorter than the rounds already
+   * played would end on the next point, and `lib/match-changes.ts` works out which are left.
+   * Absent, every length; empty, no length control at all.
+   */
+  lengths?: readonly number[] | undefined;
 }
 
 interface Choice {
   /** Also the radio's value, which is what lets both groups be one component. */
   readonly value: string;
+  /** The English label, which is also its message id — {@link Group} looks it up (#220). */
   readonly label: string;
   /** The tier counted out, for a ladder that has to read without colour. */
   readonly pips?: string;
@@ -51,19 +75,14 @@ const PIPS = ['●○○', '●●○', '●●●'];
 
 const TIERS: readonly Choice[] = BOT_DIFFICULTIES.map((tier, index) => ({
   value: tier,
-  label: `${tier[0]?.toUpperCase() ?? ''}${tier.slice(1)}`,
+  label: DIFFICULTY_LABELS[tier],
   pips: PIPS[index] ?? '',
 }));
 
-/**
- * The lengths, said the way a player would say them out loud.
- *
- * "1 round" rather than "one round" only because on a 412px phone the spelled-out version
- * wraps onto a second line and its neighbours do not, which reads as a broken column.
- */
+/** The lengths, said the way a player would say them out loud — see `ROUND_LABELS`. */
 const LENGTHS: readonly Choice[] = ROUND_CHOICES.map((rounds) => ({
   value: String(rounds),
-  label: rounds === 1 ? '1 round' : `Best of ${String(rounds)}`,
+  label: ROUND_LABELS[rounds],
 }));
 
 export function MatchOptions({
@@ -72,16 +91,20 @@ export function MatchOptions({
   onDifficulty,
   rounds,
   onRounds,
+  lengths,
 }: MatchOptionsProps) {
   // Unique per instance: two radio groups on one page must not share a name, or picking a
   // tier would clear the match length.
   const id = useId();
+  const messages = useMessages();
+  const offered =
+    lengths === undefined ? LENGTHS : LENGTHS.filter((c) => lengths.includes(Number(c.value)));
   return (
     <div className={styles.options}>
       {showDifficulty ? (
         <Group
           name={`${id}-tier`}
-          legend={`${seatColour.p2.name}’s skill`}
+          legend={t(messages, '{name}’s skill', { name: SEAT_CHARACTERS.p2 })}
           choices={TIERS}
           chosen={difficulty}
           onChoose={(value) => {
@@ -89,15 +112,17 @@ export function MatchOptions({
           }}
         />
       ) : null}
-      <Group
-        name={`${id}-length`}
-        legend="Match length"
-        choices={LENGTHS}
-        chosen={String(rounds)}
-        onChoose={(value) => {
-          onRounds(Number(value));
-        }}
-      />
+      {offered.length === 0 ? null : (
+        <Group
+          name={`${id}-length`}
+          legend={t(messages, 'Match length')}
+          choices={offered}
+          chosen={String(rounds)}
+          onChoose={(value) => {
+            onRounds(Number(value));
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -116,6 +141,7 @@ function Group({
   chosen: string;
   onChoose: (value: string) => void;
 }) {
+  const messages = useMessages();
   return (
     <fieldset className={styles.group}>
       <legend className={styles.legend}>{legend}</legend>
@@ -135,7 +161,7 @@ function Group({
                 onChoose(choice.value);
               }}
             />
-            <span className={styles.name}>{choice.label}</span>
+            <span className={styles.name}>{t(messages, choice.label)}</span>
             {choice.pips === undefined ? null : (
               <span className={styles.pips} aria-hidden="true">
                 {choice.pips}
