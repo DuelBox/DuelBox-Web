@@ -515,6 +515,9 @@ async function saveOne(cache, game, url) {
       await cache.put(key, response.clone());
       return;
     } catch (error) {
+      // A failed write is not necessarily a full cache. Do not delete playable games for
+      // an unrelated storage error that eviction cannot repair.
+      if (!/quota/i.test(String(error && error.name))) throw error;
       const victim = candidates.shift();
       if (victim === undefined) throw error;
       const evicted = games().find((other) => other.slug === victim);
@@ -588,6 +591,12 @@ async function downloadGames() {
     // reported in one word the page can turn into a sentence; both leave the cache in a
     // state a later press can continue from.
     progress.stopped = /quota/i.test(String(error && error.name)) ? 'quota' : 'network';
+  }
+  // An evicted game may be one we passed earlier in this loop. Recount the actual cache,
+  // then report a full device if the whole catalogue could not fit at the same time.
+  await recount();
+  if (progress.stopped === null && progress.done < games().length) {
+    progress.stopped = 'quota';
   }
   progress.saving = null;
   running = null;

@@ -95,8 +95,8 @@ export function formatBytes(messages: Catalogue, bytes: number): string {
  *
  * Every state has a sentence, including the ones a person only reaches by closing the page
  * mid-way and coming back, because the count they read then has to be the count that is
- * true. The quota stop says what happened *and* that nothing was lost, since "the browser
- * refused" on its own reads as "your download is broken".
+ * true. A quota stop explains that less recently opened games may have been evicted, rather
+ * than implying that a partial download preserved every game previously saved.
  */
 export function describeDownload(
   messages: Catalogue,
@@ -138,7 +138,7 @@ export function describeDownload(
     case 'quota':
       return t(
         messages,
-        'The browser ran out of room. {done} of {total} saved and nothing already saved was damaged; free some space and press again to continue.',
+        'The browser ran out of room. {done} of {total} games are saved. Older games may have been removed to make room; free some space and press again.',
         { done: state.done, total: state.games },
       );
     case 'network':

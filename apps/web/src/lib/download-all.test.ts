@@ -53,9 +53,9 @@ describe('the line a person reads', () => {
     );
   });
 
-  it('says a quota stop damaged nothing, because a put is atomic', () => {
-    expect(describeDownload(EN, 'en', { ...idle, done: 90, stopped: 'quota' })).toContain(
-      'nothing already saved was damaged',
+  it('says a quota stop may have evicted older saved games', () => {
+    expect(describeDownload(EN, 'en', { ...idle, done: 90, stopped: 'quota' })).toBe(
+      'The browser ran out of room. 90 of 108 games are saved. Older games may have been removed to make room; free some space and press again.',
     );
   });
 
@@ -160,5 +160,67 @@ describe("the worker's eviction order", () => {
 
   it('ignores a timestamp that is not one', () => {
     expect(evictionOrder({ a: 'soon' as unknown as number, b: 5 }, ['b', 'a'])).toEqual(['a', 'b']);
+  });
+
+  it('reports a full device when evicting an earlier game prevents saving them all', async () => {
+    const entries = new Map<string, unknown>();
+    const cache = {
+      put: (key: string, response: unknown) => {
+        if (!entries.has(key) && entries.size === 2) {
+          return Promise.reject(Object.assign(new Error('full'), { name: 'QuotaExceededError' }));
+        }
+        entries.set(key, response);
+        return Promise.resolve();
+      },
+      delete: (key: string) => Promise.resolve(entries.delete(key)),
+    };
+    const storage = {
+      open: () => Promise.resolve(cache),
+      match: (key: string) => Promise.resolve(entries.get(key)),
+    };
+    const fixture = source
+      .replace("const OFFLINE_URL = '__OFFLINE__';", "const OFFLINE_URL = '/offline/';")
+      .replace(
+        "const DOWNLOAD = ['__GAMES__'];",
+        `const DOWNLOAD = ${JSON.stringify({
+          prefix: '/chunks/',
+          shared: [],
+          sharedBytes: 0,
+          games: [
+            { slug: 'a', chunk: 'a.js', bytes: 2 },
+            { slug: 'b', chunk: 'b.js', bytes: 2 },
+          ],
+        })};`,
+      );
+    class FakeRequest {
+      constructor(readonly url: string) {}
+    }
+    const response = { ok: true, type: 'basic', redirected: false, clone: () => response };
+    // Run the worker's real download loop with room for exactly one game's two files.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+    const worker = new Function(
+      'self',
+      'caches',
+      'fetch',
+      'Request',
+      'Response',
+      'URL',
+      `${fixture}\nreturn { downloadGames, status };`,
+    )(
+      {
+        addEventListener: () => undefined,
+        location: { href: 'https://x.test/' },
+        clients: { matchAll: () => Promise.resolve([]) },
+      },
+      storage,
+      () => Promise.resolve(response),
+      FakeRequest,
+      class {},
+      URL,
+    ) as { downloadGames: () => Promise<void>; status: () => Promise<DownloadState> };
+
+    await worker.downloadGames();
+    expect(await worker.status()).toMatchObject({ games: 2, done: 1, stopped: 'quota' });
+    expect([...entries.keys()]).toEqual(['https://x.test/play/b/', 'https://x.test/chunks/b.js']);
   });
 });

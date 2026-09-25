@@ -1013,8 +1013,8 @@ const catalogue = {
       '‮The‬ ‮browser‬ ‮has‬ ‮agreed‬ ‮to‬ ‮keep‬ ‮these‬ ‮when‬ ‮it‬ ‮needs‬ ‮space.‬',
     'The browser may clear these when it needs space; they come back on the next download.':
       '‮The‬ ‮browser‬ ‮may‬ ‮clear‬ ‮these‬ ‮when‬ ‮it‬ ‮needs‬ ‮space;‬ ‮they‬ ‮come‬ ‮back‬ ‮on‬ ‮the‬ ‮next‬ ‮download.‬',
-    'The browser ran out of room. {done} of {total} saved and nothing already saved was damaged; free some space and press again to continue.':
-      '‮The‬ ‮browser‬ ‮ran‬ ‮out‬ ‮of‬ ‮room.‬ {done} ‮of‬ {total} ‮saved‬ ‮and‬ ‮nothing‬ ‮already‬ ‮saved‬ ‮was‬ ‮damaged;‬ ‮free‬ ‮some‬ ‮space‬ ‮and‬ ‮press‬ ‮again‬ ‮to‬ ‮continue.‬',
+    'The browser ran out of room. {done} of {total} games are saved. Older games may have been removed to make room; free some space and press again.':
+      '‮The‬ ‮browser‬ ‮ran‬ ‮out‬ ‮of‬ ‮room.‬ {done} ‮of‬ {total} ‮games‬ ‮are‬ ‮saved.‬ ‮Older‬ ‮games‬ ‮may‬ ‮have‬ ‮been‬ ‮removed‬ ‮to‬ ‮make‬ ‮room;‬ ‮free‬ ‮some‬ ‮space‬ ‮and‬ ‮press‬ ‮again.‬',
     'The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:':
       '‮The‬ ‮catalogue‬ ‮knows‬ ‮which‬ ‮is‬ ‮which.‬ ‮While‬ ‮you‬ ‮are‬ ‮away‬ ‮from‬ ‮a‬ ‮connection‬ ‮it‬ ‮marks‬ ‮every‬ ‮game‬ ‮in‬ ‮the‬ ‮list‬ ‮as‬ ‮one‬ ‮of‬ ‮two‬ ‮things:‬',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":

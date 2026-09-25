@@ -1022,8 +1022,8 @@ const catalogue = {
       '⟦Ŧĥé ƀŕöŵšéŕ ĥåš åĝŕééð ŧö ķééþ ŧĥéšé ŵĥéñ ïŧ ñééðš šþåçé. ·····························⟧',
     'The browser may clear these when it needs space; they come back on the next download.':
       '⟦Ŧĥé ƀŕöŵšéŕ ɱåý çłéåŕ ŧĥéšé ŵĥéñ ïŧ ñééðš šþåçé; ŧĥéý çöɱé ƀåçķ öñ ŧĥé ñéẋŧ ðöŵñłöåð. ···········································⟧',
-    'The browser ran out of room. {done} of {total} saved and nothing already saved was damaged; free some space and press again to continue.':
-      '⟦Ŧĥé ƀŕöŵšéŕ ŕåñ öûŧ öƒ ŕööɱ. {done} öƒ {total} šåṽéð åñð ñöŧĥïñĝ åłŕéåðý šåṽéð ŵåš ðåɱåĝéð; ƒŕéé šöɱé šþåçé åñð þŕéšš åĝåïñ ŧö çöñŧïñûé. ····································································⟧',
+    'The browser ran out of room. {done} of {total} games are saved. Older games may have been removed to make room; free some space and press again.':
+      '⟦Ŧĥé ƀŕöŵšéŕ ŕåñ öûŧ öƒ ŕööɱ. {done} öƒ {total} ĝåɱéš åŕé šåṽéð. Öłðéŕ ĝåɱéš ɱåý ĥåṽé ƀééñ ŕéɱöṽéð ŧö ɱåķé ŕööɱ; ƒŕéé šöɱé šþåçé åñð þŕéšš åĝåïñ. ········································································⟧',
     'The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:':
       '⟦Ŧĥé çåŧåłöĝûé ķñöŵš ŵĥïçĥ ïš ŵĥïçĥ. Ŵĥïłé ýöû åŕé åŵåý ƒŕöɱ å çöññéçŧïöñ ïŧ ɱåŕķš éṽéŕý ĝåɱé ïñ ŧĥé łïšŧ åš öñé öƒ ŧŵö ŧĥïñĝš: ·······························································⟧',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
