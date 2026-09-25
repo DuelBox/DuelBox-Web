@@ -41,6 +41,7 @@ const SHELL_ROUTES = [
   '/settings/',
   '/privacy/',
   '/terms/',
+  '/dmca/',
 ] as const;
 
 /** The narrowest screen the definition of done covers. */
@@ -89,6 +90,37 @@ const EXEMPT: readonly { readonly where: string; readonly route?: string; readon
         'measures the target, and for a label-wrapped input the label is the target. What ' +
         'this walk can still say about them is the overlap check below, which grows each ' +
         "radio's own box to the token and finds no neighbour inside it.",
+    },
+    // The DMCA and abuse page (#216): four links in running text, each the same shape as the
+    // `/terms/` sentence above and exempt on the same clause. The page's job is to tell a
+    // claimant where to write and what to expect, and the address, the advisory route and
+    // the two cross-references are the words of those sentences, not controls beside them.
+    // The footer's own `/terms/` link on this page is not in a paragraph and is measured.
+    {
+      where: 'a[href="abuse@duelbox.example"] in a paragraph',
+      route: '/dmca/',
+      why:
+        'The contact address, in the sentence that gives it. A `mailto:` link is the address ' +
+        'itself; SC 2.5.8 inline exception.',
+    },
+    {
+      where: 'a[href="/DuelBox/DuelBox-Web/security/advisories/new"] in a paragraph',
+      route: '/dmca/',
+      why:
+        'The sentence that sends a vulnerability to the private advisory route instead. ' +
+        'Inline in the text that says why; SC 2.5.8 inline exception.',
+    },
+    {
+      where: 'a[href="/terms/"] in a paragraph',
+      route: '/dmca/',
+      why:
+        'The closing sentence cross-references Terms, the same way the Terms page ' +
+        'cross-references Privacy; SC 2.5.8 inline exception.',
+    },
+    {
+      where: 'a[href="/attribution/"] in a paragraph',
+      route: '/dmca/',
+      why: 'The same sentence, cross-referencing Attribution; SC 2.5.8 inline exception.',
     },
   ];
 

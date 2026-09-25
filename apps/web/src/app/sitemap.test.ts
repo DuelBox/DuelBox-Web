@@ -11,7 +11,7 @@ import sitemap from './sitemap';
  * derivation rather than a snapshot. A snapshot would need updating on every new game, which
  * is the maintenance the metadata route exists to remove (#199).
  */
-const STATIC_ROUTES = ['/', '/games/', '/how-to-play/', '/privacy/', '/terms/'];
+const STATIC_ROUTES = ['/', '/games/', '/how-to-play/', '/privacy/', '/terms/', '/dmca/'];
 
 describe('the site address', () => {
   it('carries no trailing slash, so a joined route never has two', () => {
@@ -37,7 +37,7 @@ describe('the sitemap', () => {
     }
   });
 
-  it('lists the five static pages', () => {
+  it('lists every static page, the legal ones included', () => {
     for (const route of STATIC_ROUTES) expect(urls).toContain(`${SITE_URL}${route}`);
   });
 
