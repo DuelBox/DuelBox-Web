@@ -1,3 +1,6 @@
+/// <reference types="node" />
+
+import { env } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { Rng, otherSeat } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
@@ -688,24 +691,30 @@ describe('the bot', () => {
     expect(won['hard v easy'] as number).toBeGreaterThan(won['normal v easy'] as number);
   });
 
-  it('costs almost nothing to think', { timeout: 2000 }, () => {
-    // Ten questions over thirty candidates, all in machine words — no search, no tree, no
-    // per-step allocation. A hundred thousand hard-tier decisions inside the two seconds
-    // this test allows itself is about a thousand matches' worth of thinking, which is why
-    // `bot-cost.test.ts` has nothing to say about this game.
-    //
-    // The budget is the test timeout rather than a stopwatch on purpose: reading a clock
-    // in a game package is what `no-restricted-globals` forbids, and CI runs several times
-    // slower than a development machine anyway.
-    const match = fresh(64);
-    const action = createAction();
-    const rng = new Rng(7);
-    for (let i = 0; i < 100_000; i += 1) {
-      chooseAction(action, match.p1, rng, 'hard');
-      expect(action.question).toBeLessThan(QUESTIONS);
-    }
-    expect(action.character).toBeLessThan(CAST);
-  });
+  // Coverage instrumentation changes the wall-clock cost this benchmark measures. The
+  // uninstrumented push gate still runs its two-second limit on every commit.
+  it.skipIf(env.DUELBOX_COVERAGE === '1')(
+    'costs almost nothing to think',
+    { timeout: 2000 },
+    () => {
+      // Ten questions over thirty candidates, all in machine words — no search, no tree, no
+      // per-step allocation. A hundred thousand hard-tier decisions inside the two seconds
+      // this test allows itself is about a thousand matches' worth of thinking, which is why
+      // `bot-cost.test.ts` has nothing to say about this game.
+      //
+      // The budget is the test timeout rather than a stopwatch on purpose: reading a clock
+      // in a game package is what `no-restricted-globals` forbids, and CI runs several times
+      // slower than a development machine anyway.
+      const match = fresh(64);
+      const action = createAction();
+      const rng = new Rng(7);
+      for (let i = 0; i < 100_000; i += 1) {
+        chooseAction(action, match.p1, rng, 'hard');
+        expect(action.question).toBeLessThan(QUESTIONS);
+      }
+      expect(action.character).toBeLessThan(CAST);
+    },
+  );
 
   it('holds its profiles frozen, so no caller can retune the ladder', () => {
     expect(Object.isFrozen(BOT_PROFILES)).toBe(true);
