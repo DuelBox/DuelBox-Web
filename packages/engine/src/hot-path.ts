@@ -232,14 +232,16 @@ export function measureStructuralGrowth(
   return loop.structuralAllocations - before;
 }
 
-/** The runtime's `gc()` hook, present under Node's `--expose-gc`. */
-interface GcGlobal {
+/** The two Node hooks this benchmark needs; neither is part of the browser engine contract. */
+interface HeapMeasurementGlobal {
   gc?: () => void;
+  process?: { memoryUsage?: () => { heapUsed: number } };
 }
 
 /** Whether a heap-delta measurement is possible in this runtime. */
 export function heapMeasurementAvailable(): boolean {
-  return typeof (globalThis as GcGlobal).gc === 'function';
+  const runtime = globalThis as HeapMeasurementGlobal;
+  return typeof runtime.gc === 'function' && typeof runtime.process?.memoryUsage === 'function';
 }
 
 /**
@@ -254,14 +256,16 @@ export function measureHeapBytesPerStep(
   steps: number,
   dt = 1 / 60,
 ): number | null {
-  const gc = (globalThis as GcGlobal).gc;
-  if (typeof gc !== 'function') return null;
+  const runtime = globalThis as HeapMeasurementGlobal;
+  const gc = runtime.gc;
+  const runtimeProcess = runtime.process;
+  if (typeof gc !== 'function' || typeof runtimeProcess?.memoryUsage !== 'function') return null;
   // Warm up so lazy internals are already resident before we measure.
   for (let i = 0; i < steps; i += 1) loop.step(dt);
   gc();
-  const before = process.memoryUsage().heapUsed;
+  const before = runtimeProcess.memoryUsage().heapUsed;
   for (let i = 0; i < steps; i += 1) loop.step(dt);
   gc();
-  const after = process.memoryUsage().heapUsed;
+  const after = runtimeProcess.memoryUsage().heapUsed;
   return (after - before) / steps;
 }
