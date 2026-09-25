@@ -94,6 +94,11 @@ locally omitted it. Run all six or say which you did not.
 the header check, the zero-cost guard, the bundle secret scan, the asset licence check and
 the size budget. Any of them can fail it.
 
+`pnpm e2e` includes the visual regression guard: five shell screens compared against the
+committed `-linux` baselines in `e2e/__screenshots__`. It skips off Linux, so a change that
+moves pixels goes red on the PR, not on your machine — accepting an intended change is two
+`gh run download` commands, written up in [`docs/visual-regression.md`](docs/visual-regression.md).
+
 Three things run **nightly** and this gate does not cover them: Firefox, the deep
 seat-balance sweep across three bot tiers, and the 70% coverage floor. A change that drops
 coverage merges green and is caught the next morning. That is a deliberate trade, written up

@@ -70,6 +70,53 @@ export const PLAYER_DATA_KEYS: readonly string[] = [
   BEST_SCORES_KEY,
 ];
 
+/**
+ * What each stored key is called to a player, for the line that says what an import restored.
+ *
+ * Beside `PLAYER_DATA_KEYS` rather than in the panel that renders it (#220). The panel shows
+ * these through `t(messages, name)`, and a string that reaches a lookup through a variable is
+ * invisible to the extractor — so it has to be registered in `lib/i18n/sources.ts`, and
+ * `sources.ts` cannot import a `.tsx` file at all: this repository compiles with
+ * `jsx: preserve` for Next, which leaves Vitest unable to transform one. Here the names also
+ * sit next to the list they name.
+ *
+ * Four of the keys above have no name here — the tournament in progress, the catalogue
+ * filter, the install offer's memory and the best scores — and an import of one of those
+ * shows the key itself. That is a poor line and a true one; it is recorded in #220 rather
+ * than fixed in the batch that was converting strings, because inventing four sentences is
+ * writing copy rather than translating it.
+ */
+export const PLAYER_DATA_KEY_NAMES: Readonly<Record<string, string>> = {
+  [LAST_MODE_KEY]: 'the setup you last used for each game',
+  [FAVOURITES_KEY]: 'your favourites',
+  [RECENT_KEY]: 'your recently played games',
+  [SETTINGS_KEY]: 'your settings',
+  [HEAD_TO_HEAD_KEY]: 'your head-to-head record',
+  [PLAYER_NAMES_KEY]: 'the names you chose for the two seats',
+  [KEY_BINDINGS_KEY]: 'the keys you chose for the two seats',
+  [HINTS_SEEN_KEY]: 'which games have shown you their first-play hints',
+};
+
+/**
+ * Why an import was refused, in the words the settings page shows.
+ *
+ * Hoisted out of {@link importPlayerData} for the reason above: the panel renders a refusal
+ * as `t(messages, result.error, result.values)`, so these five have to be somewhere
+ * `sources.ts` can import and register.
+ *
+ * `version` carries a `{version}` placeholder rather than the number itself, because a
+ * message with a value baked into it cannot be a catalogue key — the value travels beside it
+ * and `t()` fills it in, in whatever order the translation puts it.
+ */
+export const IMPORT_ERRORS = {
+  notJson: 'That file is not valid JSON.',
+  notOurs: 'That file is not a DuelBox player-data export.',
+  version:
+    'That export was written by a different version of DuelBox ({version}) and this one cannot read it.',
+  noData: 'That export has no data in it.',
+  storage: 'Your browser would not save the data. Storage may be full or disabled.',
+} as const;
+
 /** The settings store's own version, checked here only to count it as present. */
 const SETTINGS_VERSION = 1;
 
@@ -97,7 +144,8 @@ export function exportPlayerData(): string {
 /**
  * Restores an export made by {@link exportPlayerData}.
  *
- * Refused outright, with a reason the settings page can show, when the text is not JSON,
+ * Refused outright, with one of {@link IMPORT_ERRORS} for the settings page to show — and
+ * the values that fill its placeholders, if it has any — when the text is not JSON,
  * is not one of our files, or is a version this build does not read. Inside a file that
  * is accepted, only known keys holding plain objects are written and the rest is
  * skipped without comment — a later build may export a store this one has never heard
@@ -108,9 +156,12 @@ export function exportPlayerData(): string {
  * can do something about (free space, leave private browsing). Whatever was written
  * before the refusal stays, since it was valid data the player asked for.
  */
-export function importPlayerData(
-  text: string,
-): { readonly imported: readonly string[] } | { readonly error: string } {
+export function importPlayerData(text: string):
+  | { readonly imported: readonly string[] }
+  | {
+      readonly error: string;
+      readonly values?: Readonly<Record<string, string | number>>;
+    } {
   let parsed: unknown;
   try {
     // An imported file is chosen by the player but written by anyone — it is the one input
@@ -119,19 +170,17 @@ export function importPlayerData(
     // on their next read as well; this closes the gap in between.
     parsed = stripForbiddenKeys(JSON.parse(text));
   } catch {
-    return { error: 'That file is not valid JSON.' };
+    return { error: IMPORT_ERRORS.notJson };
   }
   if (!isRecord(parsed) || parsed['format'] !== PLAYER_DATA_FORMAT) {
-    return { error: 'That file is not a DuelBox player-data export.' };
+    return { error: IMPORT_ERRORS.notOurs };
   }
   if (parsed['version'] !== PLAYER_DATA_VERSION) {
-    return {
-      error: `That export was written by a different version of DuelBox (${String(parsed['version'])}) and this one cannot read it.`,
-    };
+    return { error: IMPORT_ERRORS.version, values: { version: String(parsed['version']) } };
   }
   const data = parsed['data'];
   if (!isRecord(data)) {
-    return { error: 'That export has no data in it.' };
+    return { error: IMPORT_ERRORS.noData };
   }
 
   const imported: string[] = [];
@@ -139,7 +188,7 @@ export function importPlayerData(
     const value = data[key];
     if (!isRecord(value)) continue;
     if (!writeJson(key, value)) {
-      return { error: 'Your browser would not save the data. Storage may be full or disabled.' };
+      return { error: IMPORT_ERRORS.storage };
     }
     imported.push(key);
   }

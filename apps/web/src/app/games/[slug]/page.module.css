@@ -163,7 +163,7 @@
 /* The favourite star, beside the call to action on the same line while both fit. */
 .favourite {
   margin-top: var(--db-space-4);
-  margin-left: var(--db-space-3);
+  margin-inline-start: var(--db-space-3);
   vertical-align: top;
 }
 

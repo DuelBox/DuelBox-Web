@@ -53,8 +53,8 @@ import { afterEach, describe, expect, it } from 'vitest';
  * guard that needed a real export would be a guard that never ran on the machine of the person
  * who broke it. The fixture below is a small export with the same shape as a real one — nested
  * documents, hashed asset names, a stylesheet whose `url()` is the only mention of a font, a
- * manifest naming an icon no page has a tag for — which is enough to exercise every rule the
- * emitter has.
+ * manifest naming an icon no page has a tag for, three `@font-face` blocks differing only in
+ * their `unicode-range` — which is enough to exercise every rule the emitter has.
  *
  * It is spawned as a child process because `scripts/emit-service-worker.mjs` is a program
  * rather than a module: it reads `process.argv`, sets `process.exitCode`, and writes its
@@ -154,12 +154,24 @@ function buildExport(basePath = '', routes: readonly string[] = ROUTES): string 
   for (const route of routes) write(join(route, 'index.html'), document(route));
   write('play/chess/index.html', document('Chess'));
 
+  // Three faces, one per rule the emitter applies to a `@font-face`: no `unicode-range` at
+  // all, a range that reaches printable ASCII, and a range that does not. The third is the
+  // one #224 turned on, and the one whose real files are 118 KB and 166 KB.
   write(
     '_next/static/css/shell.a1b2c3.css',
-    `@font-face{font-family:F;src:url(${basePath}/_next/static/media/face.9a8b7c.woff2)}`,
+    `@font-face{font-family:F;src:url(${basePath}/_next/static/media/face.9a8b7c.woff2)}` +
+      `@font-face{font-family:L;src:url(${basePath}/_next/static/media/latin.1c2d3e.woff2);` +
+      'unicode-range:U+0000-00FF,U+2000-206F}' +
+      `@font-face{font-family:S;src:url(${basePath}/_next/static/media/script.4f5a6b.woff2);` +
+      'unicode-range:U+0900-097F,U+20B9,U+25CC}',
   );
   write('_next/static/chunks/shell.d4e5f6.js', 'console.log("shell");\n');
   write('_next/static/media/face.9a8b7c.woff2', 'not really a font');
+  write('_next/static/media/latin.1c2d3e.woff2', 'not really a latin font');
+  // On disk even though it is never precached: the emitter checks that a face it leaves out
+  // exists, because a stylesheet naming a file the build did not emit is a broken export
+  // whichever cache it was going to land in.
+  write('_next/static/media/script.4f5a6b.woff2', 'not really a script font');
   write(
     'manifest.webmanifest',
     JSON.stringify({ name: 'DuelBox', icons: [{ src: `${basePath}/icons/maskable.svg` }] }),
@@ -290,6 +302,33 @@ describe('the precache list', () => {
     expect(urls).toContain('/icons/maskable.svg');
     expect(urls).toContain('/manifest.webmanifest');
     expect(urls.filter((url) => url.startsWith('/og/'))).toEqual([]);
+  });
+
+  /**
+   * The rule #224 rests on, held at the cheapest place it can be held.
+   *
+   * A face whose `unicode-range` excludes printable ASCII is one no English page ever asks
+   * for, so precaching it would install bytes the visit is never going to draw — 287,340 of
+   * them for the two script faces alone, against a precache that is 375 KB over the wire.
+   * `check-size.mjs` holds the same rule against the emitted worker on every build, but only
+   * against the real export: this is the half that runs before a build exists, and the half
+   * that can fail in both directions on a fixture whose faces were chosen to differ in
+   * exactly the descriptor under test.
+   *
+   * Both directions, because only one of them is about bytes. A range-gated face in the list
+   * is a first install a hundred kilobytes heavier than it looks; a *base* face left out of
+   * it is a return visit with no connection rendering in the system face, which is the
+   * failure #2469 shipped and the reason this list follows stylesheets at all.
+   */
+  it('leaves a range-gated face out and keeps the faces an English page fetches', () => {
+    const out = buildExport();
+    expect(emit(out).ok).toBe(true);
+
+    const urls = precacheOf(worker(out));
+    expect(urls).not.toContain('/_next/static/media/script.4f5a6b.woff2');
+    expect(urls).toContain('/_next/static/media/latin.1c2d3e.woff2');
+    // And the face with no `unicode-range` at all, which nothing gates.
+    expect(urls).toContain('/_next/static/media/face.9a8b7c.woff2');
   });
 
   /**

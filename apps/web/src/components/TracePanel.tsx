@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import styles from './TracePanel.module.css';
 
 /**
@@ -18,6 +20,7 @@ import styles from './TracePanel.module.css';
 export function TracePanel({ getTrace }: { getTrace: (() => string) | null }) {
   const [copied, setCopied] = useState<'idle' | 'done' | 'failed'>('idle');
   const [size, setSize] = useState(0);
+  const messages = useMessages();
 
   // A tenth of a second, not a frame. The panel is a debugging aid and re-rendering it on
   // every step would put React in the loop this is meant to be measuring.
@@ -50,11 +53,18 @@ export function TracePanel({ getTrace }: { getTrace: (() => string) | null }) {
   if (getTrace === null) return null;
 
   return (
-    <div className={styles.panel} role="status" aria-label="Input trace">
-      <span className={styles.title}>Trace</span>
-      <span className={styles.size}>{(size / 1024).toFixed(1)} kB</span>
+    <div className={styles.panel} role="status" aria-label={t(messages, 'Input trace')}>
+      <span className={styles.title}>{t(messages, 'Trace')}</span>
+      {/* The unit travels with the number: a locale that writes "1,2 kB" or puts the unit
+          first needs the whole phrase, not a number with a word stuck after it. */}
+      <span className={styles.size}>
+        {t(messages, '{size} kB', { size: (size / 1024).toFixed(1) })}
+      </span>
       <button type="button" className={styles.copy} onClick={copy}>
-        {copied === 'done' ? 'Copied' : copied === 'failed' ? 'Copy failed' : 'Copy trace'}
+        {t(
+          messages,
+          copied === 'done' ? 'Copied' : copied === 'failed' ? 'Copy failed' : 'Copy trace',
+        )}
       </button>
     </div>
   );

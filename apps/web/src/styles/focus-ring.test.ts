@@ -18,7 +18,11 @@ import { describe, expect, it } from 'vitest';
  * rather than silently diverging — the same reason `tokens.test.ts` reads the stylesheet.
  */
 
-const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url)), 'utf8');
+// Comments stripped: the alias block's prose names tokens in the same shape as a declaration.
+const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url)), 'utf8').replace(
+  /\/\*[\s\S]*?\*\//g,
+  '',
+);
 
 /** The declarations inside `:root { … }` — the light palette, which is defined first. */
 function lightBlock(): string {
@@ -42,8 +46,14 @@ function tokenIn(block: string, name: string): string {
   if (match?.[1]) return match[1];
   // Dark overrides only a subset; anything it does not touch keeps the light value.
   const light = new RegExp(`--db-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(lightBlock());
-  if (!light?.[1]) throw new Error(`--db-${name} is not a hex token in tokens.css`);
-  return light[1];
+  if (light?.[1]) return light[1];
+  // The seat tokens are aliases since #161 — `--db-p1` is `var(--db-seat-a)`, one hop from
+  // a hex — so a `var()` is followed, in the same block first, like `tokens.test.ts` does.
+  // The first alias in the file is the un-swapped one; the swap crosses the same two
+  // colours over, so judging that pair against every background judges both orders.
+  const alias = new RegExp(`--db-${name}:\\s*var\\(--db-([a-z0-9-]+)\\)`).exec(css);
+  if (alias?.[1]) return tokenIn(block, alias[1]);
+  throw new Error(`--db-${name} is not a hex token in tokens.css`);
 }
 
 function linear(channel: number): number {

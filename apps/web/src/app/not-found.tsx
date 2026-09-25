@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { T } from '@/lib/i18n/T';
 import styles from './not-found.module.css';
 
 /**
@@ -14,6 +15,11 @@ import styles from './not-found.module.css';
  * It offers the two destinations that are always the right answer here rather than trying
  * to guess what was meant: a wrong slug is not a search query, and a page that pretends to
  * know what you wanted is worse than one that admits it does not.
+ *
+ * Its four strings go through `<T>` (#220) — a player who chose another language and then
+ * mistyped an address should not be answered in English. The `404` above the heading does
+ * not: it is a number, it is `aria-hidden`, and it is the same number in every language.
+ * The `title` in `metadata` stays English with the rest of this site's metadata.
  */
 /**
  * No canonical on the page that says a page does not exist (#201).
@@ -36,17 +42,18 @@ export default function NotFound() {
         <p className={styles.code} aria-hidden="true">
           404
         </p>
-        <h1 className={styles.title}>That page is not here</h1>
+        <h1 className={styles.title}>
+          <T id="That page is not here" />
+        </h1>
         <p className={styles.body}>
-          The address may have a typo in it, or the page may have moved since something linked to
-          it. Nothing is lost — every game in the catalogue is one press away.
+          <T id="The address may have a typo in it, or the page may have moved since something linked to it. Nothing is lost — every game in the catalogue is one press away." />
         </p>
         <div className={styles.actions}>
           <Link href="/games/" className={styles.primary}>
-            All games
+            <T id="All games" />
           </Link>
           <Link href="/how-to-play/" className={styles.secondary}>
-            How to play
+            <T id="How to play" />
           </Link>
         </div>
       </div>

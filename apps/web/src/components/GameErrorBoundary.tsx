@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from 'react';
 import { errorMessage } from '@duelbox/game-sdk';
+import { T } from '@/lib/i18n/T';
 import styles from './GameErrorBoundary.module.css';
 
 /**
@@ -20,6 +21,12 @@ import styles from './GameErrorBoundary.module.css';
  * Either way the loop is already stopped by the time this renders — a boundary that kept
  * stepping a broken game would just crash again on the next frame — and the player is offered
  * Restart and Quit rather than a white screen.
+ *
+ * The copy goes through `<T>` rather than `t()` because this is a class component and there is
+ * no hook to read the catalogue with (#220). The message line takes whatever the throw carried,
+ * so its id is a variable: the three sentences this shell can actually put there — the SDK's
+ * own fallback and the two errors the host raises — are registered in `lib/i18n/sources.ts`,
+ * and a game's own thrown message stays in whatever language the game wrote it in.
  */
 export interface GameErrorBoundaryProps {
   children: ReactNode;
@@ -59,17 +66,21 @@ export class GameErrorBoundary extends Component<GameErrorBoundaryProps, GameErr
     return (
       <div className={styles.recovery} role="alert">
         <div className={styles.panel}>
-          <h2 className={styles.heading}>This game hit a snag</h2>
-          <p className={styles.detail}>{errorMessage(error)}</p>
+          <h2 className={styles.heading}>
+            <T id="This game hit a snag" />
+          </h2>
+          <p className={styles.detail}>
+            <T id={errorMessage(error)} />
+          </p>
           <p className={styles.reassure}>
-            The match was stopped safely. You can start it over or head back.
+            <T id="The match was stopped safely. You can start it over or head back." />
           </p>
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={this.handleRestart} autoFocus>
-              Restart
+              <T id="Restart" />
             </button>
             <button type="button" className={styles.secondary} onClick={this.props.onQuit}>
-              Quit match
+              <T id="Quit match" />
             </button>
           </div>
         </div>

@@ -66,6 +66,8 @@
  * not silently.
  */
 
+import { MOTION } from './motion.js';
+
 /**
  * A normalised curve: takes progress in [0, 1] and returns eased progress.
  *
@@ -163,8 +165,19 @@ export function easeOutBack(t: number): number {
   return 1 + u * u * u + BACK_OVERSHOOT * u * u * t;
 }
 
+// The product's own curve is `standardEase` in `motion.ts`: `cubic-bezier(0.2, 0.8, 0.2, 1)`,
+// the same four numbers `--db-ease` gives every transition in the shell. It is not re-exported
+// from here, because the signature table has to be importable without this library on the
+// other end of it — the app reads it to build CSS values and has no use for a `Tween`.
+
 export interface TweenOptions {
-  /** Seconds a run takes. Zero means every run settles on the step it starts. */
+  /**
+   * Seconds a run takes. Zero means every run settles on the step it starts.
+   *
+   * Defaults to {@link MOTION.durationSeconds}, the product's standard duration. A game
+   * reaching for one of the other two states it: `MOTION.durationFastSeconds` or
+   * `MOTION.durationSlowSeconds`.
+   */
   readonly durationSeconds?: number;
   /** Curve. Defaults to {@link smoothstep}. */
   readonly easing?: Easing;
@@ -172,7 +185,17 @@ export interface TweenOptions {
   readonly value?: number;
 }
 
-const DEFAULT_DURATION_SECONDS = 0.25;
+/**
+ * The default run length, which is the motion signature's standard duration (#72).
+ *
+ * It was 0.25 s, chosen here and answering to nothing. `MOTION.durationSeconds` is 0.2 s and
+ * is the same number `--db-duration` puts on every transition in the shell, so a tween that
+ * states no duration now moves at the speed the rest of the product moves at. Nothing in the
+ * collection relied on the old value: at the time of the change no game and no shell code
+ * constructed a `Tween` at all, and the two constructions in this package's own tests that
+ * pass no duration assert nothing about how long a run takes.
+ */
+const DEFAULT_DURATION_SECONDS = MOTION.durationSeconds;
 
 function assertFinite(value: number, name: string): void {
   if (!Number.isFinite(value)) {

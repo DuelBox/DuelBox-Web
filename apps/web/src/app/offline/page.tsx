@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { T } from '@/lib/i18n/T';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -38,8 +39,14 @@ export const metadata: Metadata = {
  *
  * ## Not a byte of client JavaScript, deliberately
  *
- * This is a server component that imports its own stylesheet and `next/link`, and that is the
- * whole of it. Three reasons, in the order they matter:
+ * This is a server component that imports its own stylesheet, `next/link` and `<T>`, and that
+ * is the whole of it. `<T>` is the locale lookup (#220) and is the one client component in
+ * that list: it is how a server component translates, it renders the English string itself
+ * when nothing is looked up, and it costs this route no chunk of its own, because
+ * `LocaleProvider` is in the root layout and the i18n modules are therefore on every route
+ * already. It is also the one thing on this page that has to work without a network, and it
+ * does: the English is in the precached document, and a locale chunk that cannot be fetched
+ * falls back to exactly that (`docs/i18n.md`, "Offline"). Three reasons for the rest:
  *
  * 1. **It has to render from the precached document alone.** Anything that waited for
  *    hydration would be blank at the exact moment hydration is least likely to happen, and it
@@ -87,20 +94,17 @@ export default function OfflinePage() {
   return (
     <div className="db-wrap">
       <div className={styles.panel}>
-        <h1 className={styles.title}>Not saved to this device</h1>
+        <h1 className={styles.title}>
+          <T id="Not saved to this device" />
+        </h1>
         <p className={styles.lede}>
-          DuelBox keeps a page on your device once you have opened it there, and this address is not
-          one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived
-          here.
+          <T id="DuelBox keeps a page on your device once you have opened it there, and this address is not one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived here." />
         </p>
         <p className={styles.body}>
-          A game asks the network for one thing, itself. Once its page and its code are on the
-          device, the rules, the bot and the scoring all run here, which is why a match never waits
-          for anything. So a game you have already played is still yours to play now.
+          <T id="A game asks the network for one thing, itself. Once its page and its code are on the device, the rules, the bot and the scoring all run here, which is why a match never waits for anything. So a game you have already played is still yours to play now." />
         </p>
         <p className={styles.body}>
-          The catalogue knows which is which. While you are away from a connection it marks every
-          game in the list as one of two things:
+          <T id="The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:" />
         </p>
         {/*
           The two strings, quoted from the catalogue rather than paraphrased. `globals.css`
@@ -111,17 +115,24 @@ export default function OfflinePage() {
         */}
         <dl className={styles.marks}>
           <div>
-            <dt>Saved on this device</dt>
-            <dd>It is here. Open it and play.</dd>
+            <dt>
+              <T id="Saved on this device" />
+            </dt>
+            <dd>
+              <T id="It is here. Open it and play." />
+            </dd>
           </div>
           <div>
-            <dt>Needs a connection</dt>
-            <dd>It has not arrived here yet, like the one you just asked for.</dd>
+            <dt>
+              <T id="Needs a connection" />
+            </dt>
+            <dd>
+              <T id="It has not arrived here yet, like the one you just asked for." />
+            </dd>
           </div>
         </dl>
         <p className={styles.body}>
-          Opening a game once, while you have a connection, is enough: this device keeps it for next
-          time.
+          <T id="Opening a game once, while you have a connection, is enough: this device keeps it for next time." />
         </p>
         <div className={styles.actions}>
           {/*
@@ -136,7 +147,7 @@ export default function OfflinePage() {
             it — the cheapest possible way not to be the file that proves the point.
           */}
           <Link href="/games/" className={styles.primary}>
-            All games
+            <T id="All games" />
           </Link>
         </div>
       </div>

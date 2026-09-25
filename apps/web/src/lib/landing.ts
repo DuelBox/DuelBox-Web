@@ -263,15 +263,11 @@ export function roundSpread(games: readonly CatalogueEntry[]): string {
     : `Rounds run from ${shortest} to ${longest}.`;
 }
 
-/**
- * "20 games", and "1 game" for the four categories that hold one.
- *
- * `app/games/category/[slug]/page.tsx` carries a private `countLine` doing exactly this.
- * Two copies of a pluraliser is one too many and they belong together in `lib/format.ts`,
- * which already owns how a round length reads — but merging them edits that route's file,
- * and this batch does not own it, so the duplicate is written down here rather than taken
- * quietly.
+/*
+ * `gameCount(count)` — "20 games", "1 game" — used to live here, and #220 removed it with
+ * its last call site. The landing page renders that span through the i18n lookup now
+ * (`{count} game` / `{count} games` with the number as a value), which is where a plural
+ * belongs once a locale is in the picture: English's two forms are not every language's,
+ * and a helper that spells the English rule cannot be translated. The hub route keeps a
+ * private `countLine` for its `metadata`, which stays English on purpose (`docs/i18n.md`).
  */
-export function gameCount(count: number): string {
-  return `${String(count)} ${count === 1 ? 'game' : 'games'}`;
-}

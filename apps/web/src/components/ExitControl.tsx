@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import styles from './ExitControl.module.css';
 
 /**
@@ -28,6 +30,7 @@ export interface ExitControlProps {
 }
 
 export function ExitControl({ open, onOpen, onCancel, onQuit }: ExitControlProps) {
+  const messages = useMessages();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +86,7 @@ export function ExitControl({ open, onOpen, onCancel, onQuit }: ExitControlProps
       >
         {/* A word, not only a glyph: the control has to say what it does at arm's length. */}
         <span aria-hidden="true">✕</span>
-        <span className={styles.exitLabel}>Exit</span>
+        <span className={styles.exitLabel}>{t(messages, 'Exit')}</span>
       </button>
 
       {open ? (
@@ -92,19 +95,22 @@ export function ExitControl({ open, onOpen, onCancel, onQuit }: ExitControlProps
           className={styles.overlay}
           role="dialog"
           aria-modal="true"
-          aria-label="Leave the match"
+          aria-label={t(messages, 'Leave the match')}
         >
           <div className={styles.panel}>
-            <h2 className={styles.heading}>Leave the match?</h2>
+            <h2 className={styles.heading}>{t(messages, 'Leave the match?')}</h2>
             <p className={styles.detail}>
-              Quitting now forfeits the match to the other player. This cannot be undone.
+              {t(
+                messages,
+                'Quitting now forfeits the match to the other player. This cannot be undone.',
+              )}
             </p>
             <div className={styles.actions}>
               <button ref={cancelRef} type="button" className={styles.keep} onClick={onCancel}>
-                Keep playing
+                {t(messages, 'Keep playing')}
               </button>
               <button type="button" className={styles.quit} onClick={onQuit}>
-                Quit and forfeit
+                {t(messages, 'Quit and forfeit')}
               </button>
             </div>
           </div>

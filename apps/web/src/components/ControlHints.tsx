@@ -1,6 +1,8 @@
 'use client';
 
 import type { SeatId } from '@duelbox/engine';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { SeatGlyph } from './SeatGlyph';
 import styles from './ControlHints.module.css';
 
@@ -42,6 +44,7 @@ export function ControlHints({
   /** The seats that have already played, and whose hint is therefore gone. */
   used: Readonly<Record<SeatId, boolean>>;
 }) {
+  const messages = useMessages();
   return (
     <div className={styles.layer} aria-hidden="true">
       {(['p2', 'p1'] as const).map((seat) => (
@@ -52,7 +55,7 @@ export function ControlHints({
           data-gone={used[seat] || undefined}
         >
           <SeatGlyph seat={seat} size={18} />
-          {names[seat]} plays this half
+          {t(messages, '{name} plays this half', { name: names[seat] })}
         </p>
       ))}
     </div>

@@ -24,7 +24,7 @@ export interface FontAttribution {
 export const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = [
   {
     "name": "next",
-    "version": "15.5.23",
+    "version": "15.5.25",
     "licence": "MIT",
     "homepage": "https://nextjs.org"
   },
@@ -62,6 +62,20 @@ export const FONT_ATTRIBUTIONS: readonly FontAttribution[] = [
     "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
     "author": "Philipp Nurullin and Konstantin Bulenkov, JetBrains — The JetBrains Mono Project Authors (Copyright 2020)",
     "source": "https://fonts.google.com/specimen/JetBrains+Mono — https://github.com/JetBrains/JetBrainsMono"
+  },
+  {
+    "family": "Noto Sans Arabic",
+    "licence": "OFL-1.1",
+    "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+    "author": "The Noto Project Authors (Copyright 2022, https://github.com/notofonts/arabic)",
+    "source": "https://fonts.google.com/noto/specimen/Noto+Sans+Arabic — https://github.com/notofonts/arabic — fetched 2026-09-12 from https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400..700&display=swap (the 'arabic' block; request, User-Agent and sha256 in src/styles/fonts.css)"
+  },
+  {
+    "family": "Noto Sans Devanagari",
+    "licence": "OFL-1.1",
+    "licenceUrl": "https://openfontlicense.org/open-font-license-official-text/",
+    "author": "The Noto Project Authors (Copyright 2022, https://github.com/notofonts/devanagari)",
+    "source": "https://fonts.google.com/noto/specimen/Noto+Sans+Devanagari — https://github.com/notofonts/devanagari — fetched 2026-09-12 from https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400..700&display=swap (the 'devanagari' block; request, User-Agent and sha256 in src/styles/fonts.css)"
   },
   {
     "family": "Plus Jakarta Sans",

@@ -1,6 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { t } from '@/lib/i18n/messages';
+import { T } from '@/lib/i18n/T';
+import { useMessages } from '@/lib/i18n/use-messages';
 import type { SeatNames } from '@/lib/seats';
 import type { BotDifficulty } from '@/lib/match-setup';
 import {
@@ -63,6 +66,7 @@ export function TournamentTrack({
   tier,
   onLeave,
 }: TournamentTrackProps) {
+  const messages = useMessages();
   const played = legsPlayed(state);
   const score = tournamentScore(state);
   const outcome = tournamentOutcome(state);
@@ -72,13 +76,17 @@ export function TournamentTrack({
   const upNext = played + 1;
 
   return (
-    <div className={styles.track} role="group" aria-label="Tournament">
+    <div className={styles.track} role="group" aria-label={t(messages, 'Tournament')}>
+      {/* Every rendered player name is wrapped in `<bdi>` (#222): a name in another script
+          would otherwise reorder the sentence around it rather than only itself. */}
       <p className={styles.head}>
-        {outcome === null
-          ? `Game ${String(upNext)} of ${String(state.games.length)}`
-          : outcome === 'draw'
-            ? 'Tournament drawn'
-            : `${names[outcome]} wins the tournament`}
+        {outcome === null ? (
+          t(messages, 'Game {n} of {total}', { n: upNext, total: state.games.length })
+        ) : outcome === 'draw' ? (
+          t(messages, 'Tournament drawn')
+        ) : (
+          <T id="{name} wins the tournament" values={{ name: <bdi>{names[outcome]}</bdi> }} />
+        )}
       </p>
 
       <ol className={styles.nodes}>
@@ -95,14 +103,13 @@ export function TournamentTrack({
                 </span>
               )}
               <span className="db-visually-hidden">
-                Game {index + 1}:{' '}
                 {result === undefined
                   ? now
-                    ? 'playing now'
-                    : 'to come'
+                    ? t(messages, 'Game {n}: playing now', { n: index + 1 })
+                    : t(messages, 'Game {n}: to come', { n: index + 1 })
                   : result === 'draw'
-                    ? 'drawn'
-                    : `${names[result]} won`}
+                    ? t(messages, 'Game {n}: drawn', { n: index + 1 })
+                    : t(messages, 'Game {n}: {name} won', { n: index + 1, name: names[result] })}
               </span>
             </li>
           );
@@ -112,19 +119,32 @@ export function TournamentTrack({
       {/* The score in words as well as in marks, for the same reason the HUD carries one:
           a row of glyphs is the fast read and a sentence is the one that can be checked. */}
       <p className={styles.score}>
-        {names.p1} {score.p1} — {score.p2} {names.p2}
-        {score.draws > 0 ? `, ${score.draws} drawn` : ''}
+        <T
+          id="{p1} {wins1} — {wins2} {p2}"
+          values={{
+            p1: <bdi>{names.p1}</bdi>,
+            wins1: score.p1,
+            wins2: score.p2,
+            p2: <bdi>{names.p2}</bdi>,
+          }}
+        />
+        {/* The drawn clause is its own id rather than a second copy of the whole line: the
+            score line is shared with the result panel and is worth translating once. */}
+        {score.draws > 0 ? t(messages, ', {drawn} drawn', { drawn: score.draws }) : ''}
       </p>
       {tier === undefined ? null : (
         <p className={styles.score}>
-          Bot skill: {tier} for all {state.games.length} games
+          {t(messages, 'Bot skill: {tier} for all {games} games', {
+            tier: t(messages, tier),
+            games: state.games.length,
+          })}
         </p>
       )}
 
       <div className={styles.actions}>
         {onPlay === undefined ? null : (
           <button type="button" className={styles.play} onClick={onPlay}>
-            Play game {upNext}
+            {t(messages, 'Play game {n}', { n: upNext })}
           </button>
         )}
         {href === undefined ? null : (
@@ -132,14 +152,14 @@ export function TournamentTrack({
              should need nothing from the network, and warming another game's chunk from a
              page somebody is playing on is exactly what `e2e/offline.spec.ts` forbids. */
           <Link className={styles.play} href={href} prefetch={false}>
-            Go to game {upNext}
+            {t(messages, 'Go to game {n}', { n: upNext })}
           </Link>
         )}
         {/* One press, and no arming step. The destructive buttons on /settings/ take two
             because what they erase cannot be rebuilt; this is seven games and one press to
             draw another line-up. What protects it is the label saying what it does. */}
         <button type="button" className={styles.leave} onClick={onLeave}>
-          {outcome === null ? 'Leave the tournament' : 'Finish'}
+          {t(messages, outcome === null ? 'Leave the tournament' : 'Finish')}
         </button>
       </div>
     </div>

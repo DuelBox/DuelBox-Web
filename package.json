@@ -22,10 +22,12 @@
     "create-game": "node scripts/create-game.mjs",
     "catalogue": "python3 scripts/generate_catalog.py",
     "fuzz:soak": "DUELBOX_FUZZ_MINUTES=60 vitest run apps/web/src/data/input-fuzz.test.ts",
+    "i18n:extract": "DUELBOX_EMIT_LOCALES=1 vitest run apps/web/src/lib/i18n/extract.test.ts",
     "balance:sweep": "vitest run apps/web/src/data/balance-aggregate.test.ts",
     "balance:audit": "DUELBOX_BALANCE_SEEDS=250 pnpm balance:sweep",
     "e2e": "playwright test",
     "e2e:all": "DUELBOX_ALL_ENGINES=1 playwright test",
+    "responsive": "node scripts/responsive-matrix.mjs",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "check:zero-cost": "node scripts/check-zero-cost.mjs",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
@@ -68,8 +70,9 @@
   },
   "pnpm": {
     "overrides": {
+      "js-yaml@4": ">=4.3.2 <5",
       "postcss": ">=8.5.18",
-      "sharp": ">=0.35.0",
+      "sharp": ">=0.35.4",
       "vite": ">=6.4.3"
     }
   }

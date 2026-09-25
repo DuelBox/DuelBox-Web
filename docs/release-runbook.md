@@ -14,10 +14,11 @@ Site: <https://duelbox.github.io/DuelBox-Web/> · Workflow:
 
 ## What a release is here
 
-**Pushing to `main` is the release.** There is no separate step, no tag, no approval and no
-promotion between environments. `deploy.yml` triggers on `push: branches: [main]`, builds the
-static export, and publishes it to GitHub Pages. The only other trigger is a manual
-`workflow_dispatch`, and the `github-pages` environment's branch policy permits `main` only.
+**Pushing to `main` starts the release.** There is no separate step, tag, approval or
+promotion between environments. `ci.yml` runs on the push; a successful run triggers
+`deploy.yml`, which rebuilds the static export and publishes it to GitHub Pages. Deploy can
+also be started manually with `workflow_dispatch`, and the `github-pages` environment's
+branch policy permits `main` only.
 
 Observed end-to-end times over the last eight deploys: **2m17s to 4m11s.**
 
@@ -47,6 +48,12 @@ on a green run of the commit you are rolling back *to*.
 A cancelled CI run does not deploy. `ci.yml` sets `cancel-in-progress: true`, so a superseded
 run ends as `cancelled` rather than `success`; the push that superseded it brings its own CI
 and its own deploy.
+
+**Check both workflows when the site is stale.** A green CI run can still be followed by a
+failed Deploy build. The CI `verify` job builds with the same GitHub Pages base path and site
+URL as Deploy so that path-sensitive checks run before merge; the e2e job builds at `/` for
+its local server. If no CI run exists for a new `main` commit, inspect how that commit was
+pushed before assuming Deploy is at fault.
 
 **One gap remains, and it is a repository setting rather than a file.** `main` has no branch
 protection and no ruleset — `gh api repos/DuelBox/DuelBox-Web/branches/main/protection`
@@ -116,6 +123,12 @@ curl -s -o /dev/null -w '%{http_code}\n' "$U/.well-known/security.txt"
 # The service worker is being served, and it is THIS build's copy.
 curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "$U/sw.js"   # expect 200 and a JS type
 curl -s "$U/sw.js" | grep -o 'duelbox-shell-[A-Za-z0-9._-]*' | head -1
+
+# Caching (#188), and what it says depends on the host. A hashed asset must come back
+# immutable on a host that reads _headers, and sw.js must not, on any host at all.
+curl -sI "$U/sw.js" | grep -i '^cache-control'
+curl -s "$U/" | grep -o '/_next/static/chunks/[A-Za-z0-9._-]*\.js' | head -1 \
+  | xargs -I{} curl -sI "$U{}" | grep -i '^cache-control'
 ```
 
 **That last line is the one that is new, and it is the one that matters.** It prints the
@@ -218,7 +231,16 @@ will not save you — Route A will not either. In that case pin the dependency a
 There are now **two** of them, and the second one is new since #2544. Read both.
 
 The live origin serves `cache-control: max-age=600` on **both** HTML and hashed assets
-(measured). So:
+(measured). **That is GitHub Pages' default and not this repository's design** — since #188 the
+artefact carries cache rules of its own, and Pages reads neither of the files they are written
+in. On a host that does read them a hashed asset comes back
+`public, max-age=31536000, immutable` and a document `public, max-age=0, must-revalidate`,
+which changes both bullets below: documents stop being a rollback problem and hashed assets
+stop being one too, because a rolled-back build references different hashed URLs. `sw.js` is
+the file that matters in either case, and it revalidates on every host. See *What the artefact
+says about caching* in `docs/deploy.md`.
+
+On Pages, today:
 
 - A visitor who loaded the bad page may keep it for **up to ten minutes** after the rollback
   deploys, on the CDN's account alone.
@@ -334,7 +356,8 @@ Rollback (if needed)
 [ ] Route chosen and why (A revert / B re-run)
 [ ] Deploy run completed
 [ ] Verification block re-run and green, including the two sw.js lines
-[ ] Ten minutes elapsed since the deploy before declaring the CDN clear (max-age=600)
+[ ] Ten minutes elapsed since the deploy before declaring the CDN clear (max-age=600 —
+    the host's default; a host that reads _headers answers documents max-age=0 instead)
 [ ] Said in the issue that returning visitors are NOT on that timer — they move when they
     take the update prompt or come back to a closed tab, and a tab left open does not move
 [ ] Issue opened with cause, action, and what would have caught it
@@ -346,8 +369,9 @@ A first-timer can follow everything above. These are the things that would have 
 configuration or code, and they are named here so the next person does not assume they are
 already handled:
 
-1. **CI does not gate the deploy** (no branch protection, no required checks, no `needs:`).
-   The largest one.
+1. **A red pull request can still be merged.** `workflow_run` gates Deploy on successful CI,
+   but `main` has no branch protection or required checks, so a bad commit can sit there
+   until corrected. This is separate from whether it reaches the published site.
 2. **`PLAYWRIGHT_BASE_URL` does nothing**, so there is no automated verification against a
    real origin. Threading it through `playwright.config.ts` — and skipping the `webServer`
    block when it is set — would give this runbook a real smoke test instead of a curl loop.

@@ -304,8 +304,22 @@ describe('the words on the card', () => {
       cardStyles,
     )?.[1] ?? '';
 
-  const wordsIn = (className: string): string =>
-    new RegExp(`className=\\{styles\\.${className}\\}>([^<]+)<`).exec(card)?.[1]?.trim() ?? '';
+  /**
+   * The sentence the card puts inside one of those classes.
+   *
+   * Either as a literal or through the i18n lookup (#220) — `<T id="…" />` with no values
+   * renders its id and nothing else, so the words on the card are the words written in the
+   * `id`, and reading only the bare form would have turned this guard into one that reports
+   * an empty sentence for a card that says exactly what it always said. Whitespace is
+   * collapsed first, because prettier puts the `<T>` on a line of its own.
+   */
+  const wordsIn = (className: string, source: string = card): string => {
+    const flat = source.replace(/\s+/g, ' ');
+    const found = new RegExp(
+      `className=\\{styles\\.${className}\\}>\\s*(?:<T id="([^"{}]*)" \\/>|([^<]*))`,
+    ).exec(flat);
+    return (found?.[1] ?? found?.[2] ?? '').trim();
+  };
 
   it('shows a different element for each of the two answers', () => {
     const present = revealed('1');
@@ -322,6 +336,17 @@ describe('the words on the card', () => {
   it('says each answer in words, and in different words', () => {
     const present = wordsIn(revealed('1'));
     const absent = wordsIn(revealed('0'));
+    // The reader, on both shapes and on one it must refuse — so a pattern that had stopped
+    // matching cannot report "no words" for a card that has them. On fixtures rather than on
+    // the card's real wording, which is the thing this file is here to read rather than to
+    // restate.
+    expect(wordsIn('stored', '<span className={styles.stored}>Here it is</span>')).toBe(
+      'Here it is',
+    );
+    expect(
+      wordsIn('stored', '<span className={styles.stored}>\n  <T id="Here it is" />\n</span>'),
+    ).toBe('Here it is');
+    expect(wordsIn('stored', '<span className={styles.missing}>Here it is</span>')).toBe('');
     expect(present, 'the card does not say a game is on the device').not.toBe('');
     expect(absent, 'the card does not say a game is missing from the device').not.toBe('');
     expect(present).not.toBe(absent);

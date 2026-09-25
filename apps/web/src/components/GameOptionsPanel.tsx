@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useState } from 'react';
 import type { GameOption } from '@duelbox/game-sdk';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import {
   defaultOptionValues,
   readOptionValues,
@@ -33,6 +35,7 @@ export interface GameOptionsPanelProps {
 }
 
 export function GameOptionsPanel({ slug, options, onChange }: GameOptionsPanelProps) {
+  const messages = useMessages();
   const [values, setValues] = useState<Record<string, OptionValue>>(() =>
     defaultOptionValues(options),
   );
@@ -60,13 +63,16 @@ export function GameOptionsPanel({ slug, options, onChange }: GameOptionsPanelPr
   }
 
   return (
-    <section className={styles.panel} aria-label="Game options">
+    /* The panel's own name goes through `t()`. Every label inside it is the game's own, from
+       its manifest under `packages/games`; `lib/i18n/sources.ts` registers them over
+       `MANIFESTS`, so the id is the manifest string and the lookup is the same (#220). */
+    <section className={styles.panel} aria-label={t(messages, 'Game options')}>
       {options.map((option) => {
         const controlId = `${baseId}-${option.id}`;
         return (
           <div key={option.id} className={styles.row}>
             <label className={styles.label} htmlFor={controlId}>
-              {option.label}
+              {t(messages, option.label)}
             </label>
             {option.type === 'select' ? (
               <select
@@ -79,7 +85,7 @@ export function GameOptionsPanel({ slug, options, onChange }: GameOptionsPanelPr
               >
                 {option.choices.map((choice) => (
                   <option key={choice.value} value={choice.value}>
-                    {choice.label}
+                    {t(messages, choice.label)}
                   </option>
                 ))}
               </select>

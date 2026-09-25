@@ -95,17 +95,32 @@ CI failed on it for every commit until 20 August 2026 while local runs of the ot
 five passed, so the repository looked green and was not. `pnpm build` runs
 `pnpm size` at the end, so the size budget is checked as part of it.
 
+`pnpm i18n:extract` regenerates the message list and the pseudo-locale catalogues under
+`apps/web/src/lib/i18n/` after any string is converted to `t()` / `<T>`; the same test that
+writes them fails CI when they are stale. The framework, the budget reasoning behind keying
+messages on the English string, what is deliberately not translated, and how #220–#224 plug in
+are in `docs/i18n.md`.
+
 `pnpm e2e` runs Chromium and real WebKit. `pnpm e2e:all` adds Firefox and is what
 the nightly workflow runs — the suite passes on Firefox and has since it was first
 tried, so paying for a third engine on every push buys nothing. If a nightly ever
 fails, move it back to every push.
 
-**Four things run nightly rather than on every push, and the gate above does not
+`pnpm responsive <slug>` photographs and measures one game at every device class in
+`docs/responsive.md`, in both orientations, on its landing page, its lobby and a
+running match, and fails on horizontal overflow or a control outside the safe area.
+It needs a `pnpm build` first, because it drives the real static export. That is how
+a game's responsive issue closes; `docs/responsive.md` has the flow.
+
+**Five things run nightly rather than on every push, and the gate above does not
 cover them.** The third browser engine; the deep seat-balance sample
 (`pnpm balance:audit`, 250 seeds a game against the push gate's 50, plus an `easy`
-and `hard` pass); and **the coverage gate** (`pnpm test:coverage`, 70% of lines,
+and `hard` pass); **the coverage gate** (`pnpm test:coverage`, 70% of lines,
 functions, branches and statements over `packages/engine/src/**` and every game's
-`rules.ts`). Coverage is not in `verify` because instrumentation makes the suite
+`rules.ts`); the memory soak (#232); and **the responsive sweep** (#1891,
+`e2e/responsive-sweep.spec.ts` behind `DUELBOX_RESPONSIVE_SWEEP=1`, every playable
+lobby at 320px in both orientations — 107 navigations a project, which is more than
+the whole push suite). Coverage is not in `verify` because instrumentation makes the suite
 several times slower and `verify` is already the job that put #2459 on the board —
 so a change that drops coverage merges green and is caught the next morning. That
 trade is written into `nightly.yml`, along with what to do if it ever costs more

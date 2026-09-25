@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   ICON_ART,
@@ -7,7 +8,7 @@ import {
   spriteSymbols,
   symbolMarkup,
 } from './icon-art.mjs';
-import { ICONS, iconId } from './icons';
+import { ICONS, MIRRORED_ICONS, MIRROR_CLASS, iconClassName, iconId, type IconName } from './icons';
 
 /**
  * The icon set holds together (#74), the way `tiles.test.ts` holds the tile set together.
@@ -138,5 +139,85 @@ describe('rendering a primitive', () => {
 
   it('throws on an unknown kind rather than emitting nothing', () => {
     expect(() => shapeToSvg({ kind: 'blob' })).toThrow(/unknown icon shape/);
+  });
+});
+
+/**
+ * Which glyphs turn round under a right-to-left shell (#222), held in both directions.
+ *
+ * The set is the decision and the class is how the stylesheet hears about it, so three
+ * things have to agree: every member of the set is a real glyph; the members are exactly
+ * the names that point along the line of reading, listed here by hand so a new arrow
+ * cannot be added to `ICONS` and mirror by accident or fail to; and the component puts the
+ * class on those and no others.
+ *
+ * The third is the one this file cannot run. `Icon.tsx` is JSX, `apps/web/tsconfig.json`
+ * says `jsx: preserve` for Next, and Vitest's transform honours that and refuses the file
+ * ("make sure to not set jsx to preserve") — the first draft of this test imported the
+ * component and rendered it through `react-dom/server`, and that is the error it got. No
+ * test under `apps/web/src` imports a `.tsx` for the same reason; the house pattern is a
+ * pure function beside the component, tested by calling it, and the component held to
+ * calling it by reading the source. So `iconClassName` is called for every name, and
+ * `Icon.tsx` is read for the one line that hands its result to the `<svg>` — a read, and
+ * said so here rather than in a sentence claiming a render. The other end of the seam, the
+ * `.db-mirror` rule in `globals.css` — `scaleX(var(--db-inline-sign))`, not a `[dir='rtl']`
+ * selector, which could not see the play surface's `ltr` island — is held to `MIRROR_CLASS`
+ * by name in `styles/direction.test.ts` and measured in a browser by `e2e/rtl.spec.ts`.
+ * Watched failing with `'play'` added to the set (the list check), with
+ * `iconClassName` made to return the caller's class alone (the class check named `back`),
+ * and with `Icon.tsx` handed `className` directly again (the source check).
+ */
+describe('the glyphs that mirror', () => {
+  it('are all real glyphs', () => {
+    for (const name of MIRRORED_ICONS) {
+      expect(ICONS, name).toContain(name);
+    }
+  });
+
+  it('are exactly the ones that point along the line of reading', () => {
+    // `back` and `forward` mean "towards the start" and "towards the end". Play and pause
+    // are media conventions, not directions — a mirrored play triangle is rewind — and the
+    // rest are symmetric or have no direction to keep.
+    expect([...MIRRORED_ICONS].sort()).toEqual(['back', 'forward']);
+    const still: IconName[] = ICONS.filter((name) => !MIRRORED_ICONS.has(name));
+    expect(still.sort()).toEqual(
+      [
+        'check',
+        'close',
+        'info',
+        'pause',
+        'play',
+        'refresh',
+        'settings',
+        'sound-off',
+        'sound-on',
+        'star',
+        'star-filled',
+        'trophy',
+      ].sort(),
+    );
+  });
+
+  it('get the mirror class, and nothing else does', () => {
+    for (const name of ICONS) {
+      const classes = iconClassName(name)?.split(' ') ?? [];
+      expect(classes.includes(MIRROR_CLASS), name).toBe(MIRRORED_ICONS.has(name));
+    }
+  });
+
+  it("keeps the caller's class beside the mirror class", () => {
+    expect(iconClassName('back', 'nav')).toBe(`nav ${MIRROR_CLASS}`);
+    expect(iconClassName('back')).toBe(MIRROR_CLASS);
+    expect(iconClassName('play', 'nav')).toBe('nav');
+    expect(iconClassName('play')).toBeUndefined();
+  });
+
+  it('is what the component puts on the <svg>', () => {
+    // Read, not rendered — see the note above. The one `className=` inside the `<svg …>` tag
+    // must be the helper's answer, or the set above decides nothing.
+    const source = readFileSync(new URL('../components/Icon.tsx', import.meta.url), 'utf8');
+    const svg = /<svg\b([^>]*)>/.exec(source)?.[1] ?? '';
+    expect(svg.match(/className=/g)).toHaveLength(1);
+    expect(svg).toContain('className={iconClassName(name, className)}');
   });
 });
