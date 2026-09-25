@@ -262,8 +262,8 @@ const catalogue = {
       '⟦ÐûéłƁöẋ ïš ƀûïłŧ ŵïŧĥ å šɱåłł ñûɱƀéŕ öƒ öþéñ-šöûŕçé łïƀŕåŕïéš åñð ƒöñŧš. Ŧĥïš þåĝé łïšŧš ŧĥéɱ åñð ŧĥé łïçéñçéš ŧĥéý åŕé ûšéð ûñðéŕ. Ïŧ ïš ĝéñéŕåŧéð, ñöŧ ŵŕïŧŧéñ ƀý ĥåñð, šö ïŧ çåññöŧ ðŕïƒŧ ƒŕöɱ ŵĥåŧ åçŧûåłłý šĥïþš. ···········································································································⟧',
     'DuelBox keeps a page on your device once you have opened it there, and this address is not one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived here.':
       '⟦ÐûéłƁöẋ ķééþš å þåĝé öñ ýöûŕ ðéṽïçé öñçé ýöû ĥåṽé öþéñéð ïŧ ŧĥéŕé, åñð ŧĥïš åððŕéšš ïš ñöŧ öñé öƒ ŧĥéɱ ýéŧ. Ñöŧĥïñĝ ïš ƀŕöķéñ åñð ñöŧĥïñĝ öƒ ýöûŕš ïš łöšŧ — ŧĥé þåĝé ĥåš ñöŧ åŕŕïṽéð ĥéŕé. ······························································································⟧',
-    'DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art, sounds and names. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.':
-      '⟦ÐûéłƁöẋ ŕéïɱþłéɱéñŧš ŧĥé ŕûłéš öƒ þûƀłïç-ðöɱåïñ åñð éṽéŕýðåý ĝåɱéš — ŵĥïçĥ åŕé ñöŧ þŕöŧéçŧéð — åñð ŵŕïŧéš ïŧš öŵñ çöðé, åŕŧ, šöûñðš åñð ñåɱéš. Ŵé ķééþ å ŵŕïŧŧéñ ŕéçöŕð öƒ ŧĥé ñåɱïñĝ åñð łïçéñšïñĝ ðéçïšïöñ ƒöŕ éṽéŕý ĝåɱé, šö å çöñçéŕñ åƀöûŧ å ñåɱé öŕ åñ åššéŧ ïš ûšûåłłý åñšŵéŕéð ŵïŧĥ å ðöçûɱéñŧ ŵé åłŕéåðý ĥöłð. Šéé {terms} åñð {attribution}. ···········································································································································································⟧',
+    'DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art and sounds. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.':
+      '⟦ÐûéłƁöẋ ŕéïɱþłéɱéñŧš ŧĥé ŕûłéš öƒ þûƀłïç-ðöɱåïñ åñð éṽéŕýðåý ĝåɱéš — ŵĥïçĥ åŕé ñöŧ þŕöŧéçŧéð — åñð ŵŕïŧéš ïŧš öŵñ çöðé, åŕŧ åñð šöûñðš. Ŵé ķééþ å ŵŕïŧŧéñ ŕéçöŕð öƒ ŧĥé ñåɱïñĝ åñð łïçéñšïñĝ ðéçïšïöñ ƒöŕ éṽéŕý ĝåɱé, šö å çöñçéŕñ åƀöûŧ å ñåɱé öŕ åñ åššéŧ ïš ûšûåłłý åñšŵéŕéð ŵïŧĥ å ðöçûɱéñŧ ŵé åłŕéåðý ĥöłð. Šéé {terms} åñð {attribution}. ········································································································································································⟧',
     'DuelBox — 108 games for two players. Runs in your browser; nothing to install.':
       '⟦ÐûéłƁöẋ — 108 ĝåɱéš ƒöŕ ŧŵö þłåýéŕš. Ŕûñš ïñ ýöûŕ ƀŕöŵšéŕ; ñöŧĥïñĝ ŧö ïñšŧåłł. ·······································⟧',
     "Each player's pieces differ in shape as well as colour, so every game is playable in greyscale and to a colour-blind player.":
@@ -397,9 +397,21 @@ const catalogue = {
     'In games played turn by turn the board turns to face whoever is to move, so you always read it the right way up — and while it is your turn the whole screen is yours to reach. In games played at the same time, the screen stays put and each of you has your own half.':
       '⟦Ïñ ĝåɱéš þłåýéð ŧûŕñ ƀý ŧûŕñ ŧĥé ƀöåŕð ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé, šö ýöû åłŵåýš ŕéåð ïŧ ŧĥé ŕïĝĥŧ ŵåý ûþ — åñð ŵĥïłé ïŧ ïš ýöûŕ ŧûŕñ ŧĥé ŵĥöłé šçŕééñ ïš ýöûŕš ŧö ŕéåçĥ. Ïñ ĝåɱéš þłåýéð åŧ ŧĥé šåɱé ŧïɱé, ŧĥé šçŕééñ šŧåýš þûŧ åñð éåçĥ öƒ ýöû ĥåš ýöûŕ öŵñ ĥåłƒ. ·····································································································································⟧',
     'Input trace': '⟦Ïñþûŧ ŧŕåçé ······⟧',
+    'It cannot answer questions about the screen, so the board could not be laid out.':
+      '⟦Ïŧ çåññöŧ åñšŵéŕ ɋûéšŧïöñš åƀöûŧ ŧĥé šçŕééñ, šö ŧĥé ƀöåŕð çöûłð ñöŧ ƀé łåïð öûŧ. ········································⟧',
+    'It cannot schedule animation frames, so nothing could be drawn in time.':
+      '⟦Ïŧ çåññöŧ šçĥéðûłé åñïɱåŧïöñ ƒŕåɱéš, šö ñöŧĥïñĝ çöûłð ƀé ðŕåŵñ ïñ ŧïɱé. ····································⟧',
+    'It cannot watch the board for size changes, so it could not be fitted to the screen.':
+      '⟦Ïŧ çåññöŧ ŵåŧçĥ ŧĥé ƀöåŕð ƒöŕ šïžé çĥåñĝéš, šö ïŧ çöûłð ñöŧ ƀé ƒïŧŧéð ŧö ŧĥé šçŕééñ. ··········································⟧',
+    'It has no high-resolution clock, so a match could not be timed.':
+      '⟦Ïŧ ĥåš ñö ĥïĝĥ-ŕéšöłûŧïöñ çłöçķ, šö å ɱåŧçĥ çöûłð ñöŧ ƀé ŧïɱéð. ································⟧',
     'It has not arrived here yet, like the one you just asked for.':
       '⟦Ïŧ ĥåš ñöŧ åŕŕïṽéð ĥéŕé ýéŧ, łïķé ŧĥé öñé ýöû ĵûšŧ åšķéð ƒöŕ. ·······························⟧',
     'It is here. Open it and play.': '⟦Ïŧ ïš ĥéŕé. Öþéñ ïŧ åñð þłåý. ···············⟧',
+    'It sends no pointer events, so a tap or a click would never reach the board.':
+      '⟦Ïŧ šéñðš ñö þöïñŧéŕ éṽéñŧš, šö å ŧåþ öŕ å çłïçķ ŵöûłð ñéṽéŕ ŕéåçĥ ŧĥé ƀöåŕð. ······································⟧',
+    'It will not give this page a drawing surface, and every game is drawn on one.':
+      '⟦Ïŧ ŵïłł ñöŧ ĝïṽé ŧĥïš þåĝé å ðŕåŵïñĝ šûŕƒåçé, åñð éṽéŕý ĝåɱé ïš ðŕåŵñ öñ öñé. ·······································⟧',
     'Its rules and controls are settled, but the build has not landed. Try another game.':
       '⟦Ïŧš ŕûłéš åñð çöñŧŕöłš åŕé šéŧŧłéð, ƀûŧ ŧĥé ƀûïłð ĥåš ñöŧ łåñðéð. Ŧŕý åñöŧĥéŕ ĝåɱé. ··········································⟧',
     'Keep DuelBox on your home screen? It opens straight to the games, offline too.':
@@ -1033,6 +1045,8 @@ const catalogue = {
       '⟦Ŧĥé þåĝéš åñð ĝåɱéš åŕé šŧåŧïç ƒïłéš, ĥöšŧéð öñ ĜïŧĤûƀ Þåĝéš. Ýöûŕ ƀŕöŵšéŕ ðöŵñłöåðš ŧĥéɱ ƒŕöɱ ĜïŧĤûƀ ŧĥé šåɱé ŵåý ïŧ ðöŵñłöåðš åñý ŵéƀ þåĝé, åñð ĜïŧĤûƀ ķééþš ïŧš öŵñ öŕðïñåŕý šéŕṽéŕ łöĝš — ŧĥé šöŕŧ éṽéŕý ŵéƀ ĥöšŧ ķééþš — ŵĥïçĥ åŕé öûŧšïðé öûŕ çöñŧŕöł åñð åŕé ñöŧ ûšéð ƀý ûš ŧö ïðéñŧïƒý öŕ þŕöƒïłé åñýöñé. ·························································································································································⟧',
     'The picture could not be made. Try again.':
       '⟦Ŧĥé þïçŧûŕé çöûłð ñöŧ ƀé ɱåðé. Ŧŕý åĝåïñ. ·····················⟧',
+    'The rest of the site works. {game} has its rules and controls written out, and {guide} explains how a match goes.':
+      '⟦Ŧĥé ŕéšŧ öƒ ŧĥé šïŧé ŵöŕķš. {game} ĥåš ïŧš ŕûłéš åñð çöñŧŕöłš ŵŕïŧŧéñ öûŧ, åñð {guide} éẋþłåïñš ĥöŵ å ɱåŧçĥ ĝöéš. ·························································⟧',
     'The roll is all of the luck, and the decision is what to spend it on. Dice Yatzy gives you five dice, three rolls and thirteen boxes that each take exactly one hand, so the skill is in spending a bad roll cheaply; Shut the Box is the shorter one, closing numbered tiles until nothing adds up any more. Yatzy is the longest game in the catalogue at about seven minutes.':
       '⟦Ŧĥé ŕöłł ïš åłł öƒ ŧĥé łûçķ, åñð ŧĥé ðéçïšïöñ ïš ŵĥåŧ ŧö šþéñð ïŧ öñ. Ðïçé Ýåŧžý ĝïṽéš ýöû ƒïṽé ðïçé, ŧĥŕéé ŕöłłš åñð ŧĥïŕŧééñ ƀöẋéš ŧĥåŧ éåçĥ ŧåķé éẋåçŧłý öñé ĥåñð, šö ŧĥé šķïłł ïš ïñ šþéñðïñĝ å ƀåð ŕöłł çĥéåþłý; Šĥûŧ ŧĥé Ɓöẋ ïš ŧĥé šĥöŕŧéŕ öñé, çłöšïñĝ ñûɱƀéŕéð ŧïłéš ûñŧïł ñöŧĥïñĝ åððš ûþ åñý ɱöŕé. Ýåŧžý ïš ŧĥé łöñĝéšŧ ĝåɱé ïñ ŧĥé çåŧåłöĝûé åŧ åƀöûŧ šéṽéñ ɱïñûŧéš. ························································································································································································⟧',
     'The rules of Checkers, Reversi and Tic Tac Toe belong to nobody, and that is exactly why we can build them. Game {mechanics} are not protected and never have been. The code, artwork, names and layouts here are ours, written from scratch, and are not copied from any other product.':
@@ -1061,6 +1075,7 @@ const catalogue = {
       '⟦Ŧĥïŕŧý çĥåŕåçŧéŕš, åñð éåçĥ þłåýéŕ ïš ĥûñŧïñĝ å ðïƒƒéŕéñŧ öñé. Šþéñð ýöûŕ ŧûŕñ öñ å ɋûéšŧïöñ ŧĥåŧ šþłïŧš ŧĥé ƒïéłð, öŕ öñ ñåɱïñĝ å çĥåŕåçŧéŕ öûŧŕïĝĥŧ. Ñåɱé ýöûŕš ƒïŕšŧ ŧö ŧåķé ŧĥé ðéåł; ƀéšŧ öƒ ŧĥŕéé. ····································································································⟧',
     'This DuelBox game cannot be embedded here.':
       '⟦Ŧĥïš ÐûéłƁöẋ ĝåɱé çåññöŧ ƀé éɱƀéððéð ĥéŕé. ·····················⟧',
+    'This browser cannot run the games': '⟦Ŧĥïš ƀŕöŵšéŕ çåññöŧ ŕûñ ŧĥé ĝåɱéš ·················⟧',
     'This device did not vibrate.': '⟦Ŧĥïš ðéṽïçé ðïð ñöŧ ṽïƀŕåŧé. ··············⟧',
     'This game hit a snag': '⟦Ŧĥïš ĝåɱé ĥïŧ å šñåĝ ··········⟧',
     'This game is not playable yet': '⟦Ŧĥïš ĝåɱé ïš ñöŧ þłåýåƀłé ýéŧ ···············⟧',

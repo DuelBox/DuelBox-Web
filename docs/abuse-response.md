@@ -5,7 +5,8 @@ is the public contract and internal procedure for a *vulnerability*; this is the
 **copyright (DMCA) or abuse** report. The public-facing version — how to contact us, and what to
 send — lives at the `/dmca/` route. This document is the **internal** side: who handles a report,
 in what order, and by when. It deliberately mirrors `SECURITY.md`'s structure so the two read the
-same way.
+same way, and `docs/incident-response.md`'s runbook 6 defers here rather than carrying a second
+copy of the procedure.
 
 > **Contact address is a placeholder.** Throughout this procedure and on the `/dmca/` route the
 > contact is `abuse@duelbox.example`, which **is not a real inbox.** Before launch the owner must
@@ -79,12 +80,13 @@ user content, so removing or renaming our own material costs a commit, not a neg
    for the report. Do not admit or deny the claim in the acknowledgement.
 2. **Assess.** Decide which of four the report is:
    - **Valid and simple** — a name or asset that should change. Action it as a reviewed change
-     (rename via the `data/name-clearance.json` decision record and the rename sequencing in
-     `scripts/check-game-names.mjs`; remove or replace an asset via its `assets.license.json`
-     entry). Reply when it ships.
+     (a rename is decided in the `data/name-clearance.json` record — `scripts/check-game-names.mjs`
+     keeps that record complete and lists what a rename has to move, but renames nothing itself;
+     an asset is removed or replaced via its `assets.license.json` entry). Reply when it ships.
    - **Valid but wrong target** — the material named is not what infringes, or is already
-     original. Reply with the evidence: the name-clearance entry, the licence entry, the
-     originality review (#2339). This is the case the whole record exists to answer.
+     original. Reply with the evidence: the name-clearance entry, the licence entry and, once it
+     has been run, the originality review (#2339 — open, and a pre-launch item). This is the case
+     the whole record exists to answer.
    - **Invalid or abusive** — a notice that does not meet §512(c)(3), or a bad-faith claim. Reply
      explaining what is missing; do not take material down on an invalid notice.
    - **Out of scope** — a vulnerability, or a complaint about a third-party host. Redirect to
@@ -109,9 +111,10 @@ The record is built in advance, which is the point of building it in advance:
   reason. `check-game-names.mjs` keeps it complete.
 - **Assets** — `assets.license.json` records the source, licence and author of every shipped
   asset; the catalogue art is original and generated from code in the repository.
-- **Layout and screens** — the originality review (#2339) places our screens beside the reference
-  app's and records a verdict per pair, filed as "the standing answer to an originality
-  challenge".
+- **Layout and screens** — the originality review (#2339) will place our screens beside the
+  reference app's and record a verdict per pair, filed as "the standing answer to an originality
+  challenge". It has not been run yet, so until it is, names and assets are the only evidence
+  built in advance; a layout claim today is answered from the code and its history.
 
 A claim we can answer in a day with a document we already wrote is a claim that never becomes the
 host's problem, which is the entire reason this channel exists.

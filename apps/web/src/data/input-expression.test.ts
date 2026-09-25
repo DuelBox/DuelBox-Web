@@ -39,8 +39,16 @@ const SEED = 7;
  *
  * Membership is the assertion. A game arriving here is a fairness regression and a game
  * leaving it is a fix, and either way somebody should have to say so in a diff.
+ *
+ * `dots-and-boxes` left this list in #1924. It read as a reach gap — the keyboard's cursor
+ * reached more discrete edges than the tap's single-axis sweep — but the real fault was the
+ * other way round and larger than the sweep could see: the cursor could reach only forty of
+ * the sixty edges, drifting onto the wrong lattice and stranding the lower-right corner,
+ * while a tap named every one. Straightening the cursor's navigation (`game.ts`) so it
+ * reaches all sixty makes the two arms reach the same count, and the game's own test walks
+ * the board to prove every edge has a keyboard route.
  */
-const MEASURED_GAP: readonly string[] = ['cricket', 'darts', 'dots-and-boxes', 'shuriken'];
+const MEASURED_GAP: readonly string[] = ['cricket', 'darts', 'shuriken'];
 
 /**
  * Games the generic sweep could not measure, so that the number cannot quietly grow.
