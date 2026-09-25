@@ -505,7 +505,6 @@ function stepBalls(game: Game, dt: number): void {
     const targetDx = target.x - target.prevX;
     if (sweptCircleCircle(contact, ballShape, dx - targetDx, dy, targetShape)) {
       if (contact.depth < bestTime) {
-        bestTime = contact.depth;
         bestWall = -1;
         hitTarget = true;
       }
