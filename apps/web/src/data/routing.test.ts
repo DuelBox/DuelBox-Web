@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from './catalogue.generated';
 import { CONTROLS, MANIFESTS } from './controls';
 import { LOADERS_FOR_TEST, PLAYABLE, isPlayable, loadGame } from './registry';
+import { killSwitchFor } from '../lib/flags';
 
 /**
  * A game has two names, and everything a player touches must agree on which one it uses.
@@ -34,9 +35,12 @@ describe('a game reached by its slug', () => {
     ).toBeGreaterThan(3);
   });
 
-  it('is playable whenever its package is in the registry', () => {
+  it('is playable whenever its package is built and not switched off', () => {
     const missing = CATALOGUE.filter(
-      (entry) => entry.id in LOADERS_FOR_TEST && !isPlayable(entry.slug),
+      (entry) =>
+        entry.id in LOADERS_FOR_TEST &&
+        killSwitchFor(entry.slug) === null &&
+        !isPlayable(entry.slug),
     ).map((entry) => `${entry.slug} (package ${entry.id})`);
     expect(
       missing,
@@ -46,7 +50,7 @@ describe('a game reached by its slug', () => {
 
   it('loads', async () => {
     for (const entry of CATALOGUE) {
-      if (!(entry.id in LOADERS_FOR_TEST)) continue;
+      if (!(entry.id in LOADERS_FOR_TEST) || killSwitchFor(entry.slug) !== null) continue;
       const loaded = await loadGame(entry.slug);
       expect(loaded.manifest.id, `${entry.slug} loaded the wrong package`).toBe(entry.id);
     }
@@ -54,7 +58,7 @@ describe('a game reached by its slug', () => {
 
   it('still loads by its package id, so an old link cannot break', async () => {
     for (const entry of RENAMED) {
-      if (!(entry.id in LOADERS_FOR_TEST)) continue;
+      if (!(entry.id in LOADERS_FOR_TEST) || killSwitchFor(entry.slug) !== null) continue;
       expect(isPlayable(entry.id)).toBe(true);
       const loaded = await loadGame(entry.id);
       expect(loaded.manifest.id).toBe(entry.id);
@@ -82,8 +86,10 @@ describe('the routes the site builds', () => {
     );
   });
 
-  it('cover exactly the games that have a build', () => {
-    const expected = CATALOGUE.filter((entry) => entry.id in LOADERS_FOR_TEST)
+  it('covers exactly the built games that are not switched off', () => {
+    const expected = CATALOGUE.filter(
+      (entry) => entry.id in LOADERS_FOR_TEST && killSwitchFor(entry.slug) === null,
+    )
       .map((entry) => entry.slug)
       .sort();
     expect([...PLAYABLE].sort()).toEqual(expected);
@@ -97,10 +103,9 @@ describe('the routes the site builds', () => {
 /**
  * The registry can only get shorter quietly, and everything else here would let it.
  *
- * Every assertion above is written as `entry.id in LOADERS_FOR_TEST ? check : skip`, which is
- * the right shape while games are still being built - a catalogue row with no package yet is
- * not a routing bug. But it means a registry that *loses* entries does not fail any of them.
- * It shrinks the sample and they all pass, more cheaply than before.
+ * The assertions above skip catalogue rows with no loader, because an unbuilt game is not a
+ * routing bug. They also exclude deliberately switched-off games from the playable routes.
+ * But a registry that *loses* entries still shrinks the sample without failing those checks.
  *
  * That is not hypothetical. #2497 records a tree operation that stripped `registry.ts` of its
  * entries while the manifests survived, and six guards in this directory build their cases

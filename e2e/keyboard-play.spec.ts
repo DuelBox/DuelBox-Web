@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { PLAYABLE } from '../apps/web/src/data/registry';
 
 /**
  * Every game must be completable with the keyboard alone.
@@ -17,6 +18,7 @@ test.describe('keyboard-only play', () => {
 
   for (const game of games) {
     test(`${game.name} responds to the keyboard with no pointer at all`, async ({ page }) => {
+      test.skip(!PLAYABLE.includes(game.slug), `${game.name} is switched off in this build`);
       await page.goto(`/play/${game.slug}/`);
       await page.getByRole('button', { name: 'Play together here' }).press('Enter');
       await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeHidden({

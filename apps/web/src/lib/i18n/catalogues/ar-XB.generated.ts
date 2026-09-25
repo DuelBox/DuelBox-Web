@@ -186,6 +186,8 @@ const catalogue = {
     'Chess for two on a board that turns to face whoever is to move, with castling, en passant, promotion and the standard draws all played out. Mate the other king to win.':
       '‮Chess‬ ‮for‬ ‮two‬ ‮on‬ ‮a‬ ‮board‬ ‮that‬ ‮turns‬ ‮to‬ ‮face‬ ‮whoever‬ ‮is‬ ‮to‬ ‮move,‬ ‮with‬ ‮castling,‬ ‮en‬ ‮passant,‬ ‮promotion‬ ‮and‬ ‮the‬ ‮standard‬ ‮draws‬ ‮all‬ ‮played‬ ‮out.‬ ‮Mate‬ ‮the‬ ‮other‬ ‮king‬ ‮to‬ ‮win.‬',
     Children: '‮Children‬',
+    'Choose any available game to play together or against a bot, and start a tournament from its lobby.':
+      '‮Choose‬ ‮any‬ ‮available‬ ‮game‬ ‮to‬ ‮play‬ ‮together‬ ‮or‬ ‮against‬ ‮a‬ ‮bot,‬ ‮and‬ ‮start‬ ‮a‬ ‮tournament‬ ‮from‬ ‮its‬ ‮lobby.‬',
     Clear: '‮Clear‬',
     'Clear all': '‮Clear‬ ‮all‬',
     'Clear favourites': '‮Clear‬ ‮favourites‬',
@@ -281,8 +283,6 @@ const catalogue = {
       "‮Every‬ ‮game‬ ‮added‬ ‮up.‬ ‮Matches‬ ‮against‬ ‮the‬ ‮bot‬ ‮are‬ ‮not‬ ‮in‬ ‮it:‬ ‮a‬ ‮bot's‬ ‮wins‬ ‮belong‬ ‮to‬ ‮nobody.‬",
     'Every game has a bot, at three strengths. It sees no more than you can see and moves no faster than a person could; what changes from one strength to the next is how far ahead it looks and how often it slips.':
       '‮Every‬ ‮game‬ ‮has‬ ‮a‬ ‮bot,‬ ‮at‬ ‮three‬ ‮strengths.‬ ‮It‬ ‮sees‬ ‮no‬ ‮more‬ ‮than‬ ‮you‬ ‮can‬ ‮see‬ ‮and‬ ‮moves‬ ‮no‬ ‮faster‬ ‮than‬ ‮a‬ ‮person‬ ‮could;‬ ‮what‬ ‮changes‬ ‮from‬ ‮one‬ ‮strength‬ ‮to‬ ‮the‬ ‮next‬ ‮is‬ ‮how‬ ‮far‬ ‮ahead‬ ‮it‬ ‮looks‬ ‮and‬ ‮how‬ ‮often‬ ‮it‬ ‮slips.‬',
-    'Every game in the catalogue offers the first two of these, and any game can start the third.':
-      '‮Every‬ ‮game‬ ‮in‬ ‮the‬ ‮catalogue‬ ‮offers‬ ‮the‬ ‮first‬ ‮two‬ ‮of‬ ‮these,‬ ‮and‬ ‮any‬ ‮game‬ ‮can‬ ‮start‬ ‮the‬ ‮third.‬',
     'Every game is built to the same shape, which is what makes the second one easy. The countdown, the score, the pause, the result and the rematch all come from the site rather than from the game, so they sit in the same place and behave the same way whichever one you opened. Esc pauses, for either player, in all of them.':
       '‮Every‬ ‮game‬ ‮is‬ ‮built‬ ‮to‬ ‮the‬ ‮same‬ ‮shape,‬ ‮which‬ ‮is‬ ‮what‬ ‮makes‬ ‮the‬ ‮second‬ ‮one‬ ‮easy.‬ ‮The‬ ‮countdown,‬ ‮the‬ ‮score,‬ ‮the‬ ‮pause,‬ ‮the‬ ‮result‬ ‮and‬ ‮the‬ ‮rematch‬ ‮all‬ ‮come‬ ‮from‬ ‮the‬ ‮site‬ ‮rather‬ ‮than‬ ‮from‬ ‮the‬ ‮game,‬ ‮so‬ ‮they‬ ‮sit‬ ‮in‬ ‮the‬ ‮same‬ ‮place‬ ‮and‬ ‮behave‬ ‮the‬ ‮same‬ ‮way‬ ‮whichever‬ ‮one‬ ‮you‬ ‮opened.‬ ‮Esc‬ ‮pauses,‬ ‮for‬ ‮either‬ ‮player,‬ ‮in‬ ‮all‬ ‮of‬ ‮them.‬',
     'Every game offers a bot in three strengths. A bot never sees anything you cannot see and never moves faster than a person could — the difference between the strengths is how far it thinks ahead and how often it makes a mistake, never what it knows.':

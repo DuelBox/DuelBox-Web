@@ -21,9 +21,10 @@ import { GAME_IDS } from '../data/game-names.generated';
  * runtime flag file would cost if the CSP were widened for it, and why it would still be
  * slower than the push it replaces.
  *
- * So switching a game off is an edit to {@link DISABLED_GAMES}, a push to `main`, and the
- * deploy workflow — which needs no review and runs no tests, so it is minutes rather than a
- * full gate. That ADR carries the runbook, written for somebody doing it at speed.
+ * Switching a game off is an edit to {@link DISABLED_GAMES} in a pull request. The tests
+ * cover the remaining playable games while still exercising the disabled game's package;
+ * protected `main` requires the PR's CI before a successful merge commit can deploy. The
+ * ADR carries the emergency runbook.
  *
  * Any later flag belongs in this file for the same reason this one does: it is the module
  * that is allowed to know what this build was compiled to do.

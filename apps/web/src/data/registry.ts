@@ -141,9 +141,8 @@ const LOADERS: Record<string, Loader> = {
  * **`LOADERS`, deliberately, and not `AVAILABLE`.** This names every game with a build, so
  * the balance, fuzz, control-parity and cross-viewport suites keep playing a game the kill
  * switch (#208) has taken off the site — which is the game whose tests most need to run. The
- * cost is that `routing.test.ts`'s "cover exactly the games that have a build" goes red for
- * as long as a switch is set, because that is exactly what a switch makes untrue; ADR 0005
- * records the choice and what the failure means when somebody meets it.
+ * routing tests compare the playable list with built games minus deliberate switches, so
+ * an emergency switch does not turn the protected-main gate red by itself.
  *
  * **Nothing may go between the end of `LOADERS` and this comment.** `scripts/register-game.mjs`
  * finds the end of the table by searching for the literal `};` followed by a blank line and
