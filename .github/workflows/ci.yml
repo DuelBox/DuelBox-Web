@@ -33,7 +33,12 @@ jobs:
       # this comment (#56).
       - run: pnpm test
       # `pnpm build` runs the manifest validator and the zero-cost guard as its own steps.
+      # Verify the same project-page URLs that Deploy builds. A root-path build passed
+      # while Deploy failed when the size checker treated /DuelBox-Web/ as a disk path.
       - run: pnpm build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
   # e2e is its own job because it is three quarters of the wall clock and depends on none
   # of the checks above.
