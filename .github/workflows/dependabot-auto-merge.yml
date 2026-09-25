@@ -58,6 +58,14 @@
 # patch, and every `github-actions` bump, which is ungrouped and therefore one dependency per
 # PR. That is the intended reach, not a bug to widen later by ungrouping.
 #
+# One exception, and it is the only group under `github-actions`: `github/codeql-action/init`
+# and `.../analyze` are grouped, because the two steps must run the same version and splitting
+# them across two PRs fails Static analysis outright (#2600, #2601). That group therefore
+# reports a minor whenever CodeQL's minor lands, and this workflow skips it — which is the
+# right answer for the one Action whose upgrade changes what the security scan looks for, and
+# is worth saying out loud so the next reader does not take the paragraph above as covering
+# every Action without exception.
+#
 # ## Why `pull_request_target`, and why nothing is checked out
 #
 # On a `pull_request` event Dependabot's runs get a read-only `GITHUB_TOKEN`, which cannot
