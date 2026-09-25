@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { getHeapStatistics, setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
