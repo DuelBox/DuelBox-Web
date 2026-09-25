@@ -1046,7 +1046,7 @@ export function stepMatch(
       return;
 
     case 'live': {
-      let dir = -1;
+      let dir: number;
       if (difficulty !== null) {
         if (match.thinkSteps > 0) {
           match.thinkSteps -= 1;

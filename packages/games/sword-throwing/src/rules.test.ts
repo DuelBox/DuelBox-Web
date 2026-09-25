@@ -265,7 +265,6 @@ describe('whose turn it is', () => {
   it('changes hands exactly once a throw', () => {
     const state = fresh(3);
     let changes = 0;
-    let last = activeOf(state);
     for (let t = 0; t < 6; t += 1) {
       throwAndSettle(state, 0.1);
       handOver(state);
@@ -273,7 +272,7 @@ describe('whose turn it is', () => {
     // Replayed, counting the changes step by step.
     const replay = fresh(3);
     let throwsSeen = 0;
-    last = activeOf(replay);
+    let last = activeOf(replay);
     for (let i = 0; i < STEP_CAP && throwsSeen < 6; i += 1) {
       if (replay.phase === 'aiming') {
         aimAt(replay, 0.1);

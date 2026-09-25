@@ -205,8 +205,8 @@ function pressOn(ball: Readonly<Mover>, player: Readonly<Mover>): void {
   // which is a seat advantage sitting on a measure-zero case and waiting for a physics
   // change to make it reachable. The player's own motion carries it instead, which mirrors
   // when the pitch does; a player standing perfectly still on it presses nothing at all.
-  let nx = 0;
-  let ny = 0;
+  let nx: number;
+  let ny: number;
   if (distance === 0) {
     const speed = Math.hypot(player.vx, player.vy);
     if (speed === 0) return;

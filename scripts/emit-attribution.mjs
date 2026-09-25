@@ -174,7 +174,7 @@ function main() {
   const rendered = render(buildAttribution());
 
   if (isCheck) {
-    let current = '';
+    let current;
     try {
       current = readFileSync(GENERATED_PATH, 'utf8');
     } catch {

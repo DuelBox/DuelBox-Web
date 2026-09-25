@@ -1044,7 +1044,6 @@ describe('the bot', () => {
         const state = createBotState();
         const command = createCommand();
         let decisions = 0;
-        let before = 0;
         for (let i = 0; i < 600; i += 1) {
           const cooling = state.cooldown - STEP > 0;
           botStep(game, 'p1', BOT_PROFILES[tier], state, rng, STEP, command);
@@ -1055,7 +1054,7 @@ describe('the bot', () => {
         // Every decision costs exactly BOT_DRAWS_PER_DECISION values and nothing else does.
         const spent = new Rng(5);
         for (let i = 0; i < decisions * BOT_DRAWS_PER_DECISION; i += 1) spent.float();
-        before = spent.float();
+        const before = spent.float();
         expect(before, `${tier} seed ${String(seed)}`).toBe(rng.float());
       }
     }
