@@ -115,14 +115,8 @@ test.describe('download all games', () => {
     await page.waitForTimeout(500);
     await expect(line(page)).toHaveText(stopped ?? '');
 
-    // A second press continues: the games already here are skipped, never fetched again.
+    // A second press finishes the collection from the stopped state.
     await page.unroute('**/_next/static/chunks/*.js');
-    const refetched: string[] = [];
-    page.on('request', (request) => {
-      if (/\/_next\/static\/chunks\/\d+\.[0-9a-f]+\.js$/.test(request.url())) {
-        refetched.push(request.url());
-      }
-    });
     await page.getByRole('button', { name: 'Download all games' }).click();
     await expect(line(page)).toHaveText(/^All \d+ games/, { timeout: DOWNLOADED });
   });
