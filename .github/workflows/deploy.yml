@@ -30,8 +30,8 @@ name: Deploy
 # the site roughly ten minutes before anyone knew whether the tests had passed - and a red CI
 # neither blocked the deploy nor undid it. The gate was real, thorough, and wired to nothing.
 #
-# `workflow_run` is the only mechanism that orders two workflows. Branch protection cannot do
-# it here, because the deploy fires on a push rather than on a merge.
+# `workflow_run` orders the two workflows. Branch protection can require checks before a
+# merge, but it cannot make Deploy wait for the CI run on the resulting `main` commit.
 on:
   workflow_run:
     workflows: [CI]
