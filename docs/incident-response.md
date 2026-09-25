@@ -183,10 +183,9 @@ Pages serves no custom response headers, so seven of the nine generated ones rea
 (#2481). A scanner grading this origin down is reporting a fact already recorded in
 `docs/deploy.md`, not a finding.
 
-One live gap worth knowing when a report arrives: **`/.well-known/security.txt` returns 404 on
-the live origin** although the artefact contains it and `/security.txt` serves fine. RFC 9116
-names the `.well-known` path as canonical, so a researcher following the standard finds
-nothing. See the release runbook.
+The former `/.well-known/security.txt` 404 was fixed by including hidden files in the Pages
+upload. Check both security.txt locations after a release; the release runbook has the
+commands and the dated history of that defect.
 
 ### 4. A game ships broken
 
