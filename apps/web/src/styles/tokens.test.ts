@@ -477,7 +477,11 @@ function rawColours(source: string, label: string): string[] {
 
 /** The same question of a TypeScript file, where the form that has ever appeared is hex. */
 function hexInSource(source: string, label: string): string[] {
-  const code = withoutComments(source, true);
+  // A kill switch's `issue: '#2512'` is an issue number, not a four-digit colour. Keep
+  // scanning the rest of that module; excluding flags.ts would hide a real raw colour.
+  const code = withoutComments(source, true).replace(/\bissue:\s*'#\d+'/g, (match) =>
+    ' '.repeat(match.length),
+  );
   return [...code.matchAll(HEX)].map(
     (match) => `${label}:${String(lineOf(code, match.index))} ${match[0]}`,
   );
@@ -542,6 +546,10 @@ describe('colour lives in the palette', () => {
       raw,
       `read the colour from styles/tokens.ts rather than spelling it again: ${raw.join(', ')}`,
     ).toEqual([]);
+  });
+
+  it('does not mistake a kill-switch issue number for a colour', () => {
+    expect(hexInSource("{ issue: '#2512', tint: '#abc' }", 'probe')).toEqual(['probe:1 #abc']);
   });
 });
 

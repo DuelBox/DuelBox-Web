@@ -8,7 +8,8 @@ Deploy now waits for successful CI on `main`, and branch protection requires `ve
 all three `e2e` shards before merge. The emergency switch procedure below must use a pull
 request and keep CI green; its old direct-push instructions are superseded.
 The Context and Decision below describe the 2026-09-08 state; use the updated runbook for
-current operations.
+current operations. The shared routing, controls, catalogue, and landing checks now
+distinguish built games from playable ones, so setting a switch alone does not make them red.
 
 ## Context
 
@@ -216,10 +217,11 @@ having; it is not what the acceptance line says.
    ];
    ```
 
-2. Open a pull request. Update any assertions that assume every built game is playable so
-   they compare with `DISABLED_GAMES`, then pass the required CI checks. The six assertions
-   listed above were observed when this ADR was written; branch protection now prevents a
-   red pull request from merging. Do not silence a failure by reverting the switch.
+2. Open a pull request and pass the required CI checks. The shared unit tests and build
+   already allow a game to be built but unavailable, and still test its package. If an
+   end-to-end spec targets the disabled play route directly, skip that play assertion only
+   while the switch is set; keep its coverage when the game is re-enabled. Do not silence
+   a failure by reverting the switch.
 3. Merge the green pull request. Successful CI on the resulting `main` commit triggers
    `deploy.yml`; watch Deploy until it finishes.
 4. Check the live site: `/play/<slug>/` answers 404, `/games/<slug>/` says the game is

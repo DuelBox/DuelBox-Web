@@ -1,10 +1,11 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { PLAYABLE } from './registry';
+import { CATALOGUE } from './catalogue.generated';
+import { LOADERS_FOR_TEST } from './registry';
 
 /**
- * Every slug an end-to-end spec navigates to has to be a real route.
+ * Every slug an end-to-end spec names has to belong to a built game.
  *
  * The catalogue routes by slug and the registry is keyed by id, and for eleven games the two
  * differ — `memory` is served at `/play/memory-match/`, `four-in-a-row` at `/play/drop-four/`.
@@ -20,13 +21,16 @@ describe('the end-to-end specs', () => {
   const root = join(__dirname, '../../../../e2e');
   const specs = readdirSync(root).filter((name) => name.endsWith('.spec.ts'));
 
-  // `isPlayable` deliberately answers to an id as well as a slug, so it is the wrong check
-  // here — it accepts `memory` happily, which is exactly the address that does not route.
-  const routed = new Set(PLAYABLE);
+  // `isPlayable` answers to an id as well as a slug, and a temporary kill switch removes a
+  // route even when a spec still correctly names its game. Check the slug-to-build mapping;
+  // a spec targeting a disabled game must skip its play assertion at runtime.
+  const routed = new Set(
+    CATALOGUE.filter((game) => game.id in LOADERS_FOR_TEST).map((game) => game.slug),
+  );
 
   it('has specs to check', () => {
     expect(specs.length).toBeGreaterThan(0);
-    expect(PLAYABLE.length).toBeGreaterThan(0);
+    expect(routed.size).toBeGreaterThan(0);
   });
 
   for (const spec of specs) {

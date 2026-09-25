@@ -114,7 +114,7 @@ export const WAYS_SECTION: LandingSection = {
   id: 'ways-to-play',
   heading: 'Three ways to play',
   paragraphs: [
-    'Every game in the catalogue offers the first two of these, and any game can start the third.',
+    'Choose any available game to play together or against a bot, and start a tournament from its lobby.',
   ],
 };
 

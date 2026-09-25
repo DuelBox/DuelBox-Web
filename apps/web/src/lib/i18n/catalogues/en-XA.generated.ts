@@ -189,6 +189,8 @@ const catalogue = {
     'Chess for two on a board that turns to face whoever is to move, with castling, en passant, promotion and the standard draws all played out. Mate the other king to win.':
       '⟦Çĥéšš ƒöŕ ŧŵö öñ å ƀöåŕð ŧĥåŧ ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé, ŵïŧĥ çåšŧłïñĝ, éñ þåššåñŧ, þŕöɱöŧïöñ åñð ŧĥé šŧåñðåŕð ðŕåŵš åłł þłåýéð öûŧ. Ṁåŧé ŧĥé öŧĥéŕ ķïñĝ ŧö ŵïñ. ····················································································⟧',
     Children: '⟦Çĥïłðŕéñ ····⟧',
+    'Choose any available game to play together or against a bot, and start a tournament from its lobby.':
+      '⟦Çĥööšé åñý åṽåïłåƀłé ĝåɱé ŧö þłåý ŧöĝéŧĥéŕ öŕ åĝåïñšŧ å ƀöŧ, åñð šŧåŕŧ å ŧöûŕñåɱéñŧ ƒŕöɱ ïŧš łöƀƀý. ··················································⟧',
     Clear: '⟦Çłéåŕ ···⟧',
     'Clear all': '⟦Çłéåŕ åłł ·····⟧',
     'Clear favourites': '⟦Çłéåŕ ƒåṽöûŕïŧéš ········⟧',
@@ -286,8 +288,6 @@ const catalogue = {
       "⟦Éṽéŕý ĝåɱé åððéð ûþ. Ṁåŧçĥéš åĝåïñšŧ ŧĥé ƀöŧ åŕé ñöŧ ïñ ïŧ: å ƀöŧ'š ŵïñš ƀéłöñĝ ŧö ñöƀöðý. ·············································⟧",
     'Every game has a bot, at three strengths. It sees no more than you can see and moves no faster than a person could; what changes from one strength to the next is how far ahead it looks and how often it slips.':
       '⟦Éṽéŕý ĝåɱé ĥåš å ƀöŧ, åŧ ŧĥŕéé šŧŕéñĝŧĥš. Ïŧ šééš ñö ɱöŕé ŧĥåñ ýöû çåñ šéé åñð ɱöṽéš ñö ƒåšŧéŕ ŧĥåñ å þéŕšöñ çöûłð; ŵĥåŧ çĥåñĝéš ƒŕöɱ öñé šŧŕéñĝŧĥ ŧö ŧĥé ñéẋŧ ïš ĥöŵ ƒåŕ åĥéåð ïŧ łööķš åñð ĥöŵ öƒŧéñ ïŧ šłïþš. ········································································································⟧',
-    'Every game in the catalogue offers the first two of these, and any game can start the third.':
-      '⟦Éṽéŕý ĝåɱé ïñ ŧĥé çåŧåłöĝûé öƒƒéŕš ŧĥé ƒïŕšŧ ŧŵö öƒ ŧĥéšé, åñð åñý ĝåɱé çåñ šŧåŕŧ ŧĥé ŧĥïŕð. ··············································⟧',
     'Every game is built to the same shape, which is what makes the second one easy. The countdown, the score, the pause, the result and the rematch all come from the site rather than from the game, so they sit in the same place and behave the same way whichever one you opened. Esc pauses, for either player, in all of them.':
       '⟦Éṽéŕý ĝåɱé ïš ƀûïłŧ ŧö ŧĥé šåɱé šĥåþé, ŵĥïçĥ ïš ŵĥåŧ ɱåķéš ŧĥé šéçöñð öñé éåšý. Ŧĥé çöûñŧðöŵñ, ŧĥé šçöŕé, ŧĥé þåûšé, ŧĥé ŕéšûłŧ åñð ŧĥé ŕéɱåŧçĥ åłł çöɱé ƒŕöɱ ŧĥé šïŧé ŕåŧĥéŕ ŧĥåñ ƒŕöɱ ŧĥé ĝåɱé, šö ŧĥéý šïŧ ïñ ŧĥé šåɱé þłåçé åñð ƀéĥåṽé ŧĥé šåɱé ŵåý ŵĥïçĥéṽéŕ öñé ýöû öþéñéð. Éšç þåûšéš, ƒöŕ éïŧĥéŕ þłåýéŕ, ïñ åłł öƒ ŧĥéɱ. ································································································································································⟧',
     'Every game offers a bot in three strengths. A bot never sees anything you cannot see and never moves faster than a person could — the difference between the strengths is how far it thinks ahead and how often it makes a mistake, never what it knows.':

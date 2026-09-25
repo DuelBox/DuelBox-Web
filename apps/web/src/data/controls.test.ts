@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { CATALOGUE } from './catalogue.generated.js';
 import { CONTROLS, MANIFESTS } from './controls.js';
-import { PLAYABLE } from './registry.js';
+import { LOADERS_FOR_TEST, PLAYABLE } from './registry.js';
 
 /**
  * The landing page promises a game's controls; the registry decides which games are
@@ -13,9 +14,10 @@ describe('the controls map', () => {
     expect(missing, `add these to controls.ts: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('names no game that is not playable', () => {
-    const extra = [...CONTROLS.keys()].filter((slug) => !PLAYABLE.includes(slug));
-    expect(extra, `these are not in the registry: ${extra.join(', ')}`).toEqual([]);
+  it('names no game without a build', () => {
+    const built = new Set(CATALOGUE.filter((game) => game.id in LOADERS_FOR_TEST).map((game) => game.slug));
+    const extra = [...CONTROLS.keys()].filter((slug) => !built.has(slug));
+    expect(extra, `these controls name no built game: ${extra.join(', ')}`).toEqual([]);
   });
 
   it('gives every game something to say about both input families', () => {

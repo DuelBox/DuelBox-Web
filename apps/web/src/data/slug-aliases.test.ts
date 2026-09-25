@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_IDS } from './game-names.generated';
 import { LOADERS_FOR_TEST, SLUG_ALIASES_FOR_TEST, isPlayable } from './registry';
+import { killSwitchFor } from '../lib/flags';
 
 /**
  * `registry.ts` writes out the eighteen slugs whose package id differs, instead of reading
@@ -30,14 +31,16 @@ describe('the hand-written slug aliases', () => {
     // The property that actually matters: for every slug the site can route to, the
     // cheaper lookup and the full map must land on the same package.
     for (const [slug, id] of Object.entries(GAME_IDS)) {
-      const playable = id in LOADERS_FOR_TEST;
+      const playable = id in LOADERS_FOR_TEST && killSwitchFor(id) === null;
       expect(isPlayable(slug), `${slug} resolves differently now`).toBe(playable);
     }
   });
 
   it('still answers when handed a package id rather than a slug', () => {
     for (const id of Object.keys(LOADERS_FOR_TEST)) {
-      expect(isPlayable(id), `${id} stopped resolving from its own id`).toBe(true);
+      expect(isPlayable(id), `${id} resolves differently from its slug`).toBe(
+        killSwitchFor(id) === null,
+      );
     }
   });
 });
