@@ -188,7 +188,7 @@ async function compare(shoot: () => Promise<void>): Promise<void> {
     await shoot();
   } catch (error) {
     const said = error instanceof Error ? error.message : 'the screenshot did not match';
-    throw new Error(`${said}\n\n${ACCEPT}`);
+    throw new Error(`${said}\n\n${ACCEPT}`, { cause: error });
   }
 }
 

@@ -868,8 +868,8 @@ export function botInput(
   const finisher = otherEdge > CHARGE_EDGE && otherEdge - selfEdge > CHARGE_MARGIN;
   const attack = finisher || lead >= profile.chargeMargin;
 
-  let aimX = 0;
-  let aimY = 0;
+  let aimX: number;
+  let aimY: number;
   if (attack && reach > 0) {
     aimX = reachX / reach;
     aimY = reachY / reach;
