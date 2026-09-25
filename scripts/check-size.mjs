@@ -95,6 +95,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const WEB = join(ROOT, 'apps/web');
 const OUT = join(WEB, 'out');
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 // Mirrors `distDir` in apps/web/next.config.ts: `pnpm dev` builds into `.next-dev` so a
 // production build never deletes the manifests a running dev server is serving from.
 const DIST = join(WEB, process.env.NEXT_DIST_DIR ?? '.next');
@@ -147,6 +148,16 @@ const emitted = new Set(files);
 // Manifest paths are URLs under `_next/`, relative to the export root. `basePath` changes
 // the URL a browser asks for, never where the file lands on disk.
 const onDisk = (path) => join(OUT, '_next', path);
+// HTML and CSS contain public URLs, while the static export stores their files without
+// the deployment prefix. GitHub Pages uses /<repo>/, so resolving those URLs against OUT
+// directly would look for a directory that Next never writes.
+function exportAssetFile(url) {
+  const prefix = `${BASE_PATH}/`;
+  if (!url.startsWith(prefix)) {
+    throw new Error(`check-size: asset URL ${url} does not start with ${prefix}`);
+  }
+  return join(OUT, url.slice(prefix.length));
+}
 const bytesOf = (group) => [...group].reduce((sum, file) => sum + (sizes.get(file) ?? 0), 0);
 
 // ---------------------------------------------------------------------------------
@@ -602,7 +613,7 @@ function documentAt(route) {
 /** The stylesheets a document links, on disk. */
 function stylesheetsOf(html) {
   return [...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g)].map((match) =>
-    join(OUT, (match[1] ?? '').replace(/^\//, '')),
+    exportAssetFile(match[1] ?? ''),
   );
 }
 
@@ -688,7 +699,7 @@ function facesIn(sheet) {
     const ranges = descriptor === null ? EVERY_CODE_POINT : parseUnicodeRange(descriptor[1]);
     for (const match of block.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
       const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
-      const file = join(OUT, url.replace(/^\//, ''));
+      const file = exportAssetFile(url);
       if (ranges === null) {
         failures.push(
           `${relative(OUT, file)} has a unicode-range this script cannot read` +

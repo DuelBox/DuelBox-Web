@@ -14,10 +14,11 @@ Site: <https://duelbox.github.io/DuelBox-Web/> · Workflow:
 
 ## What a release is here
 
-**Pushing to `main` is the release.** There is no separate step, no tag, no approval and no
-promotion between environments. `deploy.yml` triggers on `push: branches: [main]`, builds the
-static export, and publishes it to GitHub Pages. The only other trigger is a manual
-`workflow_dispatch`, and the `github-pages` environment's branch policy permits `main` only.
+**Pushing to `main` starts the release.** There is no separate step, tag, approval or
+promotion between environments. `ci.yml` runs on the push; a successful run triggers
+`deploy.yml`, which rebuilds the static export and publishes it to GitHub Pages. Deploy can
+also be started manually with `workflow_dispatch`, and the `github-pages` environment's
+branch policy permits `main` only.
 
 Observed end-to-end times over the last eight deploys: **2m17s to 4m11s.**
 
@@ -47,6 +48,12 @@ on a green run of the commit you are rolling back *to*.
 A cancelled CI run does not deploy. `ci.yml` sets `cancel-in-progress: true`, so a superseded
 run ends as `cancelled` rather than `success`; the push that superseded it brings its own CI
 and its own deploy.
+
+**Check both workflows when the site is stale.** A green CI run can still be followed by a
+failed Deploy build. The CI `verify` job builds with the same GitHub Pages base path and site
+URL as Deploy so that path-sensitive checks run before merge; the e2e job builds at `/` for
+its local server. If no CI run exists for a new `main` commit, inspect how that commit was
+pushed before assuming Deploy is at fault.
 
 **One gap remains, and it is a repository setting rather than a file.** `main` has no branch
 protection and no ruleset — `gh api repos/DuelBox/DuelBox-Web/branches/main/protection`
@@ -362,8 +369,9 @@ A first-timer can follow everything above. These are the things that would have 
 configuration or code, and they are named here so the next person does not assume they are
 already handled:
 
-1. **CI does not gate the deploy** (no branch protection, no required checks, no `needs:`).
-   The largest one.
+1. **A red pull request can still be merged.** `workflow_run` gates Deploy on successful CI,
+   but `main` has no branch protection or required checks, so a bad commit can sit there
+   until corrected. This is separate from whether it reaches the published site.
 2. **`PLAYWRIGHT_BASE_URL` does nothing**, so there is no automated verification against a
    real origin. Threading it through `playwright.config.ts` — and skipping the `webServer`
    block when it is set — would give this runbook a real smoke test instead of a curl loop.
