@@ -35,6 +35,28 @@ describe('the pause menu (#145)', () => {
   });
 });
 
+describe('the in-app bug report link (#233)', () => {
+  const overlay = read('MatchOverlay.tsx');
+
+  it('builds the link from the pure helper and offers it wherever play has stopped', () => {
+    expect(overlay).toContain("from '@/lib/bug-report-url'");
+    expect(overlay).toMatch(/href=\{reportHref\(\)\}/);
+    // The pause menu and both result screens: three places, one element.
+    expect(overlay.match(/\{report\}/g)?.length).toBe(3);
+    expect(overlay).toMatch(/>\s*\{t\(messages, 'Report a bug'\)\}\s*</);
+  });
+
+  it('is a plain anchor to a new tab, never a prefetching route link', () => {
+    expect(overlay).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(overlay).not.toMatch(/<Link[^>]*reportHref/);
+  });
+
+  it('sends the match, never the names', () => {
+    expect(overlay).toMatch(/match: \{\s*game: manifest\.name,/);
+    expect(overlay).not.toMatch(/bugReportUrl\([^)]*seatNames/s);
+  });
+});
+
 describe('the HUD clock (#149)', () => {
   it('the HUD shows the clock the SDK drives', () => {
     const hud = read('MatchHud.tsx');

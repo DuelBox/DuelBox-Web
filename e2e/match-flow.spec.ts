@@ -85,6 +85,36 @@ test.describe('the match flow', () => {
     await expect(page.getByRole('status').filter({ hasText: /^[0-9]$|^Go$/ })).toBeVisible();
   });
 
+  test('offers a bug report from the pause menu with the device and the match filled in', async ({
+    page,
+  }) => {
+    await page.goto('/play/tic-tac-toe/');
+    await page.getByRole('button', { name: 'Play together here' }).click();
+    await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
+    await page.waitForTimeout(3500);
+    await page.keyboard.press('Escape');
+
+    const paused = page.getByRole('dialog', { name: 'Paused' });
+    const report = paused.getByRole('link', { name: 'Report a bug' });
+    await expect(report).toBeVisible();
+    await expect(report).toHaveAttribute('target', '_blank');
+    await expect(report).toHaveAttribute('rel', /noopener/);
+    const href = (await report.getAttribute('href')) ?? '';
+    const params = new URL(href).searchParams;
+    expect(params.get('template')).toBe('bug.yml');
+    expect(params.get('game')).toBe('tic-tac-toe');
+    // Verbatim from the engine running this test, so it is the engine's string and not ours.
+    expect(params.get('device')).toBe(await page.evaluate(() => navigator.userAgent));
+    expect(params.get('size')).toMatch(/^\d+x\d+, (portrait|landscape)$/);
+    expect(params.get('steps')).toContain('1. Open /play/tic-tac-toe/');
+    expect(params.get('steps')).toContain('two players on this device');
+    // The link carries the match, never a chosen name: the only string keys are the fixed
+    // ones the builder sets. (That the builder has no field for a name is pinned in
+    // `bug-report-url.test.ts`; here it is enough that no unexpected parameter appears.)
+    expect([...params.keys()].sort()).toEqual(['device', 'game', 'size', 'steps', 'template']);
+    // Not pressed: it opens GitHub, and a match must need nothing from the network.
+  });
+
   test('pauses from the HUD button too, for a player with no keyboard', async ({ page }) => {
     await page.goto('/play/tic-tac-toe/');
     await page.getByRole('button', { name: 'Play together here' }).click();
