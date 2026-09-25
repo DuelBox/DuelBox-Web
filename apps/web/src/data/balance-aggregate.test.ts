@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { Rng } from '@duelbox/engine';
 import type { SeatId } from '@duelbox/engine';
 import type { Game, GameContext, InputState, MatchScore, SeatInput } from '@duelbox/game-sdk';
+import { classifyPair, endingMoved } from './balance-pairs';
 import { CATALOGUE } from './catalogue.generated';
 import { LOADERS_FOR_TEST } from './registry';
 import type { LoadedGame } from './registry';
@@ -441,13 +442,14 @@ const OPENER_BLIND = 0;
  * that goes red every time somebody scaffolds a package gets edited rather than read. A game
  * that stops working does lower it, and that is the case worth failing on.
  *
- * `hard` is one lower than the other two because `checkers` does not finish a single match
+ * `hard` was one lower than the other two while `checkers` did not finish a single match
  * against a hard bot inside the ten simulated minutes `termination.test.ts` allows - not one
- * of 101, under either opening seat or with the device shouted at. That is a real finding and
- * it belongs to `termination.test.ts`; all this file can do is refuse to pretend the game was
- * measured.
+ * of 101, under either opening seat or with the device shouted at. #2502's forty-move rule
+ * ended that: the `hard` sweep of 15 September 2026 measured all 108, and the floor is back
+ * level with the other two tiers (#2549). A tier's floor goes back up when the reason it was
+ * lowered goes away; it does not stay down out of habit.
  */
-const MEASURED_MIN: Readonly<Record<Tier, number>> = { easy: 93, normal: 93, hard: 92 };
+const MEASURED_MIN: Readonly<Record<Tier, number>> = { easy: 93, normal: 93, hard: 93 };
 
 /* ------------------------------------------------------------------ measurement */
 
@@ -669,6 +671,15 @@ interface Tally {
   concluded: number;
   /** Seed pairs whose two halves ended differently - the opening seat changed the match. */
   openerSwung: number;
+  /**
+   * Seed pairs whose second arm is the first played from the other chair: the same length,
+   * the winner's seat swapped, the two tallies swapped. A game that is exactly symmetric
+   * under the opener produces nothing else, and a draw is where {@link openerSwung} cannot
+   * see it - `draw` is its own image, so a mirrored draw has the same winner after the same
+   * steps and only the scoreline moved (#2549). Counted beside `openerSwung`, never inside
+   * it, so the `openerSwung === 0` gate on {@link unexplained} is not widened by a mirror.
+   */
+  openerMirrored: number;
   /** Seed pairs both arms of which were played, which is what {@link openerSwung} is out of. */
   pairsChecked: number;
   /**
@@ -696,10 +707,11 @@ interface Tally {
    *
    * - The game's {@link openerSwung} is **zero** - so the report calls it symmetric under the
    *   opener - and yet a pair came back with the same winner after the same number of steps
-   *   and a *different scoreline*. That is per-opener state `openerSwung` cannot see, and it
-   *   is #2494's guard in as many words. A pair neither arm of which ever ended does not
-   *   count: `openerSwung` counts endings, and a game that has none has claimed nothing to
-   *   contradict.
+   *   and a *different scoreline* that is not the other chair's. That is per-opener state
+   *   `openerSwung` cannot see, and it is #2494's guard in as many words. A pair neither arm
+   *   of which ever ended does not count: `openerSwung` counts endings, and a game that has
+   *   none has claimed nothing to contradict. Nor does a pair that is one match from the two
+   *   chairs - see {@link openerMirrored}, and #2549 for the draw that was misread as this.
    * - The game never read `context.openingSeat` at all and a pair still differed. The two
    *   contexts differ in that property and nothing else, so this is state surviving from one
    *   match into the next, which would make every number in this file a measurement of the
@@ -716,6 +728,12 @@ interface Tally {
    * anybody deciding that it should.
    */
   readonly setAside: string[];
+  /**
+   * Pairs whose second arm is the first one's mirror - see {@link openerMirrored}. Printed by
+   * the report for the same reason {@link setAside} is: a pair the guard has decided is
+   * explained must be visible as such, or an explanation is an exclusion nobody can see.
+   */
+  readonly mirrored: string[];
   /** True if the same seed played differently when the device was shouted at. */
   readsInput: boolean;
   /**
@@ -763,11 +781,13 @@ function measure(id: string, loaded: LoadedGame): Tally {
     played: 0,
     concluded: 0,
     openerSwung: 0,
+    openerMirrored: 0,
     pairsChecked: 0,
     honoursOpener: opensWithNominatedSeat(loaded),
     blind: false,
     unexplained: [],
     setAside: [],
+    mirrored: [],
     readsInput: false,
     outcomes: new Set<string>(),
   };
@@ -811,13 +831,18 @@ function measure(id: string, loaded: LoadedGame): Tally {
    * `openerSwung` counts endings and there were none to count, so a zero there is not the
    * claim "this game ignores the opener" and there is nothing to contradict.
    *
-   * **`checkers` on `hard` is the case, and it is why this list exists.** It reports
+   * **`checkers` on `hard` was the case, and it is why this list exists.** It reported
    * `seed 1000003: the same winner after the same 36000 steps, but 6-8 against 11-9` - and
-   * 36000 steps is {@link MAX_STEPS} exactly, both arms, with a null winner. It decides
-   * nothing inside ten simulated minutes at that tier, so it drops out of the sweep as
-   * unmeasurable and asserts nothing about seat balance at all; the two scorelines are how
+   * 36000 steps is {@link MAX_STEPS} exactly, both arms, with a null winner. It decided
+   * nothing inside ten simulated minutes at that tier, so it dropped out of the sweep as
+   * unmeasurable and asserted nothing about seat balance at all; the two scorelines were how
    * many pieces each side had taken when the clock ran out, which is precisely the thing the
    * opening seat is expected to move. It was being reported as hidden per-opener state.
+   * #2502 then gave the game a forty-move rule, and the same seed came back as `the same
+   * winner after the same 16489 steps, but 9-6 against 6-9` with the winner a draw - which
+   * is not this list's case any more but {@link Tally.openerMirrored}'s (#2549), and the
+   * distinction is the point: a ceilinged pair is set aside because it says nothing, a
+   * mirrored pair is explained because it says exactly what a symmetric game should.
    *
    * **This narrows the condition, and it is not a loosening of the assertion.** Three things
    * have to be true together before a pair lands here, and each one independently rules out
@@ -837,11 +862,21 @@ function measure(id: string, loaded: LoadedGame): Tally {
   /** Everything the sweep can learn from having played both arms of one seed. */
   const comparePair = (index: number, first: Played, second: Played): void => {
     tally.pairsChecked += 1;
-    const swung = first.winner !== second.winner || first.steps !== second.steps;
-    if (swung) tally.openerSwung += 1;
-    if (!swung && first.p1 === second.p1 && first.p2 === second.p2) return;
+    // `openerSwung` counts endings that moved, mirrored or not, so a seat-win mirror still
+    // swings it; `openerMirrored` is counted beside it and never folded in, which keeps the
+    // `openerSwung === 0` gate below exactly as narrow as it was.
+    if (endingMoved(first, second)) tally.openerSwung += 1;
+    const shape = classifyPair(first, second);
+    if (shape === 'identical') return;
     const at = `seed ${String(seedAt(index))}`;
-    if (swung) {
+    if (shape === 'mirrored') {
+      tally.openerMirrored += 1;
+      tally.mirrored.push(
+        `${at}: ${fingerprint(first)} is ${fingerprint(second)} from the other chair`,
+      );
+      return;
+    }
+    if (shape === 'swung') {
       divergent.push(`${at}: ${fingerprint(first)} against ${fingerprint(second)}`);
       return;
     }
@@ -849,8 +884,7 @@ function measure(id: string, loaded: LoadedGame): Tally {
       `${at}: the same winner after the same ${String(first.steps)} steps, but ` +
       `${String(first.p1)}-${String(first.p2)} against ` +
       `${String(second.p1)}-${String(second.p2)}`;
-    // `!swung` and a null winner means both arms hit the ceiling: neither ended.
-    if (first.winner === null) ceilinged.push(note);
+    if (shape === 'ceilinged') ceilinged.push(note);
     else silent.push(note);
   };
 
@@ -924,6 +958,14 @@ function measure(id: string, loaded: LoadedGame): Tally {
       tally.unexplained.push(
         `${note} - the two arms ended differently though the game never read ` +
           `context.openingSeat, so something survived from one match into the next`,
+      );
+    }
+    // A mirror is explained by the opener only in a game that asked which seat opened. This
+    // one never did, so it cannot have changed chairs, and the arms had to be one match.
+    for (const note of tally.mirrored) {
+      tally.unexplained.push(
+        `${note} - the game never read context.openingSeat, so it cannot have played from ` +
+          `the other chair and the two arms should have been the same match`,
       );
     }
     for (const note of [...silent, ...ceilinged]) {
@@ -1130,10 +1172,10 @@ const OUTSIDE_THE_BAND: readonly Exception[] = [
       'not the shape a bug has. normal and easy both decide matches and both measure exactly ' +
       '50.0%, so neither needs a line here. distinct 2: the two openers play the same match ' +
       'from the two chairs, so they draw in the same number of steps with the capture tallies ' +
-      'swapped - which is why this game now reads as opener-blind on hard and joins the ' +
-      'OPENER_BLIND list for exactly the reason that list says is a property rather than a ' +
-      'defect. That ratchet was already over its limit on hard before this game reached it, ' +
-      'at three against two, because tic-tac-toe draws all hundred for the same reason.',
+      'swapped - 9-6 against 6-9 after 16489 steps, every seed. The opener column reads 0/50 ' +
+      'for it because a draw is its own mirror, and until #2549 that zero beside a moving ' +
+      'scoreline was reported as hidden per-opener state; the mirror column reads 50/50 and ' +
+      'says what it is.',
   },
   {
     id: 'tic-tac-toe',
@@ -1255,7 +1297,7 @@ function report(): string {
   lines.push('');
   lines.push(
     'game                      archetype   seat-one   +/-  seeds  decided  draws  round(s)   ' +
-      'opener  distinct',
+      'opener   mirror  distinct',
   );
   for (const tally of rows) {
     const value = share(tally);
@@ -1272,12 +1314,14 @@ function report(): string {
         pct(drawRate(tally)),
         roundSeconds(tally).toFixed(1).padStart(9),
         `${String(tally.openerSwung)}/${String(tally.pairsChecked)}`.padStart(8),
+        `${String(tally.openerMirrored)}/${String(tally.pairsChecked)}`.padStart(8),
         String(tally.outcomes.size).padStart(8),
         proven ? (recordedFor(tally.id) ? '  OUT (recorded)' : '  OUT') : outside ? '  ?' : '',
       ].join(' '),
     );
   }
-  const symmetric = rows.filter((tally) => tally.openerSwung === 0);
+  const symmetric = rows.filter((tally) => tally.openerSwung === 0 && tally.openerMirrored === 0);
+  const chaired = rows.filter((tally) => tally.openerMirrored > 0);
   const turns = rows.filter((tally) => tally.archetype.startsWith('turn'));
   const deaf = turns.filter((tally) => !tally.honoursOpener);
   lines.push('');
@@ -1294,6 +1338,13 @@ function report(): string {
       `games came out identical either way - which is not the same as ignoring the opener, and ` +
       `asserts nothing on its own; ${String(solo.length)} of them never read ` +
       `context.openingSeat at all and are the ones measured from one arm.`,
+  );
+  lines.push(
+    `mirror: how many of those pairs were one match from the two chairs - the same length, ` +
+      `the winner's seat and the tallies swapped. That is what exact symmetry under the ` +
+      `opener looks like, and on a drawn match the opener column cannot see it, because a ` +
+      `draw is its own image (#2549). ${String(chaired.length)} games: ` +
+      `${chaired.map((t) => `${t.id} ${String(t.openerMirrored)}/${String(t.pairsChecked)}`).join(', ') || 'none'}`,
   );
   lines.push(
     `opener, honoured: ${String(turns.length - deaf.length)} of ${String(turns.length)} turn ` +
@@ -1453,9 +1504,12 @@ describe('the balance harness', () => {
     //
     // Two shapes land here, and neither may be silently halved. A pair with the same winner
     // after the same number of steps but a different scoreline is per-opener state that
-    // `openerSwung` is blind to by construction. A pair that differs at all in a game that
-    // never asked which seat opened is state surviving from one match into the next, which
-    // would make every number in this file a measurement of the harness.
+    // `openerSwung` is blind to by construction - unless the scoreline is the other chair's,
+    // with the winner's seat swapped along with it, which is a symmetric game doing exactly
+    // what it should and is told apart by `classifyPair` on all four numbers (#2549). A pair
+    // that differs at all in a game that never asked which seat opened is state surviving
+    // from one match into the next, which would make every number in this file a
+    // measurement of the harness.
     const found = [...TALLIES.values()].filter((tally) => tally.unexplained.length > 0);
     const detail = found
       .map((tally) => `${tally.id} - ${tally.unexplained[0] ?? ''}`)
