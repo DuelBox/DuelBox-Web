@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SeatFlip } from './flip.js';
 import {
+  MOTION,
+  REDUCED_MOTION_SECONDS,
+  cubicBezier,
+  motionDuration,
+  standardEase,
+} from './motion.js';
+import {
   easeInCubic,
   easeInOutCubic,
   easeInOutQuad,
@@ -28,6 +35,7 @@ const MONOTONE: readonly (readonly [string, Easing])[] = [
   ['easeInCubic', easeInCubic],
   ['easeOutCubic', easeOutCubic],
   ['easeInOutCubic', easeInOutCubic],
+  ['standardEase', standardEase],
 ];
 
 /** Steps until settled, collecting the value seen after each step. */
@@ -411,5 +419,88 @@ describe('allocation discipline', () => {
     expect(typeof tween.running).toBe('boolean');
     expect(typeof tween.settled).toBe('boolean');
     expect(tween.step(STEP)).toBeUndefined();
+  });
+});
+
+describe('the motion signature, shared with the stylesheet (#72)', () => {
+  it("runs for the product's standard duration when a tween states none", () => {
+    // The tie between the two motion layers, at the one place a game can get it for free.
+    // `--db-duration` and this are the same number, and `apps/web/src/styles/tokens.test.ts`
+    // is what fails when they stop being.
+    expect(new Tween().durationSeconds).toBe(MOTION.durationSeconds);
+    expect(MOTION.durationSeconds).toBe(0.2);
+
+    const tween = new Tween();
+    tween.restart(0, 1);
+    // 0.2 s is twelve steps at sixty — thirteen in floating point. Twelve accumulated
+    // sixtieths come to 0.19999999999999998, one ULP short, and `step` compares the sum
+    // against the duration rather than counting steps, so the run lasts one step longer than
+    // the arithmetic says. Written out because it is the kind of off-by-one that gets
+    // "fixed" by widening a comparison, which would end runs early on every duration.
+    for (let i = 0; i < 12; i += 1) tween.step(STEP);
+    expect(tween.settled).toBe(false);
+    tween.step(STEP);
+    expect(tween.settled).toBe(true);
+  });
+
+  it('states three durations and one curve, and lets none of them be rewritten', () => {
+    expect(MOTION.durationFastSeconds).toBe(0.12);
+    expect(MOTION.durationSlowSeconds).toBe(0.38);
+    expect(MOTION.ease).toEqual([0.2, 0.8, 0.2, 1]);
+    expect(Object.isFrozen(MOTION)).toBe(true);
+    expect(Object.isFrozen(MOTION.ease)).toBe(true);
+  });
+
+  it('eases on the same four control points CSS is given', () => {
+    for (let t = 0; t <= 1; t += 1 / 32) {
+      expect(standardEase(t), `standardEase(${String(t)})`).toBe(
+        cubicBezier(t, MOTION.ease[0], MOTION.ease[1], MOTION.ease[2], MOTION.ease[3]),
+      );
+    }
+  });
+
+  it('solves a bezier the way a browser does, checked against a symmetric one', () => {
+    // `cubic-bezier(0.42, 0, 0.58, 1)` is CSS `ease-in-out`, whose control points are
+    // symmetric about (0.5, 0.5) — so it is exactly a half at a half whatever the solver
+    // does internally, and it is the one value here that is known independently of this
+    // implementation. A solver that read `y(t)` instead of inverting `x` would pass this and
+    // fail the asymmetric curve above, which is why both are here.
+    expect(cubicBezier(0.5, 0.42, 0, 0.58, 1)).toBeCloseTo(0.5, 12);
+    // The identity curve: control points on the diagonal are `linear`.
+    for (let t = 0; t <= 1; t += 1 / 16) {
+      expect(cubicBezier(t, 1 / 3, 1 / 3, 2 / 3, 2 / 3), `linear at ${String(t)}`).toBeCloseTo(
+        t,
+        9,
+      );
+    }
+  });
+
+  it('clamps outside [0, 1], where there is no progress to invert', () => {
+    // The one curve here that does clamp its input, and the reason is in its docstring:
+    // outside the range there is no `u` to solve for. `Tween` clamps before it calls.
+    expect(standardEase(-1)).toBe(0);
+    expect(standardEase(2)).toBe(1);
+  });
+
+  it('collapses a duration for reduced motion the way the cascade does', () => {
+    expect(motionDuration(MOTION.durationSlowSeconds, false)).toBe(MOTION.durationSlowSeconds);
+    expect(motionDuration(MOTION.durationSlowSeconds)).toBe(MOTION.durationSlowSeconds);
+    expect(motionDuration(MOTION.durationSlowSeconds, true)).toBe(REDUCED_MOTION_SECONDS);
+    // 1ms, the same number `tokens.css` collapses to, and not zero: see its docstring.
+    expect(REDUCED_MOTION_SECONDS).toBe(0.001);
+    expect(REDUCED_MOTION_SECONDS).toBeGreaterThan(0);
+  });
+
+  it('still answers reduced motion at draw time, which is the safe end', () => {
+    // `motionDuration` is for a duration one device owns. Anything two devices step reaches
+    // the preference through `valueFor`, which changes the picture and not the run — the
+    // distinction `tween.ts` and `flip.ts` both set out, restated here because a table of
+    // durations beside a reduced-motion helper is an invitation to shorten the wrong one.
+    const tween = new Tween({ durationSeconds: MOTION.durationSeconds, easing: standardEase });
+    tween.restart(0, 1);
+    tween.step(STEP);
+    expect(tween.valueFor({ reducedMotion: true })).toBe(1);
+    expect(tween.valueFor({ reducedMotion: false })).toBeLessThan(1);
+    expect(tween.durationSeconds).toBe(MOTION.durationSeconds);
   });
 });

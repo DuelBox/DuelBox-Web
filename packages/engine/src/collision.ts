@@ -28,6 +28,43 @@ import { set } from './vec2.js';
  * to pass. Contacts hold loose scalars rather than {@link Vec2} pairs, which is
  * why the maths below is component-wise; `closestPointOnSegment` speaks Vec2 and
  * uses the vec2 helpers.
+ *
+ * **There is no broadphase here, and issue #112's spatial hash was built,
+ * measured and declined.** Every function in this module takes exactly two
+ * shapes, because at the body counts this catalogue reaches, choosing which
+ * pairs to test costs several times more than testing all of them.
+ *
+ * Measured on 7 September 2026. The games that test bodies against each other
+ * are the six that
+ * `grep -rn "j = i + 1" packages/games --include="*.ts" | grep -v '\.test\.'`
+ * finds — five of them physics, the sixth `memory/src/rules.ts`, where the loop
+ * is a bot scanning the cards it remembers rather than a body-vs-body pass. The
+ * filters are part of the command rather than tidying: without them the same
+ * grep answers with twenty-eight hits across thirteen packages, because most of
+ * the matches are in `*.test.ts`, and a reader checking this paragraph would get
+ * a set more than twice the size of the one it goes on to name. The five top out
+ * at sixteen bodies: Pool and Sling Puck at sixteen, Carrom at fourteen, Bowling
+ * at ten pins, Soccer Pool at seven discs. Sixteen bodies is a hundred and twenty
+ * pairs, which the plain double loop settles in about 85 ns on an M4 — and Pool's
+ * entire step, integration and cushions and pockets included, is 1.06
+ * microseconds, six thousandths of one 60 Hz frame.
+ *
+ * The hash that was measured against that loop is a uniform grid over
+ * preallocated typed arrays, allocating nothing per step and emitting exactly the
+ * same pairs in exactly the same order, so the comparison is like for like. It is
+ * slower until roughly seventy bodies, and at sixteen it takes 485 ns against the
+ * loop's 85. Stripped to the fastest thing a grid can be — half the neighbourhood
+ * scanned, output left unordered, duplicates not handled, so no longer a drop-in
+ * — it breaks even near fifty and is still four times slower at sixteen. The
+ * cause is arithmetic rather than implementation: a grid has to bucket every body
+ * before it can answer anything, and each body then probes the nine cells around
+ * it, so sixteen bodies pay for 144 bucket probes before the first overlap test,
+ * against the 120 tests the naive pass performs in total.
+ *
+ * So the number to watch is a body count and not a frame time. Build one when a
+ * game reaches somewhere near fifty bodies that collide with each other, and
+ * measure it against the loop it would replace rather than against the idea of
+ * one. Nothing in the catalogue is within a factor of three of that today.
  */
 
 export interface Circle {
@@ -76,6 +113,64 @@ export interface Contact {
 export function createContact(): Contact {
   return { hit: false, depth: 0, normalX: 0, normalY: 0, pointX: 0, pointY: 0 };
 }
+
+/**
+ * The scalars a box test hands to one of the shared helpers below: a centre, half extents,
+ * and the cosine and sine of a rotation, for each of two shapes.
+ *
+ * `boxSegment` fills the A half only — its second shape is a {@link Segment}, which it takes
+ * as an object because a segment is four numbers with no rotation to carry.
+ */
+interface BoxScalars {
+  ax: number;
+  ay: number;
+  ahw: number;
+  ahh: number;
+  ca: number;
+  sa: number;
+  bx: number;
+  by: number;
+  bhw: number;
+  bhh: number;
+  cb: number;
+  sb: number;
+}
+
+/**
+ * The one record every box test fills before it calls its helper. Rule 5, and the allocation
+ * it avoids is one nothing in this file writes.
+ *
+ * A floating-point value crossing a call the optimiser has declined to inline cannot travel
+ * as a raw double; it is materialised on the heap first. {@link boxBox} and
+ * {@link boxSegment} are both far past any inlining budget, so every scalar they were handed
+ * that was not a small integer cost a heap number, and a trigonometric one never is.
+ * Measured on V8 26 against the fractional shapes `allocation.test.ts` uses, before this
+ * record existed: `obbSegment` **125 bytes a call**, `obbObb` 119, `aabbSegment` 95,
+ * `aabbObb` 40. `circleCircle` and `aabbAabb`, which have no shared helper to call at all,
+ * cost nothing then and cost nothing now. How high the figure goes depends on how many of
+ * the twelve are genuinely fractional, which is why it is worth stating what it was measured
+ * against; reading a field of a record that already exists costs nothing whatever they hold,
+ * so all four are now zero and the benchmark measures them on every push.
+ *
+ * Module-level and mutable, which is safe here for one reason worth stating: a wrapper fills
+ * it and calls its helper in the same synchronous breath, with nothing of the caller's in
+ * between, so no second test can be started against a half-filled record. The wrappers below
+ * are the only writers, and a caller never sees it.
+ */
+const SCALARS: BoxScalars = {
+  ax: 0,
+  ay: 0,
+  ahw: 0,
+  ahh: 0,
+  ca: 1,
+  sa: 0,
+  bx: 0,
+  by: 0,
+  bhw: 0,
+  bhh: 0,
+  cb: 1,
+  sb: 0,
+};
 
 /** Clears the record and reports no hit, so nothing stale survives a miss. */
 function miss(out: Contact): boolean {
@@ -165,20 +260,35 @@ export function circleCircle(out: Contact, a: Circle, b: Circle): boolean {
 }
 
 /**
+ * A circle and a box for {@link circleBox} to work on when the caller has no pair of its
+ * own to hand it — `circleObb`, which turns its circle into the box's frame first.
+ *
+ * The shapes rather than their seven numbers, and rule 5 is why: a shape is one pointer and
+ * costs nothing to pass, while seven floating-point arguments cost sixteen bytes each every
+ * time the optimiser declines to inline the callee. It declines whenever the *caller* is
+ * large, which is how this went unnoticed for so long — `circleAabb` on its own is free, and
+ * the identical call from inside `sweptCircleAabb`, which opens by asking whether the pair
+ * is already touching, cost **94 bytes a call** against a box with fractional bounds.
+ * `sweptCircleAabb` is the tunnelling guard: a game sweeps every fast body against every
+ * wall, every step, which made this the largest allocation in the engine. See
+ * {@link SCALARS} for the same argument where there is no shape to pass.
+ */
+const NEAR_CIRCLE: Circle = { x: 0, y: 0, radius: 0 };
+const NEAR_BOX: Aabb = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+
+/**
  * Circle against an axis-aligned box in min/max form, in whatever frame the
  * caller is working in; `out` comes back in that same frame. Shared by
  * `circleAabb` (world frame) and `circleObb` (the box's own frame).
  */
-function circleBox(
-  out: Contact,
-  cx: number,
-  cy: number,
-  radius: number,
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
-): boolean {
+function circleBox(out: Contact, c: Circle, box: Aabb): boolean {
+  const cx = c.x;
+  const cy = c.y;
+  const radius = c.radius;
+  const minX = box.minX;
+  const minY = box.minY;
+  const maxX = box.maxX;
+  const maxY = box.maxY;
   const qx = cx < minX ? minX : cx > maxX ? maxX : cx;
   const qy = cy < minY ? minY : cy > maxY ? maxY : cy;
   const dx = cx - qx;
@@ -237,7 +347,8 @@ function circleBox(
 }
 
 export function circleAabb(out: Contact, c: Circle, box: Aabb): boolean {
-  return circleBox(out, c.x, c.y, c.radius, box.minX, box.minY, box.maxX, box.maxY);
+  // The caller's own two shapes, straight through: nothing is copied and nothing is scratch.
+  return circleBox(out, c, box);
 }
 
 export function circleObb(out: Contact, c: Circle, box: Obb): boolean {
@@ -250,7 +361,14 @@ export function circleObb(out: Contact, c: Circle, box: Obb): boolean {
   const ly = -rx * sin + ry * cos;
   const hw = box.halfWidth;
   const hh = box.halfHeight;
-  if (!circleBox(out, lx, ly, c.radius, -hw, -hh, hw, hh)) return false;
+  NEAR_CIRCLE.x = lx;
+  NEAR_CIRCLE.y = ly;
+  NEAR_CIRCLE.radius = c.radius;
+  NEAR_BOX.minX = -hw;
+  NEAR_BOX.minY = -hh;
+  NEAR_BOX.maxX = hw;
+  NEAR_BOX.maxY = hh;
+  if (!circleBox(out, NEAR_CIRCLE, NEAR_BOX)) return false;
 
   const nx = out.normalX;
   const ny = out.normalY;
@@ -349,11 +467,14 @@ export function aabbAabb(out: Contact, a: Aabb, b: Aabb): boolean {
 
 /**
  * Separating-axis theorem over the four box axes, in whatever frame the caller
- * is working in; `out` comes back in that same frame. Each box arrives as a
- * centre, half extents, and the cosine and sine of its rotation, so an
- * axis-aligned box passes (1, 0) and pays no trigonometry at all. Shared by
+ * is working in; `out` comes back in that same frame. Each box arrives in `s` as
+ * a centre, half extents, and the cosine and sine of its rotation, so an
+ * axis-aligned box writes (1, 0) and pays no trigonometry at all. Shared by
  * `obbObb` and `aabbObb`, exactly as `circleBox` is shared by `circleAabb` and
  * `circleObb`.
+ *
+ * The twelve numbers arrive in a record rather than as twelve parameters, and
+ * {@link SCALARS} is where that is argued: passing them cost a heap number each.
  *
  * Two rectangles overlap exactly when none of their four face normals separates
  * them, so four projections settle it and the shallowest overlap is the contact
@@ -365,21 +486,19 @@ export function aabbAabb(out: Contact, a: Aabb, b: Aabb): boolean {
  * keeps an axis-aligned pair exact: rounding in `cos^2 + sin^2` must never turn
  * an exact touch into a miss.
  */
-function boxBox(
-  out: Contact,
-  ax: number,
-  ay: number,
-  ahw: number,
-  ahh: number,
-  ca: number,
-  sa: number,
-  bx: number,
-  by: number,
-  bhw: number,
-  bhh: number,
-  cb: number,
-  sb: number,
-): boolean {
+function boxBox(out: Contact, s: Readonly<BoxScalars>): boolean {
+  const ax = s.ax;
+  const ay = s.ay;
+  const ahw = s.ahw;
+  const ahh = s.ahh;
+  const ca = s.ca;
+  const sa = s.sa;
+  const bx = s.bx;
+  const by = s.by;
+  const bhw = s.bhw;
+  const bhh = s.bhh;
+  const cb = s.cb;
+  const sb = s.sb;
   const cr = Math.abs(ca * cb + sa * sb);
   const sr = Math.abs(sa * cb - ca * sb);
 
@@ -455,21 +574,20 @@ function boxBox(
 
 /** Box against box, both oriented. See {@link boxBox} for how the axes are chosen. */
 export function obbObb(out: Contact, a: Obb, b: Obb): boolean {
-  return boxBox(
-    out,
-    a.x,
-    a.y,
-    a.halfWidth,
-    a.halfHeight,
-    Math.cos(a.rotation),
-    Math.sin(a.rotation),
-    b.x,
-    b.y,
-    b.halfWidth,
-    b.halfHeight,
-    Math.cos(b.rotation),
-    Math.sin(b.rotation),
-  );
+  const s = SCALARS;
+  s.ax = a.x;
+  s.ay = a.y;
+  s.ahw = a.halfWidth;
+  s.ahh = a.halfHeight;
+  s.ca = Math.cos(a.rotation);
+  s.sa = Math.sin(a.rotation);
+  s.bx = b.x;
+  s.by = b.y;
+  s.bhw = b.halfWidth;
+  s.bhh = b.halfHeight;
+  s.cb = Math.cos(b.rotation);
+  s.sb = Math.sin(b.rotation);
+  return boxBox(out, s);
 }
 
 /**
@@ -487,21 +605,20 @@ export function obbObb(out: Contact, a: Obb, b: Obb): boolean {
  * arithmetic can round to a hair either side of zero here.
  */
 export function aabbObb(out: Contact, a: Aabb, b: Obb): boolean {
-  return boxBox(
-    out,
-    (a.minX + a.maxX) / 2,
-    (a.minY + a.maxY) / 2,
-    (a.maxX - a.minX) / 2,
-    (a.maxY - a.minY) / 2,
-    1,
-    0,
-    b.x,
-    b.y,
-    b.halfWidth,
-    b.halfHeight,
-    Math.cos(b.rotation),
-    Math.sin(b.rotation),
-  );
+  const s = SCALARS;
+  s.ax = (a.minX + a.maxX) / 2;
+  s.ay = (a.minY + a.maxY) / 2;
+  s.ahw = (a.maxX - a.minX) / 2;
+  s.ahh = (a.maxY - a.minY) / 2;
+  s.ca = 1;
+  s.sa = 0;
+  s.bx = b.x;
+  s.by = b.y;
+  s.bhw = b.halfWidth;
+  s.bhh = b.halfHeight;
+  s.cb = Math.cos(b.rotation);
+  s.sb = Math.sin(b.rotation);
+  return boxBox(out, s);
 }
 
 /**
@@ -640,8 +757,13 @@ export function segmentSegment(out: Contact, a: Segment, b: Segment): boolean {
 /**
  * Box against segment, in whatever frame the caller is working in; `out` comes
  * back in that same frame. The box arrives in the same centre/half-extent/
- * cos/sin form `boxBox` takes, so `aabbSegment` passes (1, 0) and pays no
+ * cos/sin form `boxBox` takes, so `aabbSegment` writes (1, 0) and pays no
  * trigonometry. Shared by `obbSegment` and `aabbSegment`.
+ *
+ * The box is shape A of {@link SCALARS} — the same slots `boxBox`'s first box
+ * uses, since it is the first shape here too. Whatever the B half is carrying
+ * from an earlier test is not read, so the wrappers do not spend writes clearing
+ * it. See {@link SCALARS} for why the numbers travel this way at all.
  *
  * A segment is a box with no thickness. It is symmetric about its midpoint, so
  * its extent along any axis is |h . axis| for the half vector h, and the same
@@ -659,16 +781,13 @@ export function segmentSegment(out: Contact, a: Segment, b: Segment): boolean {
  * Ties keep the earlier axis, so the box's own axes win over the segment's, the
  * same preference `boxBox` gives A.
  */
-function boxSegment(
-  out: Contact,
-  bx: number,
-  by: number,
-  hw: number,
-  hh: number,
-  cb: number,
-  sb: number,
-  seg: Segment,
-): boolean {
+function boxSegment(out: Contact, s: Readonly<BoxScalars>, seg: Segment): boolean {
+  const bx = s.ax;
+  const by = s.ay;
+  const hw = s.ahw;
+  const hh = s.ahh;
+  const cb = s.ca;
+  const sb = s.sa;
   const sx = seg.x2 - seg.x1;
   const sy = seg.y2 - seg.y1;
   // The segment as a centre and a half vector, which is the form projection wants.
@@ -758,16 +877,14 @@ function boxSegment(
  * treat a touch.
  */
 export function obbSegment(out: Contact, a: Obb, b: Segment): boolean {
-  return boxSegment(
-    out,
-    a.x,
-    a.y,
-    a.halfWidth,
-    a.halfHeight,
-    Math.cos(a.rotation),
-    Math.sin(a.rotation),
-    b,
-  );
+  const s = SCALARS;
+  s.ax = a.x;
+  s.ay = a.y;
+  s.ahw = a.halfWidth;
+  s.ahh = a.halfHeight;
+  s.ca = Math.cos(a.rotation);
+  s.sa = Math.sin(a.rotation);
+  return boxSegment(out, s, b);
 }
 
 /**
@@ -779,16 +896,14 @@ export function obbSegment(out: Contact, a: Obb, b: Segment): boolean {
  * side of zero here.
  */
 export function aabbSegment(out: Contact, a: Aabb, b: Segment): boolean {
-  return boxSegment(
-    out,
-    (a.minX + a.maxX) / 2,
-    (a.minY + a.maxY) / 2,
-    (a.maxX - a.minX) / 2,
-    (a.maxY - a.minY) / 2,
-    1,
-    0,
-    b,
-  );
+  const s = SCALARS;
+  s.ax = (a.minX + a.maxX) / 2;
+  s.ay = (a.minY + a.maxY) / 2;
+  s.ahw = (a.maxX - a.minX) / 2;
+  s.ahh = (a.maxY - a.minY) / 2;
+  s.ca = 1;
+  s.sa = 0;
+  return boxSegment(out, s, b);
 }
 
 /**
@@ -828,6 +943,10 @@ export function aabbSegment(out: Contact, a: Aabb, b: Segment): boolean {
  * Earliest time in [0, 1] at which a circle of radius `r` starting at `(cx, cy)`
  * and moving by `(dx, dy)` over the step reaches distance `r` from `(px, py)`.
  * Returns -1 when it never does, and 0 when it starts already within reach.
+ *
+ * Seven scalar parameters, and they were measured before they were left alone: this
+ * one is small enough that every caller inlines it, so nothing crosses a call
+ * boundary and nothing is materialised. Contrast {@link boxBox}, which is not.
  */
 function sweptPointTime(
   cx: number,
@@ -1019,6 +1138,9 @@ export function sweptCircleSegment(
  * it does not. `p`/`dp` are the position and motion across the face, `q`/`dq`
  * the ones along it, and `[qMin, qMax]` the face's extent.
  *
+ * Nine scalar parameters, and as with {@link sweptPointTime} they were measured
+ * and left: this is small enough to be inlined into its one caller.
+ *
  * The circle must start clear of the face's expanded plane. One that starts
  * inside that band is either already touching the box, or off past a corner,
  * where a corner sweep owns the contact and finds it earlier: to reach a face
@@ -1063,11 +1185,13 @@ function faceTime(
  * marked fast — and a flag is the wrong instrument. It is set by hand, so it is
  * wrong on exactly the body nobody thought would be fast, and a missed sweep is
  * a ball through a wall rather than a slow frame. The test itself is a handful
- * of multiplies against static geometry, cheaper than the broadphase that found
- * the pair. If a caller must skip work, the honest condition is measured, not
- * declared: compare the distance the body travels this step against its radius,
- * and sweep when the step could carry it past its own width. That reads the
- * simulation rather than trusting a boolean somebody forgot to set.
+ * of multiplies against static geometry, cheaper than the pass that found the
+ * pair — a plain double loop, there being no broadphase in this module and, per
+ * #112 above, no case for one. If a caller must skip work, the honest condition
+ * is measured, not declared: compare the distance the body travels this step
+ * against its radius, and sweep when the step could carry it past its own width.
+ * That reads the simulation rather than trusting a boolean somebody forgot to
+ * set.
  */
 export function sweptCircleAabb(
   out: Contact,

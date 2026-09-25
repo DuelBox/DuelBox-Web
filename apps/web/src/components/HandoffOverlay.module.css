@@ -9,13 +9,13 @@
 .blackout {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: var(--db-z-cover);
   display: grid;
   place-items: center;
   padding-top: max(var(--db-space-4), var(--db-safe-top));
-  padding-right: max(var(--db-space-4), var(--db-safe-right));
+  padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   padding-bottom: max(var(--db-space-4), var(--db-safe-bottom));
-  padding-left: max(var(--db-space-4), var(--db-safe-left));
+  padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
   text-align: center;
   background: var(--db-ink);
 }
@@ -49,7 +49,7 @@
   border: none;
   border-radius: var(--db-radius);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font: inherit;
   font-weight: 700;
   cursor: pointer;

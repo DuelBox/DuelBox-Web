@@ -1,6 +1,15 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAVOURITES_KEY, readFavourites, toggleFavourite } from './favourites';
 import { HEAD_TO_HEAD_KEY, readGameRecord, recordResult } from './head-to-head';
+import { BEST_SCORES_KEY, recordRunScore } from './best-scores';
+import { CATALOGUE_KEY, writeSortPreference } from './catalogue-filter';
+import { HINTS_SEEN_KEY, markHintsSeen } from './control-hints';
+import { t } from './i18n/messages';
+import { INSTALL_KEY, rememberDismissed } from './install-prompt';
+import { KEY_BINDINGS_KEY, readBindings, writeSeatBinding } from './key-bindings';
 import { LAST_MODE_KEY, readSetup, writeSetup } from './last-mode';
 import { PLAYER_NAMES_KEY, readPlayerNames, writePlayerName } from './player-names';
 import {
@@ -43,9 +52,18 @@ function install(storage: Storage | undefined): void {
   });
 }
 
-/** The reason an import was refused, or the empty string if it was not. */
+/**
+ * The reason an import was refused as the settings page shows it, or the empty string if it
+ * was not refused.
+ *
+ * The refusal is a message id and the values that fill it rather than a finished sentence
+ * (#220): a sentence with a version number baked into it cannot be a catalogue key, so the
+ * number travels beside the id and `t()` puts it wherever the translation wants it. Filling it
+ * through the empty catalogue here is what a player on English is shown, which is the thing
+ * these tests are about.
+ */
 function errorOf(result: ReturnType<typeof importPlayerData>): string {
-  return 'error' in result ? result.error : '';
+  return 'error' in result ? t({}, result.error, result.values) : '';
 }
 
 /** A browser with something in every store. */
@@ -62,9 +80,43 @@ function populate(): void {
   recordResult('pool', 'p2', 'friend');
   writePlayerName('p1', 'Ada');
   writeTournament({ games: ['chess', 'darts', 'ludo'], results: ['p1'], opponent: 'bot' });
+  // A binding the defaults do not have, so the key is present in the export. `KeyC` collides
+  // with nothing either seat holds; a colliding one would be refused and write nothing, and
+  // this fixture would then be exporting six stores while claiming seven.
+  writeSeatBinding('p1', { ...readBindings().p1, action: 'KeyC' });
+  markHintsSeen('chess');
+  writeSortPreference('name');
+  rememberDismissed(1_700_000_000_000);
+  recordRunScore('sudoku', 12);
 }
 
 describe('the keys', () => {
+  /**
+   * Every key any module under `lib/` defines is in the list, read from the source rather than
+   * from memory.
+   *
+   * The hand-written list below could not notice a store that nobody added to it — which is
+   * what happened: `CATALOGUE_KEY` (`duelbox:catalogue`, the sort the player last chose) was
+   * written by `catalogue-filter.ts` for a month, exported by nobody, and not on the privacy
+   * page's list of what this site keeps, while this test said "cover every store, and nothing
+   * else" and passed. That is the tenth tally entry's shape, one file over from where it was
+   * found. Definitions are matched on the `${KEY_PREFIX}` template every store uses, so a
+   * store that spells its key any other way is a separate defect `local-store.ts` should catch.
+   */
+  it('cover every key a module under lib/ defines', () => {
+    const lib = fileURLToPath(new URL('.', import.meta.url));
+    const defined = new Set<string>();
+    for (const file of readdirSync(lib)) {
+      if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
+      const source = readFileSync(join(lib, file), 'utf8');
+      for (const match of source.matchAll(/`\$\{KEY_PREFIX\}([a-z-]+)`/g)) {
+        defined.add(`duelbox:${match[1] ?? ''}`);
+      }
+    }
+    expect(defined.size, 'the scan found no key definitions at all').toBeGreaterThan(5);
+    expect([...defined].sort()).toEqual([...PLAYER_DATA_KEYS].sort());
+  });
+
   it('cover every store, and nothing else', () => {
     expect(PLAYER_DATA_KEYS).toEqual([
       LAST_MODE_KEY,
@@ -74,6 +126,11 @@ describe('the keys', () => {
       HEAD_TO_HEAD_KEY,
       PLAYER_NAMES_KEY,
       TOURNAMENT_KEY,
+      KEY_BINDINGS_KEY,
+      HINTS_SEEN_KEY,
+      CATALOGUE_KEY,
+      INSTALL_KEY,
+      BEST_SCORES_KEY,
     ]);
     for (const key of PLAYER_DATA_KEYS) expect(key).toMatch(/^duelbox:/);
   });
@@ -104,7 +161,9 @@ describe('exporting', () => {
           haptics: false,
           theme: 'system',
           seatPalette: 'default',
+          seatSwap: false,
           gameSpeed: 1,
+          locale: 'en',
         },
         [HEAD_TO_HEAD_KEY]: {
           version: 1,
@@ -118,6 +177,24 @@ describe('exporting', () => {
           results: ['p1'],
           opponent: 'bot',
         },
+        // Both seats, not only the one that was changed: `writeSeatBinding` stores the pair,
+        // so a device that has rebound one key carries a complete keyboard to the next one
+        // rather than a patch the other device has to know how to apply.
+        [KEY_BINDINGS_KEY]: {
+          version: 1,
+          p1: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', action: 'KeyC' },
+          p2: {
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            action: 'Enter',
+          },
+        },
+        [HINTS_SEEN_KEY]: { version: 1, seen: ['chess'] },
+        [CATALOGUE_KEY]: { version: 1, sort: 'name' },
+        [INSTALL_KEY]: { version: 1, dismissedAt: 1_700_000_000_000, installed: false },
+        [BEST_SCORES_KEY]: { version: 1, games: { sudoku: 12 } },
       },
     });
   });
@@ -162,7 +239,9 @@ describe('importing', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
+      locale: 'en',
     });
     // The record travels with everything else (#2448): a pair who move to a new phone
     // keep the score they have been keeping against each other.
@@ -170,7 +249,7 @@ describe('importing', () => {
     expect(readPlayerNames()).toEqual({ p1: 'Ada' });
     // A tournament in progress travels too, and it is the one thing in here that cannot be
     // rebuilt by playing: the line-up was drawn at random and the games behind it are gone.
-    expect(readTournament()).toEqual({
+    expect(readTournament(['chess', 'darts', 'ludo'])).toEqual({
       games: ['chess', 'darts', 'ludo'],
       results: ['p1'],
       opponent: 'bot',
@@ -261,7 +340,7 @@ describe('erasing', () => {
     expect(readSettings()).toEqual(DEFAULT_SETTINGS);
     expect(readGameRecord('chess', 'friend').played).toBe(0);
     expect(readPlayerNames()).toEqual({});
-    expect(readTournament()).toBeNull();
+    expect(readTournament(['chess', 'darts', 'ludo'])).toBeNull();
   });
 
   it('is safe with nothing stored and with no storage at all', () => {

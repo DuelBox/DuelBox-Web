@@ -149,8 +149,13 @@ that bought the player no game. Position remains the fair multi-finger channel �
 a sweep, a place on the board — and Money Grabber's SPEC is the worked example of choosing
 it.
 
-**Not implemented: gamepad support.** #130 covers it. The table above anticipates it so
-the decision is not made twice.
+**Implemented: gamepad support (#130).** Two pads drive two seats by connection order, a pause-panel
+button swaps them, and a hot-plug pauses the match with a sentence saying whose seat changed. The
+stick is *added* to the keyboard vector as a rate and **rounded onto `SCALAR_ENVELOPE`** before it
+becomes intent (`InputManager.setSeatAnalog`): a key names a rate of 0 or 1, a drag names a position
+on the lattice, and a raw stick would have named any real in between — the finest instrument on the
+site by a wide margin. On the envelope it still throttles, which is what a stick is for, and can name
+nothing a rounded drag could not. `rt-race` stays same-input-class-only for the reason the table gives.
 
 **Not verified: any of this across two real devices.** There is no cross-device harness
 yet, so every judgement here is reasoned from the properties of the input families rather
@@ -318,7 +323,7 @@ bot whichever way it is spelled, and the two spellings lose at the same rate.
 |---|---|---|---|
 | checkers | — (0/0) | — (0/0) | 0 / 0 |
 | color-wars | 0% (0/14) | 0% (0/14) | 14 / 14 |
-| dots-and-boxes | 0% (0/11) | 0% (0/14) | 11 / 14 |
+| dots-and-boxes | 0% (0/12) | 0% (0/14) | 12 / 14 |
 | four-in-a-row | 0% (0/14) | 0% (0/14) | 14 / 14 |
 | ludo | 21% (3/14) | 0% (0/1) | 14 / 1 |
 | mancala | 21% (3/14) | 0% (0/5) | 14 / 5 |
@@ -473,22 +478,38 @@ All 108 registry entries, seed 7, a little over two minutes on an idle machine.
 |---|---|---|---|
 | **shuriken** | **2.54×**, pointer finer | spin and aim. Spin: one envelope is 3.5 units, so `3.5 × SPIN_PER_UNIT = 0.021` against `SPIN_KEY_RATE / 60 = 0.0433`. Aim: 3.5 units at 392 away is 0.0089 rad against `AIM_KEY_RATE / 60 = 0.0192` | **Quantise.** Both are aimed scalars on a continuum, and the fix is the direct analogue of `envelopeFor`: round spin and aim onto a shared lattice so the pointer cannot select between the values a key can reach. Nothing about the interaction is same-class-only |
 | **darts** | **2.11×**, pointer finer | the aim vector. One envelope through `dx / AIM_RADIUS × AIM_GAIN`, clamped to the pad, is about 0.0096 per envelope against the keyboard's `1.1 / 60 = 0.0183` | **Quantise**, same shape as Shuriken. A pad-anchored aim is a continuum and both instruments should step it identically |
-| **dots-and-boxes** | **1.57×**, keyboard reaches more | reachable edges: 7 by tap against 11 by cursor. Not a resolution gap — a reach gap, and the note carries which outcomes each side missed | **Not same-class-only, and not quantisation either.** A discrete board must let a tap name every target a cursor can; the game's own hit-testing is the thing to widen. Worth confirming against a bespoke gesture before acting, since 7-versus-11 is inside what the generic tap could plausibly be missing |
 | **cricket** | **1.57×**, pointer finer | swing/placement on the x axis | **Undecided, and deliberately.** Cricket was being written by another agent while this ran; the number is real for the tree it measured and should be re-measured before anything is concluded |
 
 No game in the catalogue measured as needing `sameInputClassOnly` on these grounds. That
 field is for an interaction one family cannot perform — the repeated discrete input this
-document rules on above — and none of the four gaps is that. Three are a lattice mismatch
-with an obvious fix and the fourth is a reach question on a discrete board.
+document rules on above — and none of these three gaps is that. Two are a lattice mismatch
+with an obvious fix; the third is undecided and waiting on a re-measure.
+
+A fourth game, `dots-and-boxes`, was on this list and is not now (#1924), and how it left is
+the point. The single-axis sweep read it as a reach gap the *tap* had — seven edges by tap
+against eleven by cursor — and the ruling here was to widen the tap's hit-testing. Walking
+the board proved the opposite, and larger: a tap names every one of the sixty edges, while
+the keyboard cursor reached only forty. Nearest-by-distance let each press drift onto the
+other lattice, and from the centre that drift never straightened, so the lower-right corner —
+twenty edges — had no keyboard route in at all. On a shared screen those were lines one
+player could draw and the other could not: exactly the cross-device unfairness this audit is
+for, and the sweep had pointed at the wrong instrument because it was measuring its own path
+and not the board (the same trap #2478 fell into by reading the source). The fix is in the
+cursor's navigation: inside the same cone it now takes the straightest edge first and the
+nearest of those second, so a press walks its own row or column and reaches the far corner.
+Both instruments then reach the same count and the game measures **C**. `game.test.ts` walks
+the navigation graph and asserts all sixty edges have a keyboard route, so the forty-of-sixty
+state cannot return unseen.
 
 ### C — no aimed scalar
 
-Forty-nine games, in three kinds, each distinguished by measurement rather than by archetype:
+Fifty games, in three kinds, each distinguished by measurement rather than by archetype:
 
-- **Discrete targets both instruments reach** (18): blocks, color-wars, four-in-a-row,
-  guess-the-person, light-fingers, ludo, match, memory, nuts-and-bolts, pop-it, rat-race,
-  road-dodge, rock-paper-scissors, ship-battle, solitaire, tap-match, tic-tac-toe,
-  ultimate-ttt, yazy and others. Reach counts are printed per game; a cell is a cell.
+- **Discrete targets both instruments reach** (19): blocks, color-wars, dots-and-boxes,
+  four-in-a-row, guess-the-person, light-fingers, ludo, match, memory, nuts-and-bolts,
+  pop-it, rat-race, road-dodge, rock-paper-scissors, ship-battle, solitaire, tap-match,
+  tic-tac-toe, ultimate-ttt, yazy and others. Reach counts are printed per game; a cell is a
+  cell.
 - **Integrated, not selected** (15): beach-ball, crash-it, frozen-beaks, king-of-the-yard,
   math-quiz, paint-fight, piranha-rush, racing-cars, snakes, spin-war, sticky-tongues, sumo,
   taxi-race, tennis, traffic-jam and others. The jump-versus-glide test says the pointer is

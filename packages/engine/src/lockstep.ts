@@ -123,6 +123,10 @@ const DEFAULT_STALL_LIMIT_STEPS = 300;
 /** Slack either side of the window frames can legitimately arrive in. See `#capacity`. */
 const WINDOW_SLACK = 32;
 
+/** The two slots of `LockstepSession.#checks`, named so the pair reads as two fields. */
+const ROLLING = 0;
+const SEALED = 1;
+
 /** FNV-1a's offset basis, used as the seed of every fingerprint. */
 const CHECK_SEED = 0x811c9dc5;
 
@@ -252,9 +256,21 @@ export class LockstepSession implements FrameSink {
   readonly #peerCheckStep: Int32Array;
 
   readonly #initialCheck: number;
-  #check: number;
+  /**
+   * Slot 0 is the rolling checksum, slot 1 the last one sealed.
+   *
+   * Two 32-bit words in a typed pair rather than two plain fields, and it is rule 5 that
+   * decides it. A checksum is a full unsigned 32-bit word, so most of the values it takes
+   * are outside the range this runtime can hold in a tagged number, and a plain field then
+   * has to put each one on the heap. Measured on V8 26: `allocation.test.ts`'s remote-pair
+   * case — two sessions, one observable mixed into each, one step each — cost **16 bytes an
+   * iteration** before this pair existed and nothing after. `mix()` was where it came from:
+   * taking the two `mix` calls out of that case took the 16 bytes with them. Slots of a
+   * `Uint32Array` are raw words, so nothing is materialised, and the `>>> 0` every producer
+   * here already applies is now enforced by the store rather than remembered at each one.
+   */
+  readonly #checks = new Uint32Array(2);
   #lastSealed = -1;
-  #lastSealedCheck: number;
 
   #status: SessionStatus;
   #step = 0;
@@ -303,8 +319,8 @@ export class LockstepSession implements FrameSink {
     this.#peerCheckStep = new Int32Array(capacity).fill(-1);
 
     this.#initialCheck = configFingerprint(config);
-    this.#check = this.#initialCheck;
-    this.#lastSealedCheck = this.#initialCheck;
+    this.#checks[ROLLING] = this.#initialCheck;
+    this.#checks[SEALED] = this.#initialCheck;
 
     this.#state =
       this.#localSeat === 'p1'
@@ -351,7 +367,7 @@ export class LockstepSession implements FrameSink {
 
   /** The rolling checksum of everything {@link mix} has been given. */
   get checksum(): number {
-    return this.#check;
+    return this.#checks[ROLLING]!; // invariant: the pair is two slots wide
   }
 
   /** Peer frames taken into the ring. */
@@ -380,7 +396,7 @@ export class LockstepSession implements FrameSink {
    * divergence, so the rule is simple: only what the rules of the game produced.
    */
   mix(value: number): void {
-    this.#check = mixNumber(this.#check, value);
+    this.#checks[ROLLING] = mixNumber(this.#checks[ROLLING]!, value);
   }
 
   // ---- the InputManager surface, so a host drives this exactly as it drives one ----
@@ -481,7 +497,7 @@ export class LockstepSession implements FrameSink {
     outgoing.seat = this.#localSeat;
     outgoing.step = step + this.#delay;
     outgoing.checkStep = this.#lastSealed;
-    outgoing.check = this.#lastSealedCheck;
+    outgoing.check = this.#checks[SEALED]!;
     copySeatInput(outgoing.input, sampled.seat(this.#localSeat));
     const localSlot = this.#localRing[outgoing.step % this.#capacity];
     if (localSlot !== undefined) copyFrameInto(localSlot, outgoing);
@@ -630,11 +646,12 @@ export class LockstepSession implements FrameSink {
   #seal(step: number): void {
     if (step < 0 || step <= this.#lastSealed) return;
     const slot = step % this.#capacity;
-    this.#sealed[slot] = this.#check;
+    const check = this.#checks[ROLLING]!;
+    this.#sealed[slot] = check;
     this.#sealedStep[slot] = step;
     this.#lastSealed = step;
-    this.#lastSealedCheck = this.#check;
-    if (this.#peerCheckStep[slot] === step && this.#peerCheck[slot] !== this.#check) {
+    this.#checks[SEALED] = check;
+    if (this.#peerCheckStep[slot] === step && this.#peerCheck[slot] !== check) {
       this.#desync();
     }
   }

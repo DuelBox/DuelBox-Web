@@ -48,7 +48,11 @@ import {
  *   `app/play/[slug]/page.tsx` now says a game needs JavaScript and links back to the
  *   catalogue and the guide, and the last test in this file holds it there. It is in the
  *   route's server component rather than in `PlaySurface`, so it is markup in the exported
- *   HTML and costs neither size budget.
+ *   HTML rather than a chunk — which is not the same as free: it rides in this route's
+ *   payload, and `next/link` speculates that payload for all 108 cards, so the block costs
+ *   22.4 KB of `speculatedBytes` in `size-budget.json` — 207 gzipped bytes a payload,
+ *   measured by taking it back out of each one. Measured rather than assumed, after this
+ *   file's first version of this sentence said it cost nothing.
  * - **The header's two buttons.** "Surprise me" needs `Math.random` and the router, and the
  *   mute needs storage; both are inert with script off. They are chrome rather than content,
  *   they sit outside `main`, and the landing page itself contains no control of any kind
@@ -262,6 +266,31 @@ test.describe('with JavaScript disabled', () => {
     await expect(page.getByRole('main').locator('a[href^="/games/category/"]')).not.toHaveCount(0);
   });
 
+  /**
+   * The settings page, which is the one shell route whose whole content is read from storage.
+   *
+   * With no script that read never happens, so what the exported HTML says is what a visitor
+   * here is told — and it said "The near seat has won 0, the far seat 0, and 0 ended level."
+   * to a pair fifty matches in. `components/GameRecord.tsx` had already made the argument
+   * one route over, in the same batch: a zero is a claim, and a component that has not read
+   * anything is not entitled to make it. This holds the dash, because the sentence is prose
+   * and prose is exactly what gets tidied back into a zero by somebody who has not read the
+   * paragraph above it.
+   *
+   * The counts in the list above this sentence are the same shape and still read zero. That
+   * is recorded here rather than fixed: they are a different question from the one this
+   * batch's review found, and every byte of the change is on the shell budget.
+   */
+  test('claims no head-to-head record on the settings page until it has read one', async ({
+    page,
+  }) => {
+    await page.goto('/settings/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('p', { hasText: /The near seat has won/ })).toHaveText(
+      'The near seat has won –, the far seat –, and – ended level.',
+    );
+  });
+
   test('navigates from the header and the footer of a page a visitor lands on', async ({
     page,
   }) => {
@@ -285,7 +314,9 @@ test.describe('with JavaScript disabled', () => {
    * else — a page telling a visitor to wait for something that could never arrive, on the
    * destination every card on the site links to, with the footer hidden and the header the
    * only way out. The `<noscript>` in `app/play/[slug]/page.tsx` says what is true and offers
-   * the two routes back, and it is server-rendered markup, so it costs neither size budget.
+   * the two routes back. It is server-rendered markup, which costs no JavaScript budget and
+   * is not therefore free: `size-budget.json`'s `speculatedBytes` records what it costs in
+   * the route payloads a catalogue browse fetches.
    *
    * The `<noscript>` element is the whole reason the assertions below mean anything: a
    * browser with scripting enabled does not build its children as DOM at all, so this content

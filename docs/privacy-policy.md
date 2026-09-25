@@ -40,6 +40,43 @@ It holds only the setup: the mode, the difficulty and the round count, for each 
 have opened. **No scores, no names, no times, no identifiers.** Clearing your browser's site
 data removes it, and nothing else remembers it.
 
+### What your browser keeps a copy of, so the site opens without a connection
+
+Copies of this site's own files. Nothing about you.
+
+The section above is about the one thing the site *writes down*. This is a different kind of
+storage and it deserves its own paragraph rather than a clause, because it is larger, it
+arrived recently, and a reader who found it themselves would be right to want it mentioned.
+
+A **service worker** — a small script your browser runs on this site's behalf — saves the
+site's pages, its JavaScript, its stylesheets, its fonts and its icons the first time you
+visit, and then saves each game's page and code on the device you played it on. That is what
+makes a game you have already opened start and play with no connection at all, and it is why
+opening it a second time asks the network for nothing.
+
+**Everything in it is a file this site served you.** The same HTML, JavaScript, CSS, `.woff2`
+fonts and SVG icons GitHub Pages sent to your browser, stored in your browser's Cache Storage
+under two names beginning `duelbox-shell-` and `duelbox-runtime-`. There is nothing in it
+that came from you: no scores, no names, no settings, no identifier, and no log of what you
+did — only the site's own files, which you can list yourself with the console command in the
+verification table below.
+
+**It goes nowhere.** The worker answers requests your browser was already making and does
+nothing else. It has no analytics, no error reporting, no beacon and no counter; every URL it
+touches is on this origin, and it refuses to answer a request for any other. There is no
+server of ours for it to talk to, which is the same reason the rest of this page is short.
+
+**You control it, and it is not permanent.** Clearing your browser's site data removes it
+along with everything in the section above. It is replaced wholesale whenever a new version
+of the site is published, and your browser may discard it on its own when it needs the space.
+[`docs/pwa.md`](pwa.md) has the step-by-step for removing it deliberately, in each browser,
+including what to do if the site seems stuck on an old version.
+
+**The whole catalogue is not downloaded.** Only games you actually open are saved. Pulling a
+hundred-odd games onto a phone that asked for one would be spending somebody else's data
+allowance, so it is not done, and the feature that would do it deliberately and with a
+progress bar is on the backlog rather than switched on quietly (#196).
+
 ### Cookies
 
 There are none. The site sets no cookies, and there is no server to set one.
@@ -110,7 +147,8 @@ is the passing one.
 | No analytics in the built output | grep `apps/web/out` for `UA-\d{4,}`, `G-[A-Z0-9]{8,}`, `GTM-`, `gtag` | Two matches, both the privacy page's own sentence saying there are none |
 | Fonts are self-hosted | `apps/web/src/styles/fonts.css` uses relative `src: url('./fonts/…woff2')`; built CSS references only `/_next/static/media/*.woff2`; grep `apps/web/out` for `googleapis`/`gstatic` | Nothing found. The `<head>` previously carried a `preconnect` and a Google Fonts stylesheet; both were removed when the site's own CSP was found to be blocking them |
 | One storage key, and only that | grep for `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches.` | One writer: `apps/web/src/lib/last-mode.ts`, key `duelbox:last-mode`. No other `setItem` anywhere |
-| No service worker, no app cache | search for `sw.js`, `service-worker*`, `manifest.webmanifest`, `next-pwa`, `workbox`, `serwist`; grep `apps/web/out` for `serviceWorker` | None exist. `apps/web/public` does not exist |
+| The cache holds only this site's own files | in the browser, on this site: `(await caches.keys()).map(async n => (await (await caches.open(n)).keys()).map(r => r.url))` — or read `apps/web/public/sw.js`, whose fetch handler returns early unless `new URL(request.url).origin === self.location.origin` | Confirmed. Two caches, `duelbox-shell-<revision>` and `duelbox-runtime-<revision>`, holding URLs on this origin and nothing else. `scripts/check-zero-cost.mjs` holds the worker to three properties that say it may only ever answer a request the page already made, and fails the build otherwise |
+| The worker sends nothing anywhere | grep `apps/web/public/sw.js` for `push`, `periodicsync`, `sync`, `sendBeacon`, `Notification`, and for any absolute URL | None present. It registers `install`, `activate`, `fetch` and `message` and no other event; `check-zero-cost.mjs` fails the build on any of the others, proved by mutation |
 | No device fingerprinting | grep for `navigator.userAgent`, `navigator.language`, `hardwareConcurrency`, `getGamepads`, `mediaDevices`, `geolocation`, `screen.` | None present. Every "screen" hit is the English word in prose |
 | The lint ban is real | `eslint.config.js`, the block over `packages/engine/**`, `packages/game-sdk/**`, `packages/games/**` sets `no-restricted-globals` on `Date`, `window`, `document`, `devicePixelRatio`, `screen`, `navigator`, `requestAnimationFrame`, `performance`, `matchMedia`, and `no-restricted-properties` on `Math.random` | Confirmed. One exemption, `packages/engine/src/loop.ts` |
 | The network ban is enforced at build time | `scripts/check-zero-cost.mjs`, property `Gameplay never touches the network` | Confirmed, with the scope caveat below |
@@ -142,12 +180,21 @@ updated; this policy is the one that matches the code.
 
 ### What "offline" means here, and what it does not
 
-There is no service worker and no cache manifest. Once a page and its chunk are in the tab a
-match runs with no further requests at all — the simulation, the bots and the physics are all
-on the device, proved by `e2e/offline.spec.ts`, which aborts every request after load and
-plays a bot match through to a scored result. That is **not the same as working offline**: a
-cold load with no connection, or a hard reload of a page that was never opened, depends
-entirely on the browser's ordinary HTTP cache, and nothing in this repository guarantees it.
+Two different claims live here and this section exists to keep them apart.
+
+Once a page and its chunk are in the tab a match runs with no further requests at all — the
+simulation, the bots and the physics are all on the device, proved by `e2e/offline.spec.ts`,
+which aborts every request after load and plays a bot match through to a scored result.
+
+A **cold load** with no connection is the second claim, and until the service worker was
+built it was not one this site could make: it depended entirely on the browser's ordinary
+HTTP cache and nothing here guaranteed it. It is guaranteed now, for a game this device has
+opened before — the same spec cuts the network at the browser, opens a game in a fresh tab
+and plays it out. It is **not** guaranteed for a game this device has never opened; that is
+not saved, and the site says so on a page of its own rather than showing a browser error.
+
+What that cache holds is the site's own files and nothing about you; see *What your browser
+keeps a copy of* above for what is in it and how to clear it.
 The README, CLAUDE.md and ADR 0002 describe the product in the same terms, so no document
 promises an offline cache this build does not ship.
 

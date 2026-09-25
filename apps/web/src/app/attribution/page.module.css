@@ -54,7 +54,7 @@
 
 .table th,
 .table td {
-  text-align: left;
+  text-align: start;
   padding: var(--db-space-2) var(--db-space-3);
   border-bottom: 1px solid var(--db-hairline);
   white-space: nowrap;
@@ -70,7 +70,7 @@
 }
 
 .fonts {
-  padding-left: var(--db-space-5);
+  padding-inline-start: var(--db-space-5);
   list-style: disc;
 }
 

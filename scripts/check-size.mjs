@@ -4,7 +4,7 @@
  * promised. Neither existed: the command resolved to the system `size(1)`, which
  * cheerfully reported on a non-existent `a.out` and exited without complaint.
  *
- * Three numbers matter to a player, and they are not the same number:
+ * Four numbers matter to a player, and they are not the same number:
  *
  *   - **The shell** — everything the browser must have before anyone can pick a game.
  *     Every visitor pays it once.
@@ -13,8 +13,30 @@
  *   - **A game** — the marginal chunk for the one game they chose. One chunk per game is
  *     the whole point of the layout, and it is worth failing a build that quietly
  *     collapses that into the shell.
+ *   - **Speculated** — the route payloads the router fetches for links nobody has pressed.
+ *     Not JavaScript, and therefore invisible here until #185 measured it: see below.
+ *   - **A locale** — the catalogue chunk for the one language a player chose (#219). Like a
+ *     game, a visitor downloads one of these at a time and the default (English) has none, so
+ *     the number that matters is the largest, not the sum. See "Locale chunks" below.
  *
  * Gzipped, because that is what crosses the wire.
+ *
+ * ## The bytes this script could not see, and now can
+ *
+ * Every number above is a `.js` file, because `walk()` collects nothing else — and the
+ * largest download on this site is not JavaScript. `next/link` prefetches the route payload
+ * for every catalogue card within 200px of the viewport, and a catalogue browse passes all
+ * 108 of them under that observer: 108 requests for `/play/<slug>/index.txt`, which the
+ * build writes as the router's payload for each play route. Measured on the build this
+ * guard was written against, that is **more than twice ADR 0001's whole 182 KB first-session
+ * budget**, spent before anybody has pressed anything, on a metered connection as readily as
+ * on any other — `next/link` in the app router has no save-data bail-out.
+ *
+ * The point of #2516 was that an unmeasured chunk is where the bytes go to hide, and a file
+ * extension this script filtered out is the same hiding place one layer over. So the total
+ * is budgeted here, where a build fails over it, rather than described in a docstring. What
+ * the number does *not* do is bless the arrangement: `e2e/prefetch.spec.ts` carries the
+ * argument about what to do next, and `size-budget.json`'s note carries the arithmetic.
  *
  * ## What "shell" is, and what it was
  *
@@ -67,12 +89,13 @@
  */
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const WEB = join(ROOT, 'apps/web');
 const OUT = join(WEB, 'out');
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 // Mirrors `distDir` in apps/web/next.config.ts: `pnpm dev` builds into `.next-dev` so a
 // production build never deletes the manifests a running dev server is serving from.
 const DIST = join(WEB, process.env.NEXT_DIST_DIR ?? '.next');
@@ -125,12 +148,22 @@ const emitted = new Set(files);
 // Manifest paths are URLs under `_next/`, relative to the export root. `basePath` changes
 // the URL a browser asks for, never where the file lands on disk.
 const onDisk = (path) => join(OUT, '_next', path);
+// HTML and CSS contain public URLs, while the static export stores their files without
+// the deployment prefix. GitHub Pages uses /<repo>/, so resolving those URLs against OUT
+// directly would look for a directory that Next never writes.
+function exportAssetFile(url) {
+  const prefix = `${BASE_PATH}/`;
+  if (!url.startsWith(prefix)) {
+    throw new Error(`check-size: asset URL ${url} does not start with ${prefix}`);
+  }
+  return join(OUT, url.slice(prefix.length));
+}
 const bytesOf = (group) => [...group].reduce((sum, file) => sum + (sizes.get(file) ?? 0), 0);
 
 // ---------------------------------------------------------------------------------
 // Eager: what a route's HTML loads with a <script> tag, straight from the manifests.
 // ---------------------------------------------------------------------------------
-const alwaysEager = [...buildManifest.polyfillFiles, ...buildManifest.rootMainFiles];
+const alwaysEager = [...buildManifest.rootMainFiles];
 const shellEager = new Set();
 const postChoiceEager = new Set();
 for (const [route, scripts] of Object.entries(appManifest.pages)) {
@@ -140,6 +173,34 @@ for (const [route, scripts] of Object.entries(appManifest.pages)) {
   }
 }
 for (const file of shellEager) postChoiceEager.delete(file);
+
+// ---------------------------------------------------------------------------------
+// The legacy polyfills, which are a bucket of their own because nobody supported fetches
+// them.
+// ---------------------------------------------------------------------------------
+// Next emits `polyfills-*.js` and references it as `<script nomodule>`. Every engine that
+// understands `<script type=module>` — which is every engine in tiers 1 and 2 of
+// `docs/support-matrix.md`, and has been since 2018 — skips it without a request. Only an
+// engine the matrix puts in tier 3 ("Internet Explorer, legacy EdgeHTML, UC Browser …",
+// explicitly not tested and not designed for) ever downloads it.
+//
+// It was in `shellEager` until now, so **38.5 KB of the 164 KB "paid by every visitor" was
+// paid by nobody** — 23% of the number rule 11 defends, on a line whose whole claim is that
+// it describes a real download. That is the same mistake #2516 fixed for the pages-router
+// files four lines below, and it survived because `polyfillFiles` sits in the same manifest
+// array as `rootMainFiles`, which every route really does load.
+//
+// It gets a budget rather than an exemption: this file is Next's, not ours, and a framework
+// upgrade that doubles it should be seen. And the exclusion is *checked*, not assumed —
+// `nomodule` is the entire argument, so if Next ever stops writing it the bucket becomes a
+// lie and the build fails instead.
+const legacyPolyfills = new Set(
+  buildManifest.polyfillFiles.filter((script) => script.endsWith('.js')).map(onDisk),
+);
+for (const file of legacyPolyfills) {
+  shellEager.delete(file);
+  postChoiceEager.delete(file);
+}
 
 // The manifests describe the build in `.next`; the bytes measured are the ones in `out`.
 // If a build failed after writing its manifests, the two disagree, and every number below
@@ -258,18 +319,212 @@ for (const [slug, file] of [...gameChunks].sort()) {
   }
 }
 
+// ---------------------------------------------------------------------------------
+// Locale chunks: which on-demand chunks are one language's catalogue? (#219)
+// ---------------------------------------------------------------------------------
+// The same shape as the game chunks, for the same reason. Every non-default locale in
+// `apps/web/src/lib/i18n/locales.ts` is reached by one `import()` in `load.ts` and by nothing
+// else, so it is an async chunk a browser fetches only when that language is chosen. A
+// visitor downloads one at a time, so — like a game — the number that matters is the largest,
+// and it is weighed on a line of its own rather than left inside the on-demand total, where
+// a translation of the whole site's copy would otherwise sit beside the play route's code.
+//
+// A chunk *is* a locale's catalogue when it carries the marker every generated catalogue
+// module opens with — `locale:"en-XA",messages:` in the minified output — and nothing else in
+// the build spells an object that way (checked: the only `locale:` in the framework chunks
+// is followed by an identifier, not a quoted code). Both quote styles are matched because the
+// minifier's choice is not a contract.
+//
+// What fails the build, each of which `i18n.test.ts` also catches earlier for the cases it
+// can see from the source:
+//   - a chunk carrying two locales, which has stopped being one-chunk-per-locale;
+//   - a chunk carrying a locale the registry does not list, or the default locale, which
+//     has no catalogue by design (English is the fallback at every call site);
+//   - a locale chunk in the *shell* — a static `import` of a catalogue somewhere has folded
+//     a language into what every visitor downloads, and the lazy guard in `i18n.test.ts`
+//     is the cheaper way to find out which file did it;
+//   - a registered locale with no chunk at all or with two, so the control could offer a
+//     language whose bytes are not in the export.
+//
+// The registry is read with a regular expression, one code per line followed by `{`, the way
+// the game registry is read above — `locales.ts` says so at the top and keeps that shape.
+const localesSource = readFileSync(join(WEB, 'src/lib/i18n/locales.ts'), 'utf8');
+const defaultLocale = /\bDEFAULT_LOCALE = '([^']+)'/.exec(localesSource)?.[1];
+const registryStart = localesSource.indexOf('export const LOCALES = {');
+const registryEnd = localesSource.indexOf('\n}', registryStart);
+const localeCodes =
+  registryStart === -1 || registryEnd === -1
+    ? []
+    : [
+        ...localesSource
+          .slice(registryStart, registryEnd)
+          .matchAll(/^\s*'?([A-Za-z][A-Za-z0-9-]*)'?:\s*\{/gm),
+      ].map((match) => match[1]);
+if (defaultLocale === undefined || localeCodes.length === 0) {
+  failures.push(
+    'cannot read the locale registry out of apps/web/src/lib/i18n/locales.ts — the locale' +
+      ' bucket would then measure nothing and report a saving',
+  );
+}
+const nonDefaultLocales = localeCodes.filter((code) => code !== defaultLocale);
+const LOCALE_MARKER = /\blocale:["']([A-Za-z][A-Za-z0-9-]*)["'],messages:/g;
+
+/** Locale code → the chunk(s) carrying its catalogue. */
+const localeChunks = new Map();
+const localeChunkFiles = new Set();
+for (const file of files) {
+  const source = readFileSync(file, 'utf8');
+  const named = [...new Set([...source.matchAll(LOCALE_MARKER)].map((match) => match[1]))];
+  if (named.length === 0) continue;
+  const where = relative(OUT, file);
+  if (named.length > 1) {
+    failures.push(
+      `${where} carries ${String(named.length)} locales (${named.join(', ')}) — one chunk per` +
+        ' locale is the whole point of the layout',
+    );
+  }
+  for (const code of named) {
+    if (!localeCodes.includes(code)) {
+      failures.push(`${where} carries a catalogue for "${code}", which locales.ts does not list`);
+    } else if (code === defaultLocale) {
+      failures.push(
+        `${where} carries a catalogue for the default locale "${code}" — English is the` +
+          ' fallback at every call site and must have no chunk',
+      );
+    }
+    if (shellEager.has(file)) {
+      failures.push(
+        `${where} carries the ${code} catalogue and is in the shell, so every visitor downloads` +
+          ' that language — a static import of a catalogue has folded it in; i18n.test.ts' +
+          ' names the file',
+      );
+    } else if (!onDemand.has(file)) {
+      failures.push(
+        `${where} carries the ${code} catalogue but is not reachable by import() from the` +
+          ' shell, so the language control cannot fetch it',
+      );
+    }
+    localeChunks.set(code, [...(localeChunks.get(code) ?? []), file]);
+  }
+  localeChunkFiles.add(file);
+}
+for (const code of nonDefaultLocales) {
+  const count = (localeChunks.get(code) ?? []).length;
+  if (count !== 1) {
+    failures.push(
+      `${code} is in the locale registry and has ${String(count)} chunk(s) in the export;` +
+        ' exactly one is required — check load.ts and the catalogues directory',
+    );
+  }
+}
+for (const file of localeChunkFiles) onDemand.delete(file);
+const localeReport = [];
+for (const [code, chunks] of [...localeChunks].sort()) {
+  for (const file of chunks) {
+    localeReport.push(
+      `  ${code.padEnd(22)} ${kb(sizes.get(file) ?? 0).padStart(9)}  ${relative(OUT, file)}`,
+    );
+  }
+}
+
 const shellBytes = bytesOf(shellEager);
 const onDemandBytes = bytesOf(onDemand);
+const legacyPolyfillBytes = bytesOf(legacyPolyfills);
+// The largest catalogue, not the sum: a player has one language at a time. English has none,
+// which is why a first session below does not include it — a visitor who never opens the
+// language control fetches no catalogue at all.
+const localeBytes = Math.max(0, ...[...localeChunkFiles].map((file) => sizes.get(file) ?? 0));
 const biggestGame = Math.max(0, ...[...gameChunkFiles].map((file) => sizes.get(file) ?? 0));
+
+// The one fact the bucket above rests on, read from the export rather than believed. A
+// polyfill script that is *not* `nomodule` is fetched by everybody, and would then belong in
+// the shell — so this fails the build rather than quietly under-reporting 38 KB.
+const exportedPages = (dir) => {
+  const found = [];
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) found.push(...exportedPages(full));
+    else if (entry.endsWith('.html')) found.push(full);
+  }
+  return found;
+};
+const htmlFiles = exportedPages(OUT);
+const escapeForRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+for (const file of legacyPolyfills) {
+  const url = `/${relative(OUT, file).replaceAll('\\', '/')}`;
+  const referencing = htmlFiles.filter((page) => readFileSync(page, 'utf8').includes(url));
+  if (referencing.length === 0) {
+    failures.push(
+      `${relative(OUT, file)} is in the polyfill bucket and no exported page references it` +
+        ' — the bucket is measuring a file nothing loads',
+    );
+    continue;
+  }
+  const guarded = new RegExp(`<script[^>]*${escapeForRegExp(url)}[^>]*nomodule`, 'i');
+  const unguarded = referencing.filter((page) => !guarded.test(readFileSync(page, 'utf8')));
+  if (unguarded.length > 0) {
+    failures.push(
+      `${relative(OUT, file)} is loaded without \`nomodule\` by ${String(unguarded.length)}` +
+        ` page(s), starting with ${relative(OUT, unguarded[0])} — every browser fetches it,` +
+        ' so it is shell, and this bucket is no longer honest',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Speculated: the route payloads a browse of the catalogue fetches for links nobody
+// pressed. One `index.txt` per play route, which is one per card in the grid.
+// ---------------------------------------------------------------------------------
+// From the export rather than from a browser, so this runs in the same second as the rest
+// of the build; `e2e/prefetch.spec.ts` is the half that watches a real router fetch them,
+// and it holds the total against this same budget so the two cannot drift.
+function routePayloads(dir) {
+  const found = [];
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) found.push(...routePayloads(full));
+    else if (entry === 'index.txt') found.push(full);
+  }
+  return found;
+}
+
+const payloads = routePayloads(join(OUT, 'play'));
+const speculatedBytes = payloads.reduce((sum, file) => sum + gzipped(file), 0);
 
 console.log(
   `check-size: ${String(files.length)} shipped script(s), ${kb(totalJs)} gzipped in total`,
 );
 console.log(`check-size: shell (paid by every visitor) ${kb(shellBytes)}`);
+console.log(
+  `check-size: legacy polyfills (nomodule — only a tier-3 engine fetches these)` +
+    ` ${kb(legacyPolyfillBytes)}`,
+);
 console.log(`check-size: on demand (paid on choosing a game) ${kb(onDemandBytes)}`);
 console.log(
+  `check-size: locale (paid on choosing a language; the largest of` +
+    ` ${String(localeChunkFiles.size)}, and English has none) ${kb(localeBytes)}`,
+);
+if (localeReport.length > 0) console.log(localeReport.join('\n'));
+console.log(
   `check-size: worst case for one player ${kb(shellBytes + onDemandBytes + biggestGame)}` +
-    ` = shell + on demand + the largest game`,
+    ` = shell + on demand + the largest game, on an engine this site supports`,
+);
+console.log(
+  `check-size: speculated (paid for browsing, pressing nothing) ${kb(speculatedBytes)}` +
+    ` across ${String(payloads.length)} route payload(s)`,
 );
 if (neverFetched.size > 0) {
   console.log(
@@ -291,15 +546,427 @@ if (unsplit.length > 0) {
   failures.push(`no chunk of its own for: ${unsplit.join(', ')}`);
 }
 
+// ---------------------------------------------------------------------------------
+// The service worker, which is a class of its own and belongs in none of the others.
+// ---------------------------------------------------------------------------------
+// `sw.js` is emitted by `emit-service-worker.mjs` after the export, so it is a shipped
+// script that no page's import graph reaches: the page hands its URL to
+// `navigator.serviceWorker.register` and the browser fetches it. That makes every existing
+// bucket the wrong answer. It is not shell — no route loads it, and calling it shell would
+// charge it against a budget it has nothing to do with. It is not on demand — nobody
+// chooses it. It is not a game chunk, and it is emphatically not "never fetched", which is
+// the bucket it would otherwise fall into and the one that would have hidden it.
+//
+// So it is weighed on a line of its own. What that line means is different from the others
+// and worth stating: a visitor pays it once, and then again only when its bytes change,
+// which is the mechanism by which anything is ever fixed on a device that has been here
+// before. It is small and it should stay small, but the reason to hold it is not the same
+// reason the shell is held.
+const workerFiles = files.filter((file) => basename(file) === 'sw.js');
+const workerBytes = bytesOf(new Set(workerFiles));
+if (workerFiles.length > 1) {
+  failures.push(
+    `${String(workerFiles.length)} files named sw.js in the export; there can be exactly one`,
+  );
+}
+console.log(`check-size: service worker (paid once, and again on every deploy) ${kb(workerBytes)}`);
+
+// ---------------------------------------------------------------------------------
+// Sessions: what a phone downloads, rather than what the build emits (#2446, #2419).
+// ---------------------------------------------------------------------------------
+// Every line above is a fact about JavaScript, and a session is not made of JavaScript. A
+// first visit fetches a document, its stylesheets, three self-hosted faces, the shell, the
+// worker, the play route's code and one game's chunk; a browse of the catalogue fetches a
+// document twice the size and 108 route payloads instead of a game. Neither total existed
+// anywhere: `check-zero-cost.mjs` prints a "session weight", and that figure is the *raw*
+// size of the scripts one play page references — polyfills nobody fetches included, the
+// game chunk that arrives by `import()` excluded, and no document, stylesheet or font at
+// all. It is a ratchet on one page's script tags, which is what it was written to be. These
+// three are the wire bytes of a whole session, gzipped like everything else here.
+//
+// Fonts are counted at their file size, not re-gzipped: a woff2 is Brotli-compressed
+// internally and gzip adds about 0.1% to it, so the file size is the wire size. Only the
+// base faces are counted as fetched — `unicode-range` on each `@font-face` means a face is
+// requested only when a glyph in its range is rendered, and a face whose range excludes
+// printable ASCII is one no English page ever asks for; those are reported beside the total
+// rather than hidden in it. Until #224 the rule was the literal filename suffix `-latin-ext`,
+// which was the only such face there was. The two script faces (Noto Sans Devanagari and
+// Noto Sans Arabic, 287,340 bytes between them) are the same kind of face under a different name,
+// and a rule that read the name would have counted them against every English visitor's
+// first session — or, renamed, would have hidden a base face. So the rule is now the one
+// the browser applies: the range, read out of the built stylesheet.
+//
+// Not counted, and why: the share image (`/og/…png`) is fetched by link unfurlers, never by
+// a browser rendering the page; the range-gated faces, for the reason above; and the dozen
+// route payloads the landing page's own cards prefetch, which are the browsing line's
+// concern and are already inside `speculatedBytes`.
+function documentAt(route) {
+  const file = join(OUT, ...route.split('/').filter(Boolean), 'index.html');
+  try {
+    return { file, html: readFileSync(file, 'utf8') };
+  } catch {
+    failures.push(`${route} is not in the export, so no session that starts there can be measured`);
+    return { file, html: '' };
+  }
+}
+
+/** The stylesheets a document links, on disk. */
+function stylesheetsOf(html) {
+  return [...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g)].map((match) =>
+    exportAssetFile(match[1] ?? ''),
+  );
+}
+
+/**
+ * The code points a `unicode-range` descriptor covers, as `[first, last]` pairs — or `null`
+ * if a token in it cannot be read.
+ *
+ * Three forms, all of which the built stylesheet uses: a range `U+0900-097F`, a single code
+ * point `U+20B9`, and the wildcard `u+00??` that the minifier writes `U+0000-00FF` as.
+ * Case-insensitive because the source writes `U+` and the minifier writes `u+`. An
+ * unreadable token is `null` rather than skipped so the caller fails the build: a face this
+ * cannot classify is a face it is not measuring, and the whole point of #2516 is that an
+ * unmeasured file is where the bytes go to hide.
+ *
+ * `scripts/emit-service-worker.mjs` carries the same function and the same rule below it,
+ * and the two are held together at the bottom of this script rather than by sharing a
+ * module: both files are programs that run on import, so neither can export to the other,
+ * and a check that reads the emitted worker is the check that would catch the two drifting.
+ */
+function parseUnicodeRange(descriptor) {
+  const ranges = [];
+  for (const token of descriptor.split(',')) {
+    const match = /^u\+([0-9a-f?]{1,6})(?:-([0-9a-f]{1,6}))?$/i.exec(token.trim());
+    if (match === null) return null;
+    const [, first, last] = match;
+    if (first.includes('?')) {
+      if (last !== undefined) return null;
+      ranges.push([
+        parseInt(first.replaceAll('?', '0'), 16),
+        parseInt(first.replaceAll('?', 'f'), 16),
+      ]);
+    } else {
+      ranges.push([parseInt(first, 16), parseInt(last ?? first, 16)]);
+    }
+  }
+  return ranges;
+}
+
+/**
+ * Does this face's range reach any printable ASCII code point (U+0020–U+007E)?
+ *
+ * That is the test for "an English page fetches it". A face covering none of them can only
+ * be requested for a glyph outside the Latin this site is written in — a diacritic in a
+ * player's name, a Hindi or Arabic string — and is a face a first visit never downloads.
+ * The boundary is printable ASCII rather than the whole Basic Latin block because the
+ * controls in U+0000–U+001F render nothing and Google's `symbols` subsets claim them.
+ */
+const coversBasicLatin = (ranges) => ranges.some(([first, last]) => first <= 0x7e && last >= 0x20);
+
+/** What a `@font-face` with no `unicode-range` covers, which is what a browser assumes for one. */
+const EVERY_CODE_POINT = [[0x0, 0x10ffff]];
+
+/**
+ * Every `@font-face` in one stylesheet, classified once and remembered.
+ *
+ * A face carries the URL as the stylesheet wrote it — that is the string the service
+ * worker's precache list has to be compared against — the file on disk, the ranges the
+ * browser will apply, and whether those ranges gate it away from an English page. A face
+ * with no `unicode-range` claims everything and is therefore base: nothing gates it, and
+ * nothing can be outside it.
+ *
+ * Memoised by path, and that is a correctness fix rather than a speed. The landing and the
+ * catalogue documents link overlapping sets of stylesheets — the global sheet, where every
+ * face in this export is declared, is in both — and this was called once per set, so a
+ * single unreadable `unicode-range` was pushed onto `failures` twice and a reader had no
+ * way to tell one broken face from two. Classify a sheet once; report its faults once.
+ */
+const classifiedSheets = new Map();
+
+function facesIn(sheet) {
+  const cached = classifiedSheets.get(sheet);
+  if (cached !== undefined) return cached;
+  const faces = [];
+  classifiedSheets.set(sheet, faces);
+  let css;
+  try {
+    css = readFileSync(sheet, 'utf8');
+  } catch {
+    return faces;
+  }
+  for (const [, block] of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+    const descriptor = /unicode-range\s*:\s*([^;}]+)/i.exec(block);
+    const ranges = descriptor === null ? EVERY_CODE_POINT : parseUnicodeRange(descriptor[1]);
+    for (const match of block.matchAll(/url\(([^)]+?\.woff2)\)/g)) {
+      const url = (match[1] ?? '').replace(/^["']|["']$/g, '');
+      const file = exportAssetFile(url);
+      if (ranges === null) {
+        failures.push(
+          `${relative(OUT, file)} has a unicode-range this script cannot read` +
+            ` (${(descriptor?.[1] ?? '').trim().slice(0, 60)}), so it cannot say whether an` +
+            ' English page fetches it',
+        );
+        // Base, and claiming everything: the build is failing already, and a range this
+        // cannot read must not also decide which code points the scan below calls gated.
+        faces.push({ file, url, ranges: EVERY_CODE_POINT, gated: false, unreadable: true });
+      } else {
+        faces.push({ file, url, ranges, gated: !coversBasicLatin(ranges), unreadable: false });
+      }
+    }
+  }
+  // Every woff2 the stylesheet mentions must have been seen inside an `@font-face`, or the
+  // block parse has stopped matching and a face is being neither counted nor reported.
+  const declared = [...css.matchAll(/url\(([^)]+?\.woff2)\)/g)].length;
+  if (declared !== faces.length) {
+    failures.push(
+      `${String(declared)} woff2 url(s) in ${relative(OUT, sheet)} and ${String(faces.length)}` +
+        ' inside @font-face blocks — the font-face parse has stopped matching',
+    );
+  }
+  return faces;
+}
+
+/**
+ * The font files a set of stylesheets declares, split into the base faces an English page
+ * fetches and the range-gated ones it never does — by each `@font-face`'s `unicode-range`,
+ * read from the built stylesheet, which is what the browser reads. The classified faces
+ * come back beside the split, because the scan below needs the ranges and not just the
+ * verdict.
+ */
+function fontsOf(stylesheets) {
+  const base = new Map();
+  const conditional = new Map();
+  const faces = [];
+  for (const sheet of stylesheets) {
+    for (const face of facesIn(sheet)) {
+      (face.gated ? conditional : base).set(face.file, face.url);
+      faces.push(face);
+    }
+  }
+  return {
+    base: [...base.keys()],
+    conditional: [...conditional.keys()],
+    urls: new Map([...base, ...conditional]),
+    faces,
+  };
+}
+
+const fileBytes = (file) => {
+  try {
+    return statSync(file).size;
+  } catch {
+    failures.push(`${relative(OUT, file)} is referenced by a page and not in the export`);
+    return 0;
+  }
+};
+const sum = (files, weigh) => files.reduce((total, file) => total + weigh(file), 0);
+
+const landing = documentAt('/');
+const catalogue = documentAt('/games/');
+const landingSheets = stylesheetsOf(landing.html);
+const catalogueSheets = stylesheetsOf(catalogue.html);
+const landingFonts = fontsOf(landingSheets);
+const catalogueFonts = fontsOf(catalogueSheets);
+
+// The controls, before any total is believed. A stylesheet parse that stopped matching would
+// count zero fonts and zero CSS, and the totals below would read as a saving.
+if (landingSheets.length === 0)
+  failures.push('the landing page links no stylesheet — the parse has stopped matching');
+if (landingFonts.base.length === 0)
+  failures.push(
+    'no font file is declared by the landing stylesheets — the parse has stopped matching',
+  );
+if (gzipped(catalogue.file) < 10_000 && catalogue.html !== '') {
+  failures.push(
+    'the catalogue document is under 10 KB gzipped — the grid has stopped rendering into it',
+  );
+}
+
+const landingDocument = landing.html === '' ? 0 : gzipped(landing.file);
+const catalogueDocument = catalogue.html === '' ? 0 : gzipped(catalogue.file);
+const landingCss = sum(landingSheets, gzipped);
+const catalogueCss = sum(catalogueSheets, gzipped);
+const landingFontBytes = sum(landingFonts.base, fileBytes);
+const catalogueFontBytes = sum(catalogueFonts.base, fileBytes);
+
+/** Arrive, pick a game, play it: the landing page, then one play route and its game. */
+const firstSessionBytes =
+  landingDocument +
+  landingCss +
+  landingFontBytes +
+  shellBytes +
+  onDemandBytes +
+  biggestGame +
+  workerBytes;
+/** Arrive at the catalogue and scroll to the end of it, pressing nothing. */
+const browsingSessionBytes =
+  catalogueDocument +
+  catalogueCss +
+  catalogueFontBytes +
+  shellBytes +
+  speculatedBytes +
+  workerBytes;
+/** What the grid costs to be on screen at all, before the first card comes near the viewport. */
+const catalogueBytes = catalogueDocument + catalogueCss + catalogueFontBytes + shellBytes;
+
+console.log(
+  `check-size: first session (arrive, pick a game, play it) ${kb(firstSessionBytes)} =` +
+    ` document ${kb(landingDocument)} + css ${kb(landingCss)} + fonts ${kb(landingFontBytes)}` +
+    ` + shell ${kb(shellBytes)} + on demand ${kb(onDemandBytes)} + largest game ${kb(biggestGame)}` +
+    ` + worker ${kb(workerBytes)}`,
+);
+console.log(
+  `check-size: browsing session (scroll the whole catalogue) ${kb(browsingSessionBytes)} =` +
+    ` document ${kb(catalogueDocument)} + css ${kb(catalogueCss)} + fonts ${kb(catalogueFontBytes)}` +
+    ` + shell ${kb(shellBytes)} + speculated ${kb(speculatedBytes)} + worker ${kb(workerBytes)}`,
+);
+// `fredoka-latin-ext.bb36247b.woff2` → `fredoka-latin-ext`: the name a reader can match to
+// a `@font-face` in `fonts.css`, without the hash that changes on every rebuild of the file.
+const faceName = (file) => basename(file).replace(/\.[0-9a-f]+\.woff2$/, '');
+console.log(
+  `check-size: catalogue on screen (before any prefetch) ${kb(catalogueBytes)};` +
+    ` ${String(landingFonts.conditional.length)} range-gated face(s) fetched only for a glyph` +
+    ` outside basic Latin (${landingFonts.conditional.map(faceName).sort().join(', ')}),` +
+    ` ${kb(sum(landingFonts.conditional, fileBytes))} not counted`,
+);
+
+// ---------------------------------------------------------------------------------
+// No exported document may contain a code point only a range-gated face claims.
+// ---------------------------------------------------------------------------------
+// The line above says an English page never fetches one of those faces, and until now the
+// only thing that watched a browser act on it was `e2e/fonts.spec.ts`, which opens `/`. One
+// document out of the 353 this build exports, plus 108 route payloads nothing looked at at
+// all. The claim is decidable from the export, because the gate is a range: take every code
+// point inside a range-gated face's `unicode-range` that no base face's range claims, and
+// look for one in the text of every document the build wrote. A browser laying out such a
+// character has no base face to draw it with and fetches the gated file — 118 KB of
+// Devanagari or 166 KB of Arabic — onto a page written in English, and nothing else here
+// would notice.
+//
+// It lives in this script rather than in a unit test because the documents do not exist
+// until the export does and `emit-host-config.mjs` rewrites them afterwards; `pnpm build`
+// runs `emit:host-config` before `size`, so this is the first step that reads the HTML a
+// visitor is actually served.
+//
+// The half it cannot settle is written beside the ranges in `fonts.css`: a code point a base
+// face's range *does* claim — U+200C–200D, U+2010–2011 and U+204F are inside the three
+// `latin` faces' U+2000-206F — still falls through to a script face if the base face has no
+// glyph for it. That is a question about the bytes inside a woff2 and there is no font parser
+// in this repository. This guard holds the half that is decidable, which is also the half
+// where the fetch is unconditional.
+const allFaces = [...landingFonts.faces, ...catalogueFonts.faces];
+const baseRanges = allFaces.filter((face) => !face.gated).flatMap((face) => face.ranges);
+const claimedByABaseFace = (code) =>
+  baseRanges.some(([first, last]) => code >= first && code <= last);
+
+/** Code point → the range-gated faces that claim it, for the code points no base face does. */
+const gatedOnly = new Map();
+for (const face of allFaces) {
+  if (!face.gated) continue;
+  for (const [first, last] of face.ranges) {
+    for (let code = first; code <= last; code += 1) {
+      if (claimedByABaseFace(code)) continue;
+      const claimants = gatedOnly.get(code);
+      if (claimants === undefined) gatedOnly.set(code, new Set([face.file]));
+      else claimants.add(face.file);
+    }
+  }
+}
+
+// The first document each offending code point appears in, which is the one a reader opens.
+const offending = new Map();
+for (const file of [...htmlFiles, ...payloads]) {
+  const text = readFileSync(file, 'utf8');
+  for (let index = 0; index < text.length; index += 1) {
+    // ASCII is every base face's, and it is all but a handful of the bytes here: check the
+    // cheap thing first and only decode a code point when there is something to decode.
+    if (text.charCodeAt(index) < 0x80) continue;
+    const code = text.codePointAt(index);
+    if (code > 0xffff) index += 1;
+    if (gatedOnly.has(code) && !offending.has(code)) offending.set(code, file);
+  }
+}
+for (const [code, file] of [...offending].sort(([a], [b]) => a - b)) {
+  const claimants = [...(gatedOnly.get(code) ?? [])];
+  failures.push(
+    `${relative(OUT, file)} contains U+${code.toString(16).toUpperCase().padStart(4, '0')}` +
+      ` (${String.fromCodePoint(code)}), a code point no base face's unicode-range claims — so` +
+      ` drawing it fetches one of the range-gated faces that do` +
+      ` (${claimants.map(faceName).sort().join(', ')}, up to` +
+      ` ${kb(Math.max(...claimants.map(fileBytes)))}) on a page this site exports in English.` +
+      ' See docs/fonts.md.',
+  );
+}
+// The control, because a scan with nothing to look for reads exactly like a clean one. An
+// unreadable range is excluded from it: that face already claims everything and reports
+// itself two failures up, and one defect that prints two lines is the thing this pass was
+// reviewing.
+const unreadableRange = allFaces.some((face) => face.unreadable);
+if (!unreadableRange && gatedOnly.size === 0 && landingFonts.conditional.length > 0) {
+  failures.push(
+    'every code point the range-gated faces claim is claimed by a base face as well, which' +
+      ' cannot be true of a Devanagari or an Arabic subset — the range parse has stopped' +
+      ' matching and the scan of the exported documents is checking nothing',
+  );
+}
+
+// ---------------------------------------------------------------------------------
+// The precache and the fonts line must describe the same first visit.
+// ---------------------------------------------------------------------------------
+// `emit-service-worker.mjs` decides which faces a first visit installs by the same rule the
+// classification above uses — a face whose `unicode-range` excludes printable ASCII is left
+// to the worker's runtime path, to be saved the first time a page in that script is drawn.
+// The two scripts cannot share the function (each is a program that runs on import), so this
+// reads the worker the build just emitted and holds it to the rule instead. Both directions:
+// a base face missing from the list is a first visit that renders in the system face on its
+// second, offline visit; a range-gated face in it is the shell precache grown by a hundred
+// kilobytes and more of faces nobody on an English page uses (#224).
+const worker = workerFiles[0];
+if (worker !== undefined) {
+  const workerSource = readFileSync(worker, 'utf8');
+  const start = workerSource.indexOf('const PRECACHE = [');
+  const end = start === -1 ? -1 : workerSource.indexOf(']', start);
+  const precached = new Set(
+    start === -1
+      ? []
+      : [...workerSource.slice(start, end).matchAll(/"([^"]+)"/g)].map((match) => match[1]),
+  );
+  if (precached.size === 0) {
+    failures.push(
+      `${relative(OUT, worker)} has no readable precache list, so it cannot be held to the font rule`,
+    );
+  }
+  const fonts = new Map([...landingFonts.urls, ...catalogueFonts.urls]);
+  const conditional = new Set([...landingFonts.conditional, ...catalogueFonts.conditional]);
+  for (const [file, url] of fonts) {
+    const inList = precached.has(url);
+    if (conditional.has(file) && inList) {
+      failures.push(
+        `${relative(OUT, file)} is range-gated — no English page fetches it — and the service` +
+          ` worker precaches it, so a first visit installs ${kb(fileBytes(file))} of a face it` +
+          ' will not draw; emit-service-worker.mjs has stopped applying the rule this script applies',
+      );
+    } else if (!conditional.has(file) && !inList && precached.size > 0) {
+      failures.push(
+        `${relative(OUT, file)} is a base face every English page fetches and the service worker` +
+          ' does not precache it, so a return visit with no connection renders in the system face',
+      );
+    }
+  }
+}
+
 // Nothing may fall between the buckets. A chunk this script cannot place is a chunk it is
 // not measuring, and the whole point of #2516 is that an unmeasured chunk is where the
 // bytes go to hide.
 const unclassified = files.filter(
   (file) =>
     !shellEager.has(file) &&
+    !legacyPolyfills.has(file) &&
     !onDemand.has(file) &&
     !gameChunkFiles.has(file) &&
-    !neverFetched.has(file),
+    !localeChunkFiles.has(file) &&
+    !neverFetched.has(file) &&
+    !workerFiles.includes(file),
 );
 if (unclassified.length > 0) {
   failures.push(
@@ -311,9 +978,71 @@ if (unclassified.length > 0) {
 if (shellBytes > BUDGET.shellBytes) {
   failures.push(`the shell is ${kb(shellBytes)}, over the ${kb(BUDGET.shellBytes)} budget`);
 }
+if (legacyPolyfillBytes > BUDGET.legacyPolyfillBytes) {
+  failures.push(
+    `the legacy polyfills are ${kb(legacyPolyfillBytes)}, over the` +
+      ` ${kb(BUDGET.legacyPolyfillBytes)} budget — nobody supported fetches them, but this` +
+      " file is the framework's and a version that doubles it should be argued about",
+  );
+}
 if (onDemandBytes > BUDGET.onDemandBytes) {
   failures.push(
     `on-demand code is ${kb(onDemandBytes)}, over the ${kb(BUDGET.onDemandBytes)} budget`,
+  );
+}
+// Named rather than defaulted, for the reason the session keys give below: `x > undefined`
+// is false, and a bucket whose budget is missing from the file passes every build.
+if (typeof BUDGET.localeBytes !== 'number') failures.push('size-budget.json has no localeBytes');
+if (localeBytes > BUDGET.localeBytes) {
+  failures.push(
+    `the largest locale catalogue is ${kb(localeBytes)}, over the ${kb(BUDGET.localeBytes)}` +
+      ' budget — a real translation is expected to be larger than the pseudo-locales, and' +
+      ' the number is raised with a measurement, not a guess',
+  );
+}
+// A floor as well: the registry has non-default locales, so a build that emitted no locale
+// chunk at all has lost the `import()` — the per-locale count above fails for each, and this
+// says why the largest-of-none reads zero rather than letting a zero read as a saving.
+if (nonDefaultLocales.length > 0 && localeChunkFiles.size === 0) {
+  failures.push(
+    'no locale chunk at all in the export, while locales.ts registers ' +
+      `${nonDefaultLocales.join(', ')} — the catalogues are no longer reached by import()`,
+  );
+}
+// A floor as well as a ceiling. Every card in the grid links a play route, so a build that
+// suddenly speculates far less has stopped exporting payloads rather than got thriftier —
+// and this number would then read as a win while `e2e/prefetch.spec.ts`'s count of what a
+// browse fetches went to nothing.
+if (payloads.length === 0) {
+  failures.push('no route payloads at all — the export has stopped writing index.txt files');
+}
+if (speculatedBytes > BUDGET.speculatedBytes) {
+  failures.push(
+    `browsing the catalogue speculates ${kb(speculatedBytes)} of route payloads, over the` +
+      ` ${kb(BUDGET.speculatedBytes)} budget`,
+  );
+}
+
+// A budget that is not in the file is not a budget: `x > undefined` is false, so a missing
+// key would pass every build in silence. Named rather than defaulted.
+for (const key of ['firstSessionBytes', 'browsingSessionBytes', 'catalogueBytes']) {
+  if (typeof BUDGET[key] !== 'number') failures.push(`size-budget.json has no ${key}`);
+}
+if (firstSessionBytes > BUDGET.firstSessionBytes) {
+  failures.push(
+    `a first session is ${kb(firstSessionBytes)}, over the ${kb(BUDGET.firstSessionBytes)} budget`,
+  );
+}
+if (browsingSessionBytes > BUDGET.browsingSessionBytes) {
+  failures.push(
+    `a browsing session is ${kb(browsingSessionBytes)}, over the` +
+      ` ${kb(BUDGET.browsingSessionBytes)} budget`,
+  );
+}
+if (catalogueBytes > BUDGET.catalogueBytes) {
+  failures.push(
+    `the catalogue costs ${kb(catalogueBytes)} to put on screen, over the` +
+      ` ${kb(BUDGET.catalogueBytes)} budget`,
   );
 }
 

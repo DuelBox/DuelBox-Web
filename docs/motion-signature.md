@@ -24,7 +24,7 @@ These are not proposals; they are how the shell moves today, and tests hold them
 | Rule | Value | Where |
 |------|-------|-------|
 | Three durations, and only three | `--db-duration-fast: 120ms`, `--db-duration: 200ms`, `--db-duration-slow: 380ms` | `tokens.css`; `motion.test.ts` fails any timed CSS not reaching for one |
-| One easing curve | `--db-ease: cubic-bezier(0.2, 0.8, 0.2, 1)` — a gentle decelerate | `tokens.css` |
+| One easing curve | `--db-ease: cubic-bezier(0.2, 0.8, 0.2, 1)` — a gentle decelerate | `tokens.css`; `standardEase` is the same curve solved, for tweens |
 | Reduced motion is a first-class state | the three durations collapse to `1ms`; informative motion becomes an instant state change, decorative motion is removed | `tokens.css`, `motion.test.ts`, `reduced-motion.spec.ts`, `reduced-motion-winnable.test.ts` |
 | Motion never carries meaning alone | every animated state also has a non-motion signal (rule 7); the seat flip is a snap under reduced motion, not lost | `Canvas2DRenderer.setReducedMotion`, the greyscale harness |
 | A press has a floor size, physically | gameplay controls scale to a millimetre floor by DPR (#1889) | `touch-target.ts` |
@@ -55,10 +55,47 @@ Each of these needs the brand answered before it can be written, and each names 
    palette work (#174) gives the colour-blind-safe pair to build on, but the brand accent is
    still unchosen.
 
+## One table, both layers
+
+The durations and the curve above are used by two motion systems that share no mechanism, and
+until #72 they shared no numbers either. The shell moves in CSS: `--db-duration*`, `--db-ease`,
+and the cascade as the reduced-motion lever. Games move through `Tween` on the fixed timestep,
+inside a package that has no DOM — lint forbids `window` and `document` there — so a game
+cannot read a custom property, cannot be handed one, and counts in seconds rather than
+milliseconds because that is what the timestep counts in. Neither layer can adopt the other's
+mechanism without giving up something it needs.
+
+What they can share is the table, and the dependency decides which end holds it: the engine
+cannot import the app, and the app already imports the engine. So `packages/engine/src/motion.ts`
+is where the numbers are authored —
+
+```
+MOTION.durationFastSeconds  0.12   ↔  --db-duration-fast: 120ms
+MOTION.durationSeconds      0.2    ↔  --db-duration:      200ms
+MOTION.durationSlowSeconds  0.38   ↔  --db-duration-slow: 380ms
+MOTION.ease  [0.2, 0.8, 0.2, 1]    ↔  --db-ease: cubic-bezier(0.2, 0.8, 0.2, 1)
+```
+
+— `standardEase` is that curve inverted and evaluated, so a tween and a transition ease
+identically; `apps/web/src/styles/tokens.ts` restates the table in the spellings CSS wants; and
+`tokens.test.ts` parses `tokens.css` and fails when either side has moved without the other. A
+`Tween` given no duration now runs for `MOTION.durationSeconds` rather than the 0.25 s it used
+to invent.
+
+Reduced motion stays two levers, because the two layers answer it in different places. CSS
+collapses the three durations to 1ms. A tween must not: its duration decides *how many steps* a
+value takes to arrive, and a duration that varies with a device preference is two devices
+stepping the same match differently — so `Tween.valueFor` answers with the destination instead,
+changing what is drawn and not what is stepped. `motionDuration(seconds, reducedMotion)` gives
+the CSS collapse to the JS layer for the one case where it is safe: motion that belongs to a
+single device and that nothing else is watching — a shell overlay, a host panel — where there
+is no second device to disagree with. It returns 0.001 s, which is the same 1ms.
+
 ## How to finish this
 
 When #2322 is decided: fill the four sections above with concrete values, add any new duration
-or curve token to `tokens.css` (and to the reduced-motion block, or `motion.test.ts` fails it),
+or curve token to `MOTION` and to `tokens.css` (and to the reduced-motion block, or
+`motion.test.ts` fails it; and to `tokens.test.ts`, or the two copies are unheld),
 and — if a signature entrance is added — give it a reduced-motion counterpart that is an
 instant state change, so the "informative first" property above survives it. Until then, the
 enforced half is the whole of the motion signature that can honestly exist.

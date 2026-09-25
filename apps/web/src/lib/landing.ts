@@ -150,12 +150,23 @@ export const FREE_SECTION: LandingSection = {
     'Nothing you do here is sent anywhere, because there is nowhere to send it. The games, the ' +
       'bots and the physics all run in your own browser, and there is no advertising, no ' +
       'analytics and not one cookie.',
-    'What the site remembers, it remembers on your device: your favourites, the games you ' +
-      'played last, your settings, and the running head-to-head between the two seats. The ' +
-      'settings page shows the lot, writes it out to a file, and erases it in one press.',
-    'One limit, stated rather than buried. Once a page has loaded, playing it needs nothing ' +
-      'further from the network — but there is no offline cache yet, so opening the site, or ' +
-      'reloading it, does need a connection.',
+    // Deliberately no list. This sentence used to name four of the seven things the site
+    // stores, and it went on naming four while a fifth, a sixth and a seventh were added
+    // through `lib/local-store.ts` — the same drift the privacy page had, on the page far
+    // more people read. The exhaustive list belongs where something counts it: the privacy
+    // page enumerates all seven and `lib/privacy-claims.test.ts` fails on the day a key is
+    // added without a bullet. `landing.test.ts` holds this paragraph to naming all of them
+    // or none of them, so a half-list cannot come back quietly.
+    // "On your device" and not "on your own device": the second is one of the cross-device
+    // phrasings `app/metadata-claims.test.ts` holds this repository to never using again,
+    // and it caught this paragraph the first time it was rewritten.
+    'What the site remembers, it remembers on your device, and one page has all of it: the ' +
+      'settings page lists everything kept here, writes it out to a file you can take with ' +
+      'you, and erases the lot in one press.',
+    'One limit, stated rather than buried. Your browser keeps a copy of the site and of each ' +
+      'game after you open it, so a game you have played before opens and plays with no ' +
+      'connection at all — but a game you have never opened is not on the device, and needs ' +
+      'one. The catalogue marks which games are here, in words.',
   ],
 };
 
@@ -252,15 +263,11 @@ export function roundSpread(games: readonly CatalogueEntry[]): string {
     : `Rounds run from ${shortest} to ${longest}.`;
 }
 
-/**
- * "20 games", and "1 game" for the four categories that hold one.
- *
- * `app/games/category/[slug]/page.tsx` carries a private `countLine` doing exactly this.
- * Two copies of a pluraliser is one too many and they belong together in `lib/format.ts`,
- * which already owns how a round length reads — but merging them edits that route's file,
- * and this batch does not own it, so the duplicate is written down here rather than taken
- * quietly.
+/*
+ * `gameCount(count)` — "20 games", "1 game" — used to live here, and #220 removed it with
+ * its last call site. The landing page renders that span through the i18n lookup now
+ * (`{count} game` / `{count} games` with the number as a value), which is where a plural
+ * belongs once a locale is in the picture: English's two forms are not every language's,
+ * and a helper that spells the English rule cannot be translated. The hub route keeps a
+ * private `countLine` for its `metadata`, which stays English on purpose (`docs/i18n.md`).
  */
-export function gameCount(count: number): string {
-  return `${String(count)} ${count === 1 ? 'game' : 'games'}`;
-}

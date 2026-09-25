@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FixedLoop, RunLoop, browserClock } from './loop.js';
+import {
+  FixedLoop,
+  RunLoop,
+  browserBatterySource,
+  browserClock,
+  browserGamepadSource,
+} from './loop.js';
 import type { Clock, LoopCallbacks } from './loop.js';
 
 class Recorder implements LoopCallbacks {
@@ -528,5 +534,234 @@ describe('browserClock', () => {
     } finally {
       if (original !== undefined) scope.requestAnimationFrame = original;
     }
+  });
+});
+
+describe('the frame callback (#31)', () => {
+  it('reports the wall-clock time each frame brings, before any step runs', () => {
+    const seen: number[] = [];
+    const order: string[] = [];
+    const loop = new FixedLoop({
+      update() {
+        order.push('update');
+      },
+      render() {
+        order.push('render');
+      },
+      frame(delta) {
+        seen.push(delta);
+        order.push('frame');
+      },
+    });
+    loop.advance(1 / 30);
+    expect(seen).toEqual([1 / 30]);
+    // Once, first, however many steps the frame owed.
+    expect(order).toEqual(['frame', 'update', 'update', 'render']);
+  });
+
+  it('hands over the sanitised delta, never a negative or a NaN', () => {
+    const seen: number[] = [];
+    const loop = new FixedLoop({
+      update() {},
+      render() {},
+      frame(delta) {
+        seen.push(delta);
+      },
+    });
+    loop.advance(-1);
+    loop.advance(Number.NaN);
+    expect(seen).toEqual([0, 0]);
+  });
+
+  it('is optional, so a loop driven by hand owes nothing', () => {
+    const loop = new FixedLoop({ update() {}, render() {} });
+    expect(() => {
+      loop.advance(1 / 60);
+    }).not.toThrow();
+  });
+});
+
+describe('browserBatterySource (#190)', () => {
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  /** A stand-in for `BatteryManager`, with the two events the adapter subscribes to. */
+  function fakeBattery(level: number, charging: boolean) {
+    const listeners: Record<string, (() => void)[]> = {};
+    return {
+      level,
+      charging,
+      addEventListener(type: string, listener: () => void) {
+        (listeners[type] ??= []).push(listener);
+      },
+      fire(type: string) {
+        for (const listener of listeners[type] ?? []) listener();
+      },
+    };
+  }
+
+  it('answers null where the API is absent, which is every WebKit browser', () => {
+    const read = withNavigator({}, () => browserBatterySource());
+    expect(read()).toBeNull();
+    const none = withNavigator(undefined, () => browserBatterySource());
+    expect(none()).toBeNull();
+  });
+
+  it('answers null until the promise resolves, then the level and whether it is charging', async () => {
+    const battery = fakeBattery(0.15, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    // Asked at once, answered later: the first frames of a match see "unknown".
+    expect(read()).toBeNull();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toEqual({ level: 0.15, charging: false });
+  });
+
+  it('follows the battery through its own events without a second ask', async () => {
+    const battery = fakeBattery(0.5, false);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    battery.level = 0.1;
+    battery.fire('levelchange');
+    expect(read()?.level).toBe(0.1);
+    battery.charging = true;
+    battery.fire('chargingchange');
+    expect(read()?.charging).toBe(true);
+  });
+
+  it('hands back the same object on every read, so a frame that asks allocates nothing (rule 5)', async () => {
+    const battery = fakeBattery(0.5, true);
+    const read = withNavigator({ getBattery: () => Promise.resolve(battery) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    const first = read();
+    battery.level = 0.4;
+    battery.fire('levelchange');
+    expect(read()).toBe(first);
+  });
+
+  it('stays null when the browser has the method and refuses to answer', async () => {
+    const read = withNavigator({ getBattery: () => Promise.reject(new Error('no')) }, () =>
+      browserBatterySource(),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(read()).toBeNull();
+  });
+});
+
+describe('browserGamepadSource', () => {
+  /** A stand-in for `navigator.getGamepads`, returning a fresh array each call as the real one does. */
+  function fakeNavigator(pads: () => (null | Record<string, unknown>)[]) {
+    return { getGamepads: () => pads() };
+  }
+
+  function withNavigator<T>(nav: unknown, body: () => T): T {
+    const scope = globalThis as { navigator?: unknown };
+    const had = Object.prototype.hasOwnProperty.call(scope, 'navigator');
+    const previous = scope.navigator;
+    Object.defineProperty(scope, 'navigator', { value: nav, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (had)
+        Object.defineProperty(scope, 'navigator', {
+          value: previous,
+          configurable: true,
+          writable: true,
+        });
+      else delete scope.navigator;
+    }
+  }
+
+  it('answers with nothing where the API is absent, rather than throwing', () => {
+    const read = withNavigator(undefined, () => browserGamepadSource());
+    expect(read()).toEqual([]);
+  });
+
+  it('presents the plain snapshot shape the manager consumes', () => {
+    const nav = fakeNavigator(() => [
+      null,
+      {
+        index: 1,
+        id: 'Pad',
+        connected: true,
+        axes: [0.5, -0.25],
+        buttons: [{ pressed: true }, { pressed: false }],
+      },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const pads = read();
+    expect(pads[0]).toBeNull();
+    expect(pads[1]).toEqual({
+      index: 1,
+      id: 'Pad',
+      connected: true,
+      axes: [0.5, -0.25],
+      buttons: [true, false],
+    });
+  });
+
+  it('reuses its snapshots and arrays across polls, so the step path allocates none of them (rule 5)', () => {
+    // The platform's own array is fresh every call and outside the rule; everything this
+    // adapter owns must not be. Identity across two polls is the whole assertion.
+    let pressed = false;
+    const nav = fakeNavigator(() => [
+      { index: 0, id: 'Pad', connected: true, axes: [0.1, 0.2], buttons: [{ pressed }] },
+    ]);
+    const read = withNavigator(nav, () => browserGamepadSource());
+    const first = read();
+    const firstPad = first[0];
+    const firstAxes = firstPad?.axes;
+    const firstButtons = firstPad?.buttons;
+    pressed = true;
+    const second = read();
+    expect(second).toBe(first);
+    expect(second[0]).toBe(firstPad);
+    expect(second[0]?.axes).toBe(firstAxes);
+    expect(second[0]?.buttons).toBe(firstButtons);
+    // And it is a *fresh reading*, not a stale one — reuse must not mean remembering.
+    expect(second[0]?.buttons[0]).toBe(true);
+  });
+
+  it('forgets a pad that unplugs and shrinks to the slots the browser reports', () => {
+    let pads: (null | Record<string, unknown>)[] = [
+      { index: 0, id: 'A', connected: true, axes: [0, 0], buttons: [] },
+      { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] },
+    ];
+    const read = withNavigator(
+      fakeNavigator(() => pads),
+      () => browserGamepadSource(),
+    );
+    expect(read()).toHaveLength(2);
+    pads = [null, { index: 1, id: 'B', connected: true, axes: [0, 0], buttons: [] }];
+    const next = read();
+    expect(next).toHaveLength(2);
+    expect(next[0]).toBeNull();
+    expect(next[1]?.id).toBe('B');
+    pads = [];
+    expect(read()).toHaveLength(0);
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { setActiveSeatPalette, type SeatId } from '@duelbox/engine';
+import { setActiveSeatPalette, setSeatSwap, type GamepadEvent, type SeatId } from '@duelbox/engine';
 import {
   advanceClock,
   clockExpired,
@@ -20,6 +20,13 @@ import {
 } from '@duelbox/game-sdk';
 import { PLAYABLE, loadGame } from '@/data/registry';
 import { GAME_NAMES } from '@/data/game-names.generated';
+import { recordRunScore, type RunResult } from '@/lib/best-scores';
+import { T } from '@/lib/i18n/T';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
+import { gamepadNotice } from '@/lib/gamepad-notice';
+import { MATCH_FINISHED } from '@/lib/install-prompt-key';
+import { hasSeenHints, markHintsSeen } from '@/lib/control-hints';
 import { SEAT_CHARACTERS, seatNamesFor } from '@/lib/seats';
 import {
   addOutcome,
@@ -53,11 +60,15 @@ import { clearTournament, readTournament, writeTournament } from '@/lib/tourname
 import {
   DEFAULT_SETUP,
   botSeatsFor,
+  isSolo,
+  offeredModes,
+  soloRules,
   matchRulesFor,
   type BotDifficulty,
   type MatchSetup,
   type PlayMode,
 } from '@/lib/match-setup';
+import { describeChanges } from '@/lib/match-changes';
 import { GameHost } from './GameHost';
 import { TournamentTrack } from './TournamentTrack';
 import { TracePanel } from './TracePanel';
@@ -66,6 +77,8 @@ import { MatchOverlay } from './MatchOverlay';
 import { MatchOptions } from './MatchOptions';
 import { GameOptionsPanel } from './GameOptionsPanel';
 import { ExitControl } from './ExitControl';
+import { ControlHints } from './ControlHints';
+import { RotatePrompt } from './RotatePrompt';
 import { HandoffOverlay } from './HandoffOverlay';
 import { GameErrorBoundary } from './GameErrorBoundary';
 import { shouldHandOff } from './handoff';
@@ -81,8 +94,25 @@ type Mode = PlayMode;
  * None of it belongs to a game. Games supply a simulation and an outcome; the countdown,
  * the HUD, the pause menu, the result screen and the rematch all come from here, so the
  * hundred-and-eighth game inherits them for free and the first seven cannot drift apart.
+ *
+ * ## The surface never mirrors (#222)
+ *
+ * The shell follows the reading direction; the element this returns during a match does
+ * not, and that is a decision rather than a per-game setting. #222 asks to "let each game
+ * declare whether its canvas mirrors", and the answer is that none may: rule 9 says neither
+ * player ever sees more of the play area than the other, and a board mirrored on one device
+ * is a different play area from the un-mirrored one on the other device the moment two
+ * devices play the same match. The seats make the same argument on one device — player
+ * one's zone is a side of the phone, not a side of a sentence, and the two people holding
+ * it have not moved because the menus changed language. A manifest field no game could
+ * legitimately set would be a guard that enforces nothing, and this repository counts
+ * those (CLAUDE.md), so there is no field. The root carries `dir="ltr"` and its stylesheet
+ * pins `direction: ltr` with the three direction tokens; `e2e/rtl.spec.ts` measures that
+ * nothing on it moves when `<html>` turns round, and `styles/direction.test.ts` holds the
+ * attribute and the stylesheet to each other. docs/rtl.md has the whole of it.
  */
 export function PlaySurface({ slug }: { slug: string }) {
+  const messages = useMessages();
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [manifest, setManifest] = useState<GameManifest | null>(null);
   const [create, setCreate] = useState<(() => Game) | null>(null);
@@ -149,14 +179,39 @@ export function PlaySurface({ slug }: { slug: string }) {
    * appeared, and the HUD would grow round pips for a best-of nobody chose.
    */
   const [legMatch, setLegMatch] = useState(false);
+  /**
+   * Whether the far seat has changed hands during the match on screen (#2351).
+   *
+   * A match whose far seat was a bot for some rounds and a person for others belongs on
+   * neither head-to-head map — a bot's wins are not the far player's, and the store keeps
+   * the two apart on purpose — so its ending is written to neither, and the result screen
+   * says so. Set by any hand-over and cleared only by a new match: a seat handed over and
+   * straight back at the same round result is still a match whose seats were in question,
+   * and a record short one match is better than a record carrying a doubtful one.
+   */
+  const [mixed, setMixed] = useState(false);
   // Three reads of this device's storage, in one effect because they are one thing: what
   // this browser already knows before anybody presses Start.
   useEffect(() => {
     setSetup(readSetup(slug));
+    setHintsDue(!hasSeenHints(slug));
     setChosenNames(readPlayerNames());
-    const stored = readTournament();
+    // `PLAYABLE` rather than nothing: a line-up drawn before a game was switched off (#208)
+    // would otherwise send the pair to a route this build no longer exports, and a leg can
+    // only be reported from the route it names.
+    const stored = readTournament(PLAYABLE);
     setTournament(stored === null ? initialTournament() : resume(stored));
   }, [slug]);
+
+  /**
+   * The bot's tier this match: the tournament's when this is a leg, the player's otherwise.
+   *
+   * A tournament fixes its tier when it starts (#2347), and a leg reads it from the record
+   * rather than from this game's remembered option — which is per game, so seven legs at
+   * seven games were seven tiers, whichever the player had last chosen at each of them.
+   */
+  const tier: BotDifficulty =
+    legMatch && tournament.difficulty !== undefined ? tournament.difficulty : setup.difficulty;
 
   /**
    * Which seats a bot holds this match, and how hard it tries.
@@ -164,12 +219,14 @@ export function PlaySurface({ slug }: { slug: string }) {
    * Memoised because its identity has to be stable for the life of a match: it sits in
    * the game host's setup-effect dependencies, and when this was written inline it was a
    * fresh object on every render — the first countdown frame tore the game down and
-   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency can
-   * change while a match is running: the tier is only offered before one starts.
+   * rebuilt it, and bot matches hung on the countdown forever. Neither dependency changes
+   * while a round is running: the tier and the far seat are offered before a match and
+   * between its rounds (#2351), and a change between rounds rebuilds the board the way a
+   * new opening seat already does.
    */
   const botSeats = useMemo(
-    () => (mode === null ? undefined : botSeatsFor(mode, setup.difficulty)),
-    [mode, setup.difficulty],
+    () => (mode === null ? undefined : botSeatsFor(mode, tier)),
+    [mode, tier],
   );
 
   /**
@@ -180,6 +237,17 @@ export function PlaySurface({ slug }: { slug: string }) {
    * player's wins, and the store keeps the two apart — see `lib/head-to-head.ts`.
    */
   const opponent: Opponent = botSeats === undefined ? 'friend' : 'bot';
+
+  /**
+   * One player alone (#1750). Decided once per match from the same `mode` everything else
+   * reads, and it changes four things and no more: the presentation the host is handed, the
+   * shape of the scoreboard, what the result screen says, and which store the ending goes to
+   * — a best score for this game rather than a head-to-head, because a run has nobody on the
+   * other side of it to have a record against.
+   */
+  const solo = mode !== null && isSolo(mode);
+  /** The run's result, settled once by the same effect that writes it. */
+  const [run, setRun] = useState<RunResult | null>(null);
 
   /**
    * The head-to-head at this game *before* the match now on screen, from storage.
@@ -219,8 +287,10 @@ export function PlaySurface({ slug }: { slug: string }) {
     // A tournament leg is a single match whatever the player's remembered length says: the
     // tournament is the best-of, and seven best-of-threes is a different product
     // (`docs/tournament.md`).
-    () => matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds),
-    [legMatch, setup.rounds],
+    // A solo run is always one round, whatever length is remembered: a best-of is two
+    // people taking turns to lose, and there is nobody to take turns with (#1750).
+    () => (solo ? soloRules() : matchRulesFor(legMatch ? TOURNAMENT_LEG_ROUNDS : setup.rounds)),
+    [legMatch, setup.rounds, solo],
   );
 
   const [match, send] = useReducer(
@@ -235,6 +305,23 @@ export function PlaySurface({ slug }: { slug: string }) {
   const [gameError, setGameError] = useState<unknown>(null);
   /** The seat the device is being passed to, or null when no hand-off is in progress (#134). */
   const [handoffTo, setHandoffTo] = useState<SeatId | null>(null);
+  /**
+   * The last controller edge the host reported (#130), shown on the pause panel it caused,
+   * and the swap the host hands over once per match. The notice is cleared on resume so a
+   * later pause for some other reason does not re-read old news.
+   */
+  const [gamepadEdge, setGamepadEdge] = useState<GamepadEvent | null>(null);
+  const [swapGamepads, setSwapGamepads] = useState<(() => void) | null>(null);
+  /**
+   * Whether this device has been shown this game's "which half is yours" hints (#137), and
+   * which seats have since played.
+   *
+   * `null` until storage has been read, which is one frame after the first paint on a static
+   * export — and a hint that flashed up for a returning pair and vanished would be worse than
+   * one that arrives a frame late.
+   */
+  const [hintsDue, setHintsDue] = useState(false);
+  const [seatUsed, setSeatUsed] = useState<Record<SeatId, boolean>>({ p1: false, p2: false });
   /** The active seat the last hand-off check saw, so only a real change of hands blacks out. */
   const handoffFrom = useRef<SeatId | null>(null);
 
@@ -270,7 +357,10 @@ export function PlaySurface({ slug }: { slug: string }) {
     // choice has to be in effect before the dynamic import inside `loadGame` resolves and
     // runs that file — hence here, synchronously, rather than in `GameHost` where the chunk
     // has already been read. It is a no-op on the default and cheap either way.
-    setActiveSeatPalette(readSettings().seatPalette);
+    const chosen = readSettings();
+    // The swap (#161) rides with the palette, for the same reason and at the same moment.
+    setSeatSwap(chosen.seatSwap);
+    setActiveSeatPalette(chosen.seatPalette);
     loadGame(slug)
       .then((loaded) => {
         if (cancelled) return;
@@ -353,10 +443,25 @@ export function PlaySurface({ slug }: { slug: string }) {
     // is worse than recording nothing.
     if (outcome === null || counted.current === seed) return;
     counted.current = seed;
+    if (solo) {
+      // A run, not a match: nothing goes on the head-to-head, which counts wins between two
+      // seats, and the number the player wanted is whether they beat themselves.
+      setRun(recordRunScore(slug, match.tally.p1));
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
+    if (mixed) {
+      // The far seat changed hands during this match (#2351): its ending belongs to neither
+      // head-to-head map, so it goes on neither. See `mixed`.
+      window.dispatchEvent(new Event(MATCH_FINISHED));
+      return;
+    }
     // Write only. What the result screen shows is `addOutcome` applied to the same tally
     // this call is about to write, from the same function, so the two cannot be different
     // arithmetic — and the panel does not have to wait for a second commit to be right.
     recordResult(slug, outcome, opponent);
+    // The first moment an install offer could reasonably be answered yes (#195).
+    window.dispatchEvent(new Event(MATCH_FINISHED));
     /**
      * And the tournament, if this is the game it is waiting on.
      *
@@ -370,7 +475,17 @@ export function PlaySurface({ slug }: { slug: string }) {
     const advanced = reduceTournament(tournament, { kind: 'report', outcome });
     writeTournament(advanced);
     setTournament(advanced);
-  }, [match.phase, match.matchOutcome, seed, slug, opponent, tournament]);
+  }, [
+    match.phase,
+    match.matchOutcome,
+    match.tally.p1,
+    seed,
+    slug,
+    opponent,
+    solo,
+    mixed,
+    tournament,
+  ]);
 
   /**
    * A buzz when a round ends and another when the match does (#135).
@@ -503,6 +618,8 @@ export function PlaySurface({ slug }: { slug: string }) {
       setLegMatch(isCurrentLeg(tournament, slug));
       setMode(chosen);
       setActiveSeat(null);
+      setRun(null);
+      setMixed(false);
       const next = seed + 1;
       setSeed(next);
       // The seed goes with the event: it is what the match machine flips its opening-seat
@@ -544,11 +661,19 @@ export function PlaySurface({ slug }: { slug: string }) {
           Math.random,
         ),
       ];
-      const drawn = reduceTournament(tournament, { kind: 'start', games, opponent: against });
+      const drawn = reduceTournament(tournament, {
+        kind: 'start',
+        games,
+        opponent: against,
+        // The tier the player has chosen here goes on the record and holds for every leg
+        // (#2347); each game's own remembered tier is not consulted again until the
+        // tournament is over.
+        ...(against === 'bot' ? { difficulty: setup.difficulty } : {}),
+      });
       writeTournament(drawn);
       setTournament(drawn);
     },
-    [slug, tournament],
+    [slug, tournament, setup.difficulty],
   );
 
   /**
@@ -565,6 +690,8 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const rematch = useCallback(() => {
     setActiveSeat(null);
+    setRun(null);
+    setMixed(false);
     setGameError(null);
     handoffFrom.current = null;
     setHandoffTo(null);
@@ -575,6 +702,8 @@ export function PlaySurface({ slug }: { slug: string }) {
 
   const quit = useCallback(() => {
     setMode(null);
+    setRun(null);
+    setMixed(false);
     setLegMatch(false);
     setExitOpen(false);
     setGameError(null);
@@ -593,6 +722,7 @@ export function PlaySurface({ slug }: { slug: string }) {
    */
   const restart = useCallback(() => {
     setActiveSeat(null);
+    setMixed(false);
     setExitOpen(false);
     setGameError(null);
     handoffFrom.current = null;
@@ -604,9 +734,15 @@ export function PlaySurface({ slug }: { slug: string }) {
   }, [seed]);
 
   /** A game threw; the host stopped the loop, and this raises the recovery screen (#151). */
-  const handleGameError = useCallback((error: unknown) => {
-    setGameError(error ?? new Error('The game stopped unexpectedly.'));
-  }, []);
+  const handleGameError = useCallback(
+    (error: unknown) => {
+      // The sentence `GameErrorBoundary` shows when a game threw something that carried no
+      // message of its own, translated here where the catalogue is in hand (#220): the
+      // boundary is a class component and looks its id up without knowing where it came from.
+      setGameError(error ?? new Error(t(messages, 'The game stopped unexpectedly.')));
+    },
+    [messages],
+  );
 
   /**
    * The active seat changed. Track it for the turn indicator, and raise the pass-and-play
@@ -615,6 +751,26 @@ export function PlaySurface({ slug }: { slug: string }) {
    * Only for a game that opted in, and only on a real change from one seat to another — the
    * first seat of a match is nobody handing over. A game that does not opt in never blacks out.
    */
+  /**
+   * A seat's first successful input, from `GameHost` (#137).
+   *
+   * The seat's hint goes, and the *pair* is marked as shown the moment either seat plays —
+   * not when both do. A pair who have started are a pair who have understood, and a game
+   * where one player moves first is every game; waiting for the second would leave a device
+   * that has played a match still counted as never having seen the hints.
+   */
+  const handleSeatInput = useCallback(
+    (seat: SeatId) => {
+      setSeatUsed((used) => (used[seat] ? used : { ...used, [seat]: true }));
+      markHintsSeen(slug);
+    },
+    [slug],
+  );
+
+  const handleGamepad = useCallback((event: GamepadEvent) => {
+    setGamepadEdge(event);
+  }, []);
+
   const handleActiveSeat = useCallback(
     (seat: SeatId | null) => {
       setActiveSeat(seat);
@@ -648,6 +804,26 @@ export function PlaySurface({ slug }: { slug: string }) {
     [slug],
   );
 
+  /**
+   * Hands the far seat from the bot to a person or back, between rounds (#2351).
+   *
+   * The same `mode` state a match starts with, so everything derived from it — who is a
+   * bot, what the seats are called, what the host is handed — follows in one render, and
+   * the host rebuilds the board for the next round with the new occupant in it. The round
+   * tally lives in the match machine, which is not told, so nothing anybody has won moves.
+   * Remembered as the last mode for the reason `start` remembers its own: the lobby leads
+   * with what this pair did last.
+   */
+  const handSeat = useCallback(
+    (to: 'friend' | 'bot') => {
+      writeSetup(slug, { mode: to });
+      setSetup((previous) => ({ ...previous, mode: to }));
+      setMode(to);
+      setMixed(true);
+    },
+    [slug],
+  );
+
   const suggested = useMemo(() => suggestNextGame(slug), [slug]);
 
   /** The game the tournament is waiting on, if there is a tournament and it is waiting. */
@@ -668,8 +844,13 @@ export function PlaySurface({ slug }: { slug: string }) {
   if (loadState === 'error') {
     return (
       <div className="db-panel" role="alert">
-        <h2>This game is not playable yet</h2>
-        <p>Its rules and controls are settled, but the build has not landed. Try another game.</p>
+        <h2>{t(messages, 'This game is not playable yet')}</h2>
+        <p>
+          {t(
+            messages,
+            'Its rules and controls are settled, but the build has not landed. Try another game.',
+          )}
+        </p>
       </div>
     );
   }
@@ -677,14 +858,25 @@ export function PlaySurface({ slug }: { slug: string }) {
   if (loadState === 'loading' || !manifest || !create) {
     return (
       <div className="db-panel">
-        <p>Loading {slug.replace(/-/g, ' ')}…</p>
+        {/*
+          `<T>` rather than `t()` for this one line, and the reason is the exported bytes. It is
+          the only copy in this component that a build machine renders — every other phase is
+          reached after a press — so it is in the HTML of all 108 play routes and all 108 embed
+          routes. React writes `Loading <!-- -->air hockey<!-- -->…` for three children and
+          `Loading air hockey…` for one string, and `t()` here would merge them: the same words,
+          eight bytes different, on 216 exported pages. `<T>` renders the parts separately, so
+          the English export is byte-for-byte what it was before the string was converted.
+        */}
+        <p>
+          <T id="Loading {name}…" values={{ name: slug.replace(/-/g, ' ') }} />
+        </p>
       </div>
     );
   }
 
   if (match.phase === 'idle' || mode === null) {
     const remembered = setup.mode;
-    const offered = manifest.modes.filter((m): m is Mode => m === 'friend' || m === 'bot');
+    const offered = offeredModes(manifest.modes);
     // The remembered mode leads, so the button under the player's thumb is the one they
     // used last. Order, not preselection — nothing starts without a deliberate press.
     const ordered = [...offered].sort((a, b) => {
@@ -702,6 +894,7 @@ export function PlaySurface({ slug }: { slug: string }) {
     const trackNames = seatNamesFor(
       botSeatsFor(tournament.opponent, setup.difficulty),
       chosenNames,
+      messages,
     );
     return (
       <div className="db-panel">
@@ -710,6 +903,7 @@ export function PlaySurface({ slug }: { slug: string }) {
           <TournamentTrack
             state={tournament}
             names={trackNames}
+            tier={tournament.difficulty}
             onLeave={leaveTournament}
             {...(legHere
               ? {
@@ -751,7 +945,9 @@ export function PlaySurface({ slug }: { slug: string }) {
                     start(offer);
                   }}
                 >
-                  {offer === 'friend' ? 'Play together here' : `Play against ${SEAT_CHARACTERS.p2}`}
+                  {offer === 'bot'
+                    ? t(messages, 'Play against {name}', { name: SEAT_CHARACTERS.p2 })
+                    : t(messages, offer === 'friend' ? 'Play together here' : 'Play solo')}
                 </button>
               ))}
             </div>
@@ -768,24 +964,49 @@ export function PlaySurface({ slug }: { slug: string }) {
             {tournament.phase === 'playing' ? null : (
               <>
                 <p className={styles.tournamentLede}>
-                  Or play a tournament: {TOURNAMENT_LENGTH} games drawn at random, starting with
-                  this one. First to {legsToWin(TOURNAMENT_LENGTH)} takes it.
+                  {/* One sentence with both numbers in it rather than three fragments: a
+                      translator needs the whole line to put "first to four" where their
+                      grammar wants it. Not `plural()` — `TOURNAMENT_LENGTH` is a constant
+                      seven, so there is no other count this line can ever be about. */}
+                  {t(
+                    messages,
+                    'Or play a tournament: {games} games drawn at random, starting with this one. First to {wins} takes it.',
+                    { games: TOURNAMENT_LENGTH, wins: legsToWin(TOURNAMENT_LENGTH) },
+                  )}
                 </p>
+                {/*
+                  `ordered`, not a hardcoded pair. These two buttons used to be written out as
+                  `['friend', 'bot'] as const`, ignoring `manifest.modes` entirely — so a game
+                  that declared only `friend` would still have offered "Tournament against Pip".
+                  Nothing is dead today because every one of the 108 games declares `bot`, which
+                  is exactly why it would have stayed unnoticed until the first one did not.
+                  It reads from the same list the start buttons above it do, so the two can
+                  never disagree about what this game can be played as.
+                */}
                 <div className={styles.modes}>
-                  {(['friend', 'bot'] as const).map((against) => (
-                    <button
-                      key={against}
-                      type="button"
-                      className={styles.secondary}
-                      onClick={() => {
-                        beginTournament(against);
-                      }}
-                    >
-                      {against === 'friend'
-                        ? 'Tournament together'
-                        : `Tournament against ${SEAT_CHARACTERS.p2}`}
-                    </button>
-                  ))}
+                  {/* Two seats only. A tournament is seven games between the same two
+                      people or a person and a bot; a solo run has nobody to draw a line-up
+                      against, so the filter here is `isSolo` rather than the shell's list
+                      (#1750). `lib/tournament.ts` types its opponent as `Opponent`, which has
+                      no solo member, so the machine refuses it as well as the button. */}
+                  {ordered
+                    .filter((against) => !isSolo(against))
+                    .map((against) => (
+                      <button
+                        key={against}
+                        type="button"
+                        className={styles.secondary}
+                        onClick={() => {
+                          if (!isSolo(against)) beginTournament(against);
+                        }}
+                      >
+                        {against === 'friend'
+                          ? t(messages, 'Tournament together')
+                          : t(messages, 'Tournament against {name}', {
+                              name: SEAT_CHARACTERS.p2,
+                            })}
+                      </button>
+                    ))}
                 </div>
               </>
             )}
@@ -809,7 +1030,7 @@ export function PlaySurface({ slug }: { slug: string }) {
    * marks the seat if a bot is in it — so naming the far seat and then playing the bot
    * shows the bot marked rather than the player's name on it.
    */
-  const seatNames = seatNamesFor(botSeats, chosenNames);
+  const seatNames = seatNamesFor(botSeats, chosenNames, messages);
 
   /**
    * The record the result screen shows: what the store held when this match began, plus
@@ -826,11 +1047,24 @@ export function PlaySurface({ slug }: { slug: string }) {
   const hudProps = {
     state: match,
     rounds: rules.rounds ?? 1,
+    solo,
     activeSeat,
     seatNames,
     botSeats,
+    // Said on the scoreboard for as long as a bot is playing, so a tier fixed for seven
+    // games is visible in all seven rather than only where it was chosen (#2347).
+    tier: botSeats === undefined ? undefined : tier,
     ...(clockView ? { clock: clockView.text, clockWarning: clockView.warning } : {}),
   };
+
+  /** What this match may still change about itself, and why not what it may not (#2351). */
+  const changes = describeChanges({
+    phase: match.phase,
+    mode,
+    leg: legMatch,
+    round: match.round,
+    roundWins: match.roundWins,
+  });
 
   /** Whether the match is live, which is when the exit control and the pull-to-refresh guard apply. */
   const matchLive =
@@ -839,6 +1073,12 @@ export function PlaySurface({ slug }: { slug: string }) {
   return (
     <div
       className={styles.surface}
+      // Never mirrored, whatever direction the shell reads in (#222, rule 9): the seats are
+      // sides of the device and the board is the same play area on every device. The
+      // stylesheet pins `direction: ltr` for the box model; this is the same decision for
+      // the bidi algorithm, and it is what tokens.css keys the island's own direction
+      // tokens on (`[dir='ltr']`). `direction.test.ts` fails if either half goes missing.
+      dir="ltr"
       // The physical gameplay target (#1889), published as a custom property the play
       // controls read. Computed from the device's pixel ratio in the presentation layer, so
       // a control jabbed at across a table holds its size in millimetres rather than in a
@@ -851,7 +1091,12 @@ export function PlaySurface({ slug }: { slug: string }) {
           the board is live — the match HUD is the score that matters then, and a phone two
           people share has no height to spare for a second one. */}
       {tournament.phase === 'idle' || match.phase !== 'match-over' ? null : (
-        <TournamentTrack state={tournament} names={seatNames} onLeave={leaveTournament} />
+        <TournamentTrack
+          state={tournament}
+          names={seatNames}
+          tier={tournament.difficulty}
+          onLeave={leaveTournament}
+        />
       )}
 
       {/* Two people sit on opposite sides of one device, so the scoreboard faces both
@@ -870,14 +1115,27 @@ export function PlaySurface({ slug }: { slug: string }) {
               createGame={create}
               seed={seed}
               phase={match.phase}
-              presentation="shared-screen"
+              // A solo run is one player on the whole viewport, upright, and it always opens
+              // on the only seat there is: the match machine's coin would otherwise hand the
+              // opening to a far seat nobody is in, and a turn-board game would wait forever
+              // for it (#1750).
+              presentation={solo ? 'single-seat' : 'shared-screen'}
               localSeat="p1"
-              openingSeat={match.openingSeat}
+              openingSeat={solo ? 'p1' : match.openingSeat}
+              round={match.round}
+              solo={solo}
               {...(botSeats ? { botDifficulty: botSeats } : {})}
               onTick={handleTick}
               onScore={handleScore}
               onActiveSeat={handleActiveSeat}
+              onSeatInput={handleSeatInput}
               onRequestPause={handlePauseRequest}
+              onGamepad={handleGamepad}
+              onGamepadReady={(controls) => {
+                // Wrapped, for the reason `onTraceReady` is: a function handed to a state
+                // setter is an updater.
+                setSwapGamepads(() => controls.swap);
+              }}
               onError={handleGameError}
               recordTrace={recording}
               // Wrapped, not passed. React treats a function handed to a state setter as an
@@ -905,6 +1163,15 @@ export function PlaySurface({ slug }: { slug: string }) {
               onQuit={quit}
             />
           ) : null}
+          {/* Which half belongs to whom, on this device's first go at this game (#137). Only
+              while the board is live: before the countdown there is nothing to play, and after
+              the match the result screen is what the pair are reading. */}
+          {hintsDue && matchLive ? <ControlHints names={seatNames} used={seatUsed} /> : null}
+          {/* The rotate suggestion (#136), for the 71 games whose box has a long axis, and
+              only while the device is the other way round. It never pauses and never covers
+              the board — `RotatePrompt` carries the argument, including why there is no
+              orientation lock behind it. */}
+          {matchLive ? <RotatePrompt manifest={manifest} /> : null}
           {/* The pass-and-play hand-off blackout (#134), only for a game that opted in and
               only while a hand-off is in progress. It sits above the board so no frame of the
               previous seat's state shows through. */}
@@ -920,10 +1187,35 @@ export function PlaySurface({ slug }: { slug: string }) {
             manifest={manifest}
             rounds={rules.rounds ?? 1}
             seatNames={seatNames}
-            record={record}
+            // A match whose far seat changed hands went on no record, and a record line
+            // that added it would be showing a number the store does not hold.
+            record={mixed ? undefined : record}
+            unrecorded={mixed}
+            changing={{
+              changes,
+              mode,
+              difficulty: tier,
+              onHandSeat: handSeat,
+              onDifficulty: chooseDifficulty,
+              onRounds: chooseRounds,
+            }}
             nextGame={nextGame}
-            presentation="shared-screen"
+            slug={slug}
+            presentation={solo ? 'single-seat' : 'shared-screen'}
+            solo={solo && run !== null ? run : undefined}
+            notice={
+              gamepadEdge === null ? undefined : gamepadNotice(messages, gamepadEdge, seatNames)
+            }
+            onSwapControllers={
+              gamepadEdge === null || swapGamepads === null
+                ? undefined
+                : () => {
+                    swapGamepads();
+                    setGamepadEdge({ kind: 'reassigned', seat: null, gamepadIndex: -1, id: '' });
+                  }
+            }
             onResume={() => {
+              setGamepadEdge(null);
               send({ kind: 'resume' });
             }}
             onQuit={quit}

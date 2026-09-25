@@ -1,11 +1,21 @@
 # DuelBox
 
 A browser collection of two-player mini-games played by two people on one device, in one
-tab. No accounts and no install. Once a page has loaded, playing it needs no network at
-all — the simulation, the bots and the physics are all on your device, and
+tab. No accounts, and nothing to install. Once a page has loaded, playing it needs no network
+at all — the simulation, the bots and the physics are all on your device, and
 `e2e/offline.spec.ts` blocks every request after load and plays a bot match through to
-prove it. Coming back to it does need one: there is no service worker, so nothing is
-cached for a second visit (#2445).
+prove it.
+
+Coming back is now the same story, with one condition that is stated precisely here rather
+than rounded up. A service worker saves the site's shell on the first visit and saves each
+game on the device that played it, so **a game this device has opened before opens and plays
+with no connection at all**, and its second play costs zero network requests (#192, #2445) —
+both measured by that same spec, which cuts the network at the browser and opens the game in
+a new tab. **A game this device has never opened is not saved**, and says so on a page of the
+site's own rather than a browser error page (#193). The catalogue marks which is which, in
+words. `docs/pwa.md` is the whole of it: what is cached, what deliberately is not, how an
+update is offered rather than imposed, and which of those claims is verified on which browser
+engine.
 
 ## Layout
 

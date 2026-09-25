@@ -40,7 +40,8 @@ import type { LegOutcome, TournamentRecord } from './tournament';
 export const TOURNAMENT_KEY = `${KEY_PREFIX}tournament`;
 
 /**
- * The shape written today: `{ version: 1, games: string[], results: string[], opponent }`.
+ * The shape written today: `{ version: 1, games: string[], results: string[], opponent,
+ * difficulty? }` — the tier only on a tournament against the bot (#2347).
  *
  * No phase, because the phase is arithmetic over the other three — see the note at the top
  * of `tournament.ts`. A future version is not something this build can interpret, and
@@ -80,18 +81,44 @@ function outcomesIn(value: unknown, limit: number): LegOutcome[] {
  *
  * A record, not a state: the caller passes it through `resume()` to get the phase, which is
  * the one place a phase is decided.
+ *
+ * ## Why the caller has to say what this build can open
+ *
+ * A line-up is drawn once and then persisted, and the kill switch (#208) can take a game out
+ * of the build between the draw and the next page load. A leg naming a game this build no
+ * longer has is not merely untidy: `/play/<slug>/` is genuinely absent from the export, so
+ * the "up next" link and the result screen's next link both point at a 404, and the leg can
+ * only be reported from the route that no longer exists — so the tournament cannot advance
+ * and leaving it is the only way out.
+ *
+ * `PLAYABLE` is not imported here, and that is a size decision rather than a preference:
+ * this module is reachable from `lib/player-data.ts`, which `/settings/` loads eagerly, and
+ * `data/registry.ts` is the one module no shell route may pull in. The play route already
+ * has it, so the play route hands it over.
+ *
+ * **Only the legs not yet played are filtered.** Results are positional — leg three's
+ * outcome is `results[2]` — so dropping a game the pair have already finished would re-label
+ * every leg after it, which is the same trap `outcomesIn` above is truncated rather than
+ * filtered for. A switched-off game already played is history and stays in the line-up; one
+ * still to come is dropped, and a shorter tournament is what `pickTournamentGames` already
+ * says a tournament with fewer games to draw from is.
  */
-export function readTournament(): TournamentRecord | null {
+export function readTournament(playable: readonly string[]): TournamentRecord | null {
   const stored = readVersioned(TOURNAMENT_KEY, VERSION);
   if (stored === null) return null;
   // Junk, duplicates and empty strings out of the line-up, in one call, by the same helper
   // the favourites and recently-played lists are read through. A repeated slug would break
   // the one promise the format makes about itself.
-  const games = uniqueStrings(stored['games']);
+  const written = uniqueStrings(stored['games']);
+  const results = outcomesIn(stored['results'], written.length);
+  const games = [
+    ...written.slice(0, results.length),
+    ...written.slice(results.length).filter((slug) => playable.includes(slug)),
+  ];
   if (games.length === 0) return null;
   return {
     games,
-    results: outcomesIn(stored['results'], games.length),
+    results,
     // Anything that is not the bot is the other person, which is the safe way round: a
     // tournament wrongly labelled a friend match shows an unmarked seat name, while one
     // wrongly labelled a bot match would put a bot's wins on a person's record.
@@ -100,7 +127,17 @@ export function readTournament(): TournamentRecord | null {
     // exactly this question: that module is on the play route, and importing a predicate
     // from it would pull it into the shell — see the note at the top of this file.
     opponent: stored['opponent'] === 'bot' ? 'bot' : 'friend',
+    // The three tiers, spelled out for the same reason the opponent is: `isBotDifficulty`
+    // lives in `match-setup.ts`, on the play route. Anything else — including a tier on a
+    // tournament against a person — is dropped rather than trusted.
+    ...(stored['opponent'] === 'bot' && isTier(stored['difficulty'])
+      ? { difficulty: stored['difficulty'] }
+      : {}),
   };
+}
+
+function isTier(value: unknown): value is 'easy' | 'normal' | 'hard' {
+  return value === 'easy' || value === 'normal' || value === 'hard';
 }
 
 /**
@@ -118,6 +155,9 @@ export function writeTournament(record: TournamentRecord): void {
     games: record.games,
     results: record.results,
     opponent: record.opponent,
+    // Written only when there is one: a document a build before #2347 wrote has no such
+    // field, and one that reads it back should not grow a key it never had.
+    ...(record.difficulty === undefined ? {} : { difficulty: record.difficulty }),
   });
 }
 

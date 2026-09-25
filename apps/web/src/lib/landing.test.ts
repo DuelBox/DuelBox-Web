@@ -5,17 +5,30 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE, type CatalogueEntry } from '../data/catalogue.generated';
 import { isPlayable } from '../data/registry';
 import { CATEGORY_HUBS } from './categories';
+import { FAVOURITES_KEY } from './favourites';
 import { formatRound } from './format';
+import { HEAD_TO_HEAD_KEY } from './head-to-head';
 import { AMERICAN, NEVER } from './house-voice';
+import { LAST_MODE_KEY } from './last-mode';
 import { BOT_DIFFICULTIES } from './match-setup';
+import { PLAYER_DATA_KEYS } from './player-data';
+import { BEST_SCORES_KEY } from './best-scores-key';
+import { CATALOGUE_KEY } from './catalogue-filter-key';
+import { HINTS_SEEN_KEY } from './control-hints-key';
+import { INSTALL_KEY } from './install-prompt-key';
+import { KEY_BINDINGS_KEY } from './key-bindings-key';
+import { PLAYER_NAMES_KEY } from './player-names';
+import { RECENT_KEY } from './recent';
+import { SETTINGS_KEY } from './settings';
 import { TOURNAMENT_LENGTH, legsToWin } from './tournament';
+import { TOURNAMENT_KEY } from './tournament-store';
 import * as landing from './landing';
 import {
   FEATURED_COUNT,
+  FREE_SECTION,
   LANDING_SECTIONS,
   WAYS_TO_PLAY,
   featuredGames,
-  gameCount,
   roundSpread,
   type LandingSection,
 } from './landing';
@@ -253,6 +266,59 @@ describe('the numbers the landing copy states', () => {
     );
   });
 
+  /**
+   * The words this page would use for each thing the site stores, one per key.
+   *
+   * A table rather than a scan for nouns, because "settings" appears in this section in a
+   * sentence that is not a list — and it is held against `PLAYER_DATA_KEYS`, so a store
+   * added through `lib/local-store.ts` fails the test below by having no wording here at
+   * all. That is the half `lib/privacy-claims.test.ts` learned to check the hard way: one
+   * writer means the keys are findable, and findable is not the same as found.
+   */
+  const STORE_WORDS: Readonly<Record<string, RegExp>> = {
+    [LAST_MODE_KEY]: /setup you last|last used for each game/i,
+    [FAVOURITES_KEY]: /\bfavourites\b/i,
+    [RECENT_KEY]: /games you played last|recently played/i,
+    [SETTINGS_KEY]: /your settings/i,
+    [HEAD_TO_HEAD_KEY]: /head-to-head/i,
+    [PLAYER_NAMES_KEY]: /names you (chose|gave)|names for the two seats/i,
+    [TOURNAMENT_KEY]: /tournament/i,
+    [KEY_BINDINGS_KEY]: /keys you (chose|picked)|keys for the two seats/i,
+    [HINTS_SEEN_KEY]: /first-play hints|hints you have seen/i,
+    [CATALOGUE_KEY]: /sorted the catalogue|catalogue order|sort order/i,
+    [INSTALL_KEY]: /home screen|install/i,
+    [BEST_SCORES_KEY]: /best score/i,
+  };
+
+  /**
+   * The section that says what is kept on the device names all of the stores or none.
+   *
+   * It named four of seven — favourites, recently played, settings and the head-to-head —
+   * and stayed at four while the chosen setup, the two seat names and a tournament in
+   * progress were added, on the highest-traffic route on the site. The privacy page had the
+   * identical drift and is now counted against `PLAYER_DATA_KEYS`; this paragraph is prose
+   * rather than a list, so what it is held to is the honest pair of options: enumerate the
+   * lot, or point at the page that does and enumerate nothing.
+   */
+  it('names every store the site writes, or none of them', () => {
+    const unworded = PLAYER_DATA_KEYS.filter((key) => !(key in STORE_WORDS));
+    expect(
+      unworded,
+      'a store with no wording in STORE_WORDS: add how this page would say it, then decide' +
+        ' whether it belongs in the copy — this test cannot tell you which.',
+    ).toEqual([]);
+
+    const prose = FREE_SECTION.paragraphs.join(' ');
+    const named = PLAYER_DATA_KEYS.filter((key) => STORE_WORDS[key]?.test(prose) === true);
+    expect(
+      named.length === 0 || named.length === PLAYER_DATA_KEYS.length,
+      `"${FREE_SECTION.heading}" names ${String(named.length)} of the ${String(
+        PLAYER_DATA_KEYS.length,
+      )} things this site stores: ${named.join(', ')}. Name all of them or leave the list to` +
+        ' the privacy page, which is counted against PLAYER_DATA_KEYS on every push.',
+    ).toBe(true);
+  });
+
   it('describes the tournament the machine actually runs', () => {
     const way = WAYS_TO_PLAY.find((entry) => entry.title.includes('winner'));
     expect(way, 'the tournament card has gone').toBeDefined();
@@ -348,14 +414,19 @@ describe('the sentences built from the catalogue', () => {
   });
 
   it('counts a category with one game in it in the singular', () => {
-    expect(gameCount(1)).toBe('1 game');
-    expect(gameCount(0)).toBe('0 games');
-    expect(gameCount(20)).toBe('20 games');
-    // Four of the eighteen hold exactly one, which is why this is not academic.
+    // This held `gameCount`, which #220 removed along with its last call site: the count in
+    // the category list is a placeholder the i18n lookup fills now — `{count} game` or
+    // `{count} games`, with the number as a value — because English's two plural forms are
+    // not every language's and a helper that spells the English rule cannot be translated.
+    // What is left to hold is that the page still *chooses* between the two forms, and that
+    // the singular is not academic: four of the eighteen categories hold exactly one game.
     const singles = CATEGORY_HUBS.filter(
       (hub) => CATALOGUE.filter((game) => game.category === hub.category).length === 1,
     );
     expect(singles.length).toBeGreaterThan(0);
+    expect(page, 'the category list no longer picks a singular form').toContain(
+      "'{count} game' : '{count} games'",
+    );
   });
 
   it('skips a category with nothing behind it rather than showing a gap', () => {
@@ -419,6 +490,17 @@ describe('the landing page renders what the module declares', () => {
  * component arrives is through something that looked like a server one. `GameCard` and
  * `TileSprite` are the interesting cases: both are imported here, both reach the catalogue
  * and the tile geometry, and neither may ever gain a directive without this failing.
+ *
+ * One exception, added by #220 and no wider than it has to be: `lib/i18n/T.tsx` and what it
+ * imports. Translating a server component means passing the English to a client component
+ * that can read the locale context — that is what `<T>` is and `docs/i18n.md` has no other
+ * mechanism for it — and the cost this test exists to prevent is not paid, because
+ * `LocaleProvider` is mounted in the root layout: those modules are in the shell on every
+ * route already, so this page's use of them adds no chunk that a visitor would not have
+ * downloaded anyway. It is checked rather than asserted — `pnpm build`'s shell line is the
+ * number, and the pull request records it. Every other client directive in the graph still
+ * fails, and the allowance is a prefix rather than a file so that `T`'s own imports
+ * (`use-messages`, `provider`) do not each need listing; nothing else lives there.
  */
 describe('the landing page is server-rendered all the way down', () => {
   const SPECIFIER = /(?:from|import)\s*\(?\s*'([^']+)'/g;
@@ -476,13 +558,28 @@ describe('the landing page is server-rendered all the way down', () => {
     expect(graph.length).toBeGreaterThan(8);
   });
 
-  it('imports nothing that carries a client directive', () => {
-    const client = graphFrom(pagePath).filter((path) =>
-      /^\s*(['"])use client\1/.test(readFileSync(path, 'utf8')),
-    );
+  /** The one client boundary this page is allowed: the i18n framework's own modules. */
+  const I18N = 'lib/i18n/';
+
+  it('imports nothing that carries a client directive but the locale lookup', () => {
+    const client = graphFrom(pagePath)
+      .filter((path) => /^\s*(['"])use client\1/.test(readFileSync(path, 'utf8')))
+      .map((path) => relative(web, path));
     expect(
-      client.map((path) => relative(web, path)),
+      client.filter((path) => !path.startsWith(I18N)),
       'a client component on the landing page costs the shell budget and breaks #103',
     ).toEqual([]);
+  });
+
+  it('still reads a directive it should reject, and reaches the one it allows', () => {
+    // The allowance above is only safe while the reader still works: a regular expression
+    // that had stopped matching would let every client component through and read as a
+    // clean page. Both halves, on the real graph — the exception is reached, and a file
+    // that carries a directive outside it is still found.
+    const graph = graphFrom(pagePath).map((path) => relative(web, path));
+    expect(graph, 'the page no longer reaches <T> at all').toContain('lib/i18n/T.tsx');
+    const directive = (source: string) => /^\s*(['"])use client\1/.test(source);
+    expect(directive(readFileSync(join(web, 'lib', 'i18n', 'T.tsx'), 'utf8'))).toBe(true);
+    expect(directive(readFileSync(pagePath, 'utf8'))).toBe(false);
   });
 });

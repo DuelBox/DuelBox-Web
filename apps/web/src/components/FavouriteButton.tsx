@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { favouriteLabel } from '@/lib/catalogue-filter';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { isFavourite, toggleFavourite } from '@/lib/favourites';
 import styles from './FavouriteButton.module.css';
 
@@ -14,9 +15,15 @@ import styles from './FavouriteButton.module.css';
  * remembered setup.
  *
  * The visible word is "Favourite" in both states and the accessible name is the action —
- * "Add Chess to favourites", "Remove Chess from favourites" — from the same function the
- * catalogue's stars use. The word is a substring of both names, so what a sighted player
- * reads is what a voice-control user can say.
+ * "Add Chess to favourites", "Remove Chess from favourites" — the same two sentences
+ * `favouriteLabel` builds for the catalogue's stars. The word is a substring of both names, so
+ * what a sighted player reads is what a voice-control user can say.
+ *
+ * The two names are written here as `{name}` messages rather than taken from that function
+ * (#220): a game's name is a value, so `Add {name} to favourites` is one msgid a translator can
+ * put the name anywhere in, where `favouriteLabel`'s concatenation would be 108 msgids the
+ * extractor could not see in any case. The English is identical in both places, and
+ * `catalogue-filter.ts` keeps the function for the callers this batch does not own.
  */
 export function FavouriteButton({
   slug,
@@ -30,6 +37,7 @@ export function FavouriteButton({
   className?: string | undefined;
 }) {
   const [on, setOn] = useState(false);
+  const messages = useMessages();
   useEffect(() => {
     setOn(isFavourite(slug));
   }, [slug]);
@@ -38,7 +46,11 @@ export function FavouriteButton({
       type="button"
       className={className === undefined ? styles.button : `${styles.button} ${className}`}
       aria-pressed={on}
-      aria-label={favouriteLabel(name, on)}
+      aria-label={
+        on
+          ? t(messages, 'Remove {name} from favourites', { name })
+          : t(messages, 'Add {name} to favourites', { name })
+      }
       onClick={() => {
         setOn(toggleFavourite(slug).includes(slug));
       }}
@@ -46,7 +58,7 @@ export function FavouriteButton({
       <span className={styles.glyph} aria-hidden="true">
         {on ? '★' : '☆'}
       </span>
-      Favourite
+      {t(messages, 'Favourite')}
     </button>
   );
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Rng, set, vec2 } from '@duelbox/engine';
 import type { Presentation, SeatId, TextAlign, Vec2 } from '@duelbox/engine';
 import type { GameContext, InputState, Renderer, SeatInput } from '@duelbox/game-sdk';
-import { DotsAndBoxesGame, edgeCentre } from './game.js';
+import { DotsAndBoxesGame, edgeCentre, edgeIndexAt } from './game.js';
 import { BOX_COUNT, EDGE_COUNT, boxEdges } from './rules.js';
 import type { BotDifficulty } from './rules.js';
 import { manifest } from './manifest.js';
@@ -219,33 +219,67 @@ describe('playing with the keyboard alone', () => {
     expect(game.edgeDrawn(moved)).toBe(true);
   });
 
-  it('reaches every kind of edge, not only one lattice', () => {
+  it('reaches every edge on the board from the keyboard, not only one lattice', () => {
     // The navigation problem in this game: horizontal and vertical edges are two
-    // interleaved grids, and a cursor that could only walk one of them would leave half
-    // the board unreachable from the keyboard.
-    const game = new DotsAndBoxesGame();
-    const input = new FakeInput();
-    game.init(makeContext(null, null));
-
-    const seen = new Set<number>();
+    // interleaved grids, and a cursor must walk both to reach every line.
+    //
+    // "Reaches both kinds" was the assertion here before #1924, and it passed while a third
+    // of the board was unreachable: nearest-by-distance let a press drift onto the other
+    // grid, and from the centre that drift never straightened, so the lower-right twenty
+    // edges had no keyboard route in at all. A tap reaches all sixty (the test below), so on
+    // a shared screen those were lines one player could draw and the other could not. The
+    // guard has to be reachability of *every* edge, walked as a graph, or it does not bite —
+    // this one was watched failing at 40/60 before the fix.
     const directions: readonly (readonly [number, number])[] = [
       [1, 0],
-      [0, 1],
       [-1, 0],
+      [0, 1],
       [0, -1],
     ];
-    for (let i = 0; i < 60; i += 1) {
-      const [x, y] = directions[i % 4] as readonly [number, number];
-      input.clear();
-      step(game, input);
-      set(input.p1.move, x, y);
-      step(game, input);
-      seen.add(game.cursorEdge);
+    const cursorAfter = (path: readonly (readonly [number, number])[]): number => {
+      const game = new DotsAndBoxesGame();
+      const input = new FakeInput();
+      game.init(makeContext(null, null));
+      for (const [x, y] of path) {
+        input.clear();
+        step(game, input);
+        set(input.p1.move, x, y);
+        step(game, input);
+      }
+      return game.cursorEdge;
+    };
+    const start = cursorAfter([]);
+    const seen = new Set<number>([start]);
+    const paths = new Map<number, readonly (readonly [number, number])[]>([[start, []]]);
+    const queue: number[] = [start];
+    while (queue.length > 0) {
+      const edge = queue.shift() as number;
+      const path = paths.get(edge) as readonly (readonly [number, number])[];
+      for (const direction of directions) {
+        const next = cursorAfter([...path, direction]);
+        if (!seen.has(next)) {
+          seen.add(next);
+          paths.set(next, [...path, direction]);
+          queue.push(next);
+        }
+      }
     }
-    const horizontal = [...seen].filter((e) => e < EDGE_COUNT && e < 30).length;
+    const horizontal = [...seen].filter((e) => e < 30).length;
     const vertical = [...seen].filter((e) => e >= 30).length;
     expect(horizontal, 'never reached a horizontal edge').toBeGreaterThan(0);
     expect(vertical, 'never reached a vertical edge').toBeGreaterThan(0);
+    expect(seen.size, 'some edges have no keyboard route').toBe(EDGE_COUNT);
+  });
+
+  it('a tap on any edge centre names exactly that edge, so the pointer reaches all sixty', () => {
+    // The other half of cross-device fairness on this board: the keyboard reaching every
+    // edge is only fair if the pointer does too. It does — a tap on a line's midpoint names
+    // that line and no other — which is why the reach gap #1924 measured was the keyboard's
+    // to close, not the tap's.
+    for (let edge = 0; edge < EDGE_COUNT; edge += 1) {
+      edgeCentre(aim, edge);
+      expect(edgeIndexAt(aim.x, aim.y), `a tap on edge ${edge} named another`).toBe(edge);
+    }
   });
 
   it('never leaves the board', () => {

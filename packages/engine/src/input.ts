@@ -479,6 +479,14 @@ export function quantiseScalar(value: number, lattice: number): number {
   return Math.round(value / lattice) * lattice;
 }
 
+/** A finite number held to [-1, 1]; anything else reads as no intent. */
+function clampUnit(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value < -1) return -1;
+  if (value > 1) return 1;
+  return value;
+}
+
 export class InputManager {
   readonly #logical: LogicalSize;
   #split: ZoneSplit;
@@ -494,6 +502,19 @@ export class InputManager {
   readonly #state = new InputState(this.#p1State, this.#p2State);
   /** Scratch for the movement vector, so beginStep allocates nothing. */
   readonly #move: Vec2 = vec2();
+  /**
+   * The step's delta, handed to `#applySeat` through a slot rather than as an argument.
+   *
+   * Rule 5, and the allocation it avoids is one nothing in this file writes. A
+   * floating-point value crossing a call the optimiser has declined to inline cannot travel
+   * as a raw double: it is materialised on the heap first, and `#applySeat` is far past any
+   * inlining budget. Measured on V8 26, `beginStep` allocated one 16-byte number every step
+   * — every step of every match in the collection, since every game reaches input through
+   * this method — for a value that never leaves this object. A typed slot is written and
+   * read as a raw double, so nothing is materialised, and `allocation.test.ts` holds it at
+   * zero rather than leaving it to be re-noticed.
+   */
+  readonly #stepDelta = new Float64Array(1);
 
   constructor(
     logical: LogicalSize,
@@ -587,8 +608,16 @@ export class InputManager {
    */
   setSeatAnalog(seat: SeatId, moveX: number, moveY: number, action: boolean): void {
     const sources = this.#sourcesFor(seat);
-    sources.analogX = Number.isFinite(moveX) ? moveX : 0;
-    sources.analogY = Number.isFinite(moveY) ? moveY : 0;
+    // Onto the scalar envelope, for the reason `docs/input-parity.md` gives every aimed
+    // quantity one: no family may name a value finer than the coarsest supported one can.
+    // A key names a rate of exactly 0 or 1; a finger's drag names one on the position
+    // lattice; a stick left raw would name any real in between and be the finest
+    // instrument on the site by a wide margin. Rounded to `SCALAR_ENVELOPE` — one
+    // sixty-fourth of full tilt — it still throttles, which is what a stick is for, and it
+    // can name nothing a rounded drag could not. `quantiseScalar` is the same call the
+    // aimed-scalar seam uses, so the two envelopes cannot drift.
+    sources.analogX = quantiseScalar(clampUnit(moveX), SCALAR_ENVELOPE);
+    sources.analogY = quantiseScalar(clampUnit(moveY), SCALAR_ENVELOPE);
     sources.analogAction = action;
   }
 
@@ -736,16 +765,22 @@ export class InputManager {
    * Sampling on the step boundary rather than on the event is what makes the edges
    * exact: `actionPressed` and `actionReleased` are true for exactly one step no
    * matter how many events, repeats included, arrived since the last one.
+   *
+   * The sentence above has been in this docstring since the method was written and was
+   * measurably untrue until #122; `#stepDelta` records what it cost. It is now measured on
+   * every push rather than asserted here, which is the only form of the claim worth having.
    */
   beginStep(fixedDeltaSeconds: number): Readonly<InputState> {
     let delta = fixedDeltaSeconds;
     if (!Number.isFinite(delta) || delta < 0) delta = 0;
-    this.#applySeat(this.#p1State, this.#p1Sources, delta);
-    this.#applySeat(this.#p2State, this.#p2Sources, delta);
+    this.#stepDelta[0] = delta;
+    this.#applySeat(this.#p1State, this.#p1Sources);
+    this.#applySeat(this.#p2State, this.#p2Sources);
     return this.#state;
   }
 
-  #applySeat(out: SeatInputState, sources: SeatSources, delta: number): void {
+  #applySeat(out: SeatInputState, sources: SeatSources): void {
+    const delta = this.#stepDelta[0]!; // invariant: a one-slot array always has slot 0
     const keys = sources.keys;
     const taps = sources.latchedKeys;
     const move = this.#move;

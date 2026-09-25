@@ -202,7 +202,7 @@ export class SolitaireGame implements Game {
     // Three draws from the match generator in a fixed order: the deal, then a stream each. A
     // stream each means neither seat's play is a function of how its opponent is playing, which
     // one shared generator cannot promise once a turn's draw count depends on the position.
-    this.#state = createMatch(context.rng, context.openingSeat);
+    this.#state = createMatch(context.rng, context.openingSeat, undefined, context.solo === true);
     this.#rngP1 = new Rng(context.rng.int(1, 0x7fff_ffff));
     this.#rngP2 = new Rng(context.rng.int(1, 0x7fff_ffff));
 

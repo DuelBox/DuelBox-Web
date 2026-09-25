@@ -27,7 +27,14 @@ export {
 } from './vec2.js';
 export type { Vec2 } from './vec2.js';
 
-export { FixedLoop, RunLoop, browserClock, browserGamepadSource } from './loop.js';
+export {
+  FixedLoop,
+  RunLoop,
+  browserClock,
+  browserGamepadSource,
+  browserBatterySource,
+} from './loop.js';
+export type { BatteryManagerLike } from './loop.js';
 export type { Clock, LoopCallbacks, LoopOptions } from './loop.js';
 
 export { LatencyMeter, INPUT_FAMILIES } from './latency.js';
@@ -84,6 +91,20 @@ export {
 } from './tween.js';
 export type { Easing, TweenOptions, MotionPreference } from './tween.js';
 
+/**
+ * The motion signature's numbers (#72). Also reachable as `@duelbox/engine/motion`, which is
+ * the spelling `apps/web/src/styles/tokens.ts` uses: the shell's root layout imports that
+ * file, so pulling the barrel in through it would put the whole engine on every non-play
+ * route, and the subpath is a few hundred bytes that depend on nothing.
+ */
+export {
+  MOTION,
+  REDUCED_MOTION_SECONDS,
+  cubicBezier,
+  standardEase,
+  motionDuration,
+} from './motion.js';
+
 export {
   Shake,
   Flash,
@@ -101,6 +122,8 @@ export {
   seatPalette,
   setActiveSeatPalette,
   activeSeatPaletteId,
+  setSeatSwap,
+  seatSwapped,
 } from './palette.js';
 export type { SeatPalette, SeatPaletteId } from './palette.js';
 
@@ -156,7 +179,10 @@ export { InputView } from './input-view.js';
 export type { InputStateView, SeatInputView } from './input-view.js';
 
 export { Canvas2DRenderer } from './renderer.js';
-export type { Renderer, Canvas2DLike, TextAlign } from './renderer.js';
+export type { Renderer, Canvas2DLike, TextAlign, HostRenderer } from './renderer.js';
+// `WebGLRenderer` is deliberately NOT here. It is reached through `@duelbox/engine/webgl`
+// and an `import()` behind a build flag, so that with the flag off nothing WebGL is in any
+// bundle — `scripts/check-renderer-flag.mjs` reads the export to be sure (#16).
 
 export { AudioSystem, browserAudioContext, GESTURE_EVENTS } from './audio.js';
 export type {
@@ -213,6 +239,8 @@ export { ParticlePool } from './particle.js';
 export type { EmitterConfig } from './particle.js';
 
 export { AdaptiveQuality, DEFAULT_QUALITY_LEVELS } from './quality.js';
+export { LOW_BATTERY_LEVEL, RenderGate, isLowPower } from './power.js';
+export type { BatterySnapshot, BatterySource } from './power.js';
 export type { QualityLevel, AdaptiveQualityOptions } from './quality.js';
 
 export { AssetLoader, AssetBundle, AssetLoadError } from './asset-loader.js';

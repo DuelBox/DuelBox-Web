@@ -96,7 +96,7 @@ export const VISUAL_COUNTERPARTS: Readonly<Record<SoundEvent, VisualCounterpart>
     kind: 'shell',
     shows: 'The pause panel, named, over a board that has visibly stopped.',
     source: OVERLAY,
-    marker: 'heading="Paused"',
+    marker: "heading={t(messages, 'Paused')}",
   },
   'round-over': {
     kind: 'shell',
@@ -108,7 +108,7 @@ export const VISUAL_COUNTERPARTS: Readonly<Record<SoundEvent, VisualCounterpart>
     kind: 'shell',
     shows: "The result panel naming the winner, with that seat's own glyph beside the name.",
     source: OVERLAY,
-    marker: '{seatNames[outcome]} wins',
+    marker: 'values={{ name: <bdi>{seatNames[outcome]}</bdi> }}',
   },
   'match-draw': {
     kind: 'shell',

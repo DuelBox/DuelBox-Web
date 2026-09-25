@@ -27,6 +27,7 @@
 
 import { addOutcome, EMPTY_TALLY, type Opponent, type Tally } from './head-to-head';
 import { uniqueStrings } from './local-store';
+import type { BotDifficulty } from './match-setup';
 import { pickQuickPlay } from './quick-play';
 
 /**
@@ -60,6 +61,8 @@ export type TournamentEvent =
       readonly kind: 'start';
       readonly games: readonly string[];
       readonly opponent: Opponent;
+      /** The bot's tier for every leg, when the opponent is the bot (#2347). */
+      readonly difficulty?: BotDifficulty;
     }
   /** One game, settled. The machine decides whether that settles the tournament. */
   | { readonly kind: 'report'; readonly outcome: LegOutcome }
@@ -80,6 +83,18 @@ export interface TournamentRecord {
   readonly results: readonly LegOutcome[];
   /** Who held the far seat, fixed for the whole tournament. */
   readonly opponent: Opponent;
+  /**
+   * How hard the bot plays, fixed for the whole tournament (#2347).
+   *
+   * Present only when the opponent is the bot. Until this field existed a bot tournament
+   * played each leg at whatever tier the player last chose *for that game*, because the tier
+   * lives in `last-mode.ts` per game — so a run that started on Hard in Crash It could be on
+   * Normal by leg two, and "a ladder that changed difficulty between legs would not be a
+   * tournament of the same thing" (`docs/tournament.md`) was a sentence rather than a rule.
+   * Absent on a document written before the field existed; the surface then reads the tier
+   * the way it always did, once, and writes it down at the next report.
+   */
+  readonly difficulty?: BotDifficulty;
 }
 
 export interface TournamentState extends TournamentRecord {
@@ -223,7 +238,15 @@ export function reduce(state: TournamentState, event: TournamentEvent): Tourname
       // A line-up of nothing is not a tournament — it would be a state whose current game
       // never arrives — so the event does nothing rather than something unfinishable.
       if (games.length === 0) return state;
-      return resume({ games, results: [], opponent: event.opponent });
+      return resume({
+        games,
+        results: [],
+        opponent: event.opponent,
+        // A tier means nothing to a tournament against a person, so it is not kept for one.
+        ...(event.opponent === 'bot' && event.difficulty !== undefined
+          ? { difficulty: event.difficulty }
+          : {}),
+      });
     }
 
     case 'report':

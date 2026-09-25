@@ -142,9 +142,25 @@ when it goes anywhere.
 
 A tournament is against a friend or against the bot, chosen once at the start and fixed
 for all seven legs — the reference's two entry buttons, and the only way the result means
-one thing. The bot's tier is whatever that player has already chosen for themselves in the
-ordinary pre-match options; the tournament does not offer a tier of its own, because a
-ladder that changed difficulty between legs would not be a tournament of the same thing.
+one thing. The bot's tier is fixed the same way (#2347): the tier chosen in the lobby's
+ordinary pre-match options when "Tournament against the bot" is pressed goes onto the
+record as `difficulty`, every leg plays at it, the track says it on every leg's screen
+("Bot skill: hard for all 7 games") and the scoreboard says it beside the round while the
+leg runs. The tournament does not offer a tier control of its own; the lobby's serves,
+and it stands down with the rest of the lobby on the leg the tournament is waiting on.
+
+It used to read the tier from each game's own remembered option instead, which is per
+game: a player who had once tried the hard bot at Chess and never touched the option at
+Darts played leg three at hard and leg four at normal, and nothing on screen said so. A
+ladder that changes difficulty between legs is not a tournament of the same thing, which
+is the whole reason the tier is on the record now. A document written before there was a
+`difficulty` field reads back as a tournament with none and plays at each game's own
+tier, as it did; nothing is invented for it.
+
+A solo tournament's legs go on the head-to-head store's `bots` map and a two-player
+tournament's on its `games` map, and the two are never added together
+(`lib/head-to-head.ts`). The tournament record itself has one `opponent` for all seven
+legs, so a solo run of seven cannot be half of a head-to-head one.
 
 Mixed tournaments — some legs against the bot, some against the other seat — are not
 offered. The head-to-head store keeps those two kinds of match apart for a good reason,
@@ -189,9 +205,31 @@ after the line-up is drawn, and today every playable manifest declares both `fri
 `bot`. If a solo-only game ever ships, the line-up needs a filter that knows about modes,
 and that filter has to live where the manifests do.
 
+## Changing a match while it runs (#2351)
+
+A tournament leg changes nothing about itself: the tournament settled the seats, the bot
+and the length when it started, and a leg's round result and pause menu both say so rather
+than offering a control that would have to refuse. Leaving the tournament is the way to
+change any of them.
+
+An ordinary match may change between rounds and never during one, which is the whole rule
+and `lib/match-changes.ts` is that rule as a function. On the round result, under "Change
+something for the next round", the far seat can be handed from the bot to a person or
+back, the bot's tier changed, and the match lengthened to any best-of the score has not
+already decided. The match machine keeps the round tally through all of it — it reads its
+rules on every event, so a best-of-three grown to five is the same match with a higher
+target — and the host rebuilds the board for the next round with the new occupant in it,
+the way it already does for a new opening seat. Mid-round nothing changes, because a new
+bot or a new board mid-round is a round thrown away; the pause menu says "finish this round
+first" instead of offering the controls. A match whose far seat changed hands goes on
+neither head-to-head map, and its result screen says "Not added to the record".
+
 ## Deliberately not in v1
 
-- **Cross-device tournaments** (#1878). Remote play is not built.
+- **Cross-device tournaments** (#1878). Remote play is not built, and the match's own
+  "change something" panel says so where a pair would look for it (see below). What does
+  work is carrying the whole record: export from Settings on one device, import on the
+  other, and the tournament resumes there at the same leg.
 - **A persistent entry point on every page.** Shell bytes, and the argument is in "Where
   it lives" above. If the shell budget is raised for something else, this is the first
   thing that should be reconsidered.

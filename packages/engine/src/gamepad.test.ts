@@ -177,3 +177,37 @@ describe('gamepad drives a seat through InputManager (#130 end to end)', () => {
     expect(seat.actionHeld).toBe(false);
   });
 });
+
+describe('the stick is held to the scalar envelope, like every other aimed quantity', () => {
+  const logical = { width: 800, height: 600 };
+  const STEP = 1 / 60;
+
+  it('rounds a raw stick reading onto SCALAR_ENVELOPE before it becomes intent', () => {
+    // 0.3 is not on a 1/64 lattice; 19/64 = 0.296875 is the nearest point on it. A key can
+    // name only 0 and 1 and a rounded drag names positions on its own lattice, so a stick
+    // that could name 0.3 exactly would be the finest instrument on the site.
+    const manager = new InputManager(logical);
+    manager.setSeatAnalog('p1', 0.3, -0.3, false);
+    const state = manager.beginStep(STEP).seat('p1');
+    expect(state.moveX).toBeCloseTo(19 / 64, 10);
+    expect(state.moveY).toBeCloseTo(-19 / 64, 10);
+    expect(state.moveX).not.toBeCloseTo(0.3, 10);
+  });
+
+  it('clamps a reading a pad has no business sending', () => {
+    const manager = new InputManager(logical);
+    manager.setSeatAnalog('p2', 4, Number.NaN, true);
+    const state = manager.beginStep(STEP).seat('p2');
+    expect(state.moveX).toBe(1);
+    expect(state.moveY).toBe(0);
+    expect(state.actionHeld).toBe(true);
+  });
+
+  it('keeps a full tilt full and a resting stick at rest', () => {
+    const manager = new InputManager(logical);
+    manager.setSeatAnalog('p1', 1, 0, false);
+    expect(manager.beginStep(STEP).seat('p1').moveX).toBe(1);
+    manager.setSeatAnalog('p1', 0, 0, false);
+    expect(manager.beginStep(STEP).seat('p1').moveX).toBe(0);
+  });
+});

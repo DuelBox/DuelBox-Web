@@ -3,6 +3,26 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import noUntranslatedText from './scripts/eslint-rules/no-untranslated-text.mjs';
+
+/**
+ * Every `.tsx` under the web app is held to `duelbox/no-untranslated-text` (#219, #220).
+ *
+ * The rule reports bare text in JSX and a literal in the seven user-facing attributes, so a
+ * sentence added to any component without `t()` / `<T>` fails lint. Until 12 September 2026 it
+ * was a ratchet, `I18N_CLEAN`, an explicit list a file joined in the commit that converted it;
+ * #220 converted every file and the list became this glob, at which point the ratchet became
+ * the rule. What stays exempt, each with its reason in `docs/i18n.md` under "deliberately not
+ * translated": anything inside `<noscript>` (the rule skips the subtree itself), and the handful
+ * of literals carrying an `eslint-disable-next-line duelbox/no-untranslated-text -- <reason>`
+ * comment — the skip link and the framed notice in `app/layout.tsx`, whose `<T>` would be
+ * serialised into all 108 play payloads, and the two lines of `play/[slug]/loading.tsx`, which
+ * a test holds to importing nothing. Game names, `metadata` exports and key caps are not
+ * literals the rule can see and are exempt by design rather than by comment. What the rule
+ * cannot see — a string reaching JSX through a variable — is what `e2e/pseudo-sweep.spec.ts`
+ * walks the pseudo-locale for.
+ */
+const I18N_FILES = ['apps/web/src/**/*.tsx'];
 
 export default tseslint.config(
   {
@@ -128,6 +148,12 @@ export default tseslint.config(
     },
   },
   {
+    // The i18n rule: see `I18N_FILES` above.
+    files: I18N_FILES,
+    plugins: { duelbox: { rules: { 'no-untranslated-text': noUntranslatedText } } },
+    rules: { 'duelbox/no-untranslated-text': 'error' },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
@@ -136,6 +162,17 @@ export default tseslint.config(
     files: ['scripts/**', 'e2e/**', '*.config.ts', '*.config.js', 'eslint.config.js'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
+  },
+  {
+    // ...except the half of `responsive-matrix.mjs` that is not Node. The bodies it hands to
+    // `page.evaluate` are serialised and run inside the page, where `document`, `window` and
+    // `getComputedStyle` are the ambient globals. `e2e/responsive.ts` states the same
+    // measurements and escapes this rule only by being TypeScript, where `no-undef` is off and
+    // the DOM lib supplies the names; the matrix is a Node script and cannot import TypeScript,
+    // so it says them again in plain JavaScript and needs the globals named here. The Node
+    // globals above still apply — the file is a Node script either side of those callbacks.
+    files: ['scripts/responsive-matrix.mjs'],
+    languageOptions: { globals: { ...globals.browser } },
   },
   {
     files: ['**/*.test.ts'],

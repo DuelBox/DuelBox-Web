@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { colour } from '../styles/tokens';
 
 /**
  * The web app manifest (#73), so the site can be installed and shows its own mark and name
@@ -31,8 +32,10 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: `${base}/`,
     display: 'standalone',
     orientation: 'any',
-    background_color: '#f7f8fc',
-    theme_color: '#4b3beb',
+    // From the palette rather than spelled again: a manifest cannot use a CSS custom
+    // property, but it can read the same source the stylesheet does.
+    background_color: colour.surface,
+    theme_color: colour.brand,
     icons: [
       {
         src: `${base}/manifest-icon.svg`,

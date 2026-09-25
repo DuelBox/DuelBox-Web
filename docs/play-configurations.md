@@ -18,8 +18,9 @@ what stops each of the 108 growing its own answer.
 Two of the three cost nothing to run and, once loaded, work with the network off. That is
 not an accident of implementation, it is the product: the simulation is on the player's
 device in every configuration, and remote play differs only in where the *other* player's
-inputs come from. A loaded page is the whole of it, in all three columns: there is no
-service worker, so opening the site fresh needs a connection whichever way you are playing
+inputs come from. Opening the site fresh is no longer the whole of it: a service worker
+keeps the shell and each game this device has played, so a game opened before opens again
+with no connection whichever way you are playing
 (#2445).
 
 ## Where the choice is made

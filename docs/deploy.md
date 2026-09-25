@@ -18,7 +18,7 @@ pnpm build          # → apps/web/out/
 |---|---|
 | `index.html`, `games/`, `play/…` | The site. One directory per route, `trailingSlash: true`, so directory-style hosts work unmodified |
 | `_next/static/chunks/*.js` | The shell, plus one lazily-loaded chunk per game |
-| `_headers` | Netlify and Cloudflare Pages read this |
+| `_headers` | Netlify, Cloudflare Pages and Cloudflare Workers static assets read this — Workers has since April 2025, so `wrangler.jsonc` needs nothing added to it |
 | `vercel.json` | Vercel reads this |
 | `security-headers.conf.txt` | nginx, Apache and Caddy blocks, commented, for anyone serving it themselves |
 | `security.txt`, `.well-known/security.txt` | RFC 9116, both locations |
@@ -26,19 +26,106 @@ pnpm build          # → apps/web/out/
 | `manifest.webmanifest`, `icons/` | The web app manifest and its five icons |
 
 A host needs to do nothing for the offline story to work: the worker is a file like any
-other, its scope is the site root, and everything it needs travels in the export. Two host
-behaviours are worth knowing about anyway. A host that served `sw.js` with a long
-`cache-control` would slow down how fast a deploy reaches returning visitors — browsers cap
-the worker script's own cache at 24 hours, so it is bounded rather than broken, and GitHub
-Pages' `max-age=600` is well inside that. And a service worker requires a secure context, so
-the site must be on HTTPS or `localhost`; every host in this document is, and the e2e suite
-runs on `127.0.0.1`, which counts.
+other and everything it needs travels in the export. Two properties of it are worth knowing
+before the section that follows, because that section is a warning and these two are the
+facts it rests on.
 
-`docs/pwa.md` is the design record: what is cached, what deliberately is not, and how a
-stale worker is prevented from becoming permanent.
+**Its scope is the directory it is served from, which is not the origin root.** `sw.js` sits
+beside `index.html` in the export, so on a root-served host its scope is `/` and on the
+GitHub Pages *project* page it is `/DuelBox-Web/`. That is correct and sufficient — the whole
+site is under that prefix — but it means the worker's scope, and every URL in its precache
+list, must carry the base path or they name pages that are not there. That is the same
+`NEXT_PUBLIC_BASE_PATH` `next.config.ts` reads and `.github/workflows/deploy.yml` sets, and
+`apps/web/src/app/base-path.ts` names the worker's scope and its precache list, by those
+words, as two of the four places a hand-built URL has to carry it. A precache list that
+forgot it 404s every entry **on the deployed host and nowhere else** — not in `pnpm dev`, not
+in the e2e suite, both of which run root-served.
 
-The three config files are generated from one source,
-[`scripts/security-headers.mjs`](../scripts/security-headers.mjs), by
+**A service worker requires a secure context**, so the site must be on HTTPS or `localhost`.
+Every host in this document is, and the e2e suite runs on `127.0.0.1`, which counts.
+
+### `sw.js` must not be served with a long cache lifetime
+
+**This is the one host setting that can strand every visitor on a build you have already
+deleted**, and it is worth being blunt about because nothing in this repository can stop a
+host getting it wrong.
+
+The mechanism is short. A returning visitor is served the site out of the worker's cache and
+asks the network for nothing — that is #2445, and it is the feature. The *only* thing that
+tells that device a new build exists is the browser re-fetching `sw.js` on navigation and
+finding different bytes. Serve that file with a long `Cache-Control` and the browser answers
+its own check out of the HTTP cache, finds the same bytes it had, and concludes there is
+nothing new. The deploy is then live, correct, and invisible to everybody who already has the
+site.
+
+Two things bound the damage, and neither is a reason to relax:
+
+- **The specification caps the worker script's own HTTP cache at 24 hours** during an update
+  check, so `max-age=31536000` on `sw.js` behaves as `max-age=86400`. Bounded rather than
+  broken — but a day is a very long time to be shipping a fix nobody can receive.
+- **A registration's default `updateViaCache` is `'imports'`**, which makes the browser
+  bypass the HTTP cache entirely for the top-level worker script on an update check. That is
+  a property of how the worker is registered rather than of the host, so it is a real defence
+  and it is not one the host operator controls or can see. If a registration is ever changed
+  to `updateViaCache: 'all'`, the 24-hour cap is the only thing left.
+
+### What the artefact says about caching, per class of file
+
+Until #188 this repository shipped **no cache directive of any kind**: the generated headers
+were nine security headers and none of them was a `Cache-Control`, so every file's lifetime
+was whatever the host did by default. It now ships two, drawn along the only line that
+matters — **does the URL change when the bytes change?**
+
+| Class | `Cache-Control` | Why that one |
+|---|---|---|
+| `/_next/static/*` — every chunk, stylesheet, font and the Noto faces: 177 files | `public, max-age=31536000, immutable` | Next names each of these by a hash of its own bytes, so a changed file is a changed URL and an old URL is never asked to serve new content. `immutable` is the half that does the work: a long `max-age` alone still revalidates on a reload, and 177 conditional requests to be told 304 is the thing #188 asks to stop |
+| `/sw.js` | `public, max-age=0, must-revalidate` | The section above, in one line: it is the only file whose staleness cannot be fixed from here, so it gets a rule of its own rather than inheriting whatever the default happens to be |
+| Documents (all 223), `index.txt` route payloads, `manifest.webmanifest`, `sitemap.xml`, `robots.txt`, `.well-known/*` | `public, max-age=0, must-revalidate` | Their URLs outlive their bytes — same address, new content every deploy — so a stored copy is last week's site. Storable and re-checked, not `no-store`: the file may be cached, it must be asked about, and a 304 costs a round trip and no payload |
+
+The third row is written out in `vercel.json` and **deliberately absent from `_headers`**, which
+is the one surprise here. Cloudflare documents what happens when two `_headers` rules match one
+path, and it is not what everybody assumes: "an incoming request which matches multiple rules'
+URL patterns will inherit all rules' headers", and "if a header is applied twice in the
+`_headers` file, the values are joined with a comma separator"
+([Workers](https://developers.cloudflare.com/workers/static-assets/headers/),
+[Pages](https://developers.cloudflare.com/pages/configuration/headers/)). So the obvious file — a
+`/*` default plus a `/_next/static/*` exception — answers a hashed chunk with
+`max-age=0, must-revalidate, public, max-age=31536000, immutable`, the first `max-age` wins, and
+the immutable rule is inert while the word `immutable` sits in the file for any check that greps
+for it. Every rule that file contains is therefore disjoint, and `check-headers.mjs` fails the
+build if any path is ever matched by two of them. Vercel's `source` is a path-to-regexp pattern
+and can express a complement, so there the document rule is stated outright.
+
+What the documents get on a `_headers` host instead is that host's default, and both document
+the same value this would have written: Cloudflare sends `public, max-age=0, must-revalidate`
+on a static asset and says "headers defined in the `_headers` file override what Cloudflare
+ordinarily sends"; Netlify's documented default for static assets is the identical string.
+Enumerating the complement by hand instead comes to 45 rules that grow with every route added,
+against a 100-rule limit this repository has already abandoned one design over.
+
+**On GitHub Pages — the current host — none of it arrives**, for the same reason seven of the
+nine security headers do not: Pages reads neither file. Documents and hashed assets alike come
+back `max-age=600`, which is the host's default and not a decision of ours (measured; see
+`docs/release-runbook.md`). What makes a repeat visit free there is the **service worker**, not
+the CDN — `e2e/offline.spec.ts`, "the second play of a game costs no network request at all" —
+and that needs no host configuration at all, which is why the offline story was built the way
+it was. On any host that reads `_headers` or `vercel.json` the two compose: the worker answers
+from the device, and whatever it does not hold comes back from the edge without a revalidation.
+There is nothing to remember on those hosts and nothing to set by hand; the `sw.js` rule above
+is in the file.
+
+The failure has no symptom on our side. Every route answers 200, the artefact is correct, CI
+is green, and a proportion of real people are on last week's build with no way to find out.
+The check that sees it is in `docs/release-runbook.md` step 3, and it is a check on the
+*revision inside the served `sw.js`* rather than on any status code.
+
+`docs/pwa.md` is the design record: what is cached, under which strategy, what deliberately
+is not, why the update waits rather than taking over, what is verified on which engines, and
+how to clear a worker that is stuck.
+
+The three config files are generated from two sources —
+[`scripts/security-headers.mjs`](../scripts/security-headers.mjs) for the header set and
+[`scripts/cache-headers.mjs`](../scripts/cache-headers.mjs) for the cache rules — by
 `scripts/emit-host-config.mjs`, and checked by `scripts/check-headers.mjs` as part of
 `pnpm build`. **Do not edit them in `out/` — they are overwritten on every build.** To
 change a header, change the source; all three follow, and they cannot drift apart.
@@ -138,8 +225,15 @@ npx wrangler pages deploy apps/web/out --project-name duelbox
 
 Or connect the repository and set: build command `pnpm build`, output directory
 `apps/web/out`, Node 22. `_headers` is picked up automatically. Note that Cloudflare caps a
-`_headers` file at 100 rules — ours has one, deliberately; see the note in
-`emit-host-config.mjs` for the version that had 150 and why it was abandoned.
+`_headers` file at 100 rules — ours has three: the security set on `/*` and the two cache
+rules, which are disjoint from it and from each other because an overlap there is joined
+rather than resolved. See the note in `emit-host-config.mjs` for the version that had 150
+rules and why it was abandoned, and `cache-headers.mjs` for why the count did not go to 45.
+
+**Cloudflare Workers static assets reads the same file**, which is what `wrangler.jsonc` in
+the repository root deploys to, and has done since April 2025. Custom headers are not applied
+to responses a Worker script generates — irrelevant here, because that config has no `main`
+at all and every response is an asset response.
 
 ### Netlify
 

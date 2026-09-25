@@ -72,6 +72,8 @@ const live: Record<SeatId, MutableSeatPalette> = {
 export const SEAT_PALETTE: Readonly<Record<SeatId, SeatPalette>> = live;
 
 let activeId: SeatPaletteId = 'default';
+/** Whether the two seats' colours are exchanged (#161). Presentation, like the palette. */
+let swapped = false;
 
 /**
  * Switches the live {@link SEAT_PALETTE} to a named palette.
@@ -92,12 +94,41 @@ export function setActiveSeatPalette(id: SeatPaletteId): SeatPaletteId {
   // the types (a stored string from an older build) can still hand this an unknown id. The
   // membership test survives that and the lint both.
   const resolved: SeatPaletteId = KNOWN_PALETTES.includes(id) ? id : 'default';
-  const chosen = SEAT_PALETTES[resolved];
-  for (const seat of SEATS) {
-    Object.assign(live[seat], chosen[seat]);
-  }
   activeId = resolved;
+  refresh();
   return resolved;
+}
+
+/**
+ * Exchanges the two seats' colours, or puts them back (#161).
+ *
+ * Colour only. `live.p1` goes on being the object every game and the shell hold for the
+ * near seat — it is the *values* inside it that come from the far seat's entry of the
+ * chosen palette — so a game that captured `SEAT_PALETTE.p1` at module load sees the swap
+ * the way it sees a palette change, and a game that captured `SEAT_PALETTE.p1.base` into a
+ * `const` is why the shell calls this before the game chunk loads, like the palette. The
+ * shapes a seat is drawn with are not in this module and do not move: rule 7 says a seat
+ * differs by shape as well as colour, and a shape that followed the colour would defeat
+ * that. Names do not move either — a name belongs to a seat, not to a colour. Survives a
+ * later {@link setActiveSeatPalette}: the swap is remembered and re-applied, so choosing the
+ * colour-blind pair keeps the seats the way round the player put them.
+ */
+export function setSeatSwap(swap: boolean): void {
+  swapped = swap;
+  refresh();
+}
+
+/** Whether the seats' colours are currently exchanged. */
+export function seatSwapped(): boolean {
+  return swapped;
+}
+
+function refresh(): void {
+  const chosen = SEAT_PALETTES[activeId];
+  for (const seat of SEATS) {
+    const source: SeatId = swapped ? (seat === 'p1' ? 'p2' : 'p1') : seat;
+    Object.assign(live[seat], chosen[source]);
+  }
 }
 
 /** The id currently in effect. */

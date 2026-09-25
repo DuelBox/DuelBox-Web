@@ -299,12 +299,13 @@ export class DotsAndBoxesGame implements Game {
   }
 
   /**
-   * Move the cursor to the nearest edge in the direction pressed.
+   * Move the cursor to the edge that lies most squarely in the direction pressed.
    *
    * Geometric rather than index arithmetic: from a horizontal edge, pressing down should
-   * reach the vertical edge below it, and those are not adjacent in any index order. So
-   * the cursor asks which edge lies nearest in that direction, which is what the player
-   * means by "down" and needs no special case for the two lattices.
+   * reach the vertical edge below it, and those are not adjacent in any index order. So the
+   * cursor asks which edge lies in that direction — straightest first, nearest of those
+   * second, as the selection below sets out — which is what the player means by "down" and
+   * needs no special case for the two lattices.
    */
   #stepCursor(moveX: number, moveY: number, fixedDeltaSeconds: number): void {
     const x = moveX > 0.5 ? 1 : moveX < -0.5 ? -1 : 0;
@@ -334,7 +335,8 @@ export class DotsAndBoxesGame implements Game {
 
     edgeCentre(this.#scratch, this.#cursorEdge);
     let best = -1;
-    let bestScore = Number.POSITIVE_INFINITY;
+    let bestAcross = Number.POSITIVE_INFINITY;
+    let bestAlong = Number.POSITIVE_INFINITY;
     for (let edge = 0; edge < EDGE_COUNT; edge += 1) {
       if (edge === this.#cursorEdge) continue;
       edgeCentre(this.#scratchB, edge);
@@ -343,17 +345,24 @@ export class DotsAndBoxesGame implements Game {
       const along = offX * dx + offY * dy;
       if (along <= 0) continue;
       const across = Math.abs(offX * dy - offY * dx);
-      // A 45-degree cone, then plain nearest inside it.
-      //
-      // Weighting sideways drift instead — which is the obvious first attempt — keeps the
-      // cursor on whichever lattice it started in: from a horizontal edge, the horizontal
-      // edge directly below scores better than the vertical edge that is actually nearer,
-      // so half the board becomes unreachable from the keyboard. The cone admits both and
-      // lets distance decide, which is what the player means by "down".
       if (across > along) continue;
-      const score = offX * offX + offY * offY;
-      if (score < bestScore) {
-        bestScore = score;
+      // Inside a 45-degree cone, the straightest edge first and the nearest of those
+      // second — not the nearest by distance.
+      //
+      // Nearest-by-distance was the obvious rule and it was wrong, in a way no test caught
+      // until #1924. It prefers a slightly-off-axis edge on the other lattice to the edge
+      // squarely in the pressed direction, so every press drifts sideways as it advances;
+      // from the centre that drift never straightens, and the lower-right third of the
+      // board — twenty of the sixty edges — had no keyboard route into it at all, while a
+      // tap reached every one. On a shared screen that is a line a keyboard player simply
+      // cannot draw, and the pointer can: the cross-device unfairness this audit is for.
+      // Ordering by perpendicular offset first walks each press straight down its own row
+      // or column, so the whole board is reachable; the along-distance breaks ties within
+      // one. Both quantities land on the 60-unit half-pitch lattice, so the equality is
+      // exact rather than a float compare.
+      if (across < bestAcross || (across === bestAcross && along < bestAlong)) {
+        bestAcross = across;
+        bestAlong = along;
         best = edge;
       }
     }

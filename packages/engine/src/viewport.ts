@@ -20,6 +20,49 @@ export const NO_INSETS: SafeAreaInsets = Object.freeze({
 });
 
 /**
+ * Which way round a rectangle is. Two values, because a rectangle is one or the other.
+ *
+ * Deliberately narrower than the manifest's `ORIENTATIONS`, which is
+ * `'portrait' | 'landscape' | 'any'` — that third value is a *declaration* a game makes
+ * about the box it designed ("either way round suits it"), not a shape a screen can have.
+ * The pair is the same shape as `DeclaredZoneSplit` against `ZoneSplit` in seat.ts, and
+ * for the same reason: the wider declared union is not assignable to this one, so a
+ * caller that tries to pass `manifest.orientation` straight into a function taking this
+ * stops compiling rather than silently treating `'any'` as a screen shape.
+ */
+export type Orientation = 'portrait' | 'landscape';
+
+/**
+ * Which way round this screen is — the one place in the product where a pixel measurement
+ * becomes the word "portrait" or "landscape".
+ *
+ * It lives here because rule 8 puts every pixel-to-anything conversion in the render layer,
+ * and rule 10 forbids a game asking what device it is on. A game physically cannot misuse
+ * this: a game is handed a `LogicalSize` and never a screen size, so it has no pixels to
+ * pass in. Feeding it the logical box instead answers a question about the *box*, which is
+ * a constant of the match and tells a game nothing about the device it is running on.
+ *
+ * **Returns null when the screen has no shape yet**, and that is the interesting case
+ * rather than a defensive flourish. A rotation is not instantaneous: mobile browsers report
+ * a zero or nonsensical size for a frame or two in the middle of one — the same transient
+ * {@link fitViewport} answers with a collapsed viewport rather than a throw. A function that
+ * had to answer anyway would flap between the two orientations while the device turned, and
+ * anything downstream of it — a rotate hint, a re-layout — would flicker in step. Null says
+ * "no answer this frame"; the honest thing for a caller to do with it is keep the answer it
+ * already had.
+ *
+ * A square screen is reported as landscape. The tie-break is arbitrary and it is also free:
+ * a square screen letterboxes a portrait box and that same box turned on its side to exactly
+ * the same drawn area, so whichever way the tie falls, neither player gets a larger board out
+ * of it. `viewport.test.ts` asserts that equality rather than leaving it as a claim.
+ */
+export function screenOrientation(screenWidth: number, screenHeight: number): Orientation | null {
+  if (!Number.isFinite(screenWidth) || !Number.isFinite(screenHeight)) return null;
+  if (screenWidth <= 0 || screenHeight <= 0) return null;
+  return screenHeight > screenWidth ? 'portrait' : 'landscape';
+}
+
+/**
  * The mapping from a game's fixed logical resolution onto one device's screen.
  * Every number is in device-independent CSS pixels; the simulation itself never
  * sees any of them.

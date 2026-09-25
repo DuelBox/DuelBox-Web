@@ -127,6 +127,47 @@ describe('what a game emits', () => {
   });
 });
 
+describe('the seam a game would emit through', () => {
+  const contract = readFileSync(join(root, 'packages/game-sdk/src/contract.ts'), 'utf8');
+  const context = /export interface GameContext \{([\s\S]*?)\n\}/.exec(contract)?.[1] ?? '';
+
+  it('found GameContext to read', () => {
+    // The control. A regex that stopped matching would make every assertion below pass on an
+    // empty string, which is the failure #2519 is on the tally for.
+    expect(context, 'GameContext is no longer declared the way this reads it').toContain(
+      'readonly manifest',
+    );
+  });
+
+  /**
+   * **`GameContext` carries no way to make a sound, and this is what says so out loud.**
+   *
+   * Eight of the fourteen cues are `owner: 'game'`, and a game is handed a `GameContext` and
+   * nothing else — so today not one of them can be raised by anybody. That is why the two
+   * scans above are honest about being vacuous: they walk 108 packages for emissions that
+   * cannot exist.
+   *
+   * A guard that can only pass is worth nothing on its own, so this one is aimed at the
+   * moment it stops being vacuous rather than at the state it is in. The day somebody adds
+   * an audio bus to the context — which is `GameSoundBus`'s whole reason to exist — this
+   * fails, and the message is the review: every cue that seam makes reachable owes the
+   * drawn half in `VISUAL_COUNTERPARTS`, and #180's acceptance stops being true by
+   * construction and starts needing a per-game pass.
+   */
+  it('has none, so no game can carry information by sound alone (#180)', () => {
+    const seam = /\b(audio|sound|cue|bus|play)\b/i.exec(context)?.[0];
+    expect(
+      seam,
+      'GameContext has grown something that looks like an audio seam. That is not a bug — it' +
+        ' is what GameSoundBus was written for — but it is the moment #180 stops holding by' +
+        ' construction. Before landing it: every game cue it makes reachable needs its row in' +
+        ' apps/web/src/lib/sound-visuals.ts to be a promise somebody has checked on a real' +
+        ' screen, and the per-game pass in that issue becomes due. Then delete this test and' +
+        ' say in its place what replaced it.',
+    ).toBeUndefined();
+  });
+});
+
 describe('the emission scan itself', () => {
   /** A game file as it would look the day somebody wires the first sound. */
   const FIXTURE = `

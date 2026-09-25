@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 import { CATALOGUE } from '@/data/catalogue.generated';
 import { PLAYABLE } from '@/data/registry';
 import { absoluteUrl } from '@/lib/site';
-import { embedBacklinkLabel, embedBacklinkPath, embedStaticParams } from '@/lib/embed';
+import { embedBacklinkPath, embedStaticParams } from '@/lib/embed';
+import { T } from '@/lib/i18n/T';
 import { Wordmark } from '@/components/Wordmark';
+import { EmbedBrandLink } from './EmbedBrandLink';
 import { EmbedFrame } from './EmbedFrame';
 import styles from './page.module.css';
 
@@ -16,6 +18,11 @@ import styles from './page.module.css';
  * carry. The branding and the backlink are rendered here, in the server component, so they are
  * in the exported HTML and present with JavaScript disabled; the client `EmbedFrame` enforces
  * the frame allowlist and owns the `postMessage` channel on top of that.
+ *
+ * The backlink's sentence is one msgid with the game's name as a value (#220): the visible
+ * text through `<T>`, which a server component can render, and the wordmark link's
+ * `aria-label` through `EmbedBrandLink`, because an attribute cannot hold an element. The
+ * `metadata` title stays English, like every other, for the crawlers that read it.
  *
  * The embed holds nothing authenticated or personal — there is none anywhere in this product —
  * and it is marked `noindex`: the game's own page is the canonical, indexable one, and a
@@ -61,22 +68,16 @@ export default async function EmbedPage({ params }: { params: Promise<{ slug: st
         <EmbedFrame slug={slug} gameName={game.name} backlinkHref={backlinkHref} />
       </div>
       <footer className={styles.attribution}>
-        <a
-          className={styles.brand}
-          href={backlinkHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={embedBacklinkLabel(game.name)}
-        >
+        <EmbedBrandLink className={styles.brand} href={backlinkHref} name={game.name}>
           <Wordmark />
-        </a>
+        </EmbedBrandLink>
         <a
           className={styles.backlink}
           href={backlinkHref}
           target="_blank"
           rel="noopener noreferrer"
         >
-          {embedBacklinkLabel(game.name)}
+          <T id="Play {name} on DuelBox" values={{ name: game.name }} />
         </a>
       </footer>
     </div>

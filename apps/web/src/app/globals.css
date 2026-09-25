@@ -21,6 +21,19 @@ body {
   font-size: var(--db-text-base);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* A word longer than its column breaks rather than running out of the page (#223).
+     Inherited, so it is the site's default answer to a word no engine can break — a German
+     compound, an address, a file name, the padding run `en-XA` ends every string with — and
+     `e2e/text-expansion.spec.ts` found the prose pages overflowing by up to 890px without it,
+     which took the document sideways on every one of them.
+
+     `break-word` and deliberately not `anywhere`: the two break the same lines, and differ
+     only in whether the break counts towards the box's min-content width. `anywhere` would
+     let a flex or grid item shrink below the longest word it holds, which is a change to how
+     every English column is sized; `break-word` leaves intrinsic sizing exactly as it was,
+     so nothing that fits today moves. Where a box really does have to shrink past its longest
+     word, that box asks for `anywhere` itself. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -129,14 +142,44 @@ canvas {
   display: block;
 }
 
+/* The notice a framed page shows, and the visible half of the clickjacking defence
+   (#2367, #2545).
+
+   `app/frame-guard.ts` runs before paint, hides `<html>` with a rule of its own, and stamps
+   `data-framed` here. Everything else about the notice lives in this file rather than in that
+   script because the script is serialised into all 108 route payloads and this stylesheet is
+   fetched once — the measurement is in `size-budget.json`.
+
+   Fail-closed by construction: if this stylesheet never arrives, the `display: none` below
+   never arrives either, but neither does the reveal — and the guard's own
+   `html{visibility:hidden!important}` is still in force, so a framed page shows nothing at
+   all rather than showing itself. */
+#db-framed {
+  display: none;
+}
+
+html[data-framed] #db-framed {
+  display: block;
+  /* Beats the guard's `html{visibility:hidden!important}` on this subtree, and only this
+     one: an id selector outranks the element selector the guard uses, and `visibility`
+     inherits, so the link inside is visible too. */
+  visibility: visible !important;
+  position: fixed;
+  inset: 0;
+  z-index: var(--db-z-frame-notice);
+  padding: var(--db-space-6);
+  background: var(--db-paper);
+  color: var(--db-ink);
+}
+
 .db-skip {
   position: absolute;
-  left: max(var(--db-space-4), var(--db-safe-left));
+  inset-inline-start: max(var(--db-space-4), var(--db-safe-inline-start));
   top: calc(var(--db-space-4) * -4);
-  z-index: 100;
+  z-index: var(--db-z-escape);
   padding: var(--db-space-3) var(--db-space-4);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   border-radius: var(--db-radius-sm);
   font-weight: 600;
   transition: top var(--db-duration) var(--db-ease);
@@ -145,7 +188,7 @@ canvas {
 .db-skip:focus {
   /* The first thing a keyboard user reaches must not land under a notch. */
   top: max(var(--db-space-4), var(--db-safe-top));
-  color: #fff;
+  color: var(--db-paper);
 }
 
 .db-shell {
@@ -285,15 +328,53 @@ canvas {
   margin-inline: auto;
   /* max(), so the notch only ever widens the gutter and never narrows it. In landscape
      on a notched phone the cutout is on one side, and content there is unreadable. */
-  padding-left: max(var(--db-space-5), var(--db-safe-left));
-  padding-right: max(var(--db-space-5), var(--db-safe-right));
+  padding-left: max(var(--db-space-5), var(--db-safe-left)); /* physical: side of the device */
+  padding-right: max(var(--db-space-5), var(--db-safe-right)); /* physical: side of the device */
 }
 
 @media (max-width: 40rem) {
   .db-wrap {
-    padding-left: max(var(--db-space-4), var(--db-safe-left));
-    padding-right: max(var(--db-space-4), var(--db-safe-right));
+    padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
+    padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   }
+}
+
+/*
+ * The interface glyphs that point along a line turn round with the line (#222).
+ *
+ * `back` and `forward` mean "towards the start" and "towards the end", and under an Arabic
+ * shell the start is on the right — so the arrow that says "back" has to point right there.
+ * `Icon.tsx` puts this class on exactly the names in `MIRRORED_ICONS` (`lib/icons.ts`), and
+ * nothing else: play, pause, a tick, a cross, a cog, a star, a trophy and a speaker are the
+ * same picture in every reading direction, and a mirrored play triangle would mean "rewind".
+ * Global rather than a module class so `e2e/rtl.spec.ts` can reach it by name in the built
+ * export; only the transform lives here, colour stays with `currentColor`.
+ *
+ * Scaled by the sign token rather than written as `[dir='rtl'] .db-mirror { scaleX(-1) }`,
+ * because an ancestor selector cannot see the play surface: `<html dir="rtl">` matches it
+ * from outside the `ltr` island the surface pins (PlaySurface.module.css), so an arrow drawn
+ * inside a match would flip while everything around it stayed. `--db-inline-sign` is -1
+ * under the shell's `[dir='rtl']` and set back to 1 inside the island, which is exactly the
+ * question this glyph is asking. In a left-to-right shell it is `scaleX(1)`, an identity.
+ * `direction.test.ts` fails any `[dir=…]` rule outside tokens.css for the same reason.
+ *
+ * `inline-block` is for the class worn by text, not by an `<svg>`: `transform` applies only
+ * to a transformable element, and a non-replaced inline box is not one, so a `<span>` with
+ * this class in running text would not turn round without it. It is *not* what turns the
+ * one text arrow a route renders today — the landing page's "See all 108 →" (page.tsx) is
+ * a flex item of an `inline-flex` link, which blockifies it (`display` computes to `block`
+ * on it), and measured against the built export with this declaration removed from the
+ * rule, that arrow still read `matrix(-1, 0, 0, 1, 0, 0)`. The declaration is measured
+ * where it is load-bearing instead: `e2e/rtl.spec.ts` draws a span with the class in a
+ * paragraph and photographs it, because a computed `transform` serialises the matrix on a
+ * span forced back to `inline` too (measured) and a flip about the centre moves no box.
+ * A 24px `<svg>` appended to a landing-page paragraph read the same box and the same
+ * paragraph height with and without the class (measured), so the icons lose nothing.
+ * `direction.test.ts` holds this rule to `MIRROR_CLASS` in `lib/icons.ts` by name.
+ */
+.db-mirror {
+  display: inline-block;
+  transform: scaleX(var(--db-inline-sign));
 }
 
 /* Present to assistive technology, invisible on screen. Used where a visual signal
@@ -302,7 +383,7 @@ canvas {
   position: absolute;
   width: 1px;
   height: 1px;
-  margin: -1px;
+  margin: -1px; /* off-scale: the 1px clip rectangle, not spacing */
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);
@@ -319,12 +400,60 @@ canvas {
  * `html[data-net]` follows the same pattern as `html[data-match='live']` above — one
  * attribute on the document, styling in the stylesheet, no component involved.
  */
+/*
+ * The bar never takes a press that was not aimed at it.
+ *
+ * It is `position: fixed` at the bottom of the viewport, and the match HUD is also at the
+ * bottom on a tall narrow screen. Measured on `notched-portrait`: the bar occupies y 602-648
+ * and the pause button y 590-643, so they overlap by 41px, and `elementFromPoint` at the
+ * centre of the pause button returned the bar's own text rather than the button. Every click
+ * aimed there timed out. `e2e/match-flow.spec.ts`, `tap.spec.ts`, `keyboard.spec.ts` and
+ * `bot-difficulty.spec.ts` all failed on the two notched projects and on no others, because
+ * those are the viewports short enough for the two to meet.
+ *
+ * `pointer-events: none` on the bar with `auto` on its button is the same shape the catalogue
+ * already uses for the favourite star over a card: the box is a place to draw, and only the
+ * control inside it is a place to press. It is the right rule whatever is showing — an
+ * announcement that blocks the game it is announcing about is a worse bug than the one it
+ * reports.
+ */
+/*
+ * The bar stays out of a running match, and that is a product decision before it is a fix.
+ *
+ * The worker deliberately does not `skipWaiting`: a new version installs and *waits*, so a
+ * match is never swapped out from under itself. Putting a "Reload" button over that same
+ * match invites exactly the interruption the waiting exists to prevent. And an "Offline"
+ * notice mid-match is noise by construction — once a game is running it needs nothing from
+ * the network, which is the whole claim this site makes about itself.
+ *
+ * It is also what CI found. `e2e/offline.spec.ts` manufactures a second deploy by appending
+ * a comment to the served `out/sw.js`, and its own note explains why that is safe: the
+ * revision does not move, so a worker registered in that window behaves identically. What
+ * the note did not anticipate is that *behaving* identically is not *being* identical — the
+ * bytes differ, so every other test running in parallel got a genuine `updatefound` and a
+ * Reload prompt. Playwright reported it exactly: "<button class=\"db-net-do\">Reload</button>
+ * from <div role=\"status\" class=\"db-net-bar\"> subtree intercepts pointer events", against
+ * the pause button, on the two notched projects — the viewports short enough for a bar
+ * pinned to the bottom to reach a HUD pinned to the bottom.
+ *
+ * `pointer-events: none` below stops the *bar* taking a press, but the Reload button inside
+ * it is a real control and must keep `auto`, so the container alone could never have been
+ * the whole answer. This is: while `data-match` says a match is live, there is nothing there
+ * to intercept. `PlaySurface` sets that attribute for the duration of a match and removes it
+ * after, so the prompt reappears the moment the player is back at a lobby or a result — a
+ * person is asked to reload when reloading costs them nothing, which is when they should be.
+ */
+html[data-match='live'] .db-net-bar {
+  display: none;
+}
+
 .db-net-bar {
+  pointer-events: none;
   position: fixed;
-  left: max(var(--db-space-3), var(--db-safe-left));
-  right: max(var(--db-space-3), var(--db-safe-right));
+  left: max(var(--db-space-3), var(--db-safe-left)); /* physical: side of the device */
+  right: max(var(--db-space-3), var(--db-safe-right)); /* physical: side of the device */
   bottom: max(var(--db-space-3), var(--db-safe-bottom));
-  z-index: 40;
+  z-index: var(--db-z-bar);
   display: flex;
   gap: var(--db-space-3);
   align-items: center;
@@ -349,12 +478,14 @@ canvas {
 }
 
 .db-net-do {
+  /* The one part of the bar that is a control, so the one part that takes a press. */
+  pointer-events: auto;
   flex: none;
   padding: var(--db-space-2) var(--db-space-4);
   border: 0;
   border-radius: var(--db-radius-pill);
   background: var(--db-brand);
-  color: #fff;
+  color: var(--db-paper);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -390,4 +521,31 @@ html[data-net='offline'] a[data-offline-ready='1']::after {
 
 html[data-net='offline'] a[data-offline-ready='0'] {
   opacity: 0.55;
+}
+
+/* The idle catalogue's match (#165). Global rather than a CSS module, and that is a size
+   decision: the stage arrives as an `import()` chunk, and a CSS module imported from an
+   async chunk puts webpack's stylesheet loader into the runtime every visitor downloads —
+   measured at 563 B on the shell for three rules. Here they are paid once, with the rest of
+   this file. It sits between the catalogue's heading and its grid, in flow, so it pushes
+   nothing above it and covers no card. */
+.db-attract {
+  display: grid;
+  gap: var(--db-space-2);
+  margin-block: var(--db-space-4) var(--db-space-5);
+}
+
+/* The width it is given and the height of a phone held sideways: enough to read a match,
+   never so tall that the cards fall below the fold. */
+.db-attract-canvas {
+  width: 100%;
+  height: clamp(12rem, 40vh, 22rem);
+  display: block;
+  background: var(--db-surface);
+  border-radius: var(--db-radius-lg);
+}
+
+.db-attract-caption {
+  font-size: var(--db-text-sm);
+  color: var(--db-muted);
 }

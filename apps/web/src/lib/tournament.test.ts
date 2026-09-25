@@ -372,3 +372,68 @@ describe('the format', () => {
     expect(legsToWin(TOURNAMENT_LENGTH)).toBe(4);
   });
 });
+
+describe('the bot’s tier (#2347)', () => {
+  it('is fixed on the record when a tournament against the bot starts', () => {
+    const state = reduce(initialTournament(), {
+      kind: 'start',
+      games: LINE_UP,
+      opponent: 'bot',
+      difficulty: 'hard',
+    });
+    expect(state.difficulty).toBe('hard');
+  });
+
+  it('holds for every leg, through reports and through a resume', () => {
+    const state = play(
+      reduce(initialTournament(), {
+        kind: 'start',
+        games: LINE_UP,
+        opponent: 'bot',
+        difficulty: 'easy',
+      }),
+      'p1',
+      'p2',
+      'draw',
+    );
+    expect(state.difficulty).toBe('easy');
+    // The record is what the store writes and reads back; the tier has to be on it, not on
+    // the phase the store deliberately leaves out.
+    const { games, results, opponent, difficulty } = state;
+    const record = {
+      games,
+      results,
+      opponent,
+      ...(difficulty === undefined ? {} : { difficulty }),
+    };
+    expect(resume(record).difficulty).toBe('easy');
+  });
+
+  it('has no tier when the far seat is a person, whatever the event says', () => {
+    const state = reduce(initialTournament(), {
+      kind: 'start',
+      games: LINE_UP,
+      opponent: 'friend',
+      difficulty: 'hard',
+    });
+    expect(state.difficulty).toBeUndefined();
+    expect(started().difficulty).toBeUndefined();
+  });
+
+  it('does not survive into the next tournament unless that one sets it', () => {
+    const first = play(
+      reduce(initialTournament(), {
+        kind: 'start',
+        games: ['chess', 'darts'],
+        opponent: 'bot',
+        difficulty: 'hard',
+      }),
+      'p1',
+      'p1',
+    );
+    expect(first.phase).toBe('complete');
+    const next = reduce(first, { kind: 'start', games: LINE_UP, opponent: 'bot' });
+    expect(next.difficulty).toBeUndefined();
+    expect(reduce(first, { kind: 'abandon' }).difficulty).toBeUndefined();
+  });
+});

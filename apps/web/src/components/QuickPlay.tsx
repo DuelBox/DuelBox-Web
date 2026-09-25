@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import { pickQuickPlay } from '@/lib/quick-play';
 import { readRecent } from '@/lib/recent';
 
@@ -29,6 +31,7 @@ export function QuickPlay({
   className?: string | undefined;
 }) {
   const router = useRouter();
+  const messages = useMessages();
   if (slugs.length === 0) return null;
   return (
     <button
@@ -39,7 +42,7 @@ export function QuickPlay({
         if (slug !== undefined) router.push(`/play/${slug}/`);
       }}
     >
-      Surprise me
+      {t(messages, 'Surprise me')}
     </button>
   );
 }
