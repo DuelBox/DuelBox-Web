@@ -48,6 +48,7 @@ describe('the defaults', () => {
       // the seats keep the brand palette (#174), and the match runs at full speed (#179).
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
       // And the language is the one the site is written in (#219), which is the only
       // locale with no catalogue to fetch — so the default costs no bytes and no request.
@@ -80,6 +81,7 @@ describe('reading and writing settings', () => {
     writeSettings({ haptics: true });
     writeSettings({ theme: 'dark' });
     writeSettings({ seatPalette: 'colourblind' });
+    writeSettings({ seatSwap: true });
     writeSettings({ gameSpeed: 0.75 });
     writeSettings({ locale: 'en-XA' });
     expect(readSettings()).toEqual({
@@ -88,6 +90,7 @@ describe('reading and writing settings', () => {
       haptics: true,
       theme: 'dark',
       seatPalette: 'colourblind',
+      seatSwap: true,
       gameSpeed: 0.75,
       locale: 'en-XA',
     });
@@ -132,6 +135,7 @@ describe('reading and writing settings', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
       locale: 'en',
     });
@@ -166,7 +170,8 @@ describe('surviving whatever is actually in storage', () => {
       fakeStorage({
         [SETTINGS_KEY]:
           '{"version":1,"muted":true,"volume":"loud","haptics":"yes",' +
-          '"theme":42,"seatPalette":"colourblind","gameSpeed":"fast","locale":"de"}',
+          '"theme":42,"seatPalette":"colourblind","seatSwap":"yes","gameSpeed":"fast",' +
+          '"locale":"de"}',
       }),
     );
     expect(readSettings()).toEqual({
@@ -175,6 +180,8 @@ describe('surviving whatever is actually in storage', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'colourblind',
+      // A boolean that is not exactly `true` reads as the default (#161).
+      seatSwap: false,
       gameSpeed: 1,
       locale: 'en',
     });
@@ -191,6 +198,7 @@ describe('surviving whatever is actually in storage', () => {
       haptics: false,
       theme: 'system',
       seatPalette: 'default',
+      seatSwap: false,
       gameSpeed: 1,
       locale: 'en',
     });

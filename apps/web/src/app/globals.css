@@ -21,6 +21,19 @@ body {
   font-size: var(--db-text-base);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* A word longer than its column breaks rather than running out of the page (#223).
+     Inherited, so it is the site's default answer to a word no engine can break — a German
+     compound, an address, a file name, the padding run `en-XA` ends every string with — and
+     `e2e/text-expansion.spec.ts` found the prose pages overflowing by up to 890px without it,
+     which took the document sideways on every one of them.
+
+     `break-word` and deliberately not `anywhere`: the two break the same lines, and differ
+     only in whether the break counts towards the box's min-content width. `anywhere` would
+     let a flex or grid item shrink below the longest word it holds, which is a change to how
+     every English column is sized; `break-word` leaves intrinsic sizing exactly as it was,
+     so nothing that fits today moves. Where a box really does have to shrink past its longest
+     word, that box asks for `anywhere` itself. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -153,7 +166,7 @@ html[data-framed] #db-framed {
   visibility: visible !important;
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--db-z-frame-notice);
   padding: var(--db-space-6);
   background: var(--db-paper);
   color: var(--db-ink);
@@ -161,9 +174,9 @@ html[data-framed] #db-framed {
 
 .db-skip {
   position: absolute;
-  left: max(var(--db-space-4), var(--db-safe-left));
+  inset-inline-start: max(var(--db-space-4), var(--db-safe-inline-start));
   top: calc(var(--db-space-4) * -4);
-  z-index: 100;
+  z-index: var(--db-z-escape);
   padding: var(--db-space-3) var(--db-space-4);
   background: var(--db-brand);
   color: var(--db-paper);
@@ -315,15 +328,53 @@ html[data-framed] #db-framed {
   margin-inline: auto;
   /* max(), so the notch only ever widens the gutter and never narrows it. In landscape
      on a notched phone the cutout is on one side, and content there is unreadable. */
-  padding-left: max(var(--db-space-5), var(--db-safe-left));
-  padding-right: max(var(--db-space-5), var(--db-safe-right));
+  padding-left: max(var(--db-space-5), var(--db-safe-left)); /* physical: side of the device */
+  padding-right: max(var(--db-space-5), var(--db-safe-right)); /* physical: side of the device */
 }
 
 @media (max-width: 40rem) {
   .db-wrap {
-    padding-left: max(var(--db-space-4), var(--db-safe-left));
-    padding-right: max(var(--db-space-4), var(--db-safe-right));
+    padding-left: max(var(--db-space-4), var(--db-safe-left)); /* physical: side of the device */
+    padding-right: max(var(--db-space-4), var(--db-safe-right)); /* physical: side of the device */
   }
+}
+
+/*
+ * The interface glyphs that point along a line turn round with the line (#222).
+ *
+ * `back` and `forward` mean "towards the start" and "towards the end", and under an Arabic
+ * shell the start is on the right — so the arrow that says "back" has to point right there.
+ * `Icon.tsx` puts this class on exactly the names in `MIRRORED_ICONS` (`lib/icons.ts`), and
+ * nothing else: play, pause, a tick, a cross, a cog, a star, a trophy and a speaker are the
+ * same picture in every reading direction, and a mirrored play triangle would mean "rewind".
+ * Global rather than a module class so `e2e/rtl.spec.ts` can reach it by name in the built
+ * export; only the transform lives here, colour stays with `currentColor`.
+ *
+ * Scaled by the sign token rather than written as `[dir='rtl'] .db-mirror { scaleX(-1) }`,
+ * because an ancestor selector cannot see the play surface: `<html dir="rtl">` matches it
+ * from outside the `ltr` island the surface pins (PlaySurface.module.css), so an arrow drawn
+ * inside a match would flip while everything around it stayed. `--db-inline-sign` is -1
+ * under the shell's `[dir='rtl']` and set back to 1 inside the island, which is exactly the
+ * question this glyph is asking. In a left-to-right shell it is `scaleX(1)`, an identity.
+ * `direction.test.ts` fails any `[dir=…]` rule outside tokens.css for the same reason.
+ *
+ * `inline-block` is for the class worn by text, not by an `<svg>`: `transform` applies only
+ * to a transformable element, and a non-replaced inline box is not one, so a `<span>` with
+ * this class in running text would not turn round without it. It is *not* what turns the
+ * one text arrow a route renders today — the landing page's "See all 108 →" (page.tsx) is
+ * a flex item of an `inline-flex` link, which blockifies it (`display` computes to `block`
+ * on it), and measured against the built export with this declaration removed from the
+ * rule, that arrow still read `matrix(-1, 0, 0, 1, 0, 0)`. The declaration is measured
+ * where it is load-bearing instead: `e2e/rtl.spec.ts` draws a span with the class in a
+ * paragraph and photographs it, because a computed `transform` serialises the matrix on a
+ * span forced back to `inline` too (measured) and a flip about the centre moves no box.
+ * A 24px `<svg>` appended to a landing-page paragraph read the same box and the same
+ * paragraph height with and without the class (measured), so the icons lose nothing.
+ * `direction.test.ts` holds this rule to `MIRROR_CLASS` in `lib/icons.ts` by name.
+ */
+.db-mirror {
+  display: inline-block;
+  transform: scaleX(var(--db-inline-sign));
 }
 
 /* Present to assistive technology, invisible on screen. Used where a visual signal
@@ -332,7 +383,7 @@ html[data-framed] #db-framed {
   position: absolute;
   width: 1px;
   height: 1px;
-  margin: -1px;
+  margin: -1px; /* off-scale: the 1px clip rectangle, not spacing */
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);
@@ -399,10 +450,10 @@ html[data-match='live'] .db-net-bar {
 .db-net-bar {
   pointer-events: none;
   position: fixed;
-  left: max(var(--db-space-3), var(--db-safe-left));
-  right: max(var(--db-space-3), var(--db-safe-right));
+  left: max(var(--db-space-3), var(--db-safe-left)); /* physical: side of the device */
+  right: max(var(--db-space-3), var(--db-safe-right)); /* physical: side of the device */
   bottom: max(var(--db-space-3), var(--db-safe-bottom));
-  z-index: 40;
+  z-index: var(--db-z-bar);
   display: flex;
   gap: var(--db-space-3);
   align-items: center;

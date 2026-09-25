@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
+import { T } from '@/lib/i18n/T';
 import styles from './not-found.module.css';
 
 /**
@@ -23,6 +26,10 @@ import styles from './not-found.module.css';
  * appears. Sending errors off-device would contradict all three. The digest below is the
  * honest substitute — it is the same identifier the server-side render logged, so a person
  * can quote it without us collecting anything.
+ *
+ * The digest line is a `<T>` rather than a `t()` because the code is a `<code>` element inside
+ * the sentence, and a translator has to be able to move it (#220). The digest itself is not
+ * copy: it is an identifier, and it is passed as a value.
  */
 export default function ErrorBoundary({
   error,
@@ -31,6 +38,8 @@ export default function ErrorBoundary({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const messages = useMessages();
+
   useEffect(() => {
     // The console is the only sink this site has. It reaches a developer with the page open
     // and nobody else, which is the correct audience for a stack trace.
@@ -43,22 +52,27 @@ export default function ErrorBoundary({
         <p className={styles.code} aria-hidden="true">
           !
         </p>
-        <h1 className={styles.title}>Something went wrong here</h1>
+        <h1 className={styles.title}>{t(messages, 'Something went wrong here')}</h1>
         <p className={styles.body}>
-          This page stopped part-way. It is usually momentary — trying again reloads just this part,
-          not the whole site, and nothing about your games is stored anywhere to lose.
+          {t(
+            messages,
+            'This page stopped part-way. It is usually momentary — trying again reloads just this part, not the whole site, and nothing about your games is stored anywhere to lose.',
+          )}
         </p>
         <div className={styles.actions}>
           <button type="button" onClick={reset} className={styles.primary}>
-            Try again
+            {t(messages, 'Try again')}
           </button>
           <Link href="/games/" className={styles.secondary}>
-            All games
+            {t(messages, 'All games')}
           </Link>
         </div>
         {error.digest !== undefined && (
           <p className={styles.body}>
-            If it keeps happening, this code identifies it: <code>{error.digest}</code>
+            <T
+              id="If it keeps happening, this code identifies it: {code}"
+              values={{ code: <code>{error.digest}</code> }}
+            />
           </p>
         )}
       </div>

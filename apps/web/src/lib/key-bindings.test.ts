@@ -47,9 +47,15 @@ const IJKL: KeyBinding = { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL'
  *
  * `components/KeyBindings.tsx` cannot read `BINDING_SLOTS` — it reaches this module through
  * `import()` so that `@duelbox/engine` stays off the shell, and a top-level import of the
- * order alone would undo that — so it derives its order from its own label map. Two lists,
- * one meaning, which is the shape this repository keeps finding drifted. This is the check
- * that stops the panel offering four boxes for a store that validates five.
+ * order alone would undo that — so it writes its order out itself. Two lists, one meaning,
+ * which is the shape this repository keeps finding drifted. This is the check that stops the
+ * panel offering four boxes for a store that validates five.
+ *
+ * It used to read the keys of the panel's `SLOT_LABELS` map, which was the same five names in
+ * the same order. #220 turned those labels into `t()` calls with literal ids — the extractor
+ * reads a message by its shape at the call site and cannot see a string that arrives through
+ * a map — so the order it reads is now the `SLOT_ORDER` list the panel iterates, which is the
+ * value that actually decides what is rendered.
  */
 describe('the slots the settings panel lists', () => {
   const panel = readFileSync(
@@ -58,9 +64,9 @@ describe('the slots the settings panel lists', () => {
   );
 
   it('are exactly the slots the store validates, in the same order', () => {
-    const labels = /const SLOT_LABELS: Record<BindingSlot, string> = \{([^}]*)\}/.exec(panel)?.[1];
-    expect(labels, 'KeyBindings.tsx no longer has a SLOT_LABELS map to read').toBeDefined();
-    const listed = [...(labels ?? '').matchAll(/^\s*(\w+):/gm)].map((match) => match[1]);
+    const order = /const SLOT_ORDER: readonly BindingSlot\[\] = \[([^\]]*)\]/.exec(panel)?.[1];
+    expect(order, 'KeyBindings.tsx no longer has a SLOT_ORDER list to read').toBeDefined();
+    const listed = [...(order ?? '').matchAll(/'(\w+)'/g)].map((match) => match[1]);
     expect(listed).toEqual([...BINDING_SLOTS]);
   });
 });

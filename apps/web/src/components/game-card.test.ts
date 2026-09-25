@@ -15,6 +15,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { CATALOGUE } from '../data/catalogue.generated';
+import { DYNAMIC_SOURCES } from '../lib/i18n/sources';
 
 const read = (file: string) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), 'utf8');
 const css = read('./GameCard.module.css').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -73,5 +75,68 @@ describe('what the card says', () => {
     // second stop on every one of 108 cards.
     const body = tsx.slice(tsx.indexOf('<Link'), tsx.lastIndexOf('</Link>'));
     expect(body).not.toMatch(/<button|<input|<a |tabIndex/);
+  });
+});
+
+/**
+ * The mode line is translated as one string, and the words it is built from live twice.
+ *
+ * The card joins `MODE_LABEL` with a middle dot and hands the joined line to `<T>`, so what a
+ * locale translates is "Two players · vs Bot" rather than three words a page assembles — one
+ * text node, as the export has always had. The extractor cannot see a variable, so the same
+ * lines are computed in `lib/i18n/sources.ts`, and it cannot import this file to share the
+ * labels: vitest transforms no JSX in this project, so a `.ts` importing a `.tsx` fails to
+ * parse. That leaves two copies of three words, which is exactly the shape this repository
+ * keeps finding rotted — so it is read rather than trusted. A label renamed on one side and
+ * not the other fails here, in a second, rather than showing plain English on a
+ * pseudo-localised card that nobody is looking at.
+ */
+describe('the mode line a locale translates', () => {
+  /** The labels as written in the card, read out of the object literal. */
+  function labels(source: string): Record<string, string> {
+    const block = /const MODE_LABEL: Record<string, string> = \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    const found: Record<string, string> = {};
+    for (const match of block.matchAll(/(\w+): '([^']*)'/g)) {
+      const mode = match[1];
+      const label = match[2];
+      if (mode !== undefined && label !== undefined) found[mode] = label;
+    }
+    return found;
+  }
+
+  /** Every line the cards can show, from the labels this file actually holds. */
+  function rendered(source: string): string[] {
+    const map = labels(source);
+    return [...new Set(CATALOGUE.map((game) => game.modes.map((m) => map[m] ?? m).join(' · ')))];
+  }
+
+  it('registers every line the 108 cards can render, and nothing else', () => {
+    const map = labels(tsx);
+    expect(Object.keys(map), 'MODE_LABEL is no longer an object of string literals').toContain(
+      'friend',
+    );
+    const source = DYNAMIC_SOURCES.find((entry) => entry.name === 'catalogue mode lines');
+    expect(source, 'sources.ts no longer registers the mode lines').toBeDefined();
+    const registered = new Set(source?.strings() ?? []);
+    const shown = rendered(tsx);
+    expect(shown.length, 'the catalogue renders no mode line at all').toBeGreaterThan(0);
+    expect(
+      shown.filter((line) => !registered.has(line)),
+      'the card renders a mode line sources.ts does not register: it will be plain English' +
+        ' in every locale. Change both, or neither.',
+    ).toEqual([]);
+    expect(
+      [...registered].filter((line) => !shown.includes(line)),
+      'sources.ts registers a mode line no card renders, which i18n.test.ts calls an orphan',
+    ).toEqual([]);
+  });
+
+  it('reads the labels rather than anything shaped like them', () => {
+    expect(
+      labels("const MODE_LABEL: Record<string, string> = {\n  friend: 'Two players',\n};"),
+    ).toEqual({ friend: 'Two players' });
+    // A reader that had stopped matching would return nothing and pass the test above by
+    // comparing two empty lists.
+    expect(labels('const SOMETHING_ELSE = { friend: 1 };')).toEqual({});
   });
 });

@@ -33,7 +33,7 @@
 }
 
 .prose ul {
-  padding-left: var(--db-space-5);
+  padding-inline-start: var(--db-space-5);
   list-style: disc;
 }
 
@@ -46,7 +46,7 @@
    copy. Uses the same surface and hairline the footer does. */
 .placeholder {
   border: 1px solid var(--db-hairline);
-  border-left-width: 3px;
+  border-inline-start-width: 3px;
   background: var(--db-surface);
   padding: var(--db-space-3) var(--db-space-4);
   border-radius: var(--db-radius-md, 6px);

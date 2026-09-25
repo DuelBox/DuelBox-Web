@@ -9,7 +9,7 @@
 .layer {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: var(--db-z-hint);
   display: flex;
   flex-direction: column;
   justify-content: space-between;

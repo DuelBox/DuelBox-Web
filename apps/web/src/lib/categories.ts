@@ -1,3 +1,6 @@
+import type { CatalogueEntry } from '../data/catalogue.generated';
+import { formatRound } from './format';
+
 /**
  * The eighteen category hubs, and the copy each one is built from (#200).
  *
@@ -23,6 +26,17 @@
  * that against the real catalogue. The order is load-bearing: the footer links the first six
  * from every page in the site, so the hubs a crawler reaches most cheaply are the ones with
  * the most behind them.
+ *
+ * Every string a hub page renders from this module is translated through the same lookup the
+ * rest of the site uses (#220) and is registered in `lib/i18n/sources.ts` as
+ * `category hub copy`, because the page passes it as a variable and the extractor reads
+ * literals. The two sentences the *page* used to build for itself — the heading over the
+ * games grid and the line about how long a round takes — are functions here rather than
+ * private helpers there, for the reason the blurbs are here at all: what a page assembles
+ * inline is copy nothing can register, hold to the house voice, or hand a translator. The
+ * `intent` field is deliberately **not** registered: it reaches a reader only through the
+ * route's `metadata`, which stays English (`docs/i18n.md`), and a registered string the site
+ * never renders is an orphan `i18n.test.ts` refuses.
  */
 
 /** One hub: where it lives, what it covers, and the prose that makes it worth indexing. */
@@ -260,4 +274,40 @@ const BY_SLUG: ReadonlyMap<string, CategoryHub> = new Map(
 /** The hub at an address, or nothing — which is the route's cue to render a 404. */
 export function hubFor(slug: string): CategoryHub | undefined {
   return BY_SLUG.get(slug);
+}
+
+/**
+ * The heading over a hub's games grid: "Board games".
+ *
+ * One string rather than the category name and the word "games" side by side, because word
+ * order is the first thing a translation changes and a language that puts the noun first
+ * cannot express it in two fragments the page assembles. `e2e/category-hubs.spec.ts` finds
+ * the grid by this exact accessible name.
+ */
+export function gridHeading(category: string): string {
+  return `${category} games`;
+}
+
+/**
+ * How long a round takes, from the real `roundSeconds` of the games on the page.
+ *
+ * Compared as *rendered* strings rather than as seconds, which is the difference between a
+ * useful line and a silly one: Memory holds a 60-second game and a 75-second one, and both
+ * render as "about 1 minute", so comparing the numbers would produce "Rounds run from about
+ * 1 minute to about 1 minute". `formatRound` is the one place that decides how a length
+ * reads, so it is the thing to ask.
+ *
+ * It lived in the route file until #220 and moved here so that the strings it can produce
+ * can be registered: there are eighteen of them, one per hub, and they are what
+ * `lib/i18n/sources.ts` computes from this function over the catalogue, so the registered
+ * set is the rendered set by construction rather than by a second copy of the arithmetic.
+ * The route still calls it for its `metadata`, which stays English.
+ */
+export function roundLine(games: readonly CatalogueEntry[]): string {
+  const seconds = games.map((game) => game.roundSeconds);
+  const shortest = formatRound(Math.min(...seconds));
+  const longest = formatRound(Math.max(...seconds));
+  return shortest === longest
+    ? `A round takes ${shortest}.`
+    : `Rounds run from ${shortest} to ${longest}.`;
 }

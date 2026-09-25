@@ -126,24 +126,11 @@ test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
  * anything else only when `-u` was typed, and skipping a run that was told to write the
  * pictures is how the documented way to make them would have quietly done nothing: written
  * first, run second, five skips and no files.
- *
- * `DUELBOX_VISUAL_BOOTSTRAP` is the one exception, and it exists because the alternative was
- * a pass that meant nothing. Until a `-linux` baseline is committed, `ci.yml` takes the
- * pictures from the build it has just made, uploads them to be committed, and deletes them
- * again; this file is told so, and stands its five screens down. **While that variable is
- * set, #227 is not met on that run** — nothing was compared. A skip says that where a green
- * tick would have said the opposite.
  */
 function requireBaseline(name: string): void {
   if (test.info().config.updateSnapshots !== 'none') return;
   const baseline = test.info().snapshotPath(name, { kind: 'screenshot' });
   if (existsSync(baseline)) return;
-  test.skip(
-    process.env['DUELBOX_VISUAL_BOOTSTRAP'] === '1',
-    `No committed baseline for ${name}: this run took the pictures itself and uploaded ` +
-      'them as an artefact, so there is nothing here to compare against and #227 is not ' +
-      'met yet. Commit visual-baselines-<shard> into e2e/__screenshots__.',
-  );
   test.skip(
     !process.env.CI,
     `No ${process.platform} baseline for ${name}: the committed ones are Linux, because ` +

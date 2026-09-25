@@ -29,7 +29,6 @@ import {
   LANDING_SECTIONS,
   WAYS_TO_PLAY,
   featuredGames,
-  gameCount,
   roundSpread,
   type LandingSection,
 } from './landing';
@@ -415,14 +414,19 @@ describe('the sentences built from the catalogue', () => {
   });
 
   it('counts a category with one game in it in the singular', () => {
-    expect(gameCount(1)).toBe('1 game');
-    expect(gameCount(0)).toBe('0 games');
-    expect(gameCount(20)).toBe('20 games');
-    // Four of the eighteen hold exactly one, which is why this is not academic.
+    // This held `gameCount`, which #220 removed along with its last call site: the count in
+    // the category list is a placeholder the i18n lookup fills now — `{count} game` or
+    // `{count} games`, with the number as a value — because English's two plural forms are
+    // not every language's and a helper that spells the English rule cannot be translated.
+    // What is left to hold is that the page still *chooses* between the two forms, and that
+    // the singular is not academic: four of the eighteen categories hold exactly one game.
     const singles = CATEGORY_HUBS.filter(
       (hub) => CATALOGUE.filter((game) => game.category === hub.category).length === 1,
     );
     expect(singles.length).toBeGreaterThan(0);
+    expect(page, 'the category list no longer picks a singular form').toContain(
+      "'{count} game' : '{count} games'",
+    );
   });
 
   it('skips a category with nothing behind it rather than showing a gap', () => {
@@ -486,6 +490,17 @@ describe('the landing page renders what the module declares', () => {
  * component arrives is through something that looked like a server one. `GameCard` and
  * `TileSprite` are the interesting cases: both are imported here, both reach the catalogue
  * and the tile geometry, and neither may ever gain a directive without this failing.
+ *
+ * One exception, added by #220 and no wider than it has to be: `lib/i18n/T.tsx` and what it
+ * imports. Translating a server component means passing the English to a client component
+ * that can read the locale context — that is what `<T>` is and `docs/i18n.md` has no other
+ * mechanism for it — and the cost this test exists to prevent is not paid, because
+ * `LocaleProvider` is mounted in the root layout: those modules are in the shell on every
+ * route already, so this page's use of them adds no chunk that a visitor would not have
+ * downloaded anyway. It is checked rather than asserted — `pnpm build`'s shell line is the
+ * number, and the pull request records it. Every other client directive in the graph still
+ * fails, and the allowance is a prefix rather than a file so that `T`'s own imports
+ * (`use-messages`, `provider`) do not each need listing; nothing else lives there.
  */
 describe('the landing page is server-rendered all the way down', () => {
   const SPECIFIER = /(?:from|import)\s*\(?\s*'([^']+)'/g;
@@ -543,13 +558,28 @@ describe('the landing page is server-rendered all the way down', () => {
     expect(graph.length).toBeGreaterThan(8);
   });
 
-  it('imports nothing that carries a client directive', () => {
-    const client = graphFrom(pagePath).filter((path) =>
-      /^\s*(['"])use client\1/.test(readFileSync(path, 'utf8')),
-    );
+  /** The one client boundary this page is allowed: the i18n framework's own modules. */
+  const I18N = 'lib/i18n/';
+
+  it('imports nothing that carries a client directive but the locale lookup', () => {
+    const client = graphFrom(pagePath)
+      .filter((path) => /^\s*(['"])use client\1/.test(readFileSync(path, 'utf8')))
+      .map((path) => relative(web, path));
     expect(
-      client.map((path) => relative(web, path)),
+      client.filter((path) => !path.startsWith(I18N)),
       'a client component on the landing page costs the shell budget and breaks #103',
     ).toEqual([]);
+  });
+
+  it('still reads a directive it should reject, and reaches the one it allows', () => {
+    // The allowance above is only safe while the reader still works: a regular expression
+    // that had stopped matching would let every client component through and read as a
+    // clean page. Both halves, on the real graph — the exception is reached, and a file
+    // that carries a directive outside it is still found.
+    const graph = graphFrom(pagePath).map((path) => relative(web, path));
+    expect(graph, 'the page no longer reaches <T> at all').toContain('lib/i18n/T.tsx');
+    const directive = (source: string) => /^\s*(['"])use client\1/.test(source);
+    expect(directive(readFileSync(join(web, 'lib', 'i18n', 'T.tsx'), 'utf8'))).toBe(true);
+    expect(directive(readFileSync(pagePath, 'utf8'))).toBe(false);
   });
 });

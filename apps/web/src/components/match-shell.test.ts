@@ -20,7 +20,7 @@ describe('the pause menu (#145)', () => {
     // All four options are in the paused panel.
     expect(overlay).toMatch(/Resume/);
     expect(overlay).toContain('onClick={onRestart}');
-    expect(overlay).toMatch(/>\s*Restart\s*</);
+    expect(overlay).toMatch(/>\s*\{t\(messages, 'Restart'\)\}\s*</);
     expect(overlay).toContain('href="/settings/"');
     expect(overlay).toMatch(/Quit match/);
   });
@@ -96,9 +96,9 @@ describe('changing a match between rounds (#2351)', () => {
   it('the overlay offers the change between rounds and gives the reason on pause', () => {
     const overlay = read('MatchOverlay.tsx');
     expect(overlay).toContain('Change something for the next round');
-    expect(overlay).toContain('{changing.changes.seat.reason}');
+    expect(overlay).toContain('{t(messages, changing.changes.seat.reason)}');
     // Every refusal is shown, once, and the device one always: nothing is refused silently.
-    expect(overlay).toContain('{changes.device.reason}');
+    expect(overlay).toContain('{t(messages, changes.device.reason)}');
     expect(overlay).toContain('Not added to the record');
   });
 

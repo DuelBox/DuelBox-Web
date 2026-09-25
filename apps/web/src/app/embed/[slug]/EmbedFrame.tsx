@@ -9,7 +9,8 @@ import {
   postToEmbedder,
   receiveEmbedMessage,
 } from '@/lib/embed-messages';
-import { embedBacklinkLabel } from '@/lib/embed';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import styles from './EmbedFrame.module.css';
 
 export interface EmbedFrameProps {
@@ -27,8 +28,14 @@ export interface EmbedFrameProps {
  * the fallback for the static host that serves none (#2481), and the home of the message
  * receiver either way. If a non-allowlisted origin has framed us, the board is replaced with a
  * link out to the game rather than played inside a stranger's page.
+ *
+ * The backlink's label is one msgid with the game's name as a value (#220): a helper that built
+ * the sentence per game would be 108 msgids for one line, and the extractor cannot read a
+ * function call anyway. The server half of this route renders the same msgid through `<T>` and
+ * names its wordmark link through `EmbedBrandLink`, so the three share one catalogue entry.
  */
 export function EmbedFrame({ slug, gameName, backlinkHref }: EmbedFrameProps) {
+  const messages = useMessages();
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
@@ -77,9 +84,9 @@ export function EmbedFrame({ slug, gameName, backlinkHref }: EmbedFrameProps) {
   if (blocked) {
     return (
       <div className={styles.blocked}>
-        <p>This DuelBox game cannot be embedded here.</p>
+        <p>{t(messages, 'This DuelBox game cannot be embedded here.')}</p>
         <a href={backlinkHref} target="_blank" rel="noopener noreferrer">
-          {embedBacklinkLabel(gameName)}
+          {t(messages, 'Play {name} on DuelBox', { name: gameName })}
         </a>
       </div>
     );

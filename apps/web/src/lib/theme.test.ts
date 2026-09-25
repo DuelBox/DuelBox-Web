@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applySeatPalette, applyTheme, seatPaletteAttribute, themeAttribute } from './theme';
+import {
+  applySeatPalette,
+  applyTheme,
+  seatPaletteAttribute,
+  themeAttribute,
+  applySeatSwap,
+} from './theme';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -94,6 +100,25 @@ describe('applying a seat palette to the document', () => {
     applySeatPalette('default');
     expect(doc.attrs.has('data-seat-palette')).toBe(false);
   });
+
+  it('stamps the seat swap and clears it again, without touching the palette (#161)', () => {
+    const doc = fakeDocument();
+    vi.stubGlobal('document', doc);
+    applySeatPalette('colourblind');
+    applySeatSwap(true);
+    expect(doc.attrs.has('data-seat-swap')).toBe(true);
+    expect(doc.attrs.get('data-seat-palette')).toBe('colourblind');
+    applySeatSwap(false);
+    expect(doc.attrs.has('data-seat-swap')).toBe(false);
+    expect(doc.attrs.get('data-seat-palette')).toBe('colourblind');
+  });
+
+  it('does nothing, and does not throw, where there is no document (#161)', () => {
+    vi.stubGlobal('document', undefined);
+    expect(() => {
+      applySeatSwap(true);
+    }).not.toThrow();
+  });
 });
 
 describe('the inline head script in layout.tsx', () => {
@@ -116,6 +141,14 @@ describe('the inline head script in layout.tsx', () => {
     // explicit values — the same table themeAttribute encodes.
     expect(layout).toMatch(/'light'|"light"/);
     expect(layout).toMatch(/'dark'|"dark"/);
+  });
+
+  it('also stamps the seat swap before paint (#161)', () => {
+    // A scoreboard painted with the near seat red and then flipped blue on hydration would be
+    // the flash this script exists to prevent, so the swap rides with the palette. `true`
+    // exactly, mirroring `sanitise` in settings.ts: a stored "yes" swaps nothing.
+    expect(layout).toContain('data-seat-swap');
+    expect(layout).toMatch(/seatSwap===true/);
   });
 
   it('also stamps the colour-blind seat palette before paint', () => {

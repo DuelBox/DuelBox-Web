@@ -13,10 +13,20 @@
  *
  * Every Latin letter is swapped for an accented form of itself, so the text stays readable by
  * somebody who knows the English and is unmistakably not English to anybody else; then it is
- * padded with middle dots to about 35% over its length, which is what a German or Finnish
- * rendering of an English control typically costs, and wrapped in `⟦ ⟧` so that a string still
- * in plain English on a pseudo-localised screen stands out as one the extractor never saw. A
- * control that overflows under this locale is the finding #223 exists to make.
+ * padded with middle dots to **half again its length**, and wrapped in `⟦ ⟧` so that a string
+ * still in plain English on a pseudo-localised screen stands out as one the extractor never saw.
+ * A control that overflows under this locale is the finding #223 exists to make.
+ *
+ * Half again, and not the 35% this first shipped with, because 35% is what a German or Finnish
+ * rendering of an English control *typically* costs and #223 asks for the case the layout has to
+ * survive rather than the typical one: **no truncation or overflow at 150% of the source
+ * length**. So the padding is the acceptance criterion, measured the way the criterion reads —
+ * `pseudoAccent(s).length >= s.length * 1.5` for every string, the wrapper and its space adding
+ * three characters more on top of that rather than being counted towards it.
+ *
+ * The dots go after the words, never inside one. A padded word would be a word no engine can
+ * break, which is a different failure from a long line — and one the site would have no way to
+ * fix short of hyphenating real German.
  *
  * ## `ar-XB` — mirrored
  *
@@ -93,8 +103,12 @@ const ACCENTS: Readonly<Record<string, string>> = {
   Z: 'Ž',
 };
 
-/** How much longer than the English a translation is planned for. Thirty-five percent. */
-const EXPANSION = 0.35;
+/**
+ * How much longer than the English a translation is planned for: half again (#223).
+ *
+ * The padding alone, so the transform's output is `1.5 × length` plus the wrapper.
+ */
+const EXPANSION = 0.5;
 
 /** A `{placeholder}`, kept as a token of its own so neither transform touches it. */
 const PLACEHOLDER = /(\{\w+\})/;

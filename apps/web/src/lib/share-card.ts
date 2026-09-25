@@ -1,8 +1,9 @@
-import type { SeatId } from '@duelbox/engine';
+import { SEAT_PALETTE, type SeatId } from '@duelbox/engine';
 import { containsBlockedWord } from '@duelbox/game-sdk';
 import { SEAT_CHARACTERS, type SeatNames } from './seats';
+import { t, type Catalogue } from './i18n/messages';
 import { absoluteUrl } from './site';
-import { colour, seatColour } from '../styles/tokens';
+import { colour } from '../styles/tokens';
 
 /**
  * The result of a match as a picture two people can send to a third (#164).
@@ -49,6 +50,14 @@ import { colour, seatColour } from '../styles/tokens';
  * what they like on their own screen; this is the one artefact that leaves the device, and a
  * name that would get the picture taken down is a picture nobody can share. A blocked name
  * becomes the seat's own character name and the card says nothing about it.
+ *
+ * ## The words on it
+ *
+ * The verdict is drawn into the picture and is the `title` a share sheet shows, so it is in
+ * the player's language: like `match-announcement.ts`, every function that puts words on the
+ * card takes the catalogue as its first parameter (#220), the component passes the one it
+ * reads, and the unit suite passes `{}` and gets English. The game's name is a value in the
+ * sentence, never translated — `docs/i18n.md` keeps names as the catalogue spells them.
  */
 
 /** The Open Graph size. Not configurable: the whole point is one picture everywhere. */
@@ -156,9 +165,12 @@ export function shareableName(seat: SeatId, names: SeatNames): string {
 }
 
 /** The sentence under the score. Words, not a colour, say who won (rule 7). */
-export function verdictLine(data: ShareCardData): string {
-  if (data.outcome === 'draw') return `A draw at ${data.game}`;
-  return `${shareableName(data.outcome, data.names)} wins at ${data.game}`;
+export function verdictLine(messages: Catalogue, data: ShareCardData): string {
+  if (data.outcome === 'draw') return t(messages, 'A draw at {game}', { game: data.game });
+  return t(messages, '{name} wins at {game}', {
+    name: shareableName(data.outcome, data.names),
+    game: data.game,
+  });
 }
 
 /** The address printed on the card, which is also the one a share carries as its URL. */
@@ -214,8 +226,11 @@ function drawGlyph(
   y: number,
   half: number,
 ): void {
-  ctx.fillStyle = seatColour[seat].base;
-  ctx.strokeStyle = seatColour[seat].deep;
+  // The engine's live palette rather than the brand pair in `styles/tokens.ts`: it carries the
+  // player's palette choice (#174) and the seat swap (#161), so the card shows the colours the
+  // board was played in. The shapes beside the names are still per seat and do not move.
+  ctx.fillStyle = SEAT_PALETTE[seat].base;
+  ctx.strokeStyle = SEAT_PALETTE[seat].deep;
   ctx.lineWidth = half / 4;
   if (seat === 'p1') {
     ctx.beginPath();
@@ -243,6 +258,7 @@ function drawGlyph(
  * the DOM — is the smallest possible function.
  */
 export function drawShareCard(
+  messages: Catalogue,
   ctx: CanvasRenderingContext2D,
   layout: ShareCardLayout,
   data: ShareCardData,
@@ -284,7 +300,7 @@ export function drawShareCard(
 
   ctx.fillStyle = colour.body;
   ctx.font = layout.verdict.font.css;
-  ctx.fillText(verdictLine(data), layout.verdict.x, layout.verdict.y, layout.width * 0.9);
+  ctx.fillText(verdictLine(messages, data), layout.verdict.x, layout.verdict.y, layout.width * 0.9);
 
   ctx.fillStyle = colour.brand;
   ctx.font = layout.link.font.css;
@@ -298,7 +314,7 @@ export function drawShareCard(
  * resolves to an empty list rather than rejecting, so a missing font is a wrong picture and
  * not a thrown error. That is why `fonts.css` is held to these families by `share-card.test.ts`.
  */
-export async function renderShareCard(data: ShareCardData): Promise<Blob> {
+export async function renderShareCard(messages: Catalogue, data: ShareCardData): Promise<Blob> {
   const layout = shareCardLayout();
   await Promise.all(fontsToLoad(layout).map((css) => document.fonts.load(css)));
   const canvas = document.createElement('canvas');
@@ -306,7 +322,7 @@ export async function renderShareCard(data: ShareCardData): Promise<Blob> {
   canvas.height = layout.height;
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('no 2d context for the share card');
-  drawShareCard(ctx, layout, data);
+  drawShareCard(messages, ctx, layout, data);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob === null) reject(new Error('the share card could not be encoded'));
@@ -329,7 +345,11 @@ export type ShareOutcome = 'shared' | 'downloaded' | 'cancelled';
  * share the person dismissed rejects with `AbortError`, which is not a failure and is not
  * turned into a download they did not ask for.
  */
-export async function shareOrDownload(blob: Blob, data: ShareCardData): Promise<ShareOutcome> {
+export async function shareOrDownload(
+  messages: Catalogue,
+  blob: Blob,
+  data: ShareCardData,
+): Promise<ShareOutcome> {
   const filename = shareCardFilename(data);
   const file = new File([blob], filename, { type: 'image/png' });
   // Read as unknowns rather than through the DOM type: `lib.dom` declares both as always
@@ -344,7 +364,11 @@ export async function shareOrDownload(blob: Blob, data: ShareCardData): Promise<
     nav.canShare({ files: [file] })
   ) {
     try {
-      await nav.share({ files: [file], title: verdictLine(data), url: shareCardUrl(data.slug) });
+      await nav.share({
+        files: [file],
+        title: verdictLine(messages, data),
+        url: shareCardUrl(data.slug),
+      });
       return 'shared';
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return 'cancelled';

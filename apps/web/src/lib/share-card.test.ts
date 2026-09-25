@@ -109,8 +109,8 @@ describe('the layout', () => {
 
 describe('what it says', () => {
   it('names the winner in words, and a draw as a draw', () => {
-    expect(verdictLine(DATA)).toBe('Ada wins at Crash It');
-    expect(verdictLine({ ...DATA, outcome: 'draw' })).toBe('A draw at Crash It');
+    expect(verdictLine({}, DATA)).toBe('Ada wins at Crash It');
+    expect(verdictLine({}, { ...DATA, outcome: 'draw' })).toBe('A draw at Crash It');
   });
 
   it("links back to the game's own page, with nothing personal in the address", () => {
@@ -126,7 +126,7 @@ describe('what it says', () => {
   it('substitutes the character for a name that may not leave the device (#161)', () => {
     expect(shareableName('p1', { p1: 'Scunthorpe', p2: 'Grace' })).toBe('Scunthorpe');
     expect(shareableName('p1', { p1: 'sh1t', p2: 'Grace' })).toBe(SEAT_CHARACTERS.p1);
-    expect(verdictLine({ ...DATA, names: { p1: 'sh1t', p2: 'Grace' } })).toBe(
+    expect(verdictLine({}, { ...DATA, names: { p1: 'sh1t', p2: 'Grace' } })).toBe(
       `${SEAT_CHARACTERS.p1} wins at Crash It`,
     );
   });
@@ -135,7 +135,7 @@ describe('what it says', () => {
 describe('what it draws', () => {
   it('draws the game, both names, both scores, the verdict and the address', () => {
     const { ctx, calls } = recordingContext();
-    drawShareCard(ctx, shareCardLayout(), DATA);
+    drawShareCard({}, ctx, shareCardLayout(), DATA);
     const texts = calls.filter((c) => c.name === 'fillText').map((c) => String(c.args[0]));
     expect(texts).toContain('Crash It');
     expect(texts).toContain('Ada');
@@ -148,7 +148,7 @@ describe('what it draws', () => {
 
   it('gives each seat its own shape as well as its colour (rule 7)', () => {
     const { ctx, calls } = recordingContext();
-    drawShareCard(ctx, shareCardLayout(), DATA);
+    drawShareCard({}, ctx, shareCardLayout(), DATA);
     // p1 is a disc: one `arc` of a full turn. p2 is a rounded square: `arcTo` corners.
     const arcs = calls.filter((c) => c.name === 'arc');
     expect(arcs.length).toBe(1);
@@ -158,7 +158,7 @@ describe('what it draws', () => {
 
   it('sets a face before every piece of text, so nothing is drawn in the default font', () => {
     const { ctx, calls } = recordingContext();
-    drawShareCard(ctx, shareCardLayout(), DATA);
+    drawShareCard({}, ctx, shareCardLayout(), DATA);
     let font: unknown = null;
     for (const call of calls) {
       if (call.name === 'set font') font = call.args[0];
@@ -168,7 +168,7 @@ describe('what it draws', () => {
 
   it('draws the blocked name as the character, so the filter reaches the picture', () => {
     const { ctx, calls } = recordingContext();
-    drawShareCard(ctx, shareCardLayout(), { ...DATA, names: { p1: 'f_u_c_k', p2: 'Grace' } });
+    drawShareCard({}, ctx, shareCardLayout(), { ...DATA, names: { p1: 'f_u_c_k', p2: 'Grace' } });
     const texts = calls.filter((c) => c.name === 'fillText').map((c) => String(c.args[0]));
     expect(texts).not.toContain('f_u_c_k');
     expect(texts).toContain(SEAT_CHARACTERS.p1);

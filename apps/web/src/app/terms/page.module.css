@@ -36,7 +36,7 @@
 }
 
 .prose ul {
-  padding-left: var(--db-space-5);
+  padding-inline-start: var(--db-space-5);
   list-style: disc;
 }
 

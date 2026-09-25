@@ -32,7 +32,7 @@
  * now has to be allowed to take two lines.
  */
 .links {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: flex;
   flex-wrap: wrap;
   gap: var(--db-space-2) var(--db-space-4);

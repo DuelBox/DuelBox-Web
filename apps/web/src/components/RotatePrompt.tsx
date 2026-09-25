@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { rotateHintFor, type GameManifest } from '@duelbox/game-sdk';
+import { t } from '@/lib/i18n/messages';
+import { useMessages } from '@/lib/i18n/use-messages';
 import styles from './RotatePrompt.module.css';
 
 /**
@@ -32,6 +34,7 @@ import styles from './RotatePrompt.module.css';
  * work anyway. Recorded rather than written: see the comment on #136.
  */
 export function RotatePrompt({ manifest }: { manifest: GameManifest }) {
+  const messages = useMessages();
   const [want, setWant] = useState<'portrait' | 'landscape' | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -55,7 +58,14 @@ export function RotatePrompt({ manifest }: { manifest: GameManifest }) {
     <div className={styles.layer}>
       <p className={styles.prompt}>
         <span>
-          Turn the device {want === 'portrait' ? 'upright' : 'sideways'} for a bigger board.
+          {/* Two whole sentences rather than one with the direction interpolated: a language
+              that inflects the verb for the direction cannot translate the halves apart. */}
+          {t(
+            messages,
+            want === 'portrait'
+              ? 'Turn the device upright for a bigger board.'
+              : 'Turn the device sideways for a bigger board.',
+          )}
         </span>
         <button
           type="button"
@@ -64,7 +74,7 @@ export function RotatePrompt({ manifest }: { manifest: GameManifest }) {
             setDismissed(true);
           }}
         >
-          Dismiss
+          {t(messages, 'Dismiss')}
         </button>
       </p>
     </div>
