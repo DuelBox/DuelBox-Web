@@ -65,6 +65,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: absoluteUrl('/how-to-play/'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
     { url: absoluteUrl('/privacy/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
     { url: absoluteUrl('/terms/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
+    // The DMCA and abuse page (#216), which arrived after this list was written and was left
+    // out of it. A contact route a crawler is never told about is a contact route in name
+    // only: the footer links it, but the sitemap is the list a search engine trusts, and it
+    // said `/privacy/` and `/terms/` were the whole of the legal section. Same weight as
+    // those two, for the same reason.
+    { url: absoluteUrl('/dmca/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
     // The category hubs (#200). Above every game page and below the catalogue: a hub is the
     // page that answers a search for a whole genre, and it is the one that then hands the
     // crawler the games in it. From `CATEGORY_HUBS` rather than from the catalogue's

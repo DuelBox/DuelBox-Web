@@ -30,8 +30,8 @@ name: Deploy
 # the site roughly ten minutes before anyone knew whether the tests had passed - and a red CI
 # neither blocked the deploy nor undid it. The gate was real, thorough, and wired to nothing.
 #
-# `workflow_run` is the only mechanism that orders two workflows. Branch protection cannot do
-# it here, because the deploy fires on a push rather than on a merge.
+# `workflow_run` orders the two workflows. Branch protection can require checks before a
+# merge, but it cannot make Deploy wait for the CI run on the resulting `main` commit.
 on:
   workflow_run:
     workflows: [CI]
@@ -69,7 +69,7 @@ jobs:
           # the same bug in a new place. Pin to the SHA that produced the green run.
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         # Deliberately no `version:` — package.json pins `packageManager`, and passing both makes
         # the action treat it as a conflict and refuse to install. That mistake cost this
         # repository 45 consecutive red CI runs before 20 August.
@@ -116,4 +116,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

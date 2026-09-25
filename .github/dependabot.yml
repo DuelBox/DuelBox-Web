@@ -10,3 +10,11 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    # One grouped PR for all Action bumps. Dependabot otherwise opens a PR per
+    # dependency, and github/codeql-action/init and .../analyze are one monorepo
+    # whose steps must run the same version — split across two PRs, each raises
+    # only its own step and the mismatched pair fails Static analysis with a
+    # CodeQL configuration error (#2600, #2601). Grouping keeps them together.
+    groups:
+      github-actions:
+        patterns: ['*']
