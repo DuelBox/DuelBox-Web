@@ -63,18 +63,20 @@ is a rule somebody will get the wrong way round.
 already costs a first visit fifty-odd requests, on a visit nobody asked for it on. Saving the whole
 catalogue is a different feature with a different shape, and it is built (#196) — but as something a
 person asks for, from the settings page, never as part of install. The worker carries a second list,
-`GAMES`, emitted by the same script: one entry per play route with the document, the route's own
-chunks that are not shell, the game's chunk (the one reached through `import()`, which no HTML
-names), and what they weigh gzipped, so the page can say "108 games, N MB" before anything is
-fetched. On `DOWNLOAD_ALL` the worker saves each game this device does not already hold, one file at
+`DOWNLOAD`, emitted by the same script: shared play-route chunks are listed once, and each game
+entry identifies its play document, its lazy game chunk (which no HTML names), and their gzipped
+weight. That lets the page say "108 games, N MB" before anything is fetched. On `DOWNLOAD_ALL`, the
+worker saves each game this device does not already hold, one file at
 a time into the runtime cache, reporting progress by `postMessage`; a cancel stops it after the file
 in flight; a later press skips what is already here. Persistent storage is requested when the
 download starts, and a refusal is shown in words. Under quota pressure the worker evicts the least
 recently *opened* game — it notes a timestamp per game on every play-route navigation, in the cache
-under a key no route has — and retries; `cache.put` is atomic per entry, so a refused write leaves
-nothing behind and "quota pressure never corrupts the cache" is a property of the API rather than
-of the code. The whole download runs inside the message event's `waitUntil`, so closing the settings
-page does not stop it; the browser's own lifetime limit on an extended worker does, which is why
+under a key no route has — and retries. If the device cannot hold every game at once, the final
+recount reports the storage limit and the actual saved count. `cache.put` is atomic per entry, so a
+refused write leaves nothing behind and "quota pressure never corrupts the cache" is a property of
+the API rather than of the code. The whole download runs inside the message event's `waitUntil`, so
+closing the settings page does not stop it. The browser's own lifetime limit on an extended worker
+does, which is why
 resuming is not optional.
 
 The exact count and both sizes are printed by the emit step on every build, and that is where to

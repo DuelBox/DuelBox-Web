@@ -339,7 +339,7 @@ async function respondToAsset(event, request) {
  * The slug a play-route URL names, or null for any other page.
  *
  * `/play/<slug>/` with the base path in front of it. Read from the URL rather than looked up
- * in {@link GAMES} so a game this list does not know about — a build with a game switched off
+ * in {@link DOWNLOAD} so a game this list does not know about — a build with a game switched off
  * (#208) — is still touched when it is played and still counts as recently used.
  */
 function gameSlug(url) {

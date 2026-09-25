@@ -52,7 +52,7 @@
  * The play documents are still not precached: a game that has never been opened is not on
  * the device unless somebody asked for it, and a game a player actually opens is saved by
  * the worker's runtime path, which is the promise that can be kept without asking anybody
- * anything. What #196 adds is the asking. `GAMES` below is the list the worker downloads
+ * anything. What #196 adds is the asking. `DOWNLOAD` below is the list the worker downloads
  * from when the settings page says so — one entry per play route, with the files that route
  * needs and what they weigh — and it is emitted here for the same reason the precache list
  * is: the game's own chunk is reached through `import()`, no HTML names it, and only the
