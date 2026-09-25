@@ -42,7 +42,7 @@ export const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = [
   },
   {
     "name": "zod",
-    "version": "3.25.76",
+    "version": "4.6.5",
     "licence": "MIT",
     "homepage": "https://zod.dev"
   }
