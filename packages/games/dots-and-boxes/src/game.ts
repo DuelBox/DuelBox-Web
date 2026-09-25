@@ -302,10 +302,12 @@ export class DotsAndBoxesGame implements Game {
    * Move the cursor to the edge that lies most squarely in the direction pressed.
    *
    * Geometric rather than index arithmetic: from a horizontal edge, pressing down should
-   * reach the vertical edge below it, and those are not adjacent in any index order. So the
-   * cursor asks which edge lies in that direction — straightest first, nearest of those
-   * second, as the selection below sets out — which is what the player means by "down" and
-   * needs no special case for the two lattices.
+   * reach the next edge straight below it, and the two are nowhere near adjacent in index
+   * order — edge 12 at (450, 390) to edge 17 at (450, 510) is five apart on one lattice, and
+   * the press before it may have crossed from the other. So the cursor asks which edge lies
+   * in that direction — straightest first, nearest of those second, as the selection below
+   * sets out — which is what the player means by "down" and needs no special case for the
+   * two lattices.
    */
   #stepCursor(moveX: number, moveY: number, fixedDeltaSeconds: number): void {
     const x = moveX > 0.5 ? 1 : moveX < -0.5 ? -1 : 0;
