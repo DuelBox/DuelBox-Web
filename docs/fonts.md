@@ -207,6 +207,12 @@ stand-in moved behind the script faces, one given a `url()`, one given a wider r
 given no range; the e2e with every descriptor stripped out of the built stylesheet, which
 failed both of its tests.
 
+The browser guard probes the stylesheet's actual `local()` sources with `FontFace.load()`.
+Ubuntu's CSS font substitution can draw text for `font-family: Arial` even though
+`local('Arial')` loads no face, so the Linux e2e job skips the two measurements when none of
+their source faces exists. CI also runs this focused spec on macOS with the measurements
+required; a missing source there fails instead of turning the guard into a skipped pass.
+
 The cost on the wire is **+183 bytes gzipped**, all of it in the one global stylesheet every
 page links — 165 bytes on the three blocks and 18 on the three stacks, measured by stripping
 each back out of the built file at level 9, the same way #224's numbers were taken, rather

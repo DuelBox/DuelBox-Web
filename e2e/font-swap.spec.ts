@@ -38,6 +38,10 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
  * hydration rather than by the swap. It is here because `local('Arial')` resolves to a
  * different face on every platform, so the *size* of the win is a property of this machine's
  * fonts, and re-measuring it on four projects would be four different numbers for one claim.
+ * A `FontFace` probe uses the same `local()` source as the stylesheet: CSS `font-family`
+ * lookup can substitute a different face for an absent name and falsely report it present.
+ * The two measured claims stand down when neither source face exists, and the focused macOS
+ * CI job requires them to run so the regular Linux skip cannot hide a broken fallback.
  * `playwright.config.ts` lists it with the specs that stand down for reasons of their own.
  *
  * The service worker is blocked throughout: it would answer the font requests itself on a
@@ -50,33 +54,64 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 interface Pair {
   readonly primary: string;
   readonly fallback: string;
-  /** The first name the fallback's `src` asks the device for. */
-  readonly device: string;
+  /** In the order the fallback's `src` asks the device for them. */
+  readonly devices: readonly [string, ...string[]];
   /** The weight the descriptors were measured at, and so the weight to measure back. */
   readonly weight: number;
 }
 
 const PAIRS: readonly Pair[] = [
-  { primary: 'Fredoka', fallback: 'Fredoka Fallback', device: 'Arial', weight: 600 },
+  {
+    primary: 'Fredoka',
+    fallback: 'Fredoka Fallback',
+    devices: ['Arial', 'Helvetica'],
+    weight: 600,
+  },
   {
     primary: 'Plus Jakarta Sans',
     fallback: 'Plus Jakarta Sans Fallback',
-    device: 'Arial',
+    devices: ['Arial', 'Helvetica'],
     weight: 400,
   },
   {
     primary: 'JetBrains Mono',
     fallback: 'JetBrains Mono Fallback',
-    device: 'Courier New',
+    devices: ['Courier New', 'Menlo'],
     weight: 500,
   },
 ];
+
+async function resolvedPairs(page: Page): Promise<(Pair & { device: string })[]> {
+  const devices = await page.evaluate(async (pairs) => {
+    const available = new Set<string>();
+    for (const name of new Set(pairs.flatMap((pair) => pair.devices))) {
+      // This tests the `local()` source itself. A CSS `font-family: Arial` can render a
+      // substitute on Linux even when `local('Arial')` cannot load anything at all.
+      try {
+        await new FontFace('duelbox-local-probe', `local("${name}")`).load();
+        available.add(name);
+      } catch {
+        // The named local face is unavailable; the next source may still be present.
+      }
+    }
+    return pairs.map((pair) => pair.devices.find((name) => available.has(name)) ?? null);
+  }, PAIRS);
+
+  const missing = PAIRS.filter((_, index) => devices[index] === null).map((pair) => pair.fallback);
+  if (missing.length > 0) {
+    const reason = `no local source face for ${missing.join(', ')}`;
+    if (process.env.DUELBOX_REQUIRE_FONT_SWAP === '1') throw new Error(reason);
+    test.skip(true, reason);
+  }
+  return PAIRS.map((pair, index) => ({ ...pair, device: devices[index] ?? pair.devices[0] }));
+}
 
 test.describe('the metric-matched stand-ins', () => {
   test.use({ serviceWorkers: 'block' });
 
   test('have the primary’s line box exactly, and its width on average', async ({ page }) => {
     await page.goto('/');
+    const pairs = await resolvedPairs(page);
 
     const report = await page.evaluate(
       async ({ pairs, letters }) => {
@@ -108,14 +143,6 @@ test.describe('the metric-matched stand-ins', () => {
         return pairs.map((pair) => ({
           ...pair,
           loaded: document.fonts.check(`${String(pair.weight)} 40px "${pair.primary}"`),
-          // Is the device face installed at all? The name against a generic, and the generic
-          // alone — a sans name against `monospace`, since a machine whose monospace default
-          // *is* Courier New would make the obvious `"Courier New", monospace` comparison
-          // read as "missing". Without this the whole test would pass vacuously on a machine
-          // with no Arial, having measured the same system fallback three times over.
-          deviceInstalled:
-            box(`"${pair.device}", cursive`, pair.weight, letters).width !==
-            box('cursive', pair.weight, letters).width,
           primary1: box(`"${pair.primary}"`, pair.weight, letters),
           fallback1: box(`"${pair.fallback}"`, pair.weight, letters),
           device1: box(`"${pair.device}"`, pair.weight, letters),
@@ -125,13 +152,7 @@ test.describe('the metric-matched stand-ins', () => {
           sampleLength: sample.length,
         }));
       },
-      { pairs: PAIRS, letters: LETTERS },
-    );
-
-    const missing = report.filter((face) => !face.deviceInstalled).map((face) => face.device);
-    test.skip(
-      missing.length > 0,
-      `not installed here, so the stand-in resolves to nothing: ${missing.join(', ')}`,
+      { pairs, letters: LETTERS },
     );
 
     const off = (a: number, b: number) => Math.abs(a - b) / b;
@@ -242,6 +263,12 @@ test.describe('the reflow a font swap costs', () => {
 
   test('is smaller in total with the stand-ins than without them', async ({ browser }) => {
     test.slow();
+    const probe = await browser.newPage();
+    try {
+      await resolvedPairs(probe);
+    } finally {
+      await probe.close();
+    }
     let withStandIns = 0;
     let bare = 0;
     for (const { route, width } of CASES) {
