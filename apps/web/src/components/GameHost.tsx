@@ -51,6 +51,7 @@ import { audio } from '@/lib/audio';
 import { prefersReducedMotion } from '@/lib/reduced-motion';
 import { readSettings } from '@/lib/settings';
 import styles from './GameHost.module.css';
+import type { InputLatency } from './debug/InputLatency';
 
 /**
  * Runs one game on a canvas.
@@ -408,7 +409,14 @@ export function GameHost({
      * allocates is `navigator.getGamepads()` itself, which is the browser's and is argued in
      * `loop.ts`. `usedGamepad` is a two-slot typed array for the same reason `usedInput` is.
      */
-    const gamepads = new GamepadManager(browserGamepadSource());
+    let debugLatency: InputLatency | undefined;
+    let observeGamepads: ((pads: readonly (Gamepad | null)[]) => void) | undefined;
+    if (process.env.NODE_ENV !== 'production') {
+      if (new URLSearchParams(globalThis.location.search).get('debug') === '1') {
+        observeGamepads = (pads) => debugLatency?.captureGamepads(pads);
+      }
+    }
+    const gamepads = new GamepadManager(browserGamepadSource(observeGamepads));
     onGamepadReadyRef.current?.({
       swap: () => {
         const p1 = gamepads.padOf('p1');
@@ -539,14 +547,23 @@ export function GameHost({
       el.setPointerCapture(event.pointerId);
       const point = toLogical(event);
       input.pointerDown(event.pointerId, point.x, point.y);
+      if (process.env.NODE_ENV !== 'production') {
+        debugLatency?.pointer(event.pointerId, 'down', event.timeStamp);
+      }
     }
     function onPointerMove(event: PointerEvent): void {
       if (!isSimulating(phaseRef.current)) return;
       const point = toLogical(event);
       input.pointerMove(event.pointerId, point.x, point.y);
+      if (process.env.NODE_ENV !== 'production') {
+        debugLatency?.pointer(event.pointerId, 'move', event.timeStamp);
+      }
     }
     function onPointerUp(event: PointerEvent): void {
       input.pointerUp(event.pointerId);
+      if (process.env.NODE_ENV !== 'production' && isSimulating(phaseRef.current)) {
+        debugLatency?.pointer(event.pointerId, 'up', event.timeStamp);
+      }
     }
     /**
      * A cancellation is not a release, and must never be delivered as one.
@@ -560,6 +577,9 @@ export function GameHost({
      */
     function onPointerCancel(event: PointerEvent): void {
       input.pointerCancel(event.pointerId);
+      if (process.env.NODE_ENV !== 'production' && isSimulating(phaseRef.current)) {
+        debugLatency?.pointer(event.pointerId, 'up', event.timeStamp);
+      }
     }
     function onKeyDown(event: KeyboardEvent): void {
       // Escape belongs to the shell's pause menu, so it is never swallowed here.
@@ -573,6 +593,9 @@ export function GameHost({
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (!isSimulating(phaseRef.current)) return;
       input.keyDown(event.code);
+      if (process.env.NODE_ENV !== 'production' && !event.repeat && input.isBound(event.code)) {
+        debugLatency?.key(event.code, true, event.timeStamp);
+      }
       // A bound key belongs to the game while a match is live, whatever the browser has
       // focused. Otherwise seat two's Enter activates the focused button instead of
       // playing — a player pressing their own action key opened the pause menu. Escape
@@ -582,11 +605,17 @@ export function GameHost({
     }
     function onKeyUp(event: KeyboardEvent): void {
       input.keyUp(event.code);
+      if (process.env.NODE_ENV !== 'production' && isSimulating(phaseRef.current)) {
+        debugLatency?.key(event.code, false, event.timeStamp);
+      }
     }
     function onModifierRelease(event: KeyboardEvent): void {
       // Safety net for the keyup that never arrives. If a modifier is released and the
       // player was mid-chord, anything still held is cleared rather than left down.
-      if (event.key === 'Meta' || event.key === 'Control' || event.key === 'Alt') input.clear();
+      if (event.key === 'Meta' || event.key === 'Control' || event.key === 'Alt') {
+        input.clear();
+        if (process.env.NODE_ENV !== 'production') debugLatency?.clear();
+      }
     }
     function onContextMenu(event: Event): void {
       // A long press is a legitimate game input; on touch it otherwise raises the
@@ -596,6 +625,7 @@ export function GameHost({
     function onBlur(): void {
       // Otherwise a player returns to a stuck direction.
       input.clear();
+      if (process.env.NODE_ENV !== 'production') debugLatency?.clear();
       onRequestPauseRef.current?.();
     }
 
@@ -696,6 +726,7 @@ export function GameHost({
         // Exactly what `onBlur` does and for its reason: a key or a finger held when the
         // surface went must not still be held when it comes back.
         input.clear();
+        if (process.env.NODE_ENV !== 'production') debugLatency?.clear();
         onRequestPauseRef.current?.();
       },
       () => {
@@ -755,6 +786,7 @@ export function GameHost({
         // The shell's clock runs in every live phase; the simulation only while playing.
         onTickRef.current?.(dt);
         if (!isSimulating(phaseRef.current)) {
+          if (process.env.NODE_ENV !== 'production') debugLatency?.step(gamepads, false);
           // Input still has to be drained, or a key held through a countdown arrives as
           // a fresh press on the first simulated step.
           input.beginStep(dt);
@@ -764,6 +796,7 @@ export function GameHost({
         // board. Everything the step reads off the game — score, active seat — is inside the
         // guard too, so a game that throws from `getScore` is caught the same way.
         guard(() => {
+          if (process.env.NODE_ENV !== 'production') debugLatency?.step(gamepads, true);
           const sampled = input.beginStep(dt);
           game.update(dt, inputView.sync(sampled));
           // #137, and it is in the hot path, so it reads fields and calls nothing until the
@@ -870,17 +903,32 @@ export function GameHost({
     if (process.env.NODE_ENV !== 'production') {
       if (new URLSearchParams(globalThis.location.search).get('debug') === '1') {
         void import('./debug/DebugOverlay')
-          .then(({ mountDebugOverlay }) => {
+          .then(({ mountDebugOverlay, InputLatency }) => {
             // Strict mode mounts, unmounts and remounts every effect in development, which
             // is exactly where this code runs. Without the flag the discarded host's
             // overlay outlives it and two boxes stack up in the corner.
             if (debugCancelled) return;
+            debugLatency = new InputLatency();
+            // These are the same lifecycle methods the phase effect invokes. Wrapping
+            // them here keeps all instrumentation out of production (including refs),
+            // and drops events that were pending when the shell froze the match.
+            const onPause = game.onPause.bind(game);
+            const onResume = game.onResume.bind(game);
+            game.onPause = () => {
+              debugLatency?.clear();
+              onPause();
+            };
+            game.onResume = () => {
+              debugLatency?.clear();
+              onResume();
+            };
             stopDebugOverlay = mountDebugOverlay(() => ({
               at: performance.now(),
               frames: debugFrames,
               steps: loop.totalSteps,
               stepMs: loop.stepSeconds * 1000,
               running: runner.running,
+              latency: debugLatency?.readings() ?? [],
               // The seat ids are written out rather than taken from the engine's `SEATS`,
               // because an import at the top of this file ships whether or not this branch
               // does. `localSeat` above defaults the same way for the same reason.

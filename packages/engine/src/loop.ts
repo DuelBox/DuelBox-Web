@@ -209,7 +209,9 @@ export function browserClock(): Clock {
  * Returns an empty array where the API is absent (older engines, a locked-down context) rather
  * than throwing, so a host can poll unconditionally and simply see no pads.
  */
-export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
+export function browserGamepadSource(
+  observe?: (pads: readonly (Gamepad | null)[]) => void,
+): () => (GamepadSnapshot | null)[] {
   const scope = globalThis;
   if (typeof scope.navigator === 'undefined' || typeof scope.navigator.getGamepads !== 'function') {
     return () => [];
@@ -226,6 +228,9 @@ export function browserGamepadSource(): () => (GamepadSnapshot | null)[] {
   const out: (GamepadSnapshot | null)[] = [];
   return () => {
     const pads = getGamepads();
+    // Optional development instrumentation sees the exact native sample converted below,
+    // including its timestamp, without a second platform poll. Normal hosts omit it.
+    observe?.(pads);
     out.length = pads.length;
     for (let i = 0; i < pads.length; i += 1) {
       const pad = pads[i];

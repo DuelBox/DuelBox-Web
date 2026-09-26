@@ -6,6 +6,10 @@ than losing.
 
 This document decides, per archetype, where that matters and what we do about it.
 
+Browser event/sample-to-step measurements are now available in the development
+overlay. See the [input latency lab](input-latency.md) for its three-engine harness,
+recorded baselines, and the limits of headless and injected-controller measurements.
+
 ## The families, and what each is actually good at
 
 | Family | Precision | Travel | Occlusion | Latency | Multi-point |
@@ -557,8 +561,8 @@ Two limits worth stating plainly. First, **the factor is accurate to about ±20%
 between Shuriken's two known constants (2.06 and 2.15) at 2.54, which is right about the
 question and approximate about the number. Second, **only two families are compared**. A
 trackpad and a pen reach this code as ordinary pointers so they inherit the pointer's answer
-by construction, but a gamepad does not exist yet (#130), and when it does it will bring a
-third lattice — an analogue stick's dead zone and resolution — that nothing here measures.
+by construction. Gamepad input now exists (#130), but this aiming comparison still
+does not measure its third lattice — an analogue stick's dead zone and resolution.
 
 **Proved by breaking it.** `AIM_KEY_SPEED` in Archery was changed from 1.25 to 0.25, the
 package rebuilt, and the game moved from **A at 1.29× to B at 12.50×**, failing the ratchet

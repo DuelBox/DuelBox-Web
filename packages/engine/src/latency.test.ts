@@ -80,4 +80,17 @@ describe('LatencyMeter (#133)', () => {
     expect(meter.stats('keyboard').samples).toBe(0);
     expect(meter.hasPending).toBe(false);
   });
+
+  it('discards paused input without discarding completed measurements', () => {
+    const meter = new LatencyMeter();
+    meter.markEvent('keyboard', 10);
+    meter.consume(20);
+    meter.markEvent('keyboard', 25);
+    meter.markEvent('pointer', 26);
+    meter.discardPending();
+    meter.consume(1000);
+    expect(meter.stats('keyboard')).toMatchObject({ samples: 1, lastMs: 10 });
+    expect(meter.stats('pointer').samples).toBe(0);
+    expect(meter.hasPending).toBe(false);
+  });
 });

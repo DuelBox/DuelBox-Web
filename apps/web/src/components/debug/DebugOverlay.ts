@@ -1,5 +1,6 @@
 import type { SeatId } from '@duelbox/engine';
 import styles from './DebugOverlay.module.css';
+export { InputLatency } from './InputLatency';
 
 /**
  * The debug overlay (#119): what the loop is doing, and what the two seats are pressing.
@@ -188,7 +189,8 @@ function formatLatency(latency: DebugReading['latency']): readonly string[] {
     if (entry.samples <= 0) continue;
     lines.push(
       `lat ${entry.family.padEnd(8)} ${entry.meanMs.toFixed(2)}ms mean` +
-        `  ${entry.lastMs.toFixed(2)} last  ${entry.maxMs.toFixed(2)} max  n=${entry.samples}`,
+        `  ${entry.lastMs.toFixed(2)} last  ${entry.maxMs.toFixed(2)} max  n=${entry.samples}` +
+        `  ${entry.family === 'gamepad' ? 'sample' : 'event'}→step`,
     );
   }
   return lines;
@@ -215,6 +217,9 @@ export function mountDebugOverlay(read: DebugSampler): () => void {
   let previous: DebugReading | null = null;
   const refresh = (): void => {
     const reading = read();
+    // Machine-readable lab output uses the same reading displayed to the developer.
+    // Sampling/serialization stays off the fixed-step path and out of production.
+    element.dataset.latency = JSON.stringify(reading.latency ?? []);
     element.textContent = formatDebugReading(reading, previous).join('\n');
     previous = reading;
   };
