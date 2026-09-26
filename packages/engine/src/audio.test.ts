@@ -132,21 +132,32 @@ class FakeSource extends FakeNode implements AudioBufferSourceNodeLike {
   buffer: AudioBufferLike | null = null;
   readonly playbackRate: FakeParam;
   starts = 0;
+  stops = 0;
   readonly #log: string[];
+  readonly #clock: () => number;
+  #endsAt = 0;
 
   constructor(log: string[], clock: () => number) {
     super();
     this.#log = log;
+    this.#clock = clock;
     this.playbackRate = new FakeParam(clock);
   }
 
   start(): void {
     this.starts += 1;
+    this.#endsAt = this.#clock() + (this.buffer?.duration ?? 0) / this.playbackRate.value;
     this.#log.push('start');
   }
 
   stop(): void {
+    this.stops += 1;
+    this.#endsAt = this.#clock();
     this.#log.push('stop');
+  }
+
+  get playing(): boolean {
+    return this.starts > 0 && this.#clock() < this.#endsAt;
   }
 }
 
@@ -990,6 +1001,100 @@ describe('play allocation discipline', () => {
     // Sources are the one unavoidable allocation: an AudioBufferSourceNode is single-use
     // by specification. They are created in flush(), which the host calls outside the step.
     expect(context.sources.length).toBe(1 + 32 + 32);
+  });
+
+  it('stops and disconnects a stolen source before reusing its gain', () => {
+    const { audio, context } = setup({ maxVoices: 1 });
+    context.state = 'running';
+    audio.context();
+    audio.register('long', new FakeBuffer(10));
+    audio.play('long', 0.9);
+    audio.flush();
+    const first = context.sources[0]!;
+    const voiceGain = first.connectedTo;
+
+    audio.play('long', 0.2);
+    audio.flush();
+    const replacement = context.sources[1]!;
+    expect(first.stops).toBe(1);
+    expect(first.playing).toBe(false);
+    expect(first.connectedTo).toBeUndefined();
+    expect(replacement.playing).toBe(true);
+    expect(replacement.connectedTo).toBe(voiceGain);
+    expect(context.gains[1]!.gain.value).toBe(0.2);
+  });
+
+  it('keeps live sources within maxVoices through repeated bursts', () => {
+    const { audio, context } = setup({ maxVoices: 2 });
+    context.state = 'running';
+    audio.context();
+    audio.register('long', new FakeBuffer(10));
+
+    for (let burst = 0; burst < 3; burst += 1) {
+      for (let sound = 0; sound < 32; sound += 1) audio.play('long');
+      audio.flush();
+      expect(context.sources.filter((source) => source.playing)).toHaveLength(2);
+      expect(context.sources.filter((source) => source.connectedTo !== undefined)).toHaveLength(2);
+      context.currentTime += 0.5;
+    }
+    expect(context.gains).toHaveLength(3); // Master plus two reusable voice gains.
+  });
+
+  it('keeps the replacement deadline when a stolen sound would have finished', () => {
+    const { audio, context } = setup({ maxVoices: 2 });
+    context.state = 'running';
+    audio.context();
+    audio.register('short', new FakeBuffer(1));
+    audio.register('medium', new FakeBuffer(3));
+    audio.register('long', new FakeBuffer(10));
+    audio.play('short');
+    audio.play('medium');
+    audio.flush();
+    const short = context.sources[0]!;
+    const medium = context.sources[1]!;
+
+    context.currentTime = 0.5;
+    audio.play('long');
+    audio.flush();
+    const replacement = context.sources[2]!;
+    expect(short.stops).toBe(1);
+    expect(medium.stops).toBe(0);
+
+    // Past the old sound's natural end, the replacement still owns that slot. The
+    // other voice ends sooner and must be stolen next, leaving the replacement alone.
+    context.currentTime = 1.5;
+    audio.play('long');
+    audio.flush();
+    expect(medium.stops).toBe(1);
+    expect(replacement.stops).toBe(0);
+    expect(replacement.playing).toBe(true);
+    expect(replacement.connectedTo).toBeDefined();
+  });
+
+  it('reuses a naturally completed slot without disturbing its live neighbour', () => {
+    const { audio, context } = setup({ maxVoices: 2 });
+    context.state = 'running';
+    audio.context();
+    audio.register('short', new FakeBuffer(1));
+    audio.register('long', new FakeBuffer(10));
+    audio.play('short');
+    audio.play('long');
+    audio.flush();
+    const finished = context.sources[0]!;
+    const neighbour = context.sources[1]!;
+    const idleGain = finished.connectedTo;
+
+    context.currentTime = 2;
+    expect(finished.playing).toBe(false);
+    audio.play('long');
+    audio.flush();
+    const replacement = context.sources[2]!;
+    expect(finished.connectedTo).toBeUndefined();
+    expect(replacement.connectedTo).toBe(idleGain);
+    expect(replacement.playing).toBe(true);
+    expect(neighbour.stops).toBe(0);
+    expect(neighbour.playing).toBe(true);
+    expect(context.sources.filter((source) => source.playing)).toHaveLength(2);
   });
 
   it('empties the queue on flush even when nothing could play', async () => {
