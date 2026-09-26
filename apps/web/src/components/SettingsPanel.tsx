@@ -151,7 +151,9 @@ export function SettingsPanel() {
   const [hintsReset, setHintsReset] = useState(false);
   const [played, setPlayed] = useState<readonly { slug: string; record: GameRecord }[]>([]);
   const [overall, setOverall] = useState<Tally | null>(null);
-  const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>>>({});
+  // Empty is a saved choice; null means storage has not been read. An enabled empty
+  // field before that read can swallow a clear without removing the stored name.
+  const [names, setNames] = useState<Readonly<Partial<Record<SeatId, string>>> | null>(null);
   const [status, setStatus] = useState('');
 
   /**
@@ -582,7 +584,8 @@ export function SettingsPanel() {
         <NameField
           id={`${id}-p1`}
           label={t(messages, 'Name for the near seat')}
-          value={names.p1 ?? ''}
+          value={names?.p1 ?? ''}
+          disabled={names === null}
           onChange={changeName}
           onSettle={settleNames}
           seat="p1"
@@ -590,7 +593,8 @@ export function SettingsPanel() {
         <NameField
           id={`${id}-p2`}
           label={t(messages, 'Name for the far seat')}
-          value={names.p2 ?? ''}
+          value={names?.p2 ?? ''}
+          disabled={names === null}
           onChange={changeName}
           onSettle={settleNames}
           seat="p2"
@@ -778,6 +782,7 @@ function NameField({
   label,
   seat,
   value,
+  disabled,
   onChange,
   onSettle,
 }: {
@@ -785,6 +790,7 @@ function NameField({
   label: string;
   seat: SeatId;
   value: string;
+  disabled: boolean;
   onChange: (seat: SeatId, value: string) => void;
   onSettle: () => void;
 }) {
@@ -799,6 +805,7 @@ function NameField({
         className={styles.text}
         dir="auto"
         value={value}
+        disabled={disabled}
         maxLength={MAX_NAME_LENGTH}
         autoComplete="off"
         spellCheck={false}
