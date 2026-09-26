@@ -30,13 +30,13 @@ export const RUNTIME_DEPENDENCIES: readonly RuntimeDependency[] = [
   },
   {
     "name": "react",
-    "version": "19.2.8",
+    "version": "19.3.0",
     "licence": "MIT",
     "homepage": "https://react.dev/"
   },
   {
     "name": "react-dom",
-    "version": "19.2.8",
+    "version": "19.3.0",
     "licence": "MIT",
     "homepage": "https://react.dev/"
   },
