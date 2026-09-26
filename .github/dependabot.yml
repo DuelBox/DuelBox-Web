@@ -4,6 +4,11 @@ updates:
     directory: /
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
+    # Keep declarations aligned with the Node 22 CI baseline. Raise this major together
+    # with the minimum runtime so typechecking cannot admit APIs unavailable in CI.
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
         update-types: [minor, patch]
