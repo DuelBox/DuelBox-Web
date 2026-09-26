@@ -127,6 +127,66 @@ test.describe('the head-to-head record', () => {
 });
 
 test.describe('the names the two of you choose', () => {
+  // The hydration probe below must hold the network response itself, not a worker's cache.
+  test.use({ serviceWorkers: 'block' });
+
+  test('waits for stored names before allowing an immediate clear', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'duelbox:player-names',
+        JSON.stringify({ version: 1, p1: 'Ada', p2: 'Grace' }),
+      );
+    });
+
+    let release = () => {};
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let settingsRequested = false;
+    await page.route('**/_next/static/chunks/**', async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      // Identify SettingsPanel by its own copy, not an emitted filename or content hash.
+      if (body.includes('Name for the near seat')) {
+        settingsRequested = true;
+        await ready;
+      }
+      await route.fulfill({ response, body });
+    });
+
+    try {
+      await page.goto('/settings/', { waitUntil: 'commit' });
+      const near = page.getByLabel('Name for the near seat');
+      const far = page.getByLabel('Name for the far seat');
+      await expect.poll(() => settingsRequested, 'settings hydration is held').toBe(true);
+      await expect(near).toBeDisabled();
+      await expect(far).toBeDisabled();
+
+      // An attempted clear must wait for Ada to be read. Clearing the empty SSR value
+      // used to dispatch no change, so storage retained Ada and the next match kept it.
+      const clear = near.fill('');
+      release();
+      await clear;
+      await expect(far).toHaveValue('Grace');
+      const stored = await page.evaluate(() => localStorage.getItem('duelbox:player-names'));
+      expect(JSON.parse(stored ?? 'null')).toEqual({ version: 1, p2: 'Grace' });
+
+      await page.reload();
+      await expect(near).toBeEnabled();
+      await expect(near).toHaveValue('');
+      await expect(far).toHaveValue('Grace');
+
+      await page.goto('/play/tic-tac-toe/');
+      await page.getByRole('button', { name: 'Play together here' }).click();
+      const score = page.getByRole('group', { name: 'Score' });
+      await expect(score).not.toContainText('Ada');
+      await expect(score).toContainText('Grace');
+    } finally {
+      release();
+    }
+  });
+
   test('replace the seat name on the scoreboard, and are kept', async ({ page }) => {
     await page.goto('/settings/');
     await page.getByLabel('Name for the near seat').fill('Ada');
