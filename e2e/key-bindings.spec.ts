@@ -22,6 +22,47 @@ async function openSettings(page: Page) {
 }
 
 test.describe('rebinding a key', () => {
+  test('waits for the binding store before offering capture or reset', async ({ page }) => {
+    let release = () => {};
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let storeRequested = false;
+    await page.route('**/_next/static/chunks/*.js', async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      // The validation message belongs to the lazily loaded binding store. Find it in
+      // the response rather than naming a chunk whose hash changes on every build.
+      if (body.includes('it is reserved by the app')) {
+        storeRequested = true;
+        await ready;
+      }
+      await route.fulfill({ response, body });
+    });
+
+    try {
+      await page.goto('/settings/', { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => storeRequested, 'the binding store request is held').toBe(true);
+      const slots = page.getByRole('button', { name: /^(Up|Down|Left|Right|Action) for / });
+      const resets = page.getByRole('button', { name: /^Reset the (near|far) seat's keys$/ });
+      await expect(slots).toHaveCount(10);
+      await expect(resets).toHaveCount(2);
+      for (const control of [...(await slots.all()), ...(await resets.all())]) {
+        await expect(control).toBeDisabled();
+      }
+
+      release();
+      const down = page.getByRole('button', { name: slot('Down') }).first();
+      await expect(down).toBeEnabled();
+      await down.click();
+      await page.keyboard.press('KeyG');
+      await expect(down).toContainText('G');
+      for (const reset of await resets.all()) await expect(reset).toBeEnabled();
+    } finally {
+      release();
+    }
+  });
+
   test('takes the next key pressed, and keeps it across a reload', async ({ page }) => {
     await openSettings(page);
     const down = page.getByRole('button', { name: slot('Down') }).first();
