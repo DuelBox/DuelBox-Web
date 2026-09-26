@@ -1688,6 +1688,75 @@ describe('the balance harness', () => {
       ).toBe(false);
     }
   });
+
+  it('routes a mirrored pair out of the findings, and a near-miss into them', () => {
+    // `classifyPair` is held on its own in `balance-pairs.test.ts`, and a reading is not a
+    // routing: what a verdict *means* is decided here, by `measure`. A `mirrored` pair is one
+    // match from two chairs for a game that read the opening seat, and two different matches
+    // for a game that never read it - so the same verdict has to leave `unexplained` in one
+    // case and enter it in the other, and nothing proved that end to end. This came from
+    // #2590, which was closed in favour of #2593 without it.
+    //
+    // A stand-in game, because no real one can be asked for a chosen scoreline: it reads the
+    // opener, draws after the same five steps whichever seat opened, and reports the tallies
+    // it is handed. Any real manifest will do - the stand-in never looks at it, and a fake
+    // one would only be a second place for the schema to drift.
+    const borrowed = LOADED.get('tic-tac-toe');
+    expect(borrowed, 'tic-tac-toe is not in the registry').toBeDefined();
+    if (borrowed === undefined) return;
+    const stub = (tallies: (opener: SeatId) => readonly [number, number]): LoadedGame => ({
+      manifest: borrowed.manifest,
+      create: (): Game => {
+        let opener: SeatId = 'p1';
+        let steps = 0;
+        return {
+          init(context: GameContext): void {
+            opener = context.openingSeat;
+            steps = 0;
+          },
+          update(): void {
+            steps += 1;
+          },
+          render(): void {},
+          onPause(): void {},
+          onResume(): void {},
+          getScore: (): MatchScore => {
+            const [p1, p2] = tallies(opener);
+            return steps < 5 ? { p1: 0, p2: 0, winner: null } : { p1, p2, winner: 'draw' };
+          },
+          getActiveSeat: (): SeatId => opener,
+          destroy(): void {},
+        };
+      },
+    });
+
+    // 9-6 one way and 6-9 the other: one match read from two chairs.
+    const chairs = measure('stub-mirror', stub((opener) => (opener === 'p1' ? [9, 6] : [6, 9])));
+    expect(chairs.blind, 'the stand-in reads context.openingSeat, so it is measured paired').toBe(
+      false,
+    );
+    expect(chairs.openerSwung, 'it draws in the same five steps either way').toBe(0);
+    expect(
+      chairs.unexplained,
+      `a scoreline that is the other arm's swapped seat for seat is the same match from the ` +
+        `other chair, not hidden per-opener state: ${chairs.unexplained.join('; ')}`,
+    ).toEqual([]);
+    expect(
+      chairs.mirrored.length,
+      'and the sweep has to leave a trace of every pair it held back',
+    ).toBeGreaterThan(0);
+
+    // 9-6 against 8-7 is two different matches from whichever chair you read them, and is
+    // the shape #2494 exists to catch. It must still be a finding.
+    const two = measure('stub-not-a-mirror', stub((opener) => (opener === 'p1' ? [9, 6] : [8, 7])));
+    expect(two.openerSwung, 'this one also draws in the same five steps either way').toBe(0);
+    expect(
+      two.unexplained.length,
+      `9-6 against 8-7 is two different matches behind an openerSwung of 0, which is the ` +
+        `hidden per-opener state #2494 is about and must still fail`,
+    ).toBeGreaterThan(0);
+    expect(two.mirrored, 'and it is not a mirror').toEqual([]);
+  });
 });
 
 describe('neither seat wins more than the 45-55 band at equal skill', () => {
