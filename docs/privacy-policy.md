@@ -149,7 +149,7 @@ is the passing one.
 | One storage key, and only that | grep for `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches.` | One writer: `apps/web/src/lib/last-mode.ts`, key `duelbox:last-mode`. No other `setItem` anywhere |
 | The cache holds only this site's own files | in the browser, on this site: `(await caches.keys()).map(async n => (await (await caches.open(n)).keys()).map(r => r.url))` — or read `apps/web/public/sw.js`, whose fetch handler returns early unless `new URL(request.url).origin === self.location.origin` | Confirmed. Two caches, `duelbox-shell-<revision>` and `duelbox-runtime-<revision>`, holding URLs on this origin and nothing else. `scripts/check-zero-cost.mjs` holds the worker to three properties that say it may only ever answer a request the page already made, and fails the build otherwise |
 | The worker sends nothing anywhere | grep `apps/web/public/sw.js` for `push`, `periodicsync`, `sync`, `sendBeacon`, `Notification`, and for any absolute URL | None present. It registers `install`, `activate`, `fetch` and `message` and no other event; `check-zero-cost.mjs` fails the build on any of the others, proved by mutation |
-| No device fingerprinting | grep for `navigator.userAgent`, `navigator.language`, `hardwareConcurrency`, `getGamepads`, `mediaDevices`, `geolocation`, `screen.` | None present. Every "screen" hit is the English word in prose |
+| No device fingerprinting | grep for `navigator.userAgent`, `navigator.language`, `hardwareConcurrency`, `getGamepads`, `mediaDevices`, `geolocation`, `screen.` | One hit, and it is not a fingerprint: `apps/web/src/lib/bug-report-url.ts` reads `navigator.userAgent` on the device into the address of a bug report the player chooses to open (#233). It is never parsed, stored or sent by the site — it leaves only if the player presses the link, to a form they then read. Every "screen" hit is the English word in prose |
 | The lint ban is real | `eslint.config.js`, the block over `packages/engine/**`, `packages/game-sdk/**`, `packages/games/**` sets `no-restricted-globals` on `Date`, `window`, `document`, `devicePixelRatio`, `screen`, `navigator`, `requestAnimationFrame`, `performance`, `matchMedia`, and `no-restricted-properties` on `Math.random` | Confirmed. One exemption, `packages/engine/src/loop.ts` |
 | The network ban is enforced at build time | `scripts/check-zero-cost.mjs`, property `Gameplay never touches the network` | Confirmed, with the scope caveat below |
 | Nothing external is loaded | Built `index.html` carries a hashed CSP with `default-src 'none'; connect-src 'self'; font-src 'self'; img-src 'self' data:`. No `preconnect`, no `dns-prefetch`, no `crossorigin` in any built HTML | Confirmed. The browser would refuse a cross-origin request even if one were added |
@@ -190,8 +190,11 @@ A **cold load** with no connection is the second claim, and until the service wo
 built it was not one this site could make: it depended entirely on the browser's ordinary
 HTTP cache and nothing here guaranteed it. It is guaranteed now, for a game this device has
 opened before — the same spec cuts the network at the browser, opens a game in a fresh tab
-and plays it out. It is **not** guaranteed for a game this device has never opened; that is
-not saved, and the site says so on a page of its own rather than showing a browser error.
+and plays it out. It is **not** guaranteed for a game this device has never opened unless the
+whole collection was saved from the settings page (#196); a game that is not here is not
+saved, and the site says so on a page of its own rather than showing a browser error. The
+cache also notes when each game was last opened, so that if the browser runs short of room the
+worker drops the least recently played first — a date beside a slug, in the cache, never sent.
 
 What that cache holds is the site's own files and nothing about you; see *What your browser
 keeps a copy of* above for what is in it and how to clear it.

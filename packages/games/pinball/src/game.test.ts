@@ -135,7 +135,7 @@ function playMatch(
   let lastGoalStep = 0;
   let longestRallySteps = 0;
   let maxSpeed = 0;
-  let steps = 0;
+  let steps: number;
   let winner: SeatId | 'draw' | null = null;
 
   try {

@@ -11,9 +11,10 @@ than rounded up. A service worker saves the site's shell on the first visit and 
 game on the device that played it, so **a game this device has opened before opens and plays
 with no connection at all**, and its second play costs zero network requests (#192, #2445) —
 both measured by that same spec, which cuts the network at the browser and opens the game in
-a new tab. **A game this device has never opened is not saved**, and says so on a page of the
-site's own rather than a browser error page (#193). The catalogue marks which is which, in
-words. `docs/pwa.md` is the whole of it: what is cached, what deliberately is not, how an
+a new tab. **A game this device has never opened is not saved** unless the whole collection
+was downloaded from Settings (#196) — one press, the size stated first, cancellable, and
+picking up where it stopped — and a game that is not here says so on a page of the site's own
+rather than a browser error page (#193). The catalogue marks which is which, in words. `docs/pwa.md` is the whole of it: what is cached, what deliberately is not, how an
 update is offered rather than imposed, and which of those claims is verified on which browser
 engine.
 

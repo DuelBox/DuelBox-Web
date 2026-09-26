@@ -62,14 +62,12 @@ export function SiteFooter() {
             template, which already requires the game, seat, input family, device and viewport —
             so a report arrives with the context a game bug needs.
 
-            The template's field ids (`game`, `device`, `size`) can be pre-filled from the URL:
-            `?template=bug.yml&game=<slug>&device=<userAgent>&size=<w>x<h>`. This footer is a
-            server component rendered identically on every page, so it cannot know the current
-            game slug, viewport or user-agent — those are client-only. Filling them in is a small
-            client enhancement (a `'use client'` link, or the same link placed in the pause/result
-            overlay where the slug is already known); it is intentionally left to that surface
-            rather than converting this shared footer to a client component. The static link below
-            still lands the reporter on the right form with the right required fields.
+            The template's field ids (`game`, `device`, `size`, `steps`) can be pre-filled from
+            the URL. This footer is a server component rendered identically on every page, so it
+            cannot know the current game, viewport or user-agent — those are client-only. The
+            filled-in link lives in `MatchOverlay`, on the pause menu and the result screens,
+            built by `lib/bug-report-url.ts`; this footer stays a server component and its static
+            link still lands the reporter on the right form with the right required fields.
           */}
           <a
             href="https://github.com/DuelBox/DuelBox-Web/issues/new?template=bug.yml"

@@ -12,18 +12,15 @@
 #
 # ## Read this before believing it does anything
 #
-# **It is inert today, and it checks that it is rather than assuming it.** Two switches have
-# to be on outside this file, and neither is:
+# **It is inert today, and it checks that it is rather than assuming it.** One setting is
+# still off:
 #
-# 1. **"Allow auto-merge" is OFF** in the repository settings (Settings → General → Pull
+# **"Allow auto-merge" is OFF** in the repository settings (Settings → General → Pull
 #    Requests). Without it `gh pr merge --auto` fails outright — the API rejects the request.
-# 2. **This repository has no branch protection on `main`** (#2512). Auto-merge waits for the
-#    required checks and merges the moment they pass; with none required there is nothing to
-#    wait for, and a PR queued for auto-merge merges immediately — CI still running, gate
-#    unread. That is worse than the delay it replaces.
+# `main` now has branch protection requiring `verify` and all three `e2e` shards. Until
+# "Allow auto-merge" is enabled, this workflow reports the missing setting and skips merging.
 #
-# So both are needed before this file is anything but decoration: the setting on, and a
-# branch-protection rule on `main` requiring at least `verify` and `e2e` from `ci.yml`.
+# Keep both prerequisites: the repository setting on, and required checks on `main`.
 #
 # **Neither of those is left to a comment.** The `settings` step below asks the API for both
 # and the merge step runs only when both answer yes, which buys two things a paragraph
@@ -40,15 +37,15 @@
 # `branches/main/protection/required_status_checks`, which needs admin the token does not
 # have and would 404 identically whether protection exists or not — a check that cannot tell
 # its two answers apart is the kind of guard this repository keeps finding. So `protected`
-# is what is asserted: it is true only once somebody has been to the branch-protection page,
-# which is where the required checks are set.
+# is what is asserted. The branch rule currently requires `verify` and all three `e2e`
+# shards; recheck it before enabling auto-merge if CI changes.
 #
 # It is written down here rather than left to be discovered because this repository has now
 # found **seven** guards that claimed something nothing ran — the list is in CLAUDE.md, which
 # is where it is kept and counted. A workflow named "auto-merge" that does not merge would be
 # the eighth. It is not
 # claiming to work; it is ready for the day somebody flips the switches, and it says out loud
-# in the run log which of the two is still off.
+# in the run log which prerequisite is still off.
 #
 # ## And even then, most npm PRs will not qualify
 #
@@ -117,7 +114,7 @@ jobs:
           echo "auto=$auto" >> "$GITHUB_OUTPUT"
           echo "protected=$protected" >> "$GITHUB_OUTPUT"
           if [ "$auto" != "true" ] || [ "$protected" != "true" ]; then
-            echo "::notice::Auto-merge stays off: allow_auto_merge=$auto, $BASE protected=$protected. Both are needed — see #2512 and the note at the top of this file."
+            echo "::notice::Auto-merge stays off: allow_auto_merge=$auto, $BASE protected=$protected. Both are needed — see the note at the top of this file."
           fi
 
       - name: Enable auto-merge for a patch update

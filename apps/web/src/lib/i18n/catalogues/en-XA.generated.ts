@@ -132,6 +132,8 @@ const catalogue = {
       '⟦Åłł ŧïɱé ïñ {game}: {p1} {wins1} — {wins2} {p2} ························⟧',
     'All {category} games': '⟦Åłł {category} ĝåɱéš ··········⟧',
     'All {count} games': '⟦Åłł {count} ĝåɱéš ·········⟧',
+    'All {games}, {size} — on this device.':
+      '⟦Åłł {games}, {size} — öñ ŧĥïš ðéṽïçé. ···················⟧',
     'An order is dealt onto your pizza, held for a moment, and taken away. Rebuild it from the rail in front of you and ring the bell to send it out, because wrong or unfinished is spoiled. Most orders served wins.':
       '⟦Åñ öŕðéŕ ïš ðéåłŧ öñŧö ýöûŕ þïžžå, ĥéłð ƒöŕ å ɱöɱéñŧ, åñð ŧåķéñ åŵåý. Ŕéƀûïłð ïŧ ƒŕöɱ ŧĥé ŕåïł ïñ ƒŕöñŧ öƒ ýöû åñð ŕïñĝ ŧĥé ƀéłł ŧö šéñð ïŧ öûŧ, ƀéçåûšé ŵŕöñĝ öŕ ûñƒïñïšĥéð ïš šþöïłéð. Ṁöšŧ öŕðéŕš šéŕṽéð ŵïñš. ·········································································································⟧',
     'Any screen': '⟦Åñý šçŕééñ ·····⟧',
@@ -139,7 +141,10 @@ const catalogue = {
     'Arcade games': '⟦Åŕçåðé ĝåɱéš ······⟧',
     Arena: '⟦Åŕéñå ···⟧',
     'Arena games': '⟦Åŕéñå ĝåɱéš ······⟧',
+    'Asking what is on this device…': '⟦Åšķïñĝ ŵĥåŧ ïš öñ ŧĥïš ðéṽïçé… ···············⟧',
     Attribution: '⟦Åŧŧŕïƀûŧïöñ ······⟧',
+    'Available once the site has finished saving itself to this device.':
+      '⟦Åṽåïłåƀłé öñçé ŧĥé šïŧé ĥåš ƒïñïšĥéð šåṽïñĝ ïŧšéłƒ ŧö ŧĥïš ðéṽïçé. ·································⟧',
     'Back to all games': '⟦Ɓåçķ ŧö åłł ĝåɱéš ·········⟧',
     'Banknotes drift across one table with a safe let into each end. A hand grips every note under its palm at once, but a full hand moves at less than half the speed of an empty one. Most money banked wins.':
       '⟦Ɓåñķñöŧéš ðŕïƒŧ åçŕöšš öñé ŧåƀłé ŵïŧĥ å šåƒé łéŧ ïñŧö éåçĥ éñð. Å ĥåñð ĝŕïþš éṽéŕý ñöŧé ûñðéŕ ïŧš þåłɱ åŧ öñçé, ƀûŧ å ƒûłł ĥåñð ɱöṽéš åŧ łéšš ŧĥåñ ĥåłƒ ŧĥé šþééð öƒ åñ éɱþŧý öñé. Ṁöšŧ ɱöñéý ƀåñķéð ŵïñš. ·····································································································⟧',
@@ -172,6 +177,7 @@ const catalogue = {
     'Browse all {count} games': '⟦Ɓŕöŵšé åłł {count} ĝåɱéš ············⟧',
     'Browse by category': '⟦Ɓŕöŵšé ƀý çåŧéĝöŕý ·········⟧',
     'By touch': '⟦Ɓý ŧöûçĥ ····⟧',
+    Cancel: '⟦Çåñçéł ···⟧',
     Categories: '⟦Çåŧéĝöŕïéš ·····⟧',
     Category: '⟦Çåŧéĝöŕý ····⟧',
     'Change something for the next round':
@@ -183,6 +189,8 @@ const catalogue = {
     'Chess for two on a board that turns to face whoever is to move, with castling, en passant, promotion and the standard draws all played out. Mate the other king to win.':
       '⟦Çĥéšš ƒöŕ ŧŵö öñ å ƀöåŕð ŧĥåŧ ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö ɱöṽé, ŵïŧĥ çåšŧłïñĝ, éñ þåššåñŧ, þŕöɱöŧïöñ åñð ŧĥé šŧåñðåŕð ðŕåŵš åłł þłåýéð öûŧ. Ṁåŧé ŧĥé öŧĥéŕ ķïñĝ ŧö ŵïñ. ····················································································⟧',
     Children: '⟦Çĥïłðŕéñ ····⟧',
+    'Choose any available game to play together or against a bot, and start a tournament from its lobby.':
+      '⟦Çĥööšé åñý åṽåïłåƀłé ĝåɱé ŧö þłåý ŧöĝéŧĥéŕ öŕ åĝåïñšŧ å ƀöŧ, åñð šŧåŕŧ å ŧöûŕñåɱéñŧ ƒŕöɱ ïŧš łöƀƀý. ··················································⟧',
     Clear: '⟦Çłéåŕ ···⟧',
     'Clear all': '⟦Çłéåŕ åłł ·····⟧',
     'Clear favourites': '⟦Çłéåŕ ƒåṽöûŕïŧéš ········⟧',
@@ -219,6 +227,7 @@ const catalogue = {
     Dismiss: '⟦Ðïšɱïšš ····⟧',
     'Display and play': '⟦Ðïšþłåý åñð þłåý ········⟧',
     Down: '⟦Ðöŵñ ··⟧',
+    'Download all games': '⟦Ðöŵñłöåð åłł ĝåɱéš ·········⟧',
     'Drag across the bubbles you want to press':
       '⟦Ðŕåĝ åçŕöšš ŧĥé ƀûƀƀłéš ýöû ŵåñŧ ŧö þŕéšš ·····················⟧',
     'Drag anywhere in your own half; your net follows your finger and cannot outrun it':
@@ -262,10 +271,12 @@ const catalogue = {
       '⟦ÐûéłƁöẋ ïš ƀûïłŧ ŵïŧĥ å šɱåłł ñûɱƀéŕ öƒ öþéñ-šöûŕçé łïƀŕåŕïéš åñð ƒöñŧš. Ŧĥïš þåĝé łïšŧš ŧĥéɱ åñð ŧĥé łïçéñçéš ŧĥéý åŕé ûšéð ûñðéŕ. Ïŧ ïš ĝéñéŕåŧéð, ñöŧ ŵŕïŧŧéñ ƀý ĥåñð, šö ïŧ çåññöŧ ðŕïƒŧ ƒŕöɱ ŵĥåŧ åçŧûåłłý šĥïþš. ···········································································································⟧',
     'DuelBox keeps a page on your device once you have opened it there, and this address is not one of them yet. Nothing is broken and nothing of yours is lost — the page has not arrived here.':
       '⟦ÐûéłƁöẋ ķééþš å þåĝé öñ ýöûŕ ðéṽïçé öñçé ýöû ĥåṽé öþéñéð ïŧ ŧĥéŕé, åñð ŧĥïš åððŕéšš ïš ñöŧ öñé öƒ ŧĥéɱ ýéŧ. Ñöŧĥïñĝ ïš ƀŕöķéñ åñð ñöŧĥïñĝ öƒ ýöûŕš ïš łöšŧ — ŧĥé þåĝé ĥåš ñöŧ åŕŕïṽéð ĥéŕé. ······························································································⟧',
-    'DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art, sounds and names. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.':
-      '⟦ÐûéłƁöẋ ŕéïɱþłéɱéñŧš ŧĥé ŕûłéš öƒ þûƀłïç-ðöɱåïñ åñð éṽéŕýðåý ĝåɱéš — ŵĥïçĥ åŕé ñöŧ þŕöŧéçŧéð — åñð ŵŕïŧéš ïŧš öŵñ çöðé, åŕŧ, šöûñðš åñð ñåɱéš. Ŵé ķééþ å ŵŕïŧŧéñ ŕéçöŕð öƒ ŧĥé ñåɱïñĝ åñð łïçéñšïñĝ ðéçïšïöñ ƒöŕ éṽéŕý ĝåɱé, šö å çöñçéŕñ åƀöûŧ å ñåɱé öŕ åñ åššéŧ ïš ûšûåłłý åñšŵéŕéð ŵïŧĥ å ðöçûɱéñŧ ŵé åłŕéåðý ĥöłð. Šéé {terms} åñð {attribution}. ···········································································································································································⟧',
+    'DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art and sounds. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}.':
+      '⟦ÐûéłƁöẋ ŕéïɱþłéɱéñŧš ŧĥé ŕûłéš öƒ þûƀłïç-ðöɱåïñ åñð éṽéŕýðåý ĝåɱéš — ŵĥïçĥ åŕé ñöŧ þŕöŧéçŧéð — åñð ŵŕïŧéš ïŧš öŵñ çöðé, åŕŧ åñð šöûñðš. Ŵé ķééþ å ŵŕïŧŧéñ ŕéçöŕð öƒ ŧĥé ñåɱïñĝ åñð łïçéñšïñĝ ðéçïšïöñ ƒöŕ éṽéŕý ĝåɱé, šö å çöñçéŕñ åƀöûŧ å ñåɱé öŕ åñ åššéŧ ïš ûšûåłłý åñšŵéŕéð ŵïŧĥ å ðöçûɱéñŧ ŵé åłŕéåðý ĥöłð. Šéé {terms} åñð {attribution}. ········································································································································································⟧',
     'DuelBox — 108 games for two players. Runs in your browser; nothing to install.':
       '⟦ÐûéłƁöẋ — 108 ĝåɱéš ƒöŕ ŧŵö þłåýéŕš. Ŕûñš ïñ ýöûŕ ƀŕöŵšéŕ; ñöŧĥïñĝ ŧö ïñšŧåłł. ·······································⟧',
+    'Each game is saved here the first time you open it. Save all of them at once for a journey with no connection; a stopped download picks up where it left off.':
+      '⟦Éåçĥ ĝåɱé ïš šåṽéð ĥéŕé ŧĥé ƒïŕšŧ ŧïɱé ýöû öþéñ ïŧ. Šåṽé åłł öƒ ŧĥéɱ åŧ öñçé ƒöŕ å ĵöûŕñéý ŵïŧĥ ñö çöññéçŧïöñ; å šŧöþþéð ðöŵñłöåð þïçķš ûþ ŵĥéŕé ïŧ łéƒŧ öƒƒ. ···············································································⟧',
     "Each player's pieces differ in shape as well as colour, so every game is playable in greyscale and to a colour-blind player.":
       "⟦Éåçĥ þłåýéŕ'š þïéçéš ðïƒƒéŕ ïñ šĥåþé åš ŵéłł åš çöłöûŕ, šö éṽéŕý ĝåɱé ïš þłåýåƀłé ïñ ĝŕéýšçåłé åñð ŧö å çöłöûŕ-ƀłïñð þłåýéŕ. ······························································⟧",
     Easy: '⟦Éåšý ··⟧',
@@ -277,8 +288,6 @@ const catalogue = {
       "⟦Éṽéŕý ĝåɱé åððéð ûþ. Ṁåŧçĥéš åĝåïñšŧ ŧĥé ƀöŧ åŕé ñöŧ ïñ ïŧ: å ƀöŧ'š ŵïñš ƀéłöñĝ ŧö ñöƀöðý. ·············································⟧",
     'Every game has a bot, at three strengths. It sees no more than you can see and moves no faster than a person could; what changes from one strength to the next is how far ahead it looks and how often it slips.':
       '⟦Éṽéŕý ĝåɱé ĥåš å ƀöŧ, åŧ ŧĥŕéé šŧŕéñĝŧĥš. Ïŧ šééš ñö ɱöŕé ŧĥåñ ýöû çåñ šéé åñð ɱöṽéš ñö ƒåšŧéŕ ŧĥåñ å þéŕšöñ çöûłð; ŵĥåŧ çĥåñĝéš ƒŕöɱ öñé šŧŕéñĝŧĥ ŧö ŧĥé ñéẋŧ ïš ĥöŵ ƒåŕ åĥéåð ïŧ łööķš åñð ĥöŵ öƒŧéñ ïŧ šłïþš. ········································································································⟧',
-    'Every game in the catalogue offers the first two of these, and any game can start the third.':
-      '⟦Éṽéŕý ĝåɱé ïñ ŧĥé çåŧåłöĝûé öƒƒéŕš ŧĥé ƒïŕšŧ ŧŵö öƒ ŧĥéšé, åñð åñý ĝåɱé çåñ šŧåŕŧ ŧĥé ŧĥïŕð. ··············································⟧',
     'Every game is built to the same shape, which is what makes the second one easy. The countdown, the score, the pause, the result and the rematch all come from the site rather than from the game, so they sit in the same place and behave the same way whichever one you opened. Esc pauses, for either player, in all of them.':
       '⟦Éṽéŕý ĝåɱé ïš ƀûïłŧ ŧö ŧĥé šåɱé šĥåþé, ŵĥïçĥ ïš ŵĥåŧ ɱåķéš ŧĥé šéçöñð öñé éåšý. Ŧĥé çöûñŧðöŵñ, ŧĥé šçöŕé, ŧĥé þåûšé, ŧĥé ŕéšûłŧ åñð ŧĥé ŕéɱåŧçĥ åłł çöɱé ƒŕöɱ ŧĥé šïŧé ŕåŧĥéŕ ŧĥåñ ƒŕöɱ ŧĥé ĝåɱé, šö ŧĥéý šïŧ ïñ ŧĥé šåɱé þłåçé åñð ƀéĥåṽé ŧĥé šåɱé ŵåý ŵĥïçĥéṽéŕ öñé ýöû öþéñéð. Éšç þåûšéš, ƒöŕ éïŧĥéŕ þłåýéŕ, ïñ åłł öƒ ŧĥéɱ. ································································································································································⟧',
     'Every game offers a bot in three strengths. A bot never sees anything you cannot see and never moves faster than a person could — the difference between the strengths is how far it thinks ahead and how often it makes a mistake, never what it knows.':
@@ -331,6 +340,7 @@ const catalogue = {
       '⟦Ĝåɱéš åƀöûŧ ĥöłðïñĝ šöɱéŧĥïñĝ ïñ ýöûŕ ĥéåð å ƒéŵ šéçöñðš łöñĝéŕ ŧĥåñ ŧĥé þéŕšöñ öþþöšïŧé. Ṁéɱöŕý Ṁåŧçĥ ïš ŧĥé šïẋŧééñ-çåŕð ŧåƀłé, ŵĥéŕé å ɱåŧçĥéð þåïŕ ķééþš ŧĥé ŧûŕñ, šö šöɱéƀöðý ŵĥö ŕéɱéɱƀéŕš çåñ çłéåŕ ïŧ ïñ å šïñĝłé ṽïšïŧ; Þïžžå Ṁéɱöŕý ðéåłš åñ öŕðéŕ, ĥïðéš ïŧ, åñð åšķš ƒöŕ ïŧ ƀåçķ ƒŕöɱ ŧĥé ŕåïł ïñ ƒŕöñŧ öƒ ýöû. Éïŧĥéŕ öñé ïš ðöñé ïñ åƀöûŧ å ɱïñûŧé. ·················································································································································································⟧',
     'Games about timing a jump. Each player gets a strip of their own — a sky in Happy Birds, a lane in Gravity Run, a perch in Chicken Jump — and the gap or the block arrives for both at the same moment, so the loser is whoever ran out of timing first. About a minute each, and Stampede is shorter.':
       '⟦Ĝåɱéš åƀöûŧ ŧïɱïñĝ å ĵûɱþ. Éåçĥ þłåýéŕ ĝéŧš å šŧŕïþ öƒ ŧĥéïŕ öŵñ — å šķý ïñ Ĥåþþý Ɓïŕðš, å łåñé ïñ Ĝŕåṽïŧý Ŕûñ, å þéŕçĥ ïñ Çĥïçķéñ Ĵûɱþ — åñð ŧĥé ĝåþ öŕ ŧĥé ƀłöçķ åŕŕïṽéš ƒöŕ ƀöŧĥ åŧ ŧĥé šåɱé ɱöɱéñŧ, šö ŧĥé łöšéŕ ïš ŵĥöéṽéŕ ŕåñ öûŧ öƒ ŧïɱïñĝ ƒïŕšŧ. Åƀöûŧ å ɱïñûŧé éåçĥ, åñð Šŧåɱþéðé ïš šĥöŕŧéŕ. ···················································································································································⟧',
+    'Games saved on this device': '⟦Ĝåɱéš šåṽéð öñ ŧĥïš ðéṽïçé ·············⟧',
     'Games that take their rules from a real sport and shrink the pitch to one screen. Air Hockey and Tennis run in real time with both halves moving at once; Bowling and Darts take turns instead, and the board turns to face whoever is to play. Most finish inside two minutes, and Pool is the long one at about five.':
       '⟦Ĝåɱéš ŧĥåŧ ŧåķé ŧĥéïŕ ŕûłéš ƒŕöɱ å ŕéåł šþöŕŧ åñð šĥŕïñķ ŧĥé þïŧçĥ ŧö öñé šçŕééñ. Åïŕ Ĥöçķéý åñð Ŧéññïš ŕûñ ïñ ŕéåł ŧïɱé ŵïŧĥ ƀöŧĥ ĥåłṽéš ɱöṽïñĝ åŧ öñçé; Ɓöŵłïñĝ åñð Ðåŕŧš ŧåķé ŧûŕñš ïñšŧéåð, åñð ŧĥé ƀöåŕð ŧûŕñš ŧö ƒåçé ŵĥöéṽéŕ ïš ŧö þłåý. Ṁöšŧ ƒïñïšĥ ïñšïðé ŧŵö ɱïñûŧéš, åñð Þööł ïš ŧĥé łöñĝ öñé åŧ åƀöûŧ ƒïṽé. ····························································································································································⟧',
     'Games where the floor is the opponent. Robot Arena puts both robots on a disc that sweeps, fires and drops things on them; Spike Attacks sends a volley down a row of standing stones that crack a little further with every blow, so the cover runs out while the volleys do not. Whoever is still standing takes the round, three rounds take the match, and a round is about a minute.':
@@ -476,6 +486,7 @@ const catalogue = {
     'Note:': '⟦Ñöŧé: ···⟧',
     'Nothing needs setting up. Pick a game and it opens, or read the guide first — it is one page, and it covers the seats, the keys, and what to do when there is only one of you.':
       '⟦Ñöŧĥïñĝ ñééðš šéŧŧïñĝ ûþ. Þïçķ å ĝåɱé åñð ïŧ öþéñš, öŕ ŕéåð ŧĥé ĝûïðé ƒïŕšŧ — ïŧ ïš öñé þåĝé, åñð ïŧ çöṽéŕš ŧĥé šéåŧš, ŧĥé ķéýš, åñð ŵĥåŧ ŧö ðö ŵĥéñ ŧĥéŕé ïš öñłý öñé öƒ ýöû. ·······················································································⟧',
+    'Nothing to download in this build.': '⟦Ñöŧĥïñĝ ŧö ðöŵñłöåð ïñ ŧĥïš ƀûïłð. ·················⟧',
     'Nothing to import: that file holds nothing this version of DuelBox keeps.':
       '⟦Ñöŧĥïñĝ ŧö ïɱþöŕŧ: ŧĥåŧ ƒïłé ĥöłðš ñöŧĥïñĝ ŧĥïš ṽéŕšïöñ öƒ ÐûéłƁöẋ ķééþš. ·····································⟧',
     'Nothing to install, nothing to sign up for':
@@ -498,8 +509,8 @@ const catalogue = {
       '⟦Öñ ýöûŕ ŧûŕñ, ŧåþ ŧĥé ƒåçé-ûþ çåŕð öƒ åñý þïłé ŧö ŧåķé ïŧ ·····························⟧',
     'Once a page has loaded, playing it needs no network at all. Close the tab and come back and a game you have opened before still opens — your browser kept a copy of it. A game you have never opened is not on this device, and the catalogue says which is which.':
       '⟦Öñçé å þåĝé ĥåš łöåðéð, þłåýïñĝ ïŧ ñééðš ñö ñéŧŵöŕķ åŧ åłł. Çłöšé ŧĥé ŧåƀ åñð çöɱé ƀåçķ åñð å ĝåɱé ýöû ĥåṽé öþéñéð ƀéƒöŕé šŧïłł öþéñš — ýöûŕ ƀŕöŵšéŕ ķéþŧ å çöþý öƒ ïŧ. Å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ öñ ŧĥïš ðéṽïçé, åñð ŧĥé çåŧåłöĝûé šåýš ŵĥïçĥ ïš ŵĥïçĥ. ·································································································································⟧',
-    'Once a page has loaded, playing it needs nothing further from the network: the game, the bot and the physics all run on your device. Your browser also keeps a copy of the site, and of each game after you open it, so a game you have played before opens again with no connection at all. That cache holds this site’s own files and nothing about you — no scores, no names, no identifier — it is never sent anywhere, and clearing your browser’s site data removes it. A game you have never opened is not saved, and says so rather than showing an error.':
-      '⟦Öñçé å þåĝé ĥåš łöåðéð, þłåýïñĝ ïŧ ñééðš ñöŧĥïñĝ ƒûŕŧĥéŕ ƒŕöɱ ŧĥé ñéŧŵöŕķ: ŧĥé ĝåɱé, ŧĥé ƀöŧ åñð ŧĥé þĥýšïçš åłł ŕûñ öñ ýöûŕ ðéṽïçé. Ýöûŕ ƀŕöŵšéŕ åłšö ķééþš å çöþý öƒ ŧĥé šïŧé, åñð öƒ éåçĥ ĝåɱé åƒŧéŕ ýöû öþéñ ïŧ, šö å ĝåɱé ýöû ĥåṽé þłåýéð ƀéƒöŕé öþéñš åĝåïñ ŵïŧĥ ñö çöññéçŧïöñ åŧ åłł. Ŧĥåŧ çåçĥé ĥöłðš ŧĥïš šïŧé’š öŵñ ƒïłéš åñð ñöŧĥïñĝ åƀöûŧ ýöû — ñö šçöŕéš, ñö ñåɱéš, ñö ïðéñŧïƒïéŕ — ïŧ ïš ñéṽéŕ šéñŧ åñýŵĥéŕé, åñð çłéåŕïñĝ ýöûŕ ƀŕöŵšéŕ’š šïŧé ðåŧå ŕéɱöṽéš ïŧ. Å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ šåṽéð, åñð šåýš šö ŕåŧĥéŕ ŧĥåñ šĥöŵïñĝ åñ éŕŕöŕ. ·················································································································································································································································································⟧',
+    'Once a page has loaded, playing it needs nothing further from the network: the game, the bot and the physics all run on your device. Your browser also keeps a copy of the site, and of each game after you open it, so a game you have played before opens again with no connection at all. That cache holds this site’s own files and nothing about you — no scores, no names, no identifier — it is never sent anywhere, and clearing your browser’s site data removes it. A game you have never opened is not saved unless you ask for the whole collection from the settings page, and a game that is not here says so rather than showing an error. So that it knows which to drop first if the browser runs short of room, the cache also notes when each game was last opened — a date beside a game’s name, kept in that same cache, and never sent anywhere.':
+      '⟦Öñçé å þåĝé ĥåš łöåðéð, þłåýïñĝ ïŧ ñééðš ñöŧĥïñĝ ƒûŕŧĥéŕ ƒŕöɱ ŧĥé ñéŧŵöŕķ: ŧĥé ĝåɱé, ŧĥé ƀöŧ åñð ŧĥé þĥýšïçš åłł ŕûñ öñ ýöûŕ ðéṽïçé. Ýöûŕ ƀŕöŵšéŕ åłšö ķééþš å çöþý öƒ ŧĥé šïŧé, åñð öƒ éåçĥ ĝåɱé åƒŧéŕ ýöû öþéñ ïŧ, šö å ĝåɱé ýöû ĥåṽé þłåýéð ƀéƒöŕé öþéñš åĝåïñ ŵïŧĥ ñö çöññéçŧïöñ åŧ åłł. Ŧĥåŧ çåçĥé ĥöłðš ŧĥïš šïŧé’š öŵñ ƒïłéš åñð ñöŧĥïñĝ åƀöûŧ ýöû — ñö šçöŕéš, ñö ñåɱéš, ñö ïðéñŧïƒïéŕ — ïŧ ïš ñéṽéŕ šéñŧ åñýŵĥéŕé, åñð çłéåŕïñĝ ýöûŕ ƀŕöŵšéŕ’š šïŧé ðåŧå ŕéɱöṽéš ïŧ. Å ĝåɱé ýöû ĥåṽé ñéṽéŕ öþéñéð ïš ñöŧ šåṽéð ûñłéšš ýöû åšķ ƒöŕ ŧĥé ŵĥöłé çöłłéçŧïöñ ƒŕöɱ ŧĥé šéŧŧïñĝš þåĝé, åñð å ĝåɱé ŧĥåŧ ïš ñöŧ ĥéŕé šåýš šö ŕåŧĥéŕ ŧĥåñ šĥöŵïñĝ åñ éŕŕöŕ. Šö ŧĥåŧ ïŧ ķñöŵš ŵĥïçĥ ŧö ðŕöþ ƒïŕšŧ ïƒ ŧĥé ƀŕöŵšéŕ ŕûñš šĥöŕŧ öƒ ŕööɱ, ŧĥé çåçĥé åłšö ñöŧéš ŵĥéñ éåçĥ ĝåɱé ŵåš łåšŧ öþéñéð — å ðåŧé ƀéšïðé å ĝåɱé’š ñåɱé, ķéþŧ ïñ ŧĥåŧ šåɱé çåçĥé, åñð ñéṽéŕ šéñŧ åñýŵĥéŕé. ···································································································································································································································································································································································································································⟧',
     'One ball, two beetles and a base at each end. A beetle shoves the ball directly away from itself, so where you arrive decides where it goes, and walking across it rolls it out of a squeeze. Keep clear of the ladybirds and deliver three.':
       '⟦Öñé ƀåłł, ŧŵö ƀééŧłéš åñð å ƀåšé åŧ éåçĥ éñð. Å ƀééŧłé šĥöṽéš ŧĥé ƀåłł ðïŕéçŧłý åŵåý ƒŕöɱ ïŧšéłƒ, šö ŵĥéŕé ýöû åŕŕïṽé ðéçïðéš ŵĥéŕé ïŧ ĝöéš, åñð ŵåłķïñĝ åçŕöšš ïŧ ŕöłłš ïŧ öûŧ öƒ å šɋûééžé. Ķééþ çłéåŕ öƒ ŧĥé łåðýƀïŕðš åñð ðéłïṽéŕ ŧĥŕéé. ······················································································································⟧',
     "One board of numbered tiles with a single gap, and two players solving it from opposite sides of the table. You want the tiles in order as you read them, and so does your opponent, so every helpful slide gets in the other's way.":
@@ -781,6 +792,8 @@ const catalogue = {
       "⟦Ŕûñ ðöŵñ å ƀûŕŕöŵ, çĥåñĝïñĝ ŕåïłš ŧö ķééþ çłéåŕ öƒ ŧĥé çåŧš' þåŵš åñð ŧö ŕéåçĥ ŧĥé çĥééšé. Éṽéŕý þïéçé ïš ŧĥéŕé ƒöŕ ƀöŧĥ ŕåŧš, šö ŧĥïš ïš å ŕåçé ŕåŧĥéŕ ŧĥåñ å šçŕåɱƀłé. Ƒïŕšŧ ŧö çåŕŕý šïẋŧééñ ĥöɱé ŵïñš. ·····································································································⟧",
     'Saved as {file}.': '⟦Šåṽéð åš {file}. ········⟧',
     'Saved on this device': '⟦Šåṽéð öñ ŧĥïš ðéṽïçé ··········⟧',
+    'Saving {done} of {total} — {saved} of {size}':
+      '⟦Šåṽïñĝ {done} öƒ {total} — {saved} öƒ {size} ······················⟧',
     Score: '⟦Šçöŕé ···⟧',
     'Score {score}': '⟦Šçöŕé {score} ·······⟧',
     "Scores are not part of it. No match's score is written down anywhere, on your device or ours — a running tally is held in memory while you play and is gone when you close the tab. The head-to-head above is a count of matches, not a record of any of them: it knows you have won six and not which six, when, or by how much. A tournament in progress is the one thing here that remembers who won a particular game, because a line-up nobody can score is not a tournament, and it goes when the tournament does.":
@@ -882,6 +895,8 @@ const catalogue = {
     'Start playing': '⟦Šŧåŕŧ þłåýïñĝ ·······⟧',
     Stealth: '⟦Šŧéåłŧĥ ····⟧',
     'Stealth games': '⟦Šŧéåłŧĥ ĝåɱéš ·······⟧',
+    'Stopped. {done} of {total} saved, {rest}.':
+      '⟦Šŧöþþéð. {done} öƒ {total} šåṽéð, {rest}. ·····················⟧',
     'Strike the ball at the goal at the far end, choosing a line and then how hard. Whoever concedes restarts from the centre spot, and the first to three goals wins.':
       '⟦Šŧŕïķé ŧĥé ƀåłł åŧ ŧĥé ĝöåł åŧ ŧĥé ƒåŕ éñð, çĥööšïñĝ å łïñé åñð ŧĥéñ ĥöŵ ĥåŕð. Ŵĥöéṽéŕ çöñçéðéš ŕéšŧåŕŧš ƒŕöɱ ŧĥé çéñŧŕé šþöŧ, åñð ŧĥé ƒïŕšŧ ŧö ŧĥŕéé ĝöåłš ŵïñš. ·················································································⟧',
     'Surprise me': '⟦Šûŕþŕïšé ɱé ······⟧',
@@ -1003,10 +1018,18 @@ const catalogue = {
       '⟦Ŧĥé åððŕéšš ɱåý ĥåṽé å ŧýþö ïñ ïŧ, öŕ ŧĥé þåĝé ɱåý ĥåṽé ɱöṽéð šïñçé šöɱéŧĥïñĝ łïñķéð ŧö ïŧ. Ñöŧĥïñĝ ïš łöšŧ — éṽéŕý ĝåɱé ïñ ŧĥé çåŧåłöĝûé ïš öñé þŕéšš åŵåý. ··············································································⟧',
     'The board is exactly where you left it.':
       '⟦Ŧĥé ƀöåŕð ïš éẋåçŧłý ŵĥéŕé ýöû łéƒŧ ïŧ. ····················⟧',
+    'The browser has agreed to keep these when it needs space.':
+      '⟦Ŧĥé ƀŕöŵšéŕ ĥåš åĝŕééð ŧö ķééþ ŧĥéšé ŵĥéñ ïŧ ñééðš šþåçé. ·····························⟧',
+    'The browser may clear these when it needs space; they come back on the next download.':
+      '⟦Ŧĥé ƀŕöŵšéŕ ɱåý çłéåŕ ŧĥéšé ŵĥéñ ïŧ ñééðš šþåçé; ŧĥéý çöɱé ƀåçķ öñ ŧĥé ñéẋŧ ðöŵñłöåð. ···········································⟧',
+    'The browser ran out of room. {done} of {total} games are saved. Older games may have been removed to make room; free some space and press again.':
+      '⟦Ŧĥé ƀŕöŵšéŕ ŕåñ öûŧ öƒ ŕööɱ. {done} öƒ {total} ĝåɱéš åŕé šåṽéð. Öłðéŕ ĝåɱéš ɱåý ĥåṽé ƀééñ ŕéɱöṽéð ŧö ɱåķé ŕööɱ; ƒŕéé šöɱé šþåçé åñð þŕéšš åĝåïñ. ········································································⟧',
     'The catalogue knows which is which. While you are away from a connection it marks every game in the list as one of two things:':
       '⟦Ŧĥé çåŧåłöĝûé ķñöŵš ŵĥïçĥ ïš ŵĥïçĥ. Ŵĥïłé ýöû åŕé åŵåý ƒŕöɱ å çöññéçŧïöñ ïŧ ɱåŕķš éṽéŕý ĝåɱé ïñ ŧĥé łïšŧ åš öñé öƒ ŧŵö ŧĥïñĝš: ·······························································⟧',
     "The coins you can spend are in the other player's vault, so the only way to score is to leave your own floor, and the moment you do you are the thief and they are the guard. Come home to bank what you carried. Most coins after a minute wins.":
       "⟦Ŧĥé çöïñš ýöû çåñ šþéñð åŕé ïñ ŧĥé öŧĥéŕ þłåýéŕ'š ṽåûłŧ, šö ŧĥé öñłý ŵåý ŧö šçöŕé ïš ŧö łéåṽé ýöûŕ öŵñ ƒłööŕ, åñð ŧĥé ɱöɱéñŧ ýöû ðö ýöû åŕé ŧĥé ŧĥïéƒ åñð ŧĥéý åŕé ŧĥé ĝûåŕð. Çöɱé ĥöɱé ŧö ƀåñķ ŵĥåŧ ýöû çåŕŕïéð. Ṁöšŧ çöïñš åƒŧéŕ å ɱïñûŧé ŵïñš. ·························································································································⟧",
+    'The connection went away. {done} of {total} saved; press again to continue from there.':
+      '⟦Ŧĥé çöññéçŧïöñ ŵéñŧ åŵåý. {done} öƒ {total} šåṽéð; þŕéšš åĝåïñ ŧö çöñŧïñûé ƒŕöɱ ŧĥéŕé. ···········································⟧',
     'The controllers were swapped.': '⟦Ŧĥé çöñŧŕöłłéŕš ŵéŕé šŵåþþéð. ···············⟧',
     "The controllers were swapped. {who}'s seat now has the other one.":
       "⟦Ŧĥé çöñŧŕöłłéŕš ŵéŕé šŵåþþéð. {who}'š šéåŧ ñöŵ ĥåš ŧĥé öŧĥéŕ öñé. ·································⟧",
@@ -1361,11 +1384,17 @@ const catalogue = {
       '⟦{count} ĝåɱéš, þłåýéð ƀý ŧŵö þéöþłé öñ öñé ðéṽïçé. ·························⟧',
     '{count} point': '⟦{count} þöïñŧ ·······⟧',
     '{count} points': '⟦{count} þöïñŧš ·······⟧',
+    '{count} still to save': '⟦{count} šŧïłł ŧö šåṽé ···········⟧',
     '{count} typefaces, all variable fonts served from this origin under the SIL Open Font Licence. The full licence text ships with the site in {file}.':
       '⟦{count} ŧýþéƒåçéš, åłł ṽåŕïåƀłé ƒöñŧš šéŕṽéð ƒŕöɱ ŧĥïš öŕïĝïñ ûñðéŕ ŧĥé ŠÏŁ Öþéñ Ƒöñŧ Łïçéñçé. Ŧĥé ƒûłł łïçéñçé ŧéẋŧ šĥïþš ŵïŧĥ ŧĥé šïŧé ïñ {file}. ··········································································⟧',
+    '{done} of {total}': '⟦{done} öƒ {total} ·········⟧',
+    '{done} of {total} on this device, {rest} ({left}).':
+      '⟦{done} öƒ {total} öñ ŧĥïš ðéṽïçé, {rest} ({left}). ·························⟧',
     '{games} and pick one.': '⟦{games} åñð þïçķ öñé. ···········⟧',
     '{games} games across {categories} categories. Every one plays with two people on one device, and every one also takes a bot in the second seat.':
       '⟦{games} ĝåɱéš åçŕöšš {categories} çåŧéĝöŕïéš. Éṽéŕý öñé þłåýš ŵïŧĥ ŧŵö þéöþłé öñ öñé ðéṽïçé, åñð éṽéŕý öñé åłšö ŧåķéš å ƀöŧ ïñ ŧĥé šéçöñð šéåŧ. ········································································⟧',
+    '{games}, {size}. Saved on this device, they open with no connection at all.':
+      '⟦{games}, {size}. Šåṽéð öñ ŧĥïš ðéṽïçé, ŧĥéý öþéñ ŵïŧĥ ñö çöññéçŧïöñ åŧ åłł. ······································⟧',
     '{game} is switched off at the moment. {reason} It comes back on here as soon as that is put right, and nothing else in the catalogue is affected.':
       '⟦{game} ïš šŵïŧçĥéð öƒƒ åŧ ŧĥé ɱöɱéñŧ. {reason} Ïŧ çöɱéš ƀåçķ öñ ĥéŕé åš šööñ åš ŧĥåŧ ïš þûŧ ŕïĝĥŧ, åñð ñöŧĥïñĝ éłšé ïñ ŧĥé çåŧåłöĝûé ïš åƒƒéçŧéð. ·········································································⟧',
     '{items} and {last}': '⟦{items} åñð {last} ·········⟧',
@@ -1396,6 +1425,8 @@ const catalogue = {
       '⟦{near} {nearWins}, {far} {farWins}, {draws} ðŕåŵñ ·························⟧',
     '{note} the contact address below is a placeholder ({address}) and is not yet a monitored inbox. It must be replaced with the real address before launch.':
       '⟦{note} ŧĥé çöñŧåçŧ åððŕéšš ƀéłöŵ ïš å þłåçéĥöłðéŕ ({address}) åñð ïš ñöŧ ýéŧ å ɱöñïŧöŕéð ïñƀöẋ. Ïŧ ɱûšŧ ƀé ŕéþłåçéð ŵïŧĥ ŧĥé ŕéåł åððŕéšš ƀéƒöŕé łåûñçĥ. ············································································⟧',
+    '{n} KB': '⟦{n} ĶƁ ···⟧',
+    '{n} MB': '⟦{n} ṀƁ ···⟧',
     '{one} and {two} are playing {game} — move to stop.':
       '⟦{one} åñð {two} åŕé þłåýïñĝ {game} — ɱöṽé ŧö šŧöþ. ·························⟧',
     '{p1} {wins1} — {wins2} {p2}': '⟦{p1} {wins1} — {wins2} {p2} ··············⟧',
@@ -1405,6 +1436,8 @@ const catalogue = {
     '{seat} takes the other seat, at three levels.':
       '⟦{seat} ŧåķéš ŧĥé öŧĥéŕ šéåŧ, åŧ ŧĥŕéé łéṽéłš. ·······················⟧',
     '{size} kB': '⟦{size} ķƁ ·····⟧',
+    "{used} of {limit} of this site's storage in use":
+      "⟦{used} öƒ {limit} öƒ ŧĥïš šïŧé'š šŧöŕåĝé ïñ ûšé ························⟧",
     "{who}'s controller was unplugged. That seat is back on the keyboard and touch until one is plugged in.":
       "⟦{who}'š çöñŧŕöłłéŕ ŵåš ûñþłûĝĝéð. Ŧĥåŧ šéåŧ ïš ƀåçķ öñ ŧĥé ķéýƀöåŕð åñð ŧöûçĥ ûñŧïł öñé ïš þłûĝĝéð ïñ. ···················································⟧",
     '{won}W {lost}L {drawn}D': '⟦{won}Ŵ {lost}Ł {drawn}Ð ············⟧',

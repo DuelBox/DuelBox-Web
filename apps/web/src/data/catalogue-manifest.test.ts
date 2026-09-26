@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from './catalogue.generated';
-import { LOADERS_FOR_TEST, loadGame } from './registry';
+import { LOADERS_FOR_TEST } from './registry';
 
 /**
  * The catalogue and the manifests describe the same games, so they have to agree.
@@ -42,7 +42,8 @@ describe('the catalogue and the manifests', () => {
   it.each(BUILT.map((entry) => [entry.id, entry] as const))(
     '%s says the same thing in both places',
     async (_id, entry) => {
-      const { manifest } = await loadGame(entry.slug);
+      // Compare the built package even when an emergency switch hides its route.
+      const { manifest } = await LOADERS_FOR_TEST[entry.id]!();
 
       expect(
         [...manifest.modes].sort(),

@@ -49,7 +49,7 @@ export const ICON_SPRITE = ${JSON.stringify(symbols)};
 
 function main() {
   const next = generatedModule();
-  let current = '';
+  let current;
   try {
     current = readFileSync(out, 'utf8');
   } catch {

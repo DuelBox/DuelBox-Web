@@ -205,13 +205,11 @@ export default defineConfig({
         : []),
     ],
     environment: 'node',
-    poolOptions: {
-      forks: { execArgv: NATIVES },
-      threads: { execArgv: NATIVES },
-    },
+    // Vitest 4 applies this to whichever worker pool it runs; `poolOptions` was removed.
+    execArgv: NATIVES,
     testTimeout: underCoverage ? 600_000 : 30_000,
     dangerouslyIgnoreUnhandledErrors: underCoverage,
-    ...(onCi && !underCoverage ? { maxWorkers: 2, minWorkers: 1 } : {}),
+    ...(onCi && !underCoverage ? { maxWorkers: 2 } : {}),
     coverage: {
       provider: 'v8',
       include: ['packages/engine/src/**/*.ts', 'packages/**/src/**/rules.ts'],
