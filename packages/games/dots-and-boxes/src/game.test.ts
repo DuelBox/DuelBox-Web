@@ -269,6 +269,35 @@ describe('playing with the keyboard alone', () => {
     expect(horizontal, 'never reached a horizontal edge').toBeGreaterThan(0);
     expect(vertical, 'never reached a vertical edge').toBeGreaterThan(0);
     expect(seen.size, 'some edges have no keyboard route').toBe(EDGE_COUNT);
+
+    // Reachability *from the opening square* is not the claim. The claim is that the cursor
+    // can get from anywhere to anywhere — a player whose cursor is already in the corner has
+    // to be able to come back out, and a graph can be reachable from one square and still
+    // have a pocket that only drains one way. So walk it from all sixty.
+    //
+    // The BFS above already paid for a path to every edge, so the neighbours cost one more
+    // press each — sixty edges by four directions — and the sixty searches after that run on
+    // the map in memory and cost nothing.
+    const neighbours = new Map<number, readonly number[]>();
+    for (const [edge, path] of paths) {
+      neighbours.set(
+        edge,
+        directions.map((direction) => cursorAfter([...path, direction])),
+      );
+    }
+    for (const from of neighbours.keys()) {
+      const reached = new Set<number>([from]);
+      const walk: number[] = [from];
+      while (walk.length > 0) {
+        for (const next of neighbours.get(walk.shift() as number) ?? []) {
+          if (!reached.has(next)) {
+            reached.add(next);
+            walk.push(next);
+          }
+        }
+      }
+      expect(reached.size, `edge ${from} cannot reach the whole board`).toBe(EDGE_COUNT);
+    }
   });
 
   it('a tap on any edge centre names exactly that edge, so the pointer reaches all sixty', () => {

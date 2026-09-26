@@ -51,7 +51,7 @@ const loadStore = () => import('@/lib/key-bindings');
  *
  * These pages are exported once for everybody, so there is no server render of one device's
  * bindings. Storage is read in an effect, as everything on this page is, and the first paint
- * shows the defaults — which is what an unbound device really has.
+ * shows dashes. Capture and reset stay disabled until the store and bindings are ready.
  */
 
 /** The armed capture: which seat and slot are waiting for a key, or nothing. */
@@ -182,6 +182,9 @@ export function KeyBindings({ id }: { id: string }) {
   const [bindings, setBindings] = useState<SeatBindings | null>(null);
   const [capture, setCapture] = useState<Capture | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The store arrives separately from this panel. Until then there is no listener to
+  // accept a captured key, so the controls must not promise that a press will work.
+  const ready = store !== null && bindings !== null;
 
   useEffect(() => {
     let live = true;
@@ -242,6 +245,7 @@ export function KeyBindings({ id }: { id: string }) {
                   key={slot}
                   type="button"
                   className={styles.slot}
+                  disabled={!ready}
                   aria-label={t(messages, '{action} for {seat}', {
                     action: slotLabel(messages, slot),
                     seat: seatLabel(messages, seat),
@@ -266,6 +270,7 @@ export function KeyBindings({ id }: { id: string }) {
           <button
             type="button"
             className={styles.button}
+            disabled={!ready}
             onClick={() => {
               reset(seat);
             }}

@@ -52,9 +52,10 @@ memory is the fourth.
 
 ## Legal
 
-- [ ] *(auto)* **Every game name cleared.** `check-game-names.mjs` — every catalogue game has a
-      recorded name decision with a reason (`data/name-clearance.json`), and no coined name
-      above the pending ceiling.
+- [ ] *(auto)* **Every game name has a recorded decision.** `check-game-names.mjs` — every
+      catalogue game has a reason in `data/name-clearance.json`, and pending decisions match
+      the explicit IDs in `data/name-clearance-pending.json`. Resolve a decision and remove
+      its baseline entry together. This guard does not complete the IP clearance review below.
 - [ ] *(auto)* **Every asset licensed.** `check-asset-licenses.mjs` — rule 3.
 - [ ] *(human)* **Privacy policy published and linked.** `/privacy/`, in the footer (#212).
 - [ ] *(human)* **Terms published and linked.** `/terms/`, in the footer.

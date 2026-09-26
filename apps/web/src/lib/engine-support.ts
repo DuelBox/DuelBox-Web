@@ -107,7 +107,7 @@ export function browserEngineEnvironment(): EngineEnvironment {
   // these exists — which is the assumption this function is here to stop making.
   const scope = globalThis as unknown as Record<string, unknown>;
   const clock = scope.performance as { now?: unknown } | undefined;
-  let canvas2d = false;
+  let canvas2d: boolean;
   try {
     canvas2d = document.createElement('canvas').getContext('2d') !== null;
   } catch {

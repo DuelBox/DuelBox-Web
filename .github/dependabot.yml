@@ -10,11 +10,19 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
-    # One grouped PR for all Action bumps. Dependabot otherwise opens a PR per
-    # dependency, and github/codeql-action/init and .../analyze are one monorepo
-    # whose steps must run the same version — split across two PRs, each raises
-    # only its own step and the mismatched pair fails Static analysis with a
-    # CodeQL configuration error (#2600, #2601). Grouping keeps them together.
+    # github/codeql-action/init and .../analyze are one monorepo whose two steps must run the
+    # same version. Dependabot counts each path as its own dependency, so ungrouped it opens a
+    # PR per step, each raising only its own — and the mismatched pair fails Static analysis
+    # with a CodeQL configuration error (#2600, #2601). Grouping puts them in one PR.
+    #
+    # Only them, and `patterns: ['*']` is the version of this that looks tidier and is wrong.
+    # A grouped PR reports the highest update type it contains, so grouping the whole ecosystem
+    # would turn any week holding one minor into a minor PR — and `dependabot-auto-merge.yml`
+    # skips minors by design. That file states the reach it has today in as many words: "every
+    # `github-actions` bump, which is ungrouped and therefore one dependency per PR". Widening
+    # this pattern makes that sentence false without touching it, and the day somebody turns
+    # the two switches on, Action patches would stop auto-merging for a reason written down
+    # nowhere. The pair that has to move together moves together; nothing else changes.
     groups:
-      github-actions:
-        patterns: ['*']
+      codeql-action:
+        patterns: ['github/codeql-action*']
