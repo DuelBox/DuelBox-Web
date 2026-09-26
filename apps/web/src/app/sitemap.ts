@@ -71,6 +71,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // said `/privacy/` and `/terms/` were the whole of the legal section. Same weight as
     // those two, for the same reason.
     { url: absoluteUrl('/dmca/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
+    // `/attribution/` and `/settings/` were left out for the same reason `/dmca/` was: the
+    // list was written before them and nothing read it afterwards. Both are pages a visitor
+    // reaches from the shell, `robots.ts` disallows nothing and says every route is meant to
+    // be found, and neither declares `robots: { index: false }` — `/offline/` does, which is
+    // why it is the one static page still absent here. The attribution page is also the
+    // destination of the one link the DMCA page offers a rights-holder checking a credit, so
+    // a crawler that cannot see it cannot see the answer to the complaint either. Monthly for
+    // attribution, whose credits grow with the catalogue; yearly for settings, a fixed set of
+    // controls. The test below derives this list from the route directory rather than trusting
+    // it, so the next page added cannot go missing the way these two did.
+    { url: absoluteUrl('/attribution/'), lastModified, changeFrequency: 'monthly', priority: 0.3 },
+    { url: absoluteUrl('/settings/'), lastModified, changeFrequency: 'yearly', priority: 0.3 },
     // The category hubs (#200). Above every game page and below the catalogue: a hub is the
     // page that answers a search for a whole genre, and it is the one that then hands the
     // crawler the games in it. From `CATEGORY_HUBS` rather than from the catalogue's

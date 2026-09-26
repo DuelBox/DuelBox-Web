@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CATALOGUE, CATEGORIES } from '../data/catalogue.generated';
 import { PLAYABLE } from '../data/registry';
@@ -11,7 +14,52 @@ import sitemap from './sitemap';
  * derivation rather than a snapshot. A snapshot would need updating on every new game, which
  * is the maintenance the metadata route exists to remove (#199).
  */
-const STATIC_ROUTES = ['/', '/games/', '/how-to-play/', '/privacy/', '/terms/', '/dmca/'];
+const STATIC_ROUTES = [
+  '/',
+  '/games/',
+  '/how-to-play/',
+  '/privacy/',
+  '/terms/',
+  '/dmca/',
+  '/attribution/',
+  '/settings/',
+];
+
+/**
+ * The static routes read off the route directory, rather than the list above.
+ *
+ * The list above is the floor and cannot be the ceiling: it is hand-written, so a page added
+ * without a line here is a page the sitemap can omit in silence — which is exactly what
+ * happened. `/dmca/` was missing until #216 went looking, and `/attribution/` and `/settings/`
+ * were missing in the same way at the same time, one of them the destination of the only link
+ * the DMCA page offers a rights-holder. A guard that reads the same hand-written list the code
+ * reads cannot notice the page neither of them mentions.
+ *
+ * So: every `page.tsx` under this directory is a static route, except the dynamic segments —
+ * `[slug]` — which the entries derived from `CATALOGUE` and `PLAYABLE` already cover, and
+ * except a page that declares itself `robots: { index: false }`, which today is `/offline/`,
+ * the service-worker fallback. Asking a crawler to index the page it is shown when the network
+ * is gone would be the one genuine mistake here, and the page says so itself rather than this
+ * test keeping a second list of exceptions.
+ */
+function routeDirectoryPages(): { indexable: string[]; noindex: string[] } {
+  const root = fileURLToPath(new URL('.', import.meta.url));
+  const indexable: string[] = [];
+  const noindex: string[] = [];
+  const walk = (dir: string, route: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith('[')) continue;
+        walk(join(dir, entry.name), `${route}${entry.name}/`);
+      } else if (entry.name === 'page.tsx') {
+        const source = readFileSync(join(dir, 'page.tsx'), 'utf8');
+        (/robots:\s*\{[^}]*index:\s*false/.test(source) ? noindex : indexable).push(route);
+      }
+    }
+  };
+  walk(root, '/');
+  return { indexable, noindex };
+}
 
 describe('the site address', () => {
   it('carries no trailing slash, so a joined route never has two', () => {
@@ -39,6 +87,22 @@ describe('the sitemap', () => {
 
   it('lists every static page, the legal ones included', () => {
     for (const route of STATIC_ROUTES) expect(urls).toContain(`${SITE_URL}${route}`);
+  });
+
+  it('lists every static page the route directory has, not only the ones remembered', () => {
+    const { indexable, noindex } = routeDirectoryPages();
+    // The control, and the reason this cannot pass by finding nothing: the scan has to see
+    // more pages than the hand-written list, and it has to see the one page that opts out. A
+    // pattern that matched every file would empty `indexable` and this test would go green
+    // over a sitemap with nothing in it.
+    expect(indexable.length, 'the route scan found no static pages').toBeGreaterThanOrEqual(
+      STATIC_ROUTES.length,
+    );
+    expect(noindex, 'the offline fallback should be the one page opting out').toEqual([
+      '/offline/',
+    ]);
+    for (const route of indexable)
+      expect(urls, `${route} has no sitemap entry`).toContain(`${SITE_URL}${route}`);
   });
 
   it('lists every catalogue page exactly once', () => {
