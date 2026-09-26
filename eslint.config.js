@@ -129,9 +129,9 @@ export default tseslint.config(
     // the SDK and the games are all framework-free — so the plugin is scoped to it rather
     // than run over 108 packages that contain no components.
     //
-    // It lives in the *root* config on purpose. `apps/web/eslint.config.js` is empty so that
-    // `next build` does not open a second, differently-configured pass over these files, and
-    // that arrangement is worth keeping. But "the root already covers them" was only true of
+    // It lives in the *root* config on purpose. `next.config.ts` disables Next's duplicate
+    // lint pass; there must not be an empty app config, because ESLint 10 starts its config
+    // search beside each file and would stop there. Before #2482, the root covered only
     // type-aware TypeScript rules, and type-awareness is not what catches a hook bug: a
     // dependency array missing a value it closes over type-checks perfectly (#2482). A
     // stale-closure bug in PlaySurface.tsx was caught by hand before this rule existed, and
