@@ -746,6 +746,43 @@ describe('browserGamepadSource', () => {
     expect(second[0]?.buttons[0]).toBe(true);
   });
 
+  it('lets an optional observer inspect the same native poll without reading timestamps normally', () => {
+    let polls = 0;
+    let timestampReads = 0;
+    const native = [
+      {
+        index: 0,
+        id: 'Pad',
+        connected: true,
+        axes: [0, 0],
+        buttons: [],
+        get timestamp() {
+          timestampReads += 1;
+          return 42;
+        },
+      },
+    ];
+    const nav = fakeNavigator(() => {
+      polls += 1;
+      return native;
+    });
+    const normal = withNavigator(nav, () => browserGamepadSource());
+    normal();
+    expect(polls).toBe(1);
+    expect(timestampReads).toBe(0);
+    let observed: unknown;
+    const measured = withNavigator(nav, () =>
+      browserGamepadSource((pads) => {
+        observed = pads;
+        expect(pads[0]?.timestamp).toBe(42);
+      }),
+    );
+    measured();
+    expect(observed).toBe(native);
+    expect(polls).toBe(2);
+    expect(timestampReads).toBe(1);
+  });
+
   it('forgets a pad that unplugs and shrinks to the slots the browser reports', () => {
     let pads: (null | Record<string, unknown>)[] = [
       { index: 0, id: 'A', connected: true, axes: [0, 0], buttons: [] },

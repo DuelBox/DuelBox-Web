@@ -35,6 +35,9 @@ const SESSION_BUDGET_KB = 700;
  * mangled by the minifier; a string literal is the one thing that survives both intact.
  */
 const DEBUG_OVERLAY_MARKER = 'duelbox-debug-overlay';
+// A public method actually called by the host. The production minifier keeps property
+// names, so this also detects the latency helper shipping without the overlay (#133).
+const INPUT_LATENCY_MARKER = 'captureGamepads';
 
 /**
  * Anything that would put gameplay behind a round trip.
@@ -1222,6 +1225,16 @@ async function checkDebugOverlayIsNotShipped() {
     );
     return;
   }
+  const latency = await readOrFail(
+    join(debugDir, 'InputLatency.ts'),
+    property,
+    'the input latency helper must exist for its emitted-code marker to be meaningful',
+  );
+  if (latency === null) return;
+  if (!new RegExp(`\\n\\s+${INPUT_LATENCY_MARKER}\\(`).test(latency)) {
+    fail(property, `InputLatency.ts no longer declares ${INPUT_LATENCY_MARKER}; update its marker`);
+    return;
+  }
 
   // Two: nothing reaches the overlay except through a dynamic import. A static import is
   // what puts a module in the graph regardless of any flag guarding its use, and it is
@@ -1236,16 +1249,20 @@ async function checkDebugOverlayIsNotShipped() {
     const code = (await readFile(path, 'utf8'))
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '');
-    const mentions = [...code.matchAll(/debug\/DebugOverlay/g)].length;
+    const mentions = [...code.matchAll(/debug\/(?:DebugOverlay|InputLatency)/g)].length;
     if (mentions === 0) continue;
-    const dynamic = [...code.matchAll(/import\(\s*['"][^'"]*debug\/DebugOverlay['"]\s*\)/g)].length;
+    const dynamic = [
+      ...code.matchAll(/import\(\s*['"][^'"]*debug\/(?:DebugOverlay|InputLatency)['"]\s*\)/g),
+    ].length;
     const typeOnly = [
-      ...code.matchAll(/import\s+type\s[^;]*?from\s*['"][^'"]*debug\/DebugOverlay['"]/g),
+      ...code.matchAll(
+        /import\s+type\s[^;]*?from\s*['"][^'"]*debug\/(?:DebugOverlay|InputLatency)['"]/g,
+      ),
     ].length;
     if (mentions !== dynamic + typeOnly) {
       fail(
         property,
-        `${path.slice(root.length + 1)} reaches the overlay other than through a guarded` +
+        `${path.slice(root.length + 1)} reaches debug instrumentation other than through a guarded` +
           ' import() — a static import ships it whatever the flag around its use says',
       );
     }
@@ -1261,7 +1278,8 @@ async function checkDebugOverlayIsNotShipped() {
   }
   const carrying = [];
   for (const path of emitted) {
-    if ((await readFile(path, 'utf8')).includes(DEBUG_OVERLAY_MARKER)) {
+    const built = await readFile(path, 'utf8');
+    if (built.includes(DEBUG_OVERLAY_MARKER) || built.includes(INPUT_LATENCY_MARKER)) {
       carrying.push(path.slice(out.length + 1));
     }
   }

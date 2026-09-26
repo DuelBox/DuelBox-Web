@@ -3,9 +3,10 @@
  *
  * A reaction game is unfair if one input path reaches the simulation slower than another, and
  * `docs/input-parity.md` can only rule on that if it is a number. This is the meter that
- * produces the number: the shell timestamps a DOM event as it arrives and timestamps the step
- * that first consumes the latched input, and the gap between them is the latency that family
- * paid on that press.
+ * produces the number: the development host supplies Event.timeStamp for DOM input or the
+ * latest changed Gamepad.timestamp, and performance.now() at the consuming step. These share
+ * a monotonic time origin. This measures browser event/sample-to-step latency, not physical
+ * input or input-to-paint latency; gamepads expose the latest sample, not every intervening edge.
  *
  * ## Why the wall clock is injected
  *
@@ -13,9 +14,10 @@
  * and the step that reads it — but reading `performance.now()` here would violate the same
  * lint rule the whole engine lives under. So the shell passes the timestamps in (from
  * `performance.now()`, beside `browserClock`), exactly as it passes the frame delta into the
- * loop. This keeps the arithmetic testable with plain numbers and the engine free of the
- * device. It never feeds the simulation: a measurement that changed the step would make two
- * devices disagree about the match (rule 8), so nothing here is read by any `update`.
+ * loop (source timestamps use that same time origin). This keeps the arithmetic testable with
+ * plain numbers and the engine free of the device. It never feeds the simulation: a measurement
+ * that changed the step would make two devices disagree about the match (rule 8), so nothing
+ * here is read by any `update`.
  *
  * ## The measure
  *
@@ -34,7 +36,7 @@ export const INPUT_FAMILIES: readonly InputFamily[] = ['keyboard', 'pointer', 'g
 
 /** A read-out of one family's latency so far, in milliseconds. */
 export interface LatencyStats {
-  /** How many events have been measured. */
+  /** Consuming steps with pending input; a same-family burst contributes one sample. */
   readonly samples: number;
   /** Mean event-to-step latency. 0 when there are no samples. */
   readonly meanMs: number;
@@ -68,7 +70,7 @@ export class LatencyMeter {
   };
 
   /**
-   * Record that an input of `family` arrived at `atMs` (a `performance.now()` reading).
+   * Record an input's source time in the same monotonic milliseconds as `performance.now()`.
    *
    * Keeps the earliest pending time, so a step consuming several events of one family
    * attributes the latency of the one that waited longest.
@@ -125,6 +127,11 @@ export class LatencyMeter {
       if (this.#byFamily[family].pendingMs >= 0) return true;
     }
     return false;
+  }
+
+  /** A paused/discarded input must not become a latency sample on resume. Keep past stats. */
+  discardPending(): void {
+    for (const family of INPUT_FAMILIES) this.#byFamily[family].pendingMs = -1;
   }
 
   /** Forget every sample and pending event — a fresh match, a new baseline run. */

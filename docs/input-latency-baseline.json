@@ -1,0 +1,110 @@
+[
+  {
+    "date": "2026-09-26T04:57:58.873Z",
+    "project": "chromium",
+    "browser": "151.0.7922.34",
+    "platform": "darwin 27.0.0",
+    "cpu": "Apple M5",
+    "node": "v26.8.1",
+    "headless": true,
+    "mode": "development build; DOM event-to-step; injected gamepad sample-to-step",
+    "readings": [
+      {
+        "family": "keyboard",
+        "samples": 40,
+        "meanMs": 12.45499999988824,
+        "minMs": 1,
+        "maxMs": 27.799999997019768,
+        "lastMs": 11
+      },
+      {
+        "family": "pointer",
+        "samples": 40,
+        "meanMs": 10.280000000633299,
+        "minMs": 0.6999999955296516,
+        "maxMs": 28.799999997019768,
+        "lastMs": 9
+      },
+      {
+        "family": "gamepad",
+        "samples": 40,
+        "meanMs": 12.470000000298024,
+        "minMs": 3.5,
+        "maxMs": 28.600000001490116,
+        "lastMs": 11.600000001490116
+      }
+    ]
+  },
+  {
+    "date": "2026-09-26T04:58:25.332Z",
+    "project": "webkit",
+    "browser": "26.5",
+    "platform": "darwin 27.0.0",
+    "cpu": "Apple M5",
+    "node": "v26.8.1",
+    "headless": true,
+    "mode": "development build; DOM event-to-step; injected gamepad sample-to-step",
+    "readings": [
+      {
+        "family": "keyboard",
+        "samples": 40,
+        "meanMs": 26.925,
+        "minMs": 3,
+        "maxMs": 63,
+        "lastMs": 38
+      },
+      {
+        "family": "pointer",
+        "samples": 40,
+        "meanMs": 27.125,
+        "minMs": 10,
+        "maxMs": 63,
+        "lastMs": 13
+      },
+      {
+        "family": "gamepad",
+        "samples": 40,
+        "meanMs": 35.6,
+        "minMs": 1,
+        "maxMs": 407,
+        "lastMs": 8
+      }
+    ]
+  },
+  {
+    "date": "2026-09-26T04:59:11.045Z",
+    "project": "firefox",
+    "browser": "153.0",
+    "platform": "darwin 27.0.0",
+    "cpu": "Apple M5",
+    "node": "v26.8.1",
+    "headless": true,
+    "mode": "development build; DOM event-to-step; injected gamepad sample-to-step",
+    "readings": [
+      {
+        "family": "keyboard",
+        "samples": 40,
+        "meanMs": 13.725,
+        "minMs": 1,
+        "maxMs": 66,
+        "lastMs": 6
+      },
+      {
+        "family": "pointer",
+        "samples": 40,
+        "meanMs": 28.8,
+        "minMs": 4,
+        "maxMs": 128,
+        "lastMs": 8
+      },
+      {
+        "family": "gamepad",
+        "samples": 40,
+        "meanMs": 20.4,
+        "minMs": 1,
+        "maxMs": 133,
+        "lastMs": 7
+      }
+    ]
+  }
+]

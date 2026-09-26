@@ -84,9 +84,17 @@ describe('the read-out', () => {
       null,
     );
     expect(lines).toHaveLength(4); // fps, steps, (no seats), keyboard, pointer
-    expect(lines[2]).toBe('lat keyboard 8.20ms mean  9.00 last  14.00 max  n=30');
-    expect(lines[3]).toBe('lat pointer  11.50ms mean  10.00 last  20.00 max  n=12');
+    expect(lines[2]).toBe('lat keyboard 8.20ms mean  9.00 last  14.00 max  n=30  event→step');
+    expect(lines[3]).toBe('lat pointer  11.50ms mean  10.00 last  20.00 max  n=12  event→step');
     expect(lines.some((l) => l.includes('gamepad'))).toBe(false);
+  });
+
+  it('identifies gamepad measurements as sample-to-step, not physical press latency', () => {
+    const lines = formatDebugReading(
+      reading({ latency: [{ family: 'gamepad', samples: 1, meanMs: 8, lastMs: 8, maxMs: 8 }] }),
+      null,
+    );
+    expect(lines[2]).toBe('lat gamepad  8.00ms mean  8.00 last  8.00 max  n=1  sample→step');
   });
 
   it('adds no latency rows when no meter is attached', () => {
