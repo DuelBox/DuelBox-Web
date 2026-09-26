@@ -6,6 +6,22 @@ import { describe, expect, it } from 'vitest';
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 
 /**
+ * These probes supply unsaved source through `lintText`, like an editor. The parser's
+ * CI=true heuristic otherwise treats the first call as an immutable disk-only run and
+ * checks the clean file on disk, then treats a repeated filename as an autofix pass.
+ * Select its editor mode for these instances only. Config lookup, projects and rules
+ * still come from the repository; no process environment or source file is changed.
+ */
+function eslintAt(cwd: string): ESLint {
+  return new ESLint({
+    cwd,
+    overrideConfig: {
+      languageOptions: { parserOptions: { disallowAutomaticSingleRunInference: true } },
+    },
+  });
+}
+
+/**
  * Run the installed ESLint with its normal config discovery, not an imported config.
  * ESLint 10 starts that search beside each linted file. The empty app config that once
  * suppressed Next's duplicate lint pass therefore hid every app rule from `pnpm lint`.
@@ -16,7 +32,7 @@ describe('the repository lint actually reaches the app', () => {
   it.each(['.', 'apps/web'])(
     'enforces app rules when invoked from %s',
     async (cwd) => {
-      const eslint = new ESLint({ cwd: join(root, cwd) });
+      const eslint = eslintAt(join(root, cwd));
       const results = await eslint.lintText(
         `import { useEffect } from 'react';
 export function LintCoverage({ enabled }: { enabled: boolean }) {
@@ -45,7 +61,7 @@ export function LintCoverage({ enabled }: { enabled: boolean }) {
   );
 
   it('still enforces the gameplay rules outside the app', async () => {
-    const results = await new ESLint({ cwd: root }).lintText('Math.random();', {
+    const results = await eslintAt(root).lintText('Math.random();', {
       filePath: join(root, 'packages/engine/src/vec2.ts'),
     });
     expect(results.flatMap((result) => result.messages)).toContainEqual(
