@@ -42,6 +42,9 @@ const SHELL_ROUTES = [
   '/privacy/',
   '/terms/',
   '/dmca/',
+  // The page the DMCA route sends a rights-holder to, and the last shell page that was not
+  // measured here. Its absence is why #2629 went unseen; it is in the sitemap now too.
+  '/attribution/',
 ] as const;
 
 /** The narrowest screen the definition of done covers. */
@@ -121,6 +124,28 @@ const EXEMPT: readonly { readonly where: string; readonly route?: string; readon
       where: 'a[href="/attribution/"] in a paragraph',
       route: '/dmca/',
       why: 'The same sentence, cross-referencing Attribution; SC 2.5.8 inline exception.',
+    },
+    // The attribution page (#2629), which was in neither this list nor the sitemap, so
+    // nothing had ever measured it. Its dependency table is fixed rather than exempted —
+    // `page.module.css` sizes those links to the token in both dimensions, because a link
+    // alone in a table cell is a control and not a word. These two are the other kind.
+    {
+      where: 'a[href="/open-font-license-official-text/"]',
+      route: '/attribution/',
+      why:
+        'The licence at the end of each font\'s line — "Family - Author. OFL-1.1". Its size ' +
+        "is constrained by the line-height of the text it closes, which is SC 2.5.8's " +
+        'inline exception exactly. The descriptor cannot say "in a paragraph" the way the ' +
+        'entries above do, because `inProse` looks for a `<p>` ancestor and these sentences ' +
+        'are `<li>`; widening that helper to lists would exempt every nav link in the header ' +
+        'and the footer, which are the targets this sweep exists to hold.',
+    },
+    {
+      where: 'a[href="/terms/"] in a paragraph',
+      route: '/attribution/',
+      why:
+        'The closing sentence cross-references Terms, word for word the case the `/dmca/` ' +
+        'entry above covers; SC 2.5.8 inline exception.',
     },
   ];
 
