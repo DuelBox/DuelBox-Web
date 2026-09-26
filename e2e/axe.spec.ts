@@ -135,10 +135,34 @@ function lines(violations: readonly Result[]): string[] {
 }
 
 async function expectClean(page: Page, shape: string): Promise<void> {
+  // The route root fades from transparent to opaque on entry. axe measures contrast against
+  // the intermediate opacity, so under a loaded runner it can report low contrast on text
+  // whose settled colours pass. Wait for the root's finite entry animation, not a fixed
+  // timeout and not every descendant animation (some previews loop while hovered).
+  await page.locator('.db-main > *:not(.db-fill)').evaluateAll(async (roots) => {
+    const entries = roots
+      .flatMap((root) => root.getAnimations())
+      .filter(
+        (animation) =>
+          animation.playState === 'running' &&
+          animation.effect?.getTiming().iterations !== Infinity,
+      );
+    await Promise.all(entries.map((animation) => animation.finished.catch(() => {})));
+  });
   expect(lines(await scan(page)), `axe violations on ${shape}`).toEqual([]);
 }
 
 test.describe('the site has no automated accessibility violations', () => {
+  test('waits until the entry fade is opaque before judging contrast', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.db-main > *:not(.db-fill)').evaluateAll((roots) => {
+      for (const root of roots) {
+        root.animate([{ opacity: 0.2 }, { opacity: 0.2 }], { duration: 1500 });
+      }
+    });
+    await expectClean(page, 'the landing page after its entry fade');
+  });
+
   test('the landing page', async ({ page }) => {
     await page.goto('/');
     await expectClean(page, 'the landing page');
