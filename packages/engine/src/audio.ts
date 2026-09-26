@@ -288,6 +288,8 @@ export class AudioSystem {
   /** Voice pool. A slot is idle once the context clock passes its `#voiceFreeAt`. The gain
    * nodes are created on first use and then reused for the life of the tab. */
   readonly #voiceGains: (GainNodeLike | undefined)[];
+  /** The current source in each slot. Reusing a gain must first retire its old source. */
+  readonly #voiceSources: (AudioBufferSourceNodeLike | undefined)[];
   readonly #voiceFreeAt: Float64Array;
 
   #context: AudioContextLike | undefined = undefined;
@@ -332,6 +334,9 @@ export class AudioSystem {
     this.#queueGain = new Float64Array(queueCapacity);
     this.#queueRate = new Float64Array(queueCapacity);
     this.#voiceGains = new Array<GainNodeLike | undefined>(maxVoices).fill(undefined);
+    this.#voiceSources = new Array<AudioBufferSourceNodeLike | undefined>(maxVoices).fill(
+      undefined,
+    );
     this.#voiceFreeAt = new Float64Array(maxVoices);
 
     this.#masterGain = clampGain(options?.masterGain ?? 1);
@@ -630,6 +635,14 @@ export class AudioSystem {
       const rate = this.#queueRate[i]!;
       const gain = this.#queueGain[i]! * (this.#baseGains[slot] ?? 1);
       const voice = this.#takeVoice(now);
+      const previous = this.#voiceSources[voice];
+      if (previous !== undefined) {
+        // A reused gain alone is not a stolen voice: the old source would keep playing
+        // at the new sound's gain. stop() is harmless after natural completion, and
+        // disconnect only this source, never the gain the replacement will share.
+        previous.stop();
+        previous.disconnect();
+      }
       const voiceGain = this.#voiceGain(context, master, voice);
       voiceGain.gain.value = gain;
       const source = context.createBufferSource();
@@ -637,6 +650,7 @@ export class AudioSystem {
       source.playbackRate.value = rate;
       source.connect(voiceGain);
       source.start();
+      this.#voiceSources[voice] = source;
       this.#voiceFreeAt[voice] = now + buffer.duration / (rate > 0 ? rate : 1);
     }
   }
