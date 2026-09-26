@@ -13,11 +13,11 @@
  * `pnpm size`, asset licensing and `roundSeconds` were the first three; HANDOFF.md tells
  * that story. The lesson each time: when a rule matters, run something.
  *
- * What this does NOT do is rename anything. Forty-nine names are real exposure, but a
- * rename moves the catalogue card, the URL slug, SPEC.md, the manifest and every routing
- * test, and it breaks links that already exist. That is a product decision for the owner,
- * sequenced deliberately, not a cleanup a build script should perform. So the guard makes
- * the position visible and stops it getting worse, and #2515 tracks the renaming.
+ * What this does NOT do is rename anything or establish trademark clearance. A rename moves
+ * the catalogue card, the URL slug, SPEC.md, the manifest and every routing test, and it
+ * breaks links that already exist. That is a product decision for the owner, sequenced
+ * deliberately, not a cleanup a build script should perform. So the guard makes the
+ * unresolved decisions visible and stops them growing, and #2515 tracks the renaming.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,17 +26,20 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const catalogue = JSON.parse(readFileSync(`${ROOT}data/catalog.generated.json`, 'utf8')).games;
 const clearance = JSON.parse(readFileSync(`${ROOT}data/name-clearance.json`, 'utf8'));
+const baseline = JSON.parse(readFileSync(`${ROOT}data/name-clearance-pending.json`, 'utf8'));
 
 const STATUSES = new Set(['generic', 'renamed', 'pending', 'original']);
 
 /**
- * How many games may still be `pending`. A ratchet, not a target.
+ * The unresolved games, by identity rather than count. The old ceiling remained 49 after
+ * twelve decisions changed to generic, allowing twelve new pending names. Even a ceiling
+ * of 37 would let a newly copied name replace one resolved in the same change.
  *
- * Without it a new game could copy its reference name and pass by being labelled
- * `pending`, which would make this guard a place to record the problem rather than one
- * that resists it. Renaming a game means lowering this number in the same commit.
+ * Keep this separate from the decisions: deriving it from their current statuses would
+ * accept every regression by construction. A resolved entry must leave this baseline too,
+ * so it cannot quietly become pending again later.
  */
-const PENDING_CEILING = 49;
+const PENDING_IDS = new Set(baseline.pending);
 
 /** Case, spacing and punctuation are not the question; the name is. */
 const norm = (value) => (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -101,7 +104,7 @@ for (const game of catalogue) {
   if (entry.status !== 'renamed' && !identical) {
     failures.push(
       `${game.id} — recorded as "${entry.status}", but the name now differs from the ` +
-        `reference. Change the entry to "renamed" and lower PENDING_CEILING if it was pending.`,
+        `reference. Change the entry to "renamed" and remove it from the pending baseline if it was pending.`,
     );
   }
   if (entry.status === 'pending') pending.push(game.id);
@@ -109,7 +112,7 @@ for (const game of catalogue) {
 
 for (const id of Object.keys(clearance.games)) {
   if (!catalogue.some((game) => game.id === id)) {
-    failures.push(`${id} — cleared here but not in the catalogue. Stale entry; remove it.`);
+    failures.push(`${id} — recorded here but not in the catalogue. Stale entry; remove it.`);
   }
 }
 
@@ -139,18 +142,32 @@ if (existsSync(shippedCatalogue) && readFileSync(shippedCatalogue, 'utf8').inclu
   );
 }
 
-if (pending.length > PENDING_CEILING) {
-  failures.push(
-    `${String(pending.length)} games are pending, above the ceiling of ` +
-      `${String(PENDING_CEILING)}. A new game may not take its reference name. If you have ` +
-      `renamed games instead, lower PENDING_CEILING in this file to match.`,
-  );
+if (PENDING_IDS.size !== baseline.pending.length) {
+  failures.push('data/name-clearance-pending.json repeats a game id. Keep each exception once.');
+}
+
+for (const id of pending) {
+  if (!PENDING_IDS.has(id)) {
+    failures.push(
+      `${id} — newly pending, outside the recorded baseline. A new or previously resolved ` +
+        'game may not take its reference name, even when another pending name is resolved.',
+    );
+  }
+}
+
+for (const id of PENDING_IDS) {
+  if (!pending.includes(id)) {
+    failures.push(
+      `${id} — in the pending baseline but no longer pending. Remove its id from ` +
+        'data/name-clearance-pending.json in the same change as the recorded decision.',
+    );
+  }
 }
 
 console.log(
   `check-game-names: ${String(catalogue.length)} games — ` +
-    `${String(catalogue.length - pending.length)} cleared, ` +
-    `${String(pending.length)} pending a rename decision (#2515, ceiling ${String(PENDING_CEILING)})`,
+    `${String(catalogue.length - pending.length)} non-pending name decisions, ` +
+    `${String(pending.length)} pending a rename decision (#2515)`,
 );
 
 if (failures.length > 0) {
