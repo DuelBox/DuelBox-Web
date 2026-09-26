@@ -171,8 +171,16 @@ function Phase({
    * with nothing filled in, because a server component cannot know the device; this one
    * can, and `lib/bug-report-url.ts` says what goes in and what stays out — the names the
    * two of you chose stay out. A plain anchor rather than `next/link`, for the reason the
-   * result links give `prefetch={false}`: a match needs nothing from the network. Built when
-   * a panel renders and not before; none of these panels exist in the exported HTML.
+   * result links give `prefetch={false}`: a match needs nothing from the network.
+   *
+   * Built when a panel renders and not before, and that is why `report` is a function rather
+   * than an element. This component re-renders on every fixed step — `lib/match-announcement.ts`
+   * says so and depends on it — so an element built beside the phase switch is built sixty
+   * times a second through the countdown and the whole match, in every phase that never shows
+   * it. What it costs is not the JSX: `readBugReportEnvironment()` reads `innerWidth` and
+   * `innerHeight`, which flush pending layout, and allocates a `MediaQueryList` per call, all
+   * to fill in a link nobody is looking at. Called from the three panels instead, it runs when
+   * play has stopped, which is the only time any of this is on screen.
    */
   const reportHref = () =>
     bugReportUrl({
@@ -187,7 +195,7 @@ function Phase({
         state,
       },
     });
-  const report = (
+  const report = () => (
     <a className={styles.secondary} href={reportHref()} target="_blank" rel="noopener noreferrer">
       {t(messages, 'Report a bug')}
     </a>
@@ -235,7 +243,7 @@ function Phase({
             <Link className={styles.secondary} href="/settings/" prefetch={false}>
               {t(messages, 'Settings')}
             </Link>
-            {report}
+            {report()}
             {/* The product's only sound control. Here because pause is already where a
                 pair stops to change something, and because a control beside the score is
                 one either player can hit reaching across a shared device. */}
@@ -298,7 +306,7 @@ function Phase({
                   {t(messages, 'Play {game}', { game: nextGame.name })}
                 </Link>
               ) : null}
-              {report}
+              {report()}
             </div>
             <Link className={styles.back} href="/games" prefetch={false}>
               {t(messages, 'Back to all games')}
@@ -364,7 +372,7 @@ function Phase({
                 {t(messages, 'Play {game}', { game: nextGame.name })}
               </Link>
             ) : null}
-            {report}
+            {report()}
           </div>
           <Link className={styles.back} href="/games" prefetch={false}>
             {t(messages, 'Back to all games')}
