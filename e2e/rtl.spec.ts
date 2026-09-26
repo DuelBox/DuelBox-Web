@@ -231,7 +231,12 @@ test.describe('a right-to-left shell', () => {
       await page.goto('/play/tic-tac-toe/');
       await page.getByRole('button', { name: 'Play together here' }).click();
       await expect(page.locator('canvas')).toBeVisible();
-      await expect(page.getByRole('group', { name: 'Score' })).toBeVisible();
+      const score = page.getByRole('group', { name: 'Score' });
+      await expect(score).toBeVisible();
+      // Both pages must have consumed their first playing step. In landscape, the
+      // first "turn" label widens the far HUD and moves the canvas's left edge;
+      // a visible countdown board and a playing board are different layouts.
+      await expect(score.getByText('turn', { exact: true })).toBeVisible();
     };
     const ltr = await context.newPage();
     await start(ltr);
