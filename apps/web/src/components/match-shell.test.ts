@@ -42,8 +42,29 @@ describe('the in-app bug report link (#233)', () => {
     expect(overlay).toContain("from '@/lib/bug-report-url'");
     expect(overlay).toMatch(/href=\{reportHref\(\)\}/);
     // The pause menu and both result screens: three places, one element.
-    expect(overlay.match(/\{report\}/g)?.length).toBe(3);
+    expect(overlay.match(/\{report\(\)\}/g)?.length).toBe(3);
     expect(overlay).toMatch(/>\s*\{t\(messages, 'Report a bug'\)\}\s*</);
+  });
+
+  it('builds the link where a panel shows it, and not on every fixed step', () => {
+    // The docstring over `reportHref` has said "built when a panel renders and not before"
+    // since the link was added, and nothing held it: the element was assigned beside the
+    // phase switch, so it was built on every render in every phase. `MatchOverlay`
+    // re-renders on every fixed step — `lib/match-announcement.ts` says so and relies on it
+    // — and `readBugReportEnvironment()` reads `innerWidth`/`innerHeight`, which flush
+    // pending layout, and allocates a `MediaQueryList`. Sixty times a second, through the
+    // countdown and the whole match, for a link only the stopped-play panels ever show.
+    const switchAt = overlay.indexOf('switch (state.phase)');
+    // The control: a scan that cannot find the switch would slice an empty string and pass
+    // every assertion below it without reading a line of the component.
+    expect(switchAt, 'no phase switch found in MatchOverlay.tsx').toBeGreaterThan(0);
+    const beforeTheSwitch = overlay.slice(0, switchAt);
+    expect(beforeTheSwitch).toContain('const report = () => (');
+    // One call site for the builder, inside that function — not at the top level beside it.
+    expect(overlay.match(/reportHref\(\)/g)?.length).toBe(1);
+    expect(beforeTheSwitch, 'the link element is built before the phase is known').not.toMatch(
+      /const report = \(\s*\n?\s*<a/,
+    );
   });
 
   it('is a plain anchor to a new tab, never a prefetching route link', () => {
