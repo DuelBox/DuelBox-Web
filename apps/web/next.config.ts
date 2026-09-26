@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
    */
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   reactStrictMode: true,
+  // `pnpm lint` is the required, type-aware pass for the whole repository. Disable
+  // Next's duplicate pass here: an empty app-level eslint.config.js also shadows the
+  // root config under ESLint 10's per-file lookup and silently leaves the app unlinted.
+  eslint: { ignoreDuringBuilds: true },
   // A static host cannot run the image optimiser, and our art is SVG anyway.
   images: { unoptimized: true },
   // Trailing slashes keep directory-style hosts (GitHub Pages, plain S3) working.
