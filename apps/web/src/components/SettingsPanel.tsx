@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState, type ChangeEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useState, type ChangeEvent } from 'react';
 import type { SeatId } from '@duelbox/engine';
 import { clearFavourites } from '@/lib/favourites';
 import { hapticsSupported, vibrate } from '@/lib/haptics';
@@ -26,6 +26,14 @@ import { useMessages } from '@/lib/i18n/use-messages';
 import { clearRecent } from '@/lib/recent';
 import type { Settings } from '@/lib/settings';
 import { KeyBindings } from './KeyBindings';
+
+/**
+ * "Download all games" (#196), fetched rather than imported: `/settings/` is a shell route
+ * and the shell has about a kilobyte and a half to spare, so the control's sentences, its
+ * progress bar and its storage calls live in a chunk on the on-demand line. What the shell
+ * pays for is the heading, one note and this mount.
+ */
+const DownloadAll = lazy(() => import('./DownloadAll'));
 import { notifySettingsChanged, useSettings } from './SoundToggle';
 import styles from './SettingsPanel.module.css';
 
@@ -626,6 +634,20 @@ export function SettingsPanel() {
             onChange={importData}
           />
         </div>
+        {/* #196. The other half of the offline promise: what you played is what you keep,
+            and this is how to keep the rest before a flight. The worker owns the list, the
+            fetching, the progress and the eviction; the page asks and reports. */}
+        <h3 className={styles.subhead}>{t(messages, 'Games saved on this device')}</h3>
+        <p className={styles.note}>
+          {t(
+            messages,
+            'Each game is saved here the first time you open it. Save all of them at once for a journey with no connection; a stopped download picks up where it left off.',
+          )}
+        </p>
+        <Suspense fallback={null}>
+          <DownloadAll />
+        </Suspense>
+
         <div className={styles.actions}>
           <Confirm
             label={t(messages, 'Reset everything')}

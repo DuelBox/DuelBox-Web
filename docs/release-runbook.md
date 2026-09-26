@@ -1,7 +1,7 @@
 # Release and rollback runbook
 
-For the person shipping at two in the morning. Everything below was checked against the live
-origin and the workflows as they are today, not against how they are described.
+For the person shipping at two in the morning. The release procedure reflects the current
+workflows and branch protection. The dated live-origin snapshot below remains historical.
 
 [`docs/deploy.md`](deploy.md) explains the artefact, the hosts, and which security headers
 survive a header-less host. This document is the procedure: how a release happens, how to
@@ -14,15 +14,15 @@ Site: <https://duelbox.github.io/DuelBox-Web/> · Workflow:
 
 ## What a release is here
 
-**Pushing to `main` starts the release.** There is no separate step, tag, approval or
-promotion between environments. `ci.yml` runs on the push; a successful run triggers
-`deploy.yml`, which rebuilds the static export and publishes it to GitHub Pages. Deploy can
-also be started manually with `workflow_dispatch`, and the `github-pages` environment's
+**Merging a green pull request to `main` starts the release.** There is no separate tag,
+approval or promotion between environments. `ci.yml` runs on the merge commit; a successful
+run triggers `deploy.yml`, which rebuilds the static export and publishes it to GitHub Pages.
+Deploy can also be started manually with `workflow_dispatch`, and the `github-pages` environment's
 branch policy permits `main` only.
 
 Observed end-to-end times over the last eight deploys: **2m17s to 4m11s.**
 
-### The thing to understand before you push
+### The thing to understand before you merge
 
 **The deploy waits for CI, and publishes only the commit CI actually tested.**
 
@@ -55,18 +55,17 @@ URL as Deploy so that path-sensitive checks run before merge; the e2e job builds
 its local server. If no CI run exists for a new `main` commit, inspect how that commit was
 pushed before assuming Deploy is at fault.
 
-**One gap remains, and it is a repository setting rather than a file.** `main` has no branch
-protection and no ruleset — `gh api repos/DuelBox/DuelBox-Web/branches/main/protection`
-returns 404 and `…/rulesets` returns `[]` — so there are no required status checks and a pull
-request can still be merged red. That no longer publishes a broken site, because the deploy
-is gated on CI for whatever lands. It does mean `main` can hold a red commit until the next
-push. Deciding that is #2511's second half.
+**`main` is protected.** GitHub requires `verify` and all three `e2e` shards from `ci.yml`
+to pass against the current base before a pull request can merge. Administrators cannot
+bypass the rule; force pushes and branch deletion are disabled. CI runs again on the merge
+commit, and only a successful run triggers Deploy. Check the branch rule if the required
+checks change names or CI is reorganized.
 
 ---
 
 ## Releasing
 
-### 1. Before you push
+### 1. Before you merge
 
 ```bash
 pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm e2e
@@ -75,15 +74,20 @@ pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build && p
 All six. `format:check` first, because it is the one that gets skipped — CI failed on it for
 every commit until 20 August 2026 while everyone's local run of the other five was green.
 
-If you are merging a pull request rather than pushing, check that the **CI run on the head
-commit is green before you merge**, because nothing will check it for you afterwards.
+Open a pull request and wait for all four required checks to pass. Branch protection
+requires the checks to reflect the current `main`; a new base commit may require another run.
 
-### 2. Push, and watch the right run
+### 2. Merge, and watch the right run
 
 ```bash
-git push origin main
+PR_NUMBER=1234 # replace with the green pull request number
+gh pr merge "$PR_NUMBER" --repo DuelBox/DuelBox-Web --merge
+gh run list --repo DuelBox/DuelBox-Web --workflow=ci.yml --branch main --limit 3
+# Set CI_RUN_ID to the new main run's ID from that list, then wait for it to finish.
+gh run watch "$CI_RUN_ID" --repo DuelBox/DuelBox-Web
 gh run list --repo DuelBox/DuelBox-Web --workflow=deploy.yml --limit 3
-gh run watch <run-id> --repo DuelBox/DuelBox-Web
+# Set DEPLOY_RUN_ID to the new Deploy run's ID from that list.
+gh run watch "$DEPLOY_RUN_ID" --repo DuelBox/DuelBox-Web
 ```
 
 The two jobs are `build` then `deploy`. The `deploy` job's summary carries the page URL.
@@ -163,26 +167,25 @@ Measured against the live origin on 29 August 2026, deployed SHA `914e7db`:
 |---|---|---|
 | All seven routes | `200` | Good |
 | meta CSP | present | Good |
-| `<meta name="referrer">` | **absent** | Ships with the header-delivery work currently in the tree, not yet on `main` |
-| frame guard inline script | **absent** | Same |
+| `<meta name="referrer">` | **absent** | Added since this snapshot |
+| frame guard inline script | **absent** | Added since this snapshot |
 | `/security.txt` | `200` | Good |
-| `/.well-known/security.txt` | **`404`** | A defect — see below |
+| `/.well-known/security.txt` | **`404`** | Defect at the time; now fixed |
 | an unknown path | `404`, unstyled | See below |
 
-Two of those are worth filing rather than shrugging at.
+That snapshot records what failed on 29 August; it is not the current deployment state.
+Both `/security.txt` and `/.well-known/security.txt` now answer `200` on the live origin;
+the referrer meta tag and frame guard are present too.
+The two defects below explain the historical finding and how it was resolved.
 
-**`/.well-known/security.txt` 404s on the live origin while `/security.txt` serves.**
-`scripts/emit-host-config.mjs` writes both, at the deployed SHA as well as the current one,
-and `.nojekyll` is created before upload. So the artefact contains the file and the host is
-not serving it. RFC 9116 names the `.well-known` location as the canonical one, and
-`SECURITY.md` depends on a researcher finding it. The cause is not established — the dot
-directory is being lost somewhere between `apps/web/out` and the served origin. **Do not
-"fix" this by deleting the root copy**; the root copy is the one that currently works.
+**The canonical security contact was missing from the August deployment.** The Pages upload
+now includes hidden files, and both security.txt locations serve on the live origin. Keep
+checking both after releases; the root copy alone does not prove the `.well-known` copy is
+published.
 
-**A 404 shows Next's default error page** — black-on-white, system font, "This page could not
-be found", with no DuelBox chrome and no link back. There is no `not-found.tsx` anywhere in
-`apps/web/src`. That is the page a visitor gets from a stale link or a typo, which is exactly
-the moment the site should look like itself.
+**The August 404 used Next's default error page.** The site now exports a custom
+`not-found.tsx` with DuelBox styling and links back to the games and how-to-play pages.
+Check an unknown path after deployment to make sure the host serves the exported `404.html`.
 
 ---
 
@@ -341,11 +344,13 @@ Copy this into the issue.
 ```
 Release
 [ ] All six gate commands run locally, green
-[ ] CI green on the head commit (nothing enforces this — check it)
-[ ] Pushed to main; Deploy run watched to completion
+[ ] Required CI checks green on the current-base pull request
+[ ] Pull request merged to main; Deploy run watched to completion
 [ ] Seven routes return 200
+[ ] An unknown route serves the custom 404 page
 [ ] meta CSP, meta referrer, frame guard present in the served HTML
 [ ] /security.txt returns 200
+[ ] /.well-known/security.txt returns 200
 [ ] /sw.js returns 200 with a JavaScript content type
 [ ] The duelbox-shell- revision in the served /sw.js CHANGED from the last deploy
 [ ] On the live origin: one worker, activated; one duelbox-shell- cache; nothing stuck waiting
@@ -369,17 +374,12 @@ A first-timer can follow everything above. These are the things that would have 
 configuration or code, and they are named here so the next person does not assume they are
 already handled:
 
-1. **A red pull request can still be merged.** `workflow_run` gates Deploy on successful CI,
-   but `main` has no branch protection or required checks, so a bad commit can sit there
-   until corrected. This is separate from whether it reaches the published site.
-2. **`PLAYWRIGHT_BASE_URL` does nothing**, so there is no automated verification against a
+1. **`PLAYWRIGHT_BASE_URL` does nothing**, so there is no automated verification against a
    real origin. Threading it through `playwright.config.ts` — and skipping the `webServer`
    block when it is set — would give this runbook a real smoke test instead of a curl loop.
-3. **`/.well-known/security.txt` 404s** on the live origin.
-4. **No `not-found.tsx`**, so every 404 is Next's default page.
-5. **No custom domain**, so the site's URL contains the repository name and moving hosts
+2. **No custom domain**, so the site's URL contains the repository name and moving hosts
    changes every link anyone has saved. Worth deciding before that matters.
-6. **No way to force a device onto a new build.** Since #2544 a returning visitor is served
+3. **No way to force a device onto a new build.** Since #2544 a returning visitor is served
    the shell from their own browser, and the only things that move them are the update prompt
    they have to accept and the tab they have to close. There is no push channel, no kill
    switch and no remote unregister, and there is not going to be one — every mechanism that

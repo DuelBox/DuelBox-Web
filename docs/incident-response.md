@@ -183,10 +183,9 @@ Pages serves no custom response headers, so seven of the nine generated ones rea
 (#2481). A scanner grading this origin down is reporting a fact already recorded in
 `docs/deploy.md`, not a finding.
 
-One live gap worth knowing when a report arrives: **`/.well-known/security.txt` returns 404 on
-the live origin** although the artefact contains it and `/security.txt` serves fine. RFC 9116
-names the `.well-known` path as canonical, so a researcher following the standard finds
-nothing. See the release runbook.
+The former `/.well-known/security.txt` 404 was fixed by including hidden files in the Pages
+upload. Check both security.txt locations after a release; the release runbook has the
+commands and the dated history of that defect.
 
 ### 4. A game ships broken
 
@@ -221,19 +220,24 @@ Vercel needs nothing from this repository except deleting `deploy.yml` and updat
 ### 6. An originality or licensing complaint
 
 The one incident type unique to this product, and the reason `CLAUDE.md` rules 1 and 2 are
-absolute.
+absolute. The procedure and its clock are [`abuse-response.md`](abuse-response.md), and the
+public route a claimant is pointed at is `/dmca/`. This runbook is the first hour; it is not a
+second copy of that document, and it used to be one that disagreed with it.
 
-1. **Do not argue in public and do not delete anything yet.** Preserve the state.
+1. **Do not argue in public and do not delete anything yet.** Preserve the state, then work the
+   report through `abuse-response.md` — acknowledge, assess, act or plan, record — on its clock
+   and not out of band.
 2. Establish what is claimed: a **mechanic** (free to reimplement, and the substance of every
    game here) or **expression** — art, audio, code, layout, name, copy. See the research scope
    boundary in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-3. Check provenance. Every shipped asset needs an `assets.license.json` entry with a source, a
-   licence and an author; `scripts/check-asset-licenses.mjs` enforces it, and the count is
-   currently zero because every game draws with primitives. That makes this the easiest
-   provenance question this project will ever face — for now.
-4. If the claim is about a name, `data/catalog.yaml` records which of the thirteen renamed
-   games were renamed and why.
-5. If the claim is good, **remove first and discuss after.** One game is one chunk.
+3. Provenance is already written down. Every shipped asset has an `assets.license.json` entry
+   with a source, a licence and an author (`scripts/check-asset-licenses.mjs` enforces it), and
+   `data/name-clearance.json` records the decision behind every game's name — generic, renamed,
+   pending or original, each with a reason. A claim about a name is answered from that record,
+   not from memory.
+4. If the claim is good, the change ships as a normal reviewed change — one game is one chunk —
+   and the outcome is recorded where `abuse-response.md` says. Removing first and discussing
+   after is not the procedure; a decision nobody wrote down is a claim that comes back.
 
 ---
 

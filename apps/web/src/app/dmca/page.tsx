@@ -17,10 +17,14 @@ export const metadata: Metadata = {
  * The contact address is a PLACEHOLDER (`abuse@duelbox.example`) until the owner supplies a real
  * monitored inbox; the note below says so plainly rather than implying a live channel.
  *
- * Every sentence goes through `<T>` (#220), the two that carry markup keeping it as a value so a
- * translator gets the whole sentence. The address itself does not: an email address is the same
- * eleven characters in every language, and the two places it is shown carry the only
+ * Every sentence goes through `<T>` (#220), the ones that carry markup keeping it as a value so
+ * a translator gets the whole sentence. The address itself does not: an email address is the
+ * same characters in every language, and the places it is shown carry the only
  * `eslint-disable`s in this file rather than putting it in front of a translator to leave alone.
+ *
+ * "Writes its own code, art and sounds" — and not names, deliberately: `data/name-clearance.json`
+ * records 37 names still pending a decision (#2515, #210), and a page a claimant reads must not
+ * claim more than the record behind it holds.
  */
 export default function DmcaPage() {
   return (
@@ -129,7 +133,7 @@ export default function DmcaPage() {
         </h2>
         <p>
           <T
-            id="DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art, sounds and names. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}."
+            id="DuelBox reimplements the rules of public-domain and everyday games — which are not protected — and writes its own code, art and sounds. We keep a written record of the naming and licensing decision for every game, so a concern about a name or an asset is usually answered with a document we already hold. See {terms} and {attribution}."
             values={{
               terms: (
                 <Link href="/terms/">

@@ -74,8 +74,8 @@ pnpm install
 pnpm dev            # :3000, with its own .next-dev so a build cannot clobber it
 ```
 
-`package.json` requires Node >= 20 and CI runs 22, so build on 22. pnpm comes from the
-pinned `packageManager` field — do not install a different one.
+`package.json` requires Node ^20.19.0, ^22.13.0 or >=24, and CI runs 22, so build on 22.
+pnpm comes from the pinned `packageManager` field — do not install a different one.
 
 ## The gate
 
@@ -127,12 +127,11 @@ history:
 `main` is the default branch. Branch before you commit, always — the git guidance in this
 repository is not to commit on `main` directly.
 
-**`main` has no branch protection.** There is no ruleset and no required status check
-(`gh api repos/DuelBox/DuelBox-Web/branches/main/protection` returns 404). Nothing mechanical
-stops a push that has not passed CI, and `deploy.yml` fires on push to `main` regardless of
-whether `ci.yml` is green. That is a real gap, it is why the gate is a discipline rather than
-a gate, and it is the first thing to fix if this repository ever has more than a handful of
-contributors. See [`docs/release-runbook.md`](docs/release-runbook.md).
+**`main` is protected.** A pull request must pass the current-base `verify` and all three
+`e2e` CI shards before merge. The rule applies to administrators too, and disables force
+pushes and branch deletion. Merge through a pull request; the successful CI run on the
+resulting `main` commit triggers Deploy. See
+[`docs/release-runbook.md`](docs/release-runbook.md).
 
 ## Commits
 

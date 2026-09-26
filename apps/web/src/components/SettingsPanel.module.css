@@ -352,3 +352,12 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* The download's progress bar (#196): the browser's own element, styled only as far as the
+   width, so it is announced as a progress bar and drawn by the platform. */
+.progress {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: var(--db-space-2) 0;
+}

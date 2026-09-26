@@ -5,7 +5,8 @@ in one tab. Original implementations of game genres that are free to reimplement
 No accounts. Once a page has loaded it needs no network at all, and coming back to
 a game this device has opened before needs none either: a service worker keeps the
 shell and each played game on the device (#192, #2445). A game it has never opened
-still needs a connection, and the catalogue says which games are here.
+still needs a connection unless the whole collection was saved from Settings (#196), and
+the catalogue says which games are here.
 
 Read `docs/reference-analysis.md` before touching engine, input, or SDK code — it
 records what the reference app actually does and why our architecture is shaped

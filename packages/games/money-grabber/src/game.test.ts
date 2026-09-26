@@ -610,7 +610,7 @@ describe('through the engine’s own input manager', () => {
       }
       game.update(STEP, view.sync(input.beginStep(STEP)));
     }
-    state = input.beginStep(STEP);
+    input.beginStep(STEP);
     expect(game.state.notes).toBe(notes);
     expect(game.state.notes.length).toBe(NOTE_COUNT);
     expect(game.state.clock).toBeGreaterThan(0);

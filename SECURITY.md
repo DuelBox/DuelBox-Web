@@ -12,6 +12,17 @@ exists — a researcher with no route to report has publishing as their next bes
 If you cannot use GitHub advisories, say so in a public issue **without any detail** and we
 will find another channel.
 
+### Not a vulnerability?
+
+A copyright or trademark claim, or a report that something on the site is abusive, is not a
+security report and does not belong in a private advisory. It has its own route: the
+[DMCA and abuse page](https://duelbox.github.io/DuelBox-Web/dmca/) — `/dmca/` on whichever host
+is serving the site — says what to send and what to expect back, and
+[`docs/abuse-response.md`](docs/abuse-response.md) is the internal procedure behind it. It keeps
+the same three-working-day acknowledgement as the table below, with a fourteen-working-day
+action window in place of ninety. Each route names the other, so a report sent to the wrong one
+is redirected rather than dropped.
+
 ### What to send
 
 Whatever you have. A single sentence naming the file and the problem is more useful than a
@@ -76,6 +87,8 @@ privilege to escalate.
 - **Cheating in a local match.** A player who opens the console and edits their own score in
   a game they are playing on their own device has cheated at a game, not breached anything.
   Cross-device play is a different matter and is in scope.
+- **Copyright, trademark or abuse complaints.** Not vulnerabilities; they have their own route
+  at `/dmca/` and their own procedure in [`docs/abuse-response.md`](docs/abuse-response.md).
 
 ## Safe harbour
 
@@ -101,4 +114,5 @@ degrade the service for other people.
 
 Further reading: [`docs/threat-model.md`](docs/threat-model.md),
 [`docs/secure-coding.md`](docs/secure-coding.md),
-[`docs/secret-rotation.md`](docs/secret-rotation.md).
+[`docs/secret-rotation.md`](docs/secret-rotation.md),
+[`docs/abuse-response.md`](docs/abuse-response.md).

@@ -1211,7 +1211,7 @@ export function step(match: Match, fixedDeltaSeconds: number, rng: Rng): StepRes
     const r1x = ball.x - c1x;
     const r1y = ball.y - c1y;
     const r1z = ball.z - c1z;
-    let swung = false;
+    let swung: boolean;
     if (bounced > 0) {
       // The ball's path through this step is a V rather than a line, so the sweep would be
       // measuring a segment it never flew. Fall back on where it actually ended up: a

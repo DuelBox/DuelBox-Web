@@ -1,4 +1,6 @@
-import { z } from 'zod';
+// Game manifests are bundled with play routes. Mini keeps their validation in the
+// browser without charging every player for Zod's larger fluent API.
+import * as z from 'zod/mini';
 
 /**
  * The manifest every game ships. The catalog, the per-game SEO page, the lobby and the
@@ -109,17 +111,19 @@ export const DEVICE_CLASSES = ['compact', 'phone', 'tablet', 'laptop', 'wide'] a
 
 const slug = z
   .string()
-  .min(2)
-  .max(48)
-  .regex(/^[a-z][a-z0-9-]*[a-z0-9]$/, 'must be lowercase kebab-case');
+  .check(
+    z.minLength(2),
+    z.maxLength(48),
+    z.regex(/^[a-z][a-z0-9-]*[a-z0-9]$/, 'must be lowercase kebab-case'),
+  );
 
 /**
  * Simulation runs in these units, never in pixels, so a phone and a laptop step the
  * identical match. The renderer scales this box to the device and letterboxes the rest.
  */
 const logicalSize = z.object({
-  width: z.number().int().positive().max(10_000),
-  height: z.number().int().positive().max(10_000),
+  width: z.int().check(z.positive(), z.maximum(10_000)),
+  height: z.int().check(z.positive(), z.maximum(10_000)),
 });
 
 /** The kinds of per-game option the generic options panel can render (#1751). */
@@ -135,49 +139,45 @@ export type GameOptionType = (typeof GAME_OPTION_TYPES)[number];
  */
 const optionId = z
   .string()
-  .min(1)
-  .max(40)
-  .regex(/^[a-z][a-z0-9-]*[a-z0-9]$/, 'option id must be lowercase kebab-case');
+  .check(
+    z.minLength(1),
+    z.maxLength(40),
+    z.regex(/^[a-z][a-z0-9-]*[a-z0-9]$/, 'option id must be lowercase kebab-case'),
+  );
 
-const optionLabel = z.string().min(1).max(60);
+const optionLabel = z.string().check(z.minLength(1), z.maxLength(60));
 
 const optionChoice = z.object({
-  value: z.string().min(1).max(40),
-  label: z.string().min(1).max(60),
+  value: z.string().check(z.minLength(1), z.maxLength(40)),
+  label: optionLabel,
 });
 
-const selectOption = z
-  .object({
-    type: z.literal('select'),
-    id: optionId,
-    label: optionLabel,
-    /** At least two, or it is not a choice; capped so a panel does not become a form. */
-    choices: z.array(optionChoice).min(2).max(12),
-    default: z.string().min(1).max(40),
-  })
-  .strict();
+const selectOption = z.strictObject({
+  type: z.literal('select'),
+  id: optionId,
+  label: optionLabel,
+  /** At least two, or it is not a choice; capped so a panel does not become a form. */
+  choices: z.array(optionChoice).check(z.minLength(2), z.maxLength(12)),
+  default: z.string().check(z.minLength(1), z.maxLength(40)),
+});
 
-const toggleOption = z
-  .object({
-    type: z.literal('toggle'),
-    id: optionId,
-    label: optionLabel,
-    default: z.boolean(),
-  })
-  .strict();
+const toggleOption = z.strictObject({
+  type: z.literal('toggle'),
+  id: optionId,
+  label: optionLabel,
+  default: z.boolean(),
+});
 
-const rangeOption = z
-  .object({
-    type: z.literal('range'),
-    id: optionId,
-    label: optionLabel,
-    min: z.number(),
-    max: z.number(),
-    /** Step between allowed values. One by default, which is what a round count wants. */
-    step: z.number().positive().default(1),
-    default: z.number(),
-  })
-  .strict();
+const rangeOption = z.strictObject({
+  type: z.literal('range'),
+  id: optionId,
+  label: optionLabel,
+  min: z.number(),
+  max: z.number(),
+  /** Step between allowed values. One by default, which is what a round count wants. */
+  step: z._default(z.number().check(z.positive()), 1),
+  default: z.number(),
+});
 
 /**
  * One typed option a game declares. The panel renders it from this and nothing else, so a
@@ -190,44 +190,49 @@ const rangeOption = z
  */
 export const gameOptionSchema = z
   .discriminatedUnion('type', [selectOption, toggleOption, rangeOption])
-  .superRefine((option, ctx) => {
-    if (option.type === 'select' && !option.choices.some((c) => c.value === option.default)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['default'],
-        message: 'a select option default must be one of its choices',
-      });
-    }
-    if (option.type === 'range') {
-      if (option.min >= option.max) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['min'],
-          message: 'a range option needs min < max',
-        });
-      }
-      if (option.default < option.min || option.default > option.max) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+  .check(
+    z.check(({ value: option, issues }) => {
+      if (option.type === 'select' && !option.choices.some((c) => c.value === option.default)) {
+        issues.push({
+          code: 'custom',
+          input: option,
           path: ['default'],
-          message: 'a range option default must lie within [min, max]',
+          message: 'a select option default must be one of its choices',
         });
       }
-    }
-  });
+      if (option.type === 'range') {
+        if (option.min >= option.max) {
+          issues.push({
+            code: 'custom',
+            input: option,
+            path: ['min'],
+            message: 'a range option needs min < max',
+          });
+        }
+        if (option.default < option.min || option.default > option.max) {
+          issues.push({
+            code: 'custom',
+            input: option,
+            path: ['default'],
+            message: 'a range option default must lie within [min, max]',
+          });
+        }
+      }
+    }),
+  );
 
 export type GameOption = z.infer<typeof gameOptionSchema>;
 
 export const gameManifestSchema = z
-  .object({
+  .strictObject({
     id: slug,
-    name: z.string().min(1).max(60),
-    category: z.string().min(1).max(40),
+    name: optionLabel,
+    category: z.string().check(z.minLength(1), z.maxLength(40)),
     archetype: z.enum(ARCHETYPES),
 
     /** Which modes the lobby may offer. Declaring one a game cannot run is a build error. */
-    modes: z.array(z.enum(PLAY_MODES)).min(1),
-    presentations: z.array(z.enum(PRESENTATIONS)).min(1),
+    modes: z.array(z.enum(PLAY_MODES)).check(z.minLength(1)),
+    presentations: z.array(z.enum(PRESENTATIONS)).check(z.minLength(1)),
 
     logical: logicalSize,
 
@@ -249,12 +254,12 @@ export const gameManifestSchema = z
      *   nagged about how they are holding the device. This is the default and what an unset
      *   manifest gets; today it is the 33 square boards and 4 near-square ones.
      *
-     * `superRefine` below holds the word against the shape of the box in both directions, so
+     * The check below holds the word against the shape of the box in both directions, so
      * a manifest cannot go on saying something its own geometry contradicts. A game that is
      * genuinely laid out both ways declares `alternateLogical` below as well, and keeps its
      * preference here.
      */
-    orientation: z.enum(ORIENTATIONS).default('any'),
+    orientation: z._default(z.enum(ORIENTATIONS), 'any'),
 
     /**
      * A second logical box, adopted when a match starts with the device turned the way
@@ -291,7 +296,7 @@ export const gameManifestSchema = z
      * including the ones already compiled into their packages' `.d.ts` — to be rebuilt to add
      * it. Absent means "one box, both ways up", which is what every game does today.
      */
-    alternateLogical: logicalSize.optional(),
+    alternateLogical: z.optional(logicalSize),
 
     /**
      * The device-pixel-ratio ceiling this game's backing store is drawn at (#31).
@@ -308,7 +313,7 @@ export const gameManifestSchema = z
      * simulation reads — the logical box is untouched (rule 8), so two devices with
      * different caps still step the identical match.
      */
-    dprCap: z.number().min(1).max(4).optional(),
+    dprCap: z.optional(z.number().check(z.minimum(1), z.maximum(4))),
 
     zoneSplit: z.enum(ZONE_SPLITS),
 
@@ -322,21 +327,16 @@ export const gameManifestSchema = z
      * makes no claim and the shell falls back to the 320x480 floor `docs/responsive.md`
      * names. Not part of the simulation and never read by `update()`.
      */
-    minViewport: z
-      .object({
-        width: z.number().int().positive().max(10_000),
-        height: z.number().int().positive().max(10_000),
-      })
-      .optional(),
+    minViewport: z.optional(logicalSize),
 
     /**
      * The device classes this game is designed and verified at. Optional; omitted means
      * every class. See {@link DEVICE_CLASSES}.
      */
-    deviceClasses: z.array(z.enum(DEVICE_CLASSES)).min(1).optional(),
+    deviceClasses: z.optional(z.array(z.enum(DEVICE_CLASSES)).check(z.minLength(1))),
 
     /** Used by the catalog filters and by the tournament to pace a run. */
-    roundSeconds: z.number().int().positive().max(1800),
+    roundSeconds: z.int().check(z.positive(), z.maximum(1800)),
 
     /**
      * What each seat's keys and pointer do, in the game's own words.
@@ -348,14 +348,17 @@ export const gameManifestSchema = z
      */
     controls: z.object({
       /** e.g. "Move with W A S D, drop with Space". Written for a player, not a spec. */
-      keyboard: z.string().min(4).max(120),
+      keyboard: z.string().check(z.minLength(4), z.maxLength(120)),
       /** e.g. "Drag to aim, release to fire". Empty when the archetype has no pointer idiom. */
-      pointer: z.string().max(120).default(''),
+      pointer: z._default(z.string().check(z.maxLength(120)), ''),
     }),
 
-    tags: z.array(z.string().min(1).max(24)).max(12).default([]),
+    tags: z._default(
+      z.array(z.string().check(z.minLength(1), z.maxLength(24))).check(z.maxLength(12)),
+      [],
+    ),
     /** Games that cannot be made fair across input families declare it here. */
-    sameInputClassOnly: z.boolean().default(false),
+    sameInputClassOnly: z._default(z.boolean(), false),
 
     /**
      * Whether this game hides information between turns, and so needs the pass-and-play
@@ -370,7 +373,7 @@ export const gameManifestSchema = z
      * hundred already compiled into their packages' `.d.ts` — to be rebuilt to add it. Optional
      * keeps the field off the manifests that never mention it, so read it as `handoff === true`.
      */
-    handoff: z.boolean().optional(),
+    handoff: z.optional(z.boolean()),
 
     /**
      * The game's own options — board size, round length, a variant toggle — as typed schema
@@ -381,93 +384,103 @@ export const gameManifestSchema = z
      * Read it as `options ?? []`. Ids must be unique within a game, or two options would write
      * to and read from the same stored key.
      */
-    options: z.array(gameOptionSchema).max(12).optional(),
+    options: z.optional(z.array(gameOptionSchema).check(z.maxLength(12))),
   })
-  .strict()
-  .superRefine((manifest, ctx) => {
-    if (manifest.modes.includes('friend') && !manifest.presentations.includes('shared-screen')) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['presentations'],
-        message: 'a game offering "friend" must support the shared-screen presentation',
-      });
-    }
-    if (manifest.modes.includes('solo') && !manifest.presentations.includes('single-seat')) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['presentations'],
-        message: 'a game offering "solo" must support the single-seat presentation',
-      });
-    }
-    if (new Set(manifest.modes).size !== manifest.modes.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['modes'],
-        message: 'modes must not repeat',
-      });
-    }
-    /*
-     * The declared orientation, held against the shape of the box it claims to describe.
-     *
-     * A word nothing checks is a word that drifts, and this one had further to drift than
-     * most: it was read by nothing at all until #1886, so a manifest could have said
-     * "landscape" over a 600x1000 box for a year and no test, no build step and no screen
-     * would have disagreed. All 108 manifests in the catalogue pass these three as written —
-     * they were checked one by one against their built `dist/manifest.js` rather than assumed
-     * — so the checks cost nothing today. What they buy is the next copy-pasted manifest, and
-     * the shortcut described at {@link MAX_ANY_ASPECT}.
-     */
-    const shape = shapeOf(manifest.logical);
-    if (manifest.orientation !== 'any' && shape !== manifest.orientation) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['orientation'],
-        message: `declares "${manifest.orientation}" but its logical box is ${describeShape(manifest.logical)}`,
-      });
-    }
-    if (manifest.orientation === 'any' && anyAspect(manifest.logical) > MAX_ANY_ASPECT) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['orientation'],
-        message:
-          `"any" says one box serves both orientations, but this box is ${describeShape(manifest.logical)} ` +
-          `and would lose more than a fifth of its size turned the other way — declare the orientation it is ` +
-          `designed for, and add "alternateLogical" if it is genuinely laid out both ways`,
-      });
-    }
-    if (manifest.alternateLogical !== undefined) {
-      if (manifest.orientation === 'any') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['alternateLogical'],
-          message:
-            'a game whose one box already serves both orientations has no second orientation to lay out for',
-        });
-      } else if (shapeOf(manifest.alternateLogical) === manifest.orientation) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['alternateLogical'],
-          message: `must be the other way round from "logical", and this one is ${describeShape(manifest.alternateLogical)} too`,
-        });
-      } else if (shapeOf(manifest.alternateLogical) === 'any') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['alternateLogical'],
-          message:
-            'a square second box is not a second layout — a square box serves both orientations on its own',
+  .check(
+    z.check(({ value: manifest, issues }) => {
+      if (manifest.modes.includes('friend') && !manifest.presentations.includes('shared-screen')) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['presentations'],
+          message: 'a game offering "friend" must support the shared-screen presentation',
         });
       }
-    }
+      if (manifest.modes.includes('solo') && !manifest.presentations.includes('single-seat')) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['presentations'],
+          message: 'a game offering "solo" must support the single-seat presentation',
+        });
+      }
+      if (new Set(manifest.modes).size !== manifest.modes.length) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['modes'],
+          message: 'modes must not repeat',
+        });
+      }
+      /*
+       * The declared orientation, held against the shape of the box it claims to describe.
+       *
+       * A word nothing checks is a word that drifts, and this one had further to drift than
+       * most: it was read by nothing at all until #1886, so a manifest could have said
+       * "landscape" over a 600x1000 box for a year and no test, no build step and no screen
+       * would have disagreed. All 108 manifests in the catalogue pass these three as written —
+       * they were checked one by one against their built `dist/manifest.js` rather than assumed
+       * — so the checks cost nothing today. What they buy is the next copy-pasted manifest, and
+       * the shortcut described at {@link MAX_ANY_ASPECT}.
+       */
+      const shape = shapeOf(manifest.logical);
+      if (manifest.orientation !== 'any' && shape !== manifest.orientation) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['orientation'],
+          message: `declares "${manifest.orientation}" but its logical box is ${describeShape(manifest.logical)}`,
+        });
+      }
+      if (manifest.orientation === 'any' && anyAspect(manifest.logical) > MAX_ANY_ASPECT) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['orientation'],
+          message:
+            `"any" says one box serves both orientations, but this box is ${describeShape(manifest.logical)} ` +
+            `and would lose more than a fifth of its size turned the other way — declare the orientation it is ` +
+            `designed for, and add "alternateLogical" if it is genuinely laid out both ways`,
+        });
+      }
+      if (manifest.alternateLogical !== undefined) {
+        if (manifest.orientation === 'any') {
+          issues.push({
+            code: 'custom',
+            input: manifest,
+            path: ['alternateLogical'],
+            message:
+              'a game whose one box already serves both orientations has no second orientation to lay out for',
+          });
+        } else if (shapeOf(manifest.alternateLogical) === manifest.orientation) {
+          issues.push({
+            code: 'custom',
+            input: manifest,
+            path: ['alternateLogical'],
+            message: `must be the other way round from "logical", and this one is ${describeShape(manifest.alternateLogical)} too`,
+          });
+        } else if (shapeOf(manifest.alternateLogical) === 'any') {
+          issues.push({
+            code: 'custom',
+            input: manifest,
+            path: ['alternateLogical'],
+            message:
+              'a square second box is not a second layout — a square box serves both orientations on its own',
+          });
+        }
+      }
 
-    const optionIds = (manifest.options ?? []).map((option) => option.id);
-    if (new Set(optionIds).size !== optionIds.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['options'],
-        message: 'option ids must be unique within a game',
-      });
-    }
-  });
+      const optionIds = (manifest.options ?? []).map((option) => option.id);
+      if (new Set(optionIds).size !== optionIds.length) {
+        issues.push({
+          code: 'custom',
+          input: manifest,
+          path: ['options'],
+          message: 'option ids must be unique within a game',
+        });
+      }
+    }),
+  );
 
 export type GameManifest = z.infer<typeof gameManifestSchema>;
 export type GameArchetype = (typeof ARCHETYPES)[number];

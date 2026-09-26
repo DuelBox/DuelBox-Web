@@ -344,21 +344,16 @@ describe('the numbers the landing copy states', () => {
     ).toBe(true);
   });
 
-  it('promises a mode only where every game in the catalogue has it', () => {
-    // "Every game in the catalogue offers the first two of these": a second player and a
-    // bot. `PlaySurface` offers a mode only when the game's manifest declares it, so a game
-    // added without one would make that sentence false for exactly that game.
-    const missing = CATALOGUE.filter(
-      (game) => !game.modes.includes('friend') || !game.modes.includes('bot'),
-    ).map((game) => `${game.slug}: ${game.modes.join(', ')}`);
+  it('promises a mode only where every available game has it', () => {
+    // The landing page offers a friend, a bot and a tournament from any available game's
+    // lobby. A kill switch keeps the game's catalogue page but removes its play route, so
+    // it is excluded from this promise while its manifest remains under test elsewhere.
+    const available = CATALOGUE.filter((game) => isPlayable(game.slug));
+    expect(available.length).toBeGreaterThan(0);
+    const missing = available
+      .filter((game) => !game.modes.includes('friend') || !game.modes.includes('bot'))
+      .map((game) => `${game.slug}: ${game.modes.join(', ')}`);
     expect(missing, `games that do not offer both:\n${missing.join('\n')}`).toEqual([]);
-
-    // And "any game can start the third": the tournament's only entry point is a game's
-    // lobby, so a catalogue row with no build behind it offers none of the three.
-    // `data/routing.test.ts` owns the catalogue-to-registry agreement in general; this is
-    // the half of it the sentence on the landing page rests on.
-    const unbuilt = CATALOGUE.filter((game) => !isPlayable(game.slug)).map((game) => game.slug);
-    expect(unbuilt, `catalogue rows with no playable build:\n${unbuilt.join('\n')}`).toEqual([]);
   });
 
   it('shows a dozen games drawn from a dozen different categories', () => {

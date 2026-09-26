@@ -3,6 +3,14 @@
 **Status:** accepted
 **Date:** 2026-09-08
 
+**Operational update (2026-09-26):** This ADR records the release path at decision time.
+Deploy now waits for successful CI on `main`, and branch protection requires `verify` and
+all three `e2e` shards before merge. The emergency switch procedure below must use a pull
+request and keep CI green; its old direct-push instructions are superseded.
+The Context and Decision below describe the 2026-09-08 state; use the updated runbook for
+current operations. The shared routing, controls, catalogue, and landing checks now
+distinguish built games from playable ones, so setting a switch alone does not make them red.
+
 ## Context
 
 Issue #208 asks for a feature flag system with a per-game kill switch, and states the
@@ -209,10 +217,13 @@ having; it is not what the acceptance line says.
    ];
    ```
 
-2. Push to `main`. `deploy.yml` builds and publishes; nothing gates it.
-3. Expect CI to go red on the six assertions listed above. That is the site telling you it
-   now offers fewer games than it has builds for. Do not silence them by reverting the
-   switch.
+2. Open a pull request and pass the required CI checks. The shared unit tests and build
+   already allow a game to be built but unavailable, and still test its package. If an
+   end-to-end spec targets the disabled play route directly, skip that play assertion only
+   while the switch is set; keep its coverage when the game is re-enabled. Do not silence
+   a failure by reverting the switch.
+3. Merge the green pull request. Successful CI on the resulting `main` commit triggers
+   `deploy.yml`; watch Deploy until it finishes.
 4. Check the live site: `/play/<slug>/` answers 404, `/games/<slug>/` says the game is
    switched off, and the catalogue card no longer carries a Play badge.
 
